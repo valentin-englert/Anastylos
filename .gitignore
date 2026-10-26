@@ -36,6 +36,8 @@ smd_out/
 smd_eval_out/
 screw_out/
 screw_eval_out/
+markings_out/
+markings_eval_out/
 
 # ANASTYLOS session data (runtime event logs, never source)
 sessions/

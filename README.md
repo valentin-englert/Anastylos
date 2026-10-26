@@ -12,6 +12,7 @@ Marker dictionaries, ID ranges, and millimetre frames follow the physical sheet 
 - [`pcb-ocr/`](pcb-ocr/README.md) — PCB silkscreen reference-designator extraction (needs OCR engine)
 - [`smd-reader/`](smd-reader/README.md) — SMD resistor marking decoder and crop reader (reuses pcb-ocr)
 - [`screw-reader/`](screw-reader/README.md) — screw-head drive geometry classifier (synthetic-only validation)
+- [`component-markings/`](component-markings/README.md) — component marking recognition (stub-OCR validation only)
 
 Third-party attribution: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 (machine-readable [`tools/compliance/spdx.json`](tools/compliance/spdx.json),

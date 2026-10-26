@@ -1,0 +1,1 @@
+"""ANASTYLOS component marking recognition."""

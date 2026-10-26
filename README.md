@@ -9,3 +9,4 @@ Marker dictionaries, ID ranges, and millimetre frames follow the physical sheet 
 - [`assembly-memory/`](assembly-memory/README.md) — append-only disassembly memory and "where does this go?" queries
 - [`resistor-reader/`](resistor-reader/README.md) — experimental resistor color-code reader (synthetic-only validation)
 - [`tray-counter/`](tray-counter/README.md) — evidence-backed tray addition/removal candidates from detection output
+- [`pcb-ocr/`](pcb-ocr/README.md) — PCB silkscreen reference-designator extraction (needs OCR engine)

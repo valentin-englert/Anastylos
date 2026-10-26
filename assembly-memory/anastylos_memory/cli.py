@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from anastylos_memory import query as queries
-from anastylos_memory.importer import load_result, observations_from_result
+from anastylos_memory.importer import evidence_key, load_result, observations_from_result
 from anastylos_memory.store import (
     append_event,
     evidence_ref,
@@ -21,7 +21,7 @@ from anastylos_memory.store import (
 )
 
 HERE = Path(__file__).resolve().parents[1]
-DEFAULT_KIT = HERE.parents[1] / "calibration" / "calibration-config.json"
+DEFAULT_KIT = HERE.parent / "calibration" / "calibration-config.json"
 STORE_NAME = "memory.jsonl"
 
 
@@ -110,16 +110,32 @@ def cmd_import(args) -> int:
         note=args.note,
     )
     imported = []
+    skipped = []
     known_ids = {item["id"] for item in events}
+    by_evidence = {
+        evidence_key(item["evidence"]): item["id"]
+        for item in events
+        if item["type"] == "observation" and isinstance(item.get("evidence"), dict)
+    }
     for event in pending:
+        duplicate_of = by_evidence.get(evidence_key(event["evidence"]))
+        if duplicate_of is not None:
+            skipped.append(duplicate_of)
+            continue
         event["id"] = next_id(events, "obs")
         event["timestamp"] = utc_now()
         validate_observation(event, known_ids)
         append_event(store_path, event)
         events.append(event)
         known_ids.add(event["id"])
+        by_evidence[evidence_key(event["evidence"])] = event["id"]
         imported.append(event)
-    print(json.dumps({"pair_id": result.get("pair_id"), "status": result.get("status"), "imported": imported}, indent=2))
+    print(json.dumps({
+        "pair_id": result.get("pair_id"),
+        "status": result.get("status"),
+        "imported": imported,
+        "skipped": skipped,
+    }, indent=2))
     return 0
 
 

@@ -15,6 +15,12 @@ from anastylos_memory.store import ValidationError, evidence_ref
 UNTRUSTED_STATUSES = ("registration_invalid", "view_mismatch", "input_error")
 
 
+def evidence_key(evidence: dict) -> tuple:
+    """Stable identity of imported evidence: file bytes when known, else the cited path."""
+    source = evidence.get("result_sha256") or f"path:{evidence.get('result_json')}"
+    return (source, evidence.get("pair_id"), evidence.get("region"))
+
+
 def load_result(path: str | Path) -> dict:
     try:
         result = json.loads(Path(path).read_text(encoding="utf-8"))

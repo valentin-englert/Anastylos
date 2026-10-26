@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from anastylos_memory.cli import main
+from anastylos_memory.cli import DEFAULT_KIT, main
 from anastylos_memory.query import resolve_tray, where_observation, where_tray, load_kit
 from anastylos_memory.store import CorruptLogError, ValidationError, load_events, validate_observation
 
@@ -47,6 +47,28 @@ def record_observation(session: Path, **overrides) -> dict:
     for key, value in args.items():
         argv += [key, value]
     return json.loads(run(argv))
+
+
+def write_result(session: Path, pair_id: str = "pair_01", regions: list | None = None) -> Path:
+    regions = regions if regions is not None else [
+        {"label": "R1", "bbox_mm": [52.0, 40.5, 6, 6], "centroid_mm": [55.0, 43.5]},
+    ]
+    path = session / pair_id / "result.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "pair_id": pair_id,
+        "status": "single_change" if len(regions) == 1 else "multiple_changes",
+        "rectified": {"view": "fixture_back"},
+        "regions": regions,
+    }), encoding="utf-8")
+    return path
+
+
+def import_result(session: Path, result_json: Path, *extra: str) -> dict:
+    return json.loads(run([
+        "--session-dir", str(session), "import",
+        "--result-json", str(result_json), *extra,
+    ]))
 
 
 def record_link(session: Path, observation: str, tray: int = 3, **overrides) -> dict:
@@ -237,6 +259,68 @@ class MemoryTest(unittest.TestCase):
             self.assertEqual(len(present["evidence"]["result_sha256"]), 64)
             missing = record_observation(session, pair_id="gone", result_json=str(session / "gone" / "result.json"))
             self.assertIsNone(missing["evidence"]["result_sha256"])
+
+    def test_default_kit_serves_tray_link_and_lookup(self):
+        self.assertTrue(Path(DEFAULT_KIT).is_file(), str(DEFAULT_KIT))
+        self.assertEqual(Path(DEFAULT_KIT).parent.name, "calibration")
+        with tempfile.TemporaryDirectory() as directory:
+            session = Path(directory)
+            record_observation(session)
+            link_argv = [
+                "--session-dir", str(session), "record", "tray-link",
+                "--observation", "obs-0001", "--sheet", "surface_a3",
+                "--tray", "6", "--confirmed-by", "operator",
+            ]
+            link = json.loads(run(link_argv))
+            self.assertEqual(link["tray"]["sheet_id"], "surface_a3")
+            answer = json.loads(run([
+                "--session-dir", str(session), "where",
+                "--tray", "6", "--sheet", "surface_a3",
+            ]))
+            self.assertEqual(answer["status"], "located")
+            self.assertEqual(answer["observations"][0]["id"], "obs-0001")
+
+    def test_reimporting_identical_evidence_adds_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = Path(directory)
+            result = write_result(session)
+            first = import_result(session, result)
+            self.assertEqual(len(first["imported"]), 1)
+            before = (session / "memory.jsonl").read_bytes()
+            second = import_result(session, result)
+            self.assertEqual(second["imported"], [])
+            self.assertEqual(second["skipped"], ["obs-0001"])
+            self.assertEqual((session / "memory.jsonl").read_bytes(), before)
+            self.assertEqual(len(load_events(session / "memory.jsonl")), 1)
+
+    def test_import_adds_only_regions_not_yet_seen(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = Path(directory)
+            result = write_result(session, regions=[
+                {"label": "R1", "bbox_mm": [52.0, 40.5, 6, 6], "centroid_mm": [55.0, 43.5]},
+                {"label": "R2", "bbox_mm": [70.0, 40.5, 6, 6], "centroid_mm": [73.0, 43.5]},
+            ])
+            import_result(session, result, "--region", "R1")
+            report = import_result(session, result)
+            self.assertEqual([item["id"] for item in report["imported"]], ["obs-0002"])
+            self.assertEqual(report["skipped"], ["obs-0001"])
+            regions = [item["evidence"]["region"] for item in load_events(session / "memory.jsonl")]
+            self.assertEqual(regions, ["R1", "R2"])
+
+    def test_changed_file_bytes_import_as_new_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = Path(directory)
+            result = write_result(session)
+            import_result(session, result)
+            result.write_text(json.dumps({
+                "pair_id": "pair_01",
+                "status": "single_change",
+                "rectified": {"view": "fixture_back"},
+                "regions": [{"label": "R1", "bbox_mm": [52.0, 40.5, 6, 6], "centroid_mm": [99.0, 99.0]}],
+            }), encoding="utf-8")
+            report = import_result(session, result)
+            self.assertEqual([item["id"] for item in report["imported"]], ["obs-0002"])
+            self.assertEqual(report["skipped"], [])
 
     def test_tray_snapshot_comes_from_kit(self):
         kit, sha = load_kit(KIT)

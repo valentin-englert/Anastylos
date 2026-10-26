@@ -28,3 +28,8 @@ __pycache__/
 
 # Regenerated harness runs (not print masters)
 change-detection/selftest_output/
+
+# ANASTYLOS session data (runtime event logs, never source)
+sessions/
+memory.jsonl
+!**/fixtures/**/memory.jsonl

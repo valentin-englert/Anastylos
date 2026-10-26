@@ -1,0 +1,1687 @@
+{
+  "name": "ANASTYLOS",
+  "units": "mm",
+  "coordinate_system": {
+    "page": "origin at the top-left corner of the sheet, x right, y down",
+    "frame": "origin at marker 0, 10, 20, 30 or the ChArUco board corner; x right, y down, z into the plane",
+    "marker_corner_order": [
+      "top_left",
+      "top_right",
+      "bottom_right",
+      "bottom_left"
+    ],
+    "front_and_back": "fixture_front and fixture_back are separate frames with no fixed transform"
+  },
+  "opencv_package": "opencv-contrib-python==4.14.0.94",
+  "dictionaries": {
+    "DICT_5X5_100": {
+      "opencv": "cv2.aruco.DICT_5X5_100",
+      "marker_bits": 5,
+      "border_bits": 1,
+      "modules_per_side": 7,
+      "role": "registration"
+    },
+    "DICT_6X6_250": {
+      "opencv": "cv2.aruco.DICT_6X6_250",
+      "marker_bits": 6,
+      "border_bits": 1,
+      "modules_per_side": 8,
+      "role": "charuco"
+    }
+  },
+  "id_ranges": [
+    {
+      "dictionary": "DICT_5X5_100",
+      "first": 0,
+      "last": 9,
+      "role": "surface_a4",
+      "used": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "dictionary": "DICT_5X5_100",
+      "first": 10,
+      "last": 19,
+      "role": "surface_a3",
+      "used": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    {
+      "dictionary": "DICT_5X5_100",
+      "first": 20,
+      "last": 29,
+      "role": "fixture_front",
+      "used": [
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
+      ]
+    },
+    {
+      "dictionary": "DICT_5X5_100",
+      "first": 30,
+      "last": 39,
+      "role": "fixture_back",
+      "used": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35
+      ]
+    },
+    {
+      "dictionary": "DICT_5X5_100",
+      "first": 40,
+      "last": 99,
+      "role": "reserved",
+      "used": []
+    },
+    {
+      "dictionary": "DICT_6X6_250",
+      "first": 0,
+      "last": 16,
+      "role": "charuco",
+      "used": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    }
+  ],
+  "detection": {
+    "corner_refinement": "CORNER_REFINE_SUBPIX"
+  },
+  "frames": {
+    "surface_a3": {
+      "sheet_id": "surface_a3",
+      "origin_marker_id": 10,
+      "origin_on_page_mm": [
+        12,
+        12
+      ],
+      "axes": {
+        "x": "right",
+        "y": "down",
+        "z": "into_the_plane"
+      }
+    },
+    "surface_a4": {
+      "sheet_id": "surface_a4",
+      "origin_marker_id": 0,
+      "origin_on_page_mm": [
+        12,
+        12
+      ],
+      "axes": {
+        "x": "right",
+        "y": "down",
+        "z": "into_the_plane"
+      }
+    },
+    "fixture_front": {
+      "sheet_id": "fixture_front",
+      "origin_marker_id": 20,
+      "origin_on_page_mm": [
+        37.5,
+        28
+      ],
+      "axes": {
+        "x": "right",
+        "y": "down",
+        "z": "into_the_plane"
+      }
+    },
+    "fixture_back": {
+      "sheet_id": "fixture_back",
+      "origin_marker_id": 30,
+      "origin_on_page_mm": [
+        37.5,
+        28
+      ],
+      "axes": {
+        "x": "right",
+        "y": "down",
+        "z": "into_the_plane"
+      }
+    },
+    "charuco_board": {
+      "sheet_id": "charuco_a4",
+      "origin_marker_id": null,
+      "origin_on_page_mm": [
+        30,
+        22
+      ],
+      "axes": {
+        "x": "right",
+        "y": "down",
+        "z": "into_the_plane"
+      }
+    }
+  },
+  "controller": {
+    "dimensions_mm": null,
+    "height_mm": null,
+    "window_mm": [
+      172,
+      92
+    ],
+    "board_mm": [
+      230,
+      150
+    ]
+  },
+  "print": {
+    "safe_margin_mm": 10,
+    "scale": "100%",
+    "check_line_mm": 100,
+    "color": "black"
+  },
+  "measured_print_scale": {
+    "surface_a3": null,
+    "surface_a4": null,
+    "fixture_front": null,
+    "fixture_back": null,
+    "charuco_a4": null
+  },
+  "charuco": {
+    "dictionary": "DICT_6X6_250",
+    "squares_x": 5,
+    "squares_y": 7,
+    "square_length_mm": 30,
+    "marker_length_mm": 24,
+    "module_mm": 3,
+    "legacy_pattern": false,
+    "marker_ids": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "board_size_mm": [
+      150,
+      210
+    ],
+    "origin_on_page_mm": [
+      30,
+      22
+    ],
+    "top_left_square": "black"
+  },
+  "sheets": [
+    {
+      "sheet_id": "surface_a3",
+      "frame": "surface_a3",
+      "file_stem": "anastylos_surface_a3",
+      "page": {
+        "format": "A3",
+        "orientation": "landscape",
+        "width_mm": 420,
+        "height_mm": 297
+      },
+      "markers": [
+        {
+          "id": 10,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_tl",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            12,
+            12
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              0
+            ],
+            [
+              42,
+              0
+            ],
+            [
+              42,
+              42
+            ],
+            [
+              0,
+              42
+            ]
+          ],
+          "center_frame_mm": [
+            21,
+            21
+          ]
+        },
+        {
+          "id": 11,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_tr",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            366,
+            12
+          ],
+          "corners_frame_mm": [
+            [
+              354,
+              0
+            ],
+            [
+              396,
+              0
+            ],
+            [
+              396,
+              42
+            ],
+            [
+              354,
+              42
+            ]
+          ],
+          "center_frame_mm": [
+            375,
+            21
+          ]
+        },
+        {
+          "id": 12,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_br",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            366,
+            243
+          ],
+          "corners_frame_mm": [
+            [
+              354,
+              231
+            ],
+            [
+              396,
+              231
+            ],
+            [
+              396,
+              273
+            ],
+            [
+              354,
+              273
+            ]
+          ],
+          "center_frame_mm": [
+            375,
+            252
+          ]
+        },
+        {
+          "id": 13,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_bl",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            12,
+            243
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              231
+            ],
+            [
+              42,
+              231
+            ],
+            [
+              42,
+              273
+            ],
+            [
+              0,
+              273
+            ]
+          ],
+          "center_frame_mm": [
+            21,
+            252
+          ]
+        },
+        {
+          "id": 14,
+          "dictionary": "DICT_5X5_100",
+          "role": "mid_top",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            189,
+            12
+          ],
+          "corners_frame_mm": [
+            [
+              177,
+              0
+            ],
+            [
+              219,
+              0
+            ],
+            [
+              219,
+              42
+            ],
+            [
+              177,
+              42
+            ]
+          ],
+          "center_frame_mm": [
+            198,
+            21
+          ]
+        },
+        {
+          "id": 15,
+          "dictionary": "DICT_5X5_100",
+          "role": "mid_bottom",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            189,
+            243
+          ],
+          "corners_frame_mm": [
+            [
+              177,
+              231
+            ],
+            [
+              219,
+              231
+            ],
+            [
+              219,
+              273
+            ],
+            [
+              177,
+              273
+            ]
+          ],
+          "center_frame_mm": [
+            198,
+            252
+          ]
+        },
+        {
+          "id": 16,
+          "dictionary": "DICT_5X5_100",
+          "role": "mid_left",
+          "size_mm": 42,
+          "module_mm": 6,
+          "quiet_zone_mm": 6,
+          "top_left_page_mm": [
+            12,
+            127.5
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              115.5
+            ],
+            [
+              42,
+              115.5
+            ],
+            [
+              42,
+              157.5
+            ],
+            [
+              0,
+              157.5
+            ]
+          ],
+          "center_frame_mm": [
+            21,
+            136.5
+          ]
+        }
+      ],
+      "zones": [
+        {
+          "type": "work_area",
+          "rect_frame_mm": [
+            60,
+            52,
+            250,
+            172
+          ]
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            318,
+            50,
+            26,
+            26
+          ],
+          "number": 1
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            318,
+            79,
+            26,
+            26
+          ],
+          "number": 2
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            318,
+            108,
+            26,
+            26
+          ],
+          "number": 3
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            318,
+            137,
+            26,
+            26
+          ],
+          "number": 4
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            318,
+            166,
+            26,
+            26
+          ],
+          "number": 5
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            318,
+            195,
+            26,
+            26
+          ],
+          "number": 6
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            348,
+            50,
+            26,
+            26
+          ],
+          "number": 7
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            348,
+            79,
+            26,
+            26
+          ],
+          "number": 8
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            348,
+            108,
+            26,
+            26
+          ],
+          "number": 9
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            348,
+            137,
+            26,
+            26
+          ],
+          "number": 10
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            348,
+            166,
+            26,
+            26
+          ],
+          "number": 11
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            348,
+            195,
+            26,
+            26
+          ],
+          "number": 12
+        }
+      ],
+      "scale_bars": [
+        {
+          "name": "h",
+          "orientation": "horizontal",
+          "start_page_mm": [
+            78,
+            272
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": -1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        },
+        {
+          "name": "v",
+          "orientation": "vertical",
+          "start_page_mm": [
+            400,
+            98.5
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": -1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        }
+      ],
+      "labels": [
+        {
+          "text": "1",
+          "x": 343,
+          "y": 77.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "2",
+          "x": 343,
+          "y": 106.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "3",
+          "x": 343,
+          "y": 135.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "4",
+          "x": 343,
+          "y": 164.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "5",
+          "x": 343,
+          "y": 193.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "6",
+          "x": 343,
+          "y": 222.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "7",
+          "x": 373,
+          "y": 77.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "8",
+          "x": 373,
+          "y": 106.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "9",
+          "x": 373,
+          "y": 135.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "10",
+          "x": 373,
+          "y": 164.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "11",
+          "x": 373,
+          "y": 193.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "12",
+          "x": 373,
+          "y": 222.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        }
+      ]
+    },
+    {
+      "sheet_id": "surface_a4",
+      "frame": "surface_a4",
+      "file_stem": "anastylos_surface_a4",
+      "page": {
+        "format": "A4",
+        "orientation": "landscape",
+        "width_mm": 297,
+        "height_mm": 210
+      },
+      "markers": [
+        {
+          "id": 0,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_tl",
+          "size_mm": 35,
+          "module_mm": 5,
+          "quiet_zone_mm": 5,
+          "top_left_page_mm": [
+            12,
+            12
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              0
+            ],
+            [
+              35,
+              0
+            ],
+            [
+              35,
+              35
+            ],
+            [
+              0,
+              35
+            ]
+          ],
+          "center_frame_mm": [
+            17.5,
+            17.5
+          ]
+        },
+        {
+          "id": 1,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_tr",
+          "size_mm": 35,
+          "module_mm": 5,
+          "quiet_zone_mm": 5,
+          "top_left_page_mm": [
+            250,
+            12
+          ],
+          "corners_frame_mm": [
+            [
+              238,
+              0
+            ],
+            [
+              273,
+              0
+            ],
+            [
+              273,
+              35
+            ],
+            [
+              238,
+              35
+            ]
+          ],
+          "center_frame_mm": [
+            255.5,
+            17.5
+          ]
+        },
+        {
+          "id": 2,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_br",
+          "size_mm": 35,
+          "module_mm": 5,
+          "quiet_zone_mm": 5,
+          "top_left_page_mm": [
+            250,
+            163
+          ],
+          "corners_frame_mm": [
+            [
+              238,
+              151
+            ],
+            [
+              273,
+              151
+            ],
+            [
+              273,
+              186
+            ],
+            [
+              238,
+              186
+            ]
+          ],
+          "center_frame_mm": [
+            255.5,
+            168.5
+          ]
+        },
+        {
+          "id": 3,
+          "dictionary": "DICT_5X5_100",
+          "role": "corner_bl",
+          "size_mm": 35,
+          "module_mm": 5,
+          "quiet_zone_mm": 5,
+          "top_left_page_mm": [
+            12,
+            163
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              151
+            ],
+            [
+              35,
+              151
+            ],
+            [
+              35,
+              186
+            ],
+            [
+              0,
+              186
+            ]
+          ],
+          "center_frame_mm": [
+            17.5,
+            168.5
+          ]
+        },
+        {
+          "id": 4,
+          "dictionary": "DICT_5X5_100",
+          "role": "mid_left",
+          "size_mm": 35,
+          "module_mm": 5,
+          "quiet_zone_mm": 5,
+          "top_left_page_mm": [
+            12,
+            87.5
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              75.5
+            ],
+            [
+              35,
+              75.5
+            ],
+            [
+              35,
+              110.5
+            ],
+            [
+              0,
+              110.5
+            ]
+          ],
+          "center_frame_mm": [
+            17.5,
+            93
+          ]
+        }
+      ],
+      "zones": [
+        {
+          "type": "work_area",
+          "rect_frame_mm": [
+            52,
+            42,
+            180,
+            102
+          ]
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            239,
+            41,
+            20,
+            24
+          ],
+          "number": 1
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            239,
+            67,
+            20,
+            24
+          ],
+          "number": 2
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            239,
+            93,
+            20,
+            24
+          ],
+          "number": 3
+        },
+        {
+          "type": "tray_cell",
+          "rect_frame_mm": [
+            239,
+            119,
+            20,
+            24
+          ],
+          "number": 4
+        }
+      ],
+      "scale_bars": [
+        {
+          "name": "h",
+          "orientation": "horizontal",
+          "start_page_mm": [
+            98.5,
+            183
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": 1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        },
+        {
+          "name": "v",
+          "orientation": "vertical",
+          "start_page_mm": [
+            282,
+            55
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": -1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        }
+      ],
+      "labels": [
+        {
+          "text": "1",
+          "x": 261,
+          "y": 67.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "2",
+          "x": 261,
+          "y": 93.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "3",
+          "x": 261,
+          "y": 119.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        },
+        {
+          "text": "4",
+          "x": 261,
+          "y": 145.56,
+          "size_mm": 8,
+          "anchor": "middle",
+          "weight": "bold"
+        }
+      ]
+    },
+    {
+      "sheet_id": "fixture_front",
+      "frame": "fixture_front",
+      "file_stem": "anastylos_fixture_front",
+      "page": {
+        "format": "A4",
+        "orientation": "landscape",
+        "width_mm": 297,
+        "height_mm": 210
+      },
+      "markers": [
+        {
+          "id": 20,
+          "dictionary": "DICT_5X5_100",
+          "role": "front_tl",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            37.5,
+            28
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              0
+            ],
+            [
+              21,
+              0
+            ],
+            [
+              21,
+              21
+            ],
+            [
+              0,
+              21
+            ]
+          ],
+          "center_frame_mm": [
+            10.5,
+            10.5
+          ]
+        },
+        {
+          "id": 21,
+          "dictionary": "DICT_5X5_100",
+          "role": "front_tr",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            238.5,
+            28
+          ],
+          "corners_frame_mm": [
+            [
+              201,
+              0
+            ],
+            [
+              222,
+              0
+            ],
+            [
+              222,
+              21
+            ],
+            [
+              201,
+              21
+            ]
+          ],
+          "center_frame_mm": [
+            211.5,
+            10.5
+          ]
+        },
+        {
+          "id": 22,
+          "dictionary": "DICT_5X5_100",
+          "role": "front_br",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            238.5,
+            149
+          ],
+          "corners_frame_mm": [
+            [
+              201,
+              121
+            ],
+            [
+              222,
+              121
+            ],
+            [
+              222,
+              142
+            ],
+            [
+              201,
+              142
+            ]
+          ],
+          "center_frame_mm": [
+            211.5,
+            131.5
+          ]
+        },
+        {
+          "id": 23,
+          "dictionary": "DICT_5X5_100",
+          "role": "front_bl",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            37.5,
+            149
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              121
+            ],
+            [
+              21,
+              121
+            ],
+            [
+              21,
+              142
+            ],
+            [
+              0,
+              142
+            ]
+          ],
+          "center_frame_mm": [
+            10.5,
+            131.5
+          ]
+        },
+        {
+          "id": 24,
+          "dictionary": "DICT_5X5_100",
+          "role": "front_mid_top",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            138,
+            28
+          ],
+          "corners_frame_mm": [
+            [
+              100.5,
+              0
+            ],
+            [
+              121.5,
+              0
+            ],
+            [
+              121.5,
+              21
+            ],
+            [
+              100.5,
+              21
+            ]
+          ],
+          "center_frame_mm": [
+            111,
+            10.5
+          ]
+        },
+        {
+          "id": 25,
+          "dictionary": "DICT_5X5_100",
+          "role": "front_mid_bottom",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            138,
+            149
+          ],
+          "corners_frame_mm": [
+            [
+              100.5,
+              121
+            ],
+            [
+              121.5,
+              121
+            ],
+            [
+              121.5,
+              142
+            ],
+            [
+              100.5,
+              142
+            ]
+          ],
+          "center_frame_mm": [
+            111,
+            131.5
+          ]
+        }
+      ],
+      "zones": [
+        {
+          "type": "fixture_board_outline",
+          "rect_frame_mm": [
+            -4,
+            -4,
+            230,
+            150
+          ]
+        },
+        {
+          "type": "controller_window",
+          "rect_frame_mm": [
+            25,
+            25,
+            172,
+            92
+          ]
+        }
+      ],
+      "scale_bars": [
+        {
+          "name": "h",
+          "orientation": "horizontal",
+          "start_page_mm": [
+            98.5,
+            182
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": 1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        },
+        {
+          "name": "v",
+          "orientation": "vertical",
+          "start_page_mm": [
+            21,
+            49
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": -1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        }
+      ],
+      "labels": [
+        {
+          "text": "FRONT",
+          "x": 148.5,
+          "y": 17,
+          "size_mm": 6,
+          "anchor": "middle",
+          "weight": "bold"
+        }
+      ]
+    },
+    {
+      "sheet_id": "fixture_back",
+      "frame": "fixture_back",
+      "file_stem": "anastylos_fixture_back",
+      "page": {
+        "format": "A4",
+        "orientation": "landscape",
+        "width_mm": 297,
+        "height_mm": 210
+      },
+      "markers": [
+        {
+          "id": 30,
+          "dictionary": "DICT_5X5_100",
+          "role": "back_tl",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            37.5,
+            28
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              0
+            ],
+            [
+              21,
+              0
+            ],
+            [
+              21,
+              21
+            ],
+            [
+              0,
+              21
+            ]
+          ],
+          "center_frame_mm": [
+            10.5,
+            10.5
+          ]
+        },
+        {
+          "id": 31,
+          "dictionary": "DICT_5X5_100",
+          "role": "back_tr",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            238.5,
+            28
+          ],
+          "corners_frame_mm": [
+            [
+              201,
+              0
+            ],
+            [
+              222,
+              0
+            ],
+            [
+              222,
+              21
+            ],
+            [
+              201,
+              21
+            ]
+          ],
+          "center_frame_mm": [
+            211.5,
+            10.5
+          ]
+        },
+        {
+          "id": 32,
+          "dictionary": "DICT_5X5_100",
+          "role": "back_br",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            238.5,
+            149
+          ],
+          "corners_frame_mm": [
+            [
+              201,
+              121
+            ],
+            [
+              222,
+              121
+            ],
+            [
+              222,
+              142
+            ],
+            [
+              201,
+              142
+            ]
+          ],
+          "center_frame_mm": [
+            211.5,
+            131.5
+          ]
+        },
+        {
+          "id": 33,
+          "dictionary": "DICT_5X5_100",
+          "role": "back_bl",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            37.5,
+            149
+          ],
+          "corners_frame_mm": [
+            [
+              0,
+              121
+            ],
+            [
+              21,
+              121
+            ],
+            [
+              21,
+              142
+            ],
+            [
+              0,
+              142
+            ]
+          ],
+          "center_frame_mm": [
+            10.5,
+            131.5
+          ]
+        },
+        {
+          "id": 34,
+          "dictionary": "DICT_5X5_100",
+          "role": "back_mid_top",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            138,
+            28
+          ],
+          "corners_frame_mm": [
+            [
+              100.5,
+              0
+            ],
+            [
+              121.5,
+              0
+            ],
+            [
+              121.5,
+              21
+            ],
+            [
+              100.5,
+              21
+            ]
+          ],
+          "center_frame_mm": [
+            111,
+            10.5
+          ]
+        },
+        {
+          "id": 35,
+          "dictionary": "DICT_5X5_100",
+          "role": "back_mid_bottom",
+          "size_mm": 21,
+          "module_mm": 3,
+          "quiet_zone_mm": 3,
+          "top_left_page_mm": [
+            138,
+            149
+          ],
+          "corners_frame_mm": [
+            [
+              100.5,
+              121
+            ],
+            [
+              121.5,
+              121
+            ],
+            [
+              121.5,
+              142
+            ],
+            [
+              100.5,
+              142
+            ]
+          ],
+          "center_frame_mm": [
+            111,
+            131.5
+          ]
+        }
+      ],
+      "zones": [
+        {
+          "type": "fixture_board_outline",
+          "rect_frame_mm": [
+            -4,
+            -4,
+            230,
+            150
+          ]
+        },
+        {
+          "type": "controller_window",
+          "rect_frame_mm": [
+            25,
+            25,
+            172,
+            92
+          ]
+        }
+      ],
+      "scale_bars": [
+        {
+          "name": "h",
+          "orientation": "horizontal",
+          "start_page_mm": [
+            98.5,
+            182
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": 1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        },
+        {
+          "name": "v",
+          "orientation": "vertical",
+          "start_page_mm": [
+            21,
+            49
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": -1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        }
+      ],
+      "labels": [
+        {
+          "text": "BACK",
+          "x": 148.5,
+          "y": 17,
+          "size_mm": 6,
+          "anchor": "middle",
+          "weight": "bold"
+        }
+      ]
+    },
+    {
+      "sheet_id": "charuco_a4",
+      "frame": "charuco_board",
+      "file_stem": "anastylos_charuco_a4",
+      "page": {
+        "format": "A4",
+        "orientation": "portrait",
+        "width_mm": 210,
+        "height_mm": 297
+      },
+      "markers": [],
+      "zones": [],
+      "scale_bars": [
+        {
+          "name": "h",
+          "orientation": "horizontal",
+          "start_page_mm": [
+            55,
+            243
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": 1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        },
+        {
+          "name": "v",
+          "orientation": "vertical",
+          "start_page_mm": [
+            17,
+            77
+          ],
+          "length_mm": 100,
+          "thickness_mm": 0.8,
+          "tick_side": 1,
+          "major_every_mm": 10,
+          "minor_every_mm": 5,
+          "major_len_mm": 3,
+          "minor_len_mm": 1.8,
+          "tick_width_mm": 0.25
+        }
+      ],
+      "labels": [],
+      "charuco": true,
+      "board_origin_page_mm": [
+        30,
+        22
+      ]
+    }
+  ]
+}

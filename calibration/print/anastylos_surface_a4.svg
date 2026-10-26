@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="297mm" height="210mm" viewBox="0 0 297 210" data-sheet-id="surface_a4" data-frame="surface_a4">
+<title>ANASTYLOS A4 surface</title>
+<rect id="page" x="0" y="0" width="297" height="210" fill="#ffffff"/>
+<g id="zones" fill="none" stroke="#000000">
+<rect id="zone-work_area" data-zone="work_area" x="64" y="54" width="180" height="102" stroke-width="0.3" stroke-dasharray="3 1.6"/>
+<rect id="zone-tray_cell-1" data-zone="tray_cell" x="251" y="53" width="20" height="24" stroke-width="0.35"/>
+<rect id="zone-tray_cell-2" data-zone="tray_cell" x="251" y="79" width="20" height="24" stroke-width="0.35"/>
+<rect id="zone-tray_cell-3" data-zone="tray_cell" x="251" y="105" width="20" height="24" stroke-width="0.35"/>
+<rect id="zone-tray_cell-4" data-zone="tray_cell" x="251" y="131" width="20" height="24" stroke-width="0.35"/>
+</g>
+<g id="markers" fill="#000000" shape-rendering="crispEdges">
+<g id="marker-0" data-id="0" data-dictionary="DICT_5X5_100" data-x="12" data-y="12" data-size="35" data-module="5">
+<rect x="12" y="12" width="35" height="5"/>
+<rect x="12" y="17" width="5" height="5"/>
+<rect x="22" y="17" width="5" height="5"/>
+<rect x="32" y="17" width="15" height="5"/>
+<rect x="12" y="22" width="10" height="5"/>
+<rect x="27" y="22" width="5" height="5"/>
+<rect x="42" y="22" width="5" height="5"/>
+<rect x="12" y="27" width="10" height="5"/>
+<rect x="32" y="27" width="15" height="5"/>
+<rect x="12" y="32" width="5" height="5"/>
+<rect x="22" y="32" width="5" height="5"/>
+<rect x="32" y="32" width="5" height="5"/>
+<rect x="42" y="32" width="5" height="5"/>
+<rect x="12" y="37" width="5" height="5"/>
+<rect x="32" y="37" width="15" height="5"/>
+<rect x="12" y="42" width="35" height="5"/>
+</g>
+<g id="marker-1" data-id="1" data-dictionary="DICT_5X5_100" data-x="250" data-y="12" data-size="35" data-module="5">
+<rect x="250" y="12" width="35" height="5"/>
+<rect x="250" y="17" width="25" height="5"/>
+<rect x="280" y="17" width="5" height="5"/>
+<rect x="250" y="22" width="5" height="5"/>
+<rect x="265" y="22" width="20" height="5"/>
+<rect x="250" y="27" width="25" height="5"/>
+<rect x="280" y="27" width="5" height="5"/>
+<rect x="250" y="32" width="5" height="5"/>
+<rect x="260" y="32" width="5" height="5"/>
+<rect x="280" y="32" width="5" height="5"/>
+<rect x="250" y="37" width="15" height="5"/>
+<rect x="275" y="37" width="10" height="5"/>
+<rect x="250" y="42" width="35" height="5"/>
+</g>
+<g id="marker-2" data-id="2" data-dictionary="DICT_5X5_100" data-x="250" data-y="163" data-size="35" data-module="5">
+<rect x="250" y="163" width="35" height="5"/>
+<rect x="250" y="168" width="5" height="5"/>
+<rect x="265" y="168" width="5" height="5"/>
+<rect x="275" y="168" width="10" height="5"/>
+<rect x="250" y="173" width="5" height="5"/>
+<rect x="275" y="173" width="10" height="5"/>
+<rect x="250" y="178" width="20" height="5"/>
+<rect x="280" y="178" width="5" height="5"/>
+<rect x="250" y="183" width="5" height="5"/>
+<rect x="260" y="183" width="5" height="5"/>
+<rect x="275" y="183" width="10" height="5"/>
+<rect x="250" y="188" width="5" height="5"/>
+<rect x="270" y="188" width="5" height="5"/>
+<rect x="280" y="188" width="5" height="5"/>
+<rect x="250" y="193" width="35" height="5"/>
+</g>
+<g id="marker-3" data-id="3" data-dictionary="DICT_5X5_100" data-x="12" data-y="163" data-size="35" data-module="5">
+<rect x="12" y="163" width="35" height="5"/>
+<rect x="12" y="168" width="5" height="5"/>
+<rect x="22" y="168" width="25" height="5"/>
+<rect x="12" y="173" width="15" height="5"/>
+<rect x="42" y="173" width="5" height="5"/>
+<rect x="12" y="178" width="15" height="5"/>
+<rect x="32" y="178" width="5" height="5"/>
+<rect x="42" y="178" width="5" height="5"/>
+<rect x="12" y="183" width="10" height="5"/>
+<rect x="42" y="183" width="5" height="5"/>
+<rect x="12" y="188" width="5" height="5"/>
+<rect x="22" y="188" width="5" height="5"/>
+<rect x="42" y="188" width="5" height="5"/>
+<rect x="12" y="193" width="35" height="5"/>
+</g>
+<g id="marker-4" data-id="4" data-dictionary="DICT_5X5_100" data-x="12" data-y="87.5" data-size="35" data-module="5">
+<rect x="12" y="87.5" width="35" height="5"/>
+<rect x="12" y="92.5" width="5" height="5"/>
+<rect x="27" y="92.5" width="5" height="5"/>
+<rect x="37" y="92.5" width="10" height="5"/>
+<rect x="12" y="97.5" width="5" height="5"/>
+<rect x="32" y="97.5" width="5" height="5"/>
+<rect x="42" y="97.5" width="5" height="5"/>
+<rect x="12" y="102.5" width="10" height="5"/>
+<rect x="32" y="102.5" width="5" height="5"/>
+<rect x="42" y="102.5" width="5" height="5"/>
+<rect x="12" y="107.5" width="10" height="5"/>
+<rect x="27" y="107.5" width="10" height="5"/>
+<rect x="42" y="107.5" width="5" height="5"/>
+<rect x="12" y="112.5" width="15" height="5"/>
+<rect x="32" y="112.5" width="15" height="5"/>
+<rect x="12" y="117.5" width="35" height="5"/>
+</g>
+</g>
+<g id="scale-h" fill="#000000" shape-rendering="crispEdges" data-scale="horizontal" data-length-mm="100">
+<rect class="bar" x="98.5" y="183" width="100" height="0.8"/>
+<rect class="tick" x="98.5" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="103.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="108.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="113.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="118.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="123.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="128.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="133.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="138.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="143.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="148.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="153.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="158.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="163.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="168.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="173.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="178.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="183.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="188.375" y="183.8" width="0.25" height="3"/>
+<rect class="tick" x="193.375" y="183.8" width="0.25" height="1.8"/>
+<rect class="tick" x="198.25" y="183.8" width="0.25" height="3"/>
+</g>
+<text x="98.5" y="189.144" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="2.3" font-weight="normal" text-anchor="middle" fill="#000000">0</text>
+<text x="198.5" y="189.144" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="2.3" font-weight="normal" text-anchor="middle" fill="#000000">100</text>
+<text x="148.5" y="182.15" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="2.5" font-weight="bold" text-anchor="middle" fill="#000000">100 mm</text>
+<g id="scale-v" fill="#000000" shape-rendering="crispEdges" data-scale="vertical" data-length-mm="100">
+<rect class="bar" x="282" y="55" width="0.8" height="100"/>
+<rect class="tick" x="279" y="55" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="59.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="64.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="69.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="74.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="79.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="84.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="89.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="94.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="99.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="104.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="109.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="114.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="119.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="124.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="129.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="134.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="139.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="144.875" width="3" height="0.25"/>
+<rect class="tick" x="280.2" y="149.875" width="1.8" height="0.25"/>
+<rect class="tick" x="279" y="154.75" width="3" height="0.25"/>
+</g>
+<text x="278.3" y="55.736" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="2.3" font-weight="normal" text-anchor="end" fill="#000000">0</text>
+<text x="278.3" y="155.345" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="2.3" font-weight="normal" text-anchor="end" fill="#000000">100</text>
+<g id="labels" fill="#000000">
+<text x="261" y="67.56" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">1</text>
+<text x="261" y="93.56" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">2</text>
+<text x="261" y="119.56" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">3</text>
+<text x="261" y="145.56" font-family="DejaVu Sans, Liberation Sans, Arial, Helvetica, sans-serif" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">4</text>
+</g>
+</svg>

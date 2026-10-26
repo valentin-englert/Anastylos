@@ -1,0 +1,30 @@
+# Next.js / Vercel
+node_modules/
+.next/
+out/
+next-env.d.ts
+.vercel/
+
+# Local environment files
+.env
+.env*.local
+
+# Local-only research and agent instructions
+/random/
+/.agents/
+AGENTS.md
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+# Regenerated harness runs (not print masters)
+change-detection/selftest_output/

@@ -1,0 +1,17 @@
+# ANASTYLOS calibration kit — install into a virtualenv (Python 3.12).
+# Direct requirements: opencv-contrib-python==4.14.0.94 and CairoSVG==2.9.1.
+# Every other pin is a transitive dependency resolved for CPython 3.12.
+#
+# Windows: cairocffi needs a native libcairo-2.dll. If that DLL is missing,
+# `generate` still writes the SVGs and prints a warning instead of a PDF.
+cairocffi==1.7.1
+CairoSVG==2.9.1
+cffi==2.1.1
+cssselect2==0.10.1
+defusedxml==0.7.1
+numpy==2.5.4
+opencv-contrib-python==4.14.0.94
+pillow==13.0.0
+pycparser==3.12
+tinycss2==1.5.1
+webencodings==0.6.1

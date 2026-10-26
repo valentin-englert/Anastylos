@@ -1,4 +1,4 @@
-"""CLI: `record` appends events, `where` answers "where does this go?"."""
+"""CLI: `record`/`import` append events, `where` answers "where does this go?"."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from anastylos_memory import query as queries
+from anastylos_memory.importer import load_result, observations_from_result
 from anastylos_memory.store import (
     append_event,
     evidence_ref,
@@ -96,6 +97,32 @@ def cmd_record_tray_link(args) -> int:
     return 0
 
 
+def cmd_import(args) -> int:
+    store_path = resolve_store(args.session_dir, args.store)
+    events = load_events(store_path)
+    result = load_result(args.result_json)
+    pending = observations_from_result(
+        result,
+        args.result_json,
+        args.session or default_session(store_path),
+        region=args.region,
+        kit_sha256=sha256_file(args.kit) if args.kit else None,
+        note=args.note,
+    )
+    imported = []
+    known_ids = {item["id"] for item in events}
+    for event in pending:
+        event["id"] = next_id(events, "obs")
+        event["timestamp"] = utc_now()
+        validate_observation(event, known_ids)
+        append_event(store_path, event)
+        events.append(event)
+        known_ids.add(event["id"])
+        imported.append(event)
+    print(json.dumps({"pair_id": result.get("pair_id"), "status": result.get("status"), "imported": imported}, indent=2))
+    return 0
+
+
 def cmd_where(args) -> int:
     store_path = resolve_store(args.session_dir, args.store)
     events = load_events(store_path)
@@ -142,6 +169,13 @@ def build_parser() -> argparse.ArgumentParser:
     link.add_argument("--note", default=None)
     link.add_argument("--supersedes", default=None, help="earlier link id this corrects")
     link.set_defaults(func=cmd_record_tray_link)
+
+    imp = sub.add_parser("import", help="import a change-detection result.json as observations")
+    imp.add_argument("--result-json", required=True, help="change-detection result.json")
+    imp.add_argument("--region", default=None, help="import one region label only, e.g. R1")
+    imp.add_argument("--kit", default=None, help="kit config (records its sha256 when given)")
+    imp.add_argument("--note", default=None)
+    imp.set_defaults(func=cmd_import)
 
     where = sub.add_parser("where", help='"where does this go?" (original source location)')
     target = where.add_mutually_exclusive_group(required=True)

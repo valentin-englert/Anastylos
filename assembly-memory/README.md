@@ -24,11 +24,17 @@ evidence. The tray only locates the stored part and resolves the removal
 observation behind it.
 
 ```powershell
-py -3.12 assembly-memory\memory.py --session-dir sessions\day1 record observation --view fixture_back --bbox 52.0,40.5,6,6 --centroid 55.0,43.5 --result-json results\monday\screw_01\result.json --pair-id screw_01 --region R1
+py -3.12 assembly-memory\memory.py --session-dir sessions\day1 import --result-json results\monday\screw_01\result.json
 py -3.12 assembly-memory\memory.py --session-dir sessions\day1 record tray-link --observation obs-0001 --sheet surface_a3 --tray 3 --confirmed-by operator
 py -3.12 assembly-memory\memory.py --session-dir sessions\day1 where --observation obs-0001
 py -3.12 assembly-memory\memory.py --session-dir sessions\day1 where --tray 3 --sheet surface_a3
 ```
+
+`import` reads one change-detection `result.json` verbatim (view, regions,
+provenance) and appends one observation per region (`--region R1` imports a
+single region). Results without trustworthy coordinates
+(`registration_invalid`, `view_mismatch`, `input_error`) are refused. Manual
+`record observation` remains for observations without a result file.
 
 Query answers are JSON on stdout. `where --tray` reports `located` for one
 candidate, `ambiguous` with every candidate's source location when a tray
@@ -41,5 +47,9 @@ reader never guesses.
 
 ```powershell
 cd assembly-memory
-py -3.12 -m unittest discover -s tests -v
+..\.venv\Scripts\python -m unittest discover -s tests -v
 ```
+
+The unit suite (`test_memory.py`) is stdlib-only and runs on any Python 3.12.
+The integration suite (`test_integration.py`) drives the synthetic harness,
+so it needs the calibration virtualenv.

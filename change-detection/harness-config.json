@@ -1,0 +1,65 @@
+{
+  "calibration_config": {
+    "path": "../calibration/calibration-config.json",
+    "sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e"
+  },
+  "registration": {
+    "dictionary": "DICT_5X5_100",
+    "corner_refinement": "CORNER_REFINE_SUBPIX",
+    "view_groups": [
+      ["fixture_front", "fixture_back"],
+      ["surface_a3", "surface_a4"]
+    ],
+    "min_markers_view_presence": 1,
+    "min_markers": 3,
+    "ransac_reproj_threshold_mm": 1.0,
+    "max_reprojection_rms_mm": 0.5,
+    "max_reprojection_error_mm": 1.5
+  },
+  "rectification": {
+    "px_per_mm": 4.0,
+    "extent": "fixture_board_outline_or_page",
+    "margin_mm": 2.0
+  },
+  "roi": {
+    "zones_by_view": {
+      "fixture_front": ["controller_window"],
+      "fixture_back": ["controller_window"],
+      "surface_a3": ["work_area", "tray_cell"],
+      "surface_a4": ["work_area", "tray_cell"]
+    },
+    "shrink_mm": 2.0,
+    "marker_mask_extra_mm": 2.0
+  },
+  "normalization": {
+    "channel": "gray",
+    "method": "local_mean_division",
+    "meanstd_target_std": 32.0,
+    "clahe_clip_limit": 2.0,
+    "clahe_tile_grid": 8,
+    "local_mean_sigma_mm": 15.0
+  },
+  "ecc": {
+    "enabled": false,
+    "motion": "translation",
+    "include_markers": true,
+    "max_iterations": 100,
+    "epsilon": 1e-05,
+    "gauss_filt_size": 5,
+    "max_shift_mm": 2.0,
+    "roi_guard_mm": 5.0
+  },
+  "change": {
+    "pre_blur_sigma_mm": 0.4,
+    "threshold": 30,
+    "open_kernel_mm": 0.75,
+    "close_kernel_mm": 1.5,
+    "min_area_mm2": 3.0
+  },
+  "diagnostics": {
+    "residual_warn_mm": 0.5,
+    "max_changed_fraction_warn": 0.2,
+    "bbox_match_tolerance_mm": 3.0,
+    "overlay_max_width_px": 1600
+  }
+}

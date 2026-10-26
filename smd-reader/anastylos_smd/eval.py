@@ -1,0 +1,51 @@
+"""Labelled-image evaluation for SMD readings.
+
+Labels file schema:
+{"images": [{"file": "crop.png", "marking": "472"}]}
+A label matches when the top candidate code equals the marking exactly.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import cv2
+
+from anastylos_smd.annotate import annotate
+from anastylos_smd.vision import analyze
+
+
+def run_eval(labels_path: str | Path, images_dir: str | Path, out_dir: str | Path,
+             backend, aliases=None) -> dict:
+    """Score readings against ground-truth markings; writes report + overlays."""
+    labels_path, images_dir, out_dir = Path(labels_path), Path(images_dir), Path(out_dir)
+    images = json.loads(labels_path.read_text(encoding="utf-8-sig"))["images"]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rows = {"exact": 0, "misses": 0, "false_confident": 0, "undecided": 0}
+    details = []
+    for entry in images:
+        image = cv2.imread(str(images_dir / entry["file"]))
+        if image is None:
+            raise ValueError(f"cannot read eval image {entry['file']}")
+        result = analyze(image, backend, aliases=aliases, image_name=entry["file"])
+        top = result["candidates"][0]["code"] if result["candidates"] else None
+        if top == entry["marking"] and result["status"] == "ok":
+            rows["exact"] += 1
+            outcome = "exact"
+        elif result["status"] == "unknown":
+            rows["misses"] += 1
+            outcome = "miss"
+        elif result["status"] == "ok":
+            rows["false_confident"] += 1
+            outcome = "false_confident"
+        else:
+            rows["undecided"] += 1
+            outcome = "undecided"
+        details.append({"file": entry["file"], "marking": entry["marking"],
+                        "top": top, "status": result["status"], "outcome": outcome})
+        cv2.imwrite(str(out_dir / f"{Path(entry['file']).stem}_annotated.png"), annotate(image, result))
+    report = {"images": len(details), **rows, "rows": details,
+              "note": "Scores describe this labelled set only; rendered fixtures prove the harness, not accuracy."}
+    (out_dir / "eval_report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    return report

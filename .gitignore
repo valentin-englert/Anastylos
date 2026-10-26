@@ -32,6 +32,8 @@ resistor_out/
 tray_out/
 ocr_out/
 ocr_eval_out/
+smd_out/
+smd_eval_out/
 
 # ANASTYLOS session data (runtime event logs, never source)
 sessions/

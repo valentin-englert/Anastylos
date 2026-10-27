@@ -2,10 +2,14 @@
 
 Inventory of third-party software used by ANASTYLOS, verified 2026-10-26
 against `calibration/requirements.txt`, the local `.venv` package metadata
-and license files, and the installed Tesseract directory. Machine-readable
+and license files, and the installed Tesseract directory; npm development
+dependencies verified 2026-10-27 against
+`capture-companion/app/package.json`, its lockfile, and installed
+`node_modules` metadata. Machine-readable
 form: [`tools/compliance/spdx.json`](tools/compliance/spdx.json) (SPDX 2.3).
 Module notes live on: [`pcb-ocr/THIRD_PARTY.md`](pcb-ocr/THIRD_PARTY.md)
-is preserved and referenced here, not duplicated.
+and [`capture-companion/app/THIRD_PARTY.md`](capture-companion/app/THIRD_PARTY.md)
+are preserved and referenced here, not duplicated.
 
 This file grants no licenses. ANASTYLOS's own licensing is deliberately
 deferred; nothing here declares a project license.
@@ -21,9 +25,12 @@ image) is redistributed — not when this source tree is shared.
 
 ## Runtime Python dependencies (pinned)
 
-All pins come from `calibration/requirements.txt` (single declaration;
-no other manifest exists). Direct requirements per that file:
-`opencv-contrib-python`, `CairoSVG`; the rest is transitive.
+All Python pins come from `calibration/requirements.txt` (single Python
+declaration). Direct requirements per that file:
+`opencv-contrib-python`, `CairoSVG`; the rest is transitive. A second
+manifest, `capture-companion/app/package.json` (npm, exact pins plus a
+committed lockfile), declares development-only frontend tooling; see
+below. No other manifest exists.
 
 | Package | Version | SPDX license | Evidence |
 |---|---|---|---|
@@ -43,6 +50,30 @@ CairoSVG/cairocffi are exercised only by calibration PDF/PNG rendering,
 which degrades to SVG when native Cairo is absent. Assembly-memory is
 standard-library-only; the other vision modules use OpenCV + NumPy
 (+ Pillow where imported).
+
+## Frontend development-only dependencies (pinned)
+
+The shipped capture PWA has zero runtime dependencies: the production
+bundle is built solely from first-party TypeScript. Everything below is
+development-only (build, type checking, tests), pinned exact in
+`capture-companion/app/package.json` with a committed
+`package-lock.json` (lockfile v3). Licenses verified 2026-10-27 from
+the `license` field of each installed `node_modules` package; the
+Python validator (`capture-companion/python/`) is standard-library-only
+and adds no dependency.
+
+| Package | Version | SPDX license | Role | Evidence |
+|---|---|---|---|---|
+| vite | 8.3.5 | MIT | dev server + production bundler | package.json license field in node_modules |
+| typescript | 7.0.2 | Apache-2.0 | static type checking (`tsc`) | package.json license field in node_modules |
+| vitest | 5.0.5 | MIT | unit test runner | package.json license field in node_modules |
+| fake-indexeddb | 6.2.6 | Apache-2.0 | IndexedDB emulation for storage tests only | package.json license field in node_modules |
+| @types/node | 26.6.5 | MIT | Node type declarations for tests/build scripts | package.json license field in node_modules |
+
+Transitive npm packages (lockfile closure) are not inventoried
+individually; their licenses are unverified (review item below). No
+transitive package ships in the PWA bundle. No telemetry, font, icon,
+CSS, or analytics package is used.
 
 ## Bundled native components (inside wheels, not the repo)
 
@@ -67,10 +98,13 @@ standard-library-only; the other vision modules use OpenCV + NumPy
 | Tesseract dependency DLLs (~50) | various | Unverified, review item | Installed alongside Tesseract (leptonica, ICU, cairo, font libs, …); no per-component texts ship |
 | Cairo native (libcairo) | not installed | Upstream dual LGPL-2.1-only OR MPL-1.1, unverified primary | Optional; absent from `.venv`/System32. Tesseract's private copy is not on PATH and unusable by cairocffi |
 
-No development test frameworks exist (unittest from the standard
-library). No external AI services are called at runtime: no network,
-HTTP, or cloud imports anywhere under the six modules (verified by
-search 2026-10-26).
+Python tests use unittest from the standard library; the capture PWA's
+TypeScript tests use vitest (development-only, see above). No external
+AI services are called at runtime. Python has no network, HTTP, or
+cloud imports anywhere (verified by search 2026-10-27 across all
+modules); the PWA's only network use is same-origin service-worker
+caching of its own app shell (no evidence upload, no third-party
+calls).
 
 ## Mandatory notices versus acknowledgments
 
@@ -84,6 +118,9 @@ this source tree):
   allow relinking/replacement per LGPL terms.
 - BSD/HPND/MIT-family and PSF texts: keep copyright + license texts
   (`dist-info` LICENSE files) with redistributed copies.
+- MIT / Apache-2.0 (capture devDependencies): preserve copyright and
+  license texts with redistributed copies of those tools; they do not
+  ship in the PWA bundle.
 
 Optional acknowledgments: permissive-licensed transitive packages
 beyond their required one-line attributions; the NumPy composite
@@ -113,6 +150,9 @@ repo; packaging for redistribution must carry them from these sources.
    license identifiers.
 4. Tesseract DLL set: per-component licenses if ever redistributed.
 5. Cairo: primary-source license + version once installed.
+6. npm transitive closure: per-package licenses unverified; confirm
+   before redistributing `node_modules` (direct deps are MIT/Apache-2.0
+   per installed metadata).
 
 The checker prints the same list from the SPDX annotations:
 

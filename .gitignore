@@ -38,6 +38,22 @@ screw_out/
 screw_eval_out/
 markings_out/
 markings_eval_out/
+fingerprints_out/
+fingerprints_eval_out/
+connectors_out/
+connectors_eval_out/
+measure_out/
+measure_eval_out/
+measure_compare_out/
+polarity_out/
+polarity_eval_out/
+washer_out/
+washer_eval_out/
+missing_out/
+missing_reconcile_out/
+missing_eval_out/
+cable_out/
+graph_out/
 
 # ANASTYLOS session data (runtime event logs, never source)
 sessions/

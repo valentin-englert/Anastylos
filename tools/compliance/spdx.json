@@ -252,6 +252,77 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: NOT INSTALLED: absent from .venv and System32 (calibration PDF/PNG tests fail without it); upstream documents dual LGPL-2.1-only OR MPL-1.1 (secondary sources only, primary COPYING unavailable offline). The Tesseract install ships a private libcairo-2.dll that is not on PATH and not usable by cairocffi. Re-verify license and version if Cairo is ever installed or redistributed."}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-vite",
+      "name": "vite",
+      "versionInfo": "8.3.5",
+      "downloadLocation": "https://www.npmjs.com/package/vite/v/8.3.5",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/vite@8.3.5"}],
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/vite/package.json; note=dev server + production bundler; not shipped in the PWA bundle"}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-typescript",
+      "name": "typescript",
+      "versionInfo": "7.0.2",
+      "downloadLocation": "https://www.npmjs.com/package/typescript/v/7.0.2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/typescript@7.0.2"}],
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/typescript/package.json; note=static type checking (tsc); not shipped in the PWA bundle"}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-vitest",
+      "name": "vitest",
+      "versionInfo": "5.0.5",
+      "downloadLocation": "https://www.npmjs.com/package/vitest/v/5.0.5",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/vitest@5.0.5"}],
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/vitest/package.json; note=unit test runner; not shipped in the PWA bundle"}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-fake-indexeddb",
+      "name": "fake-indexeddb",
+      "versionInfo": "6.2.6",
+      "downloadLocation": "https://www.npmjs.com/package/fake-indexeddb/v/6.2.6",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/fake-indexeddb@6.2.6"}],
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/fake-indexeddb/package.json; note=IndexedDB emulation for storage tests only; not shipped in the PWA bundle"}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-types-node",
+      "name": "@types/node",
+      "versionInfo": "26.6.5",
+      "downloadLocation": "https://www.npmjs.com/package/@types/node/v/26.6.5",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/%40types/node@26.6.5"}],
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/@types/node/package.json; note=Node type declarations for tests/build scripts; not shipped in the PWA bundle"}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-transitive",
+      "name": "npm transitive closure (capture devDependencies)",
+      "versionInfo": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: transitive npm packages of the five direct capture devDependencies (lockfile v3 closure recorded in capture-companion/app/package-lock.json) are not inventoried individually and their licenses are unverified. None ships in the PWA bundle. Confirm per-package licenses before redistributing node_modules."}]
     }
   ],
   "relationships": [
@@ -271,6 +342,11 @@
     {"spdxElementId": "SPDXRef-Package-pillow", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-pillow-libjpeg-turbo"},
     {"spdxElementId": "SPDXRef-Package-pillow", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-pillow-zlib-ng"},
     {"spdxElementId": "SPDXRef-Package-pillow", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-pillow-libtiff"},
-    {"spdxElementId": "SPDXRef-Package-tesseract", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-tesseract-dll-set"}
+    {"spdxElementId": "SPDXRef-Package-tesseract", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-tesseract-dll-set"},
+    {"spdxElementId": "SPDXRef-Package-npm-vite", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
+    {"spdxElementId": "SPDXRef-Package-npm-typescript", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
+    {"spdxElementId": "SPDXRef-Package-npm-vitest", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
+    {"spdxElementId": "SPDXRef-Package-npm-fake-indexeddb", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
+    {"spdxElementId": "SPDXRef-Package-npm-types-node", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"}
   ]
 }

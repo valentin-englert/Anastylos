@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- local.properties is machine-local and gitignored. Its sdk.dir uses the
+         correct java.util.Properties escape (C\:/...); every Gradle invocation
+         resolving the SDK proves it loads. Lint's PropertyEscape flags even
+         this spelling, and its suggested double-backslash form breaks SDK
+         resolution ("SDK location not found", verified 2026-10-27).
+         Ignored for this file only; the check stays live everywhere else. -->
+    <issue id="PropertyEscape">
+        <ignore path="local.properties" />
+    </issue>
+    <!-- Keep the launcher adaptive-icon in mipmap-anydpi-v26 despite minSdk 26:
+         moving it to the suggested unversioned mipmap-anydpi makes AGP 9.4.1's
+         resource merger deterministically drop the file (fresh merge output
+         contains no mipmap .flat; verified 2026-10-27), which fails the AAPT
+         link with "resource mipmap/ic_launcher not found". The -v26 qualifier
+         is redundant but harmless; ignored for this directory only. -->
+    <issue id="ObsoleteSdkInt">
+        <ignore path="*/mipmap-anydpi-v26/*" />
+    </issue>
+</lint>

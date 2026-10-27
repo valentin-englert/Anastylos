@@ -1,0 +1,138 @@
+{
+ "trays": [
+  {
+   "id": "T1",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    318,
+    50,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T2",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    318,
+    79,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T3",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    318,
+    108,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T4",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    318,
+    137,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T5",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    318,
+    166,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T6",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    318,
+    195,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T7",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    348,
+    50,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T8",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    348,
+    79,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T9",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    348,
+    108,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T10",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    348,
+    137,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T11",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    348,
+    166,
+    26,
+    26
+   ]
+  },
+  {
+   "id": "T12",
+   "frame": "surface_a3",
+   "rect_frame_mm": [
+    348,
+    195,
+    26,
+    26
+   ]
+  }
+ ],
+ "device_area": {
+  "frame": "surface_a3",
+  "rect_frame_mm": [
+   60,
+   52,
+   250,
+   172
+  ]
+ },
+ "params": {
+  "min_overlap": 0.5,
+  "delta_threshold": 8.0,
+  "surface": "light"
+ }
+}

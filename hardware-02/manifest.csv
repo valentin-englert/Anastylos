@@ -1,0 +1,5 @@
+pair_id,expected,expected_bbox_mm,view,assert,notes
+AB,single,,surface_a3,1,"A->B; top-left case screw removed (elevated surface, parallax caveat); screw out of view; screwdriver moved out of ROI"
+BC,single,,surface_a3,1,"B->C; small screw placed in tray 1 (paper plane); case unchanged with top-left hole"
+AC,multiple,,surface_a3,1,"A->C; top-left case screw removed AND screw placed in tray 1"
+CD,multiple,,surface_a3,1,"C->D; tray 1 emptied AND top-left case screw reinstalled; screwdriver moved out of ROI"

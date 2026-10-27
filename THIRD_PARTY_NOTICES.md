@@ -5,7 +5,9 @@ against `calibration/requirements.txt`, the local `.venv` package metadata
 and license files, and the installed Tesseract directory; npm development
 dependencies verified 2026-10-27 against
 `capture-companion/app/package.json`, its lockfile, and installed
-`node_modules` metadata. Machine-readable
+`node_modules` metadata; the ML Kit Android pin verified 2026-10-27
+against `capture-companion/android/gradle/libs.versions.toml` and the
+cached Maven POM. Machine-readable
 form: [`tools/compliance/spdx.json`](tools/compliance/spdx.json) (SPDX 2.3).
 Module-level notes in [`pcb-ocr/THIRD_PARTY.md`](pcb-ocr/THIRD_PARTY.md)
 and [`capture-companion/app/THIRD_PARTY.md`](capture-companion/app/THIRD_PARTY.md)
@@ -30,7 +32,10 @@ declaration). Direct requirements per that file:
 `opencv-contrib-python`, `CairoSVG`; the rest is transitive. A second
 manifest, `capture-companion/app/package.json` (npm, exact pins plus a
 committed lockfile), declares development-only frontend tooling; see
-below. These are the only two manifests in the tree.
+below. A third manifest,
+`capture-companion/android/gradle/libs.versions.toml` (Gradle version
+catalog, exact pins), declares the native Android dependencies; see
+below. These are the only three manifests in the tree.
 
 | Package | Version | SPDX license | Evidence |
 |---|---|---|---|
@@ -74,6 +79,24 @@ Transitive npm packages (lockfile closure) are not inventoried
 individually; their licenses are unverified (review item below). No
 transitive package ships in the PWA bundle. No telemetry, font, icon,
 CSS, or analytics package is used.
+
+## Android native dependencies (pinned)
+
+The native Capture app (`capture-companion/android/`) resolves its
+dependencies from `gradle/libs.versions.toml` (exact pins). Unlike the
+Python and npm sets above, Android **runtime** libraries ship inside
+the built APK, so their terms govern APK redistribution. Per-artifact
+POM verification is scheduled for M5 delivery (review item 8); the
+one M2-relevant artifact is inventoried individually now:
+
+| Package | Version | SPDX license | Role | Evidence |
+|---|---|---|---|---|
+| com.google.mlkit:barcode-scanning | 17.3.0 | LicenseRef-MLKit-Terms (custom Google terms, not an SPDX-listed license) | Bundled on-device QR model for the pairing scanner; runs fully offline | `<license><name>` in cached `barcode-scanning-17.3.0.pom` |
+
+The bundled ML Kit model performs no network calls for detection:
+scanning works airplane-mode offline, and no image or scan content
+leaves the phone through this library. The custom terms still need a
+human read before the APK is shared (review item 7).
 
 ## Bundled native components (inside wheels, not the repo)
 
@@ -141,15 +164,21 @@ repo; packaging for redistribution must carry them from these sources.
    unverified (see review list).
 4. Tesseract DLL set — only relevant if the toolset itself is
    redistributed; normal use shells out to an operator install.
+5. ML Kit barcode-scanning (custom ML Kit Terms of Service, not an
+   SPDX-listed license) — ships in the Android APK; human review
+   required before sharing the APK beyond the developer workstation.
+6. Android Maven closure (AndroidX, CameraX, Kotlinx, …) — ships in
+   the APK; per-artifact licenses unverified until M5.
 
 ## Open review items (need a human)
 
 Every pinned dependency is directly inventoried (11 Python pins, 5 npm
-devDependencies, the CPython/pip/Tesseract platform entries, and the
-observed native bundles); the items below are the license questions
-that stay open. The checker prints 8 `REVIEW:` annotations from the
-SPDX file — this list groups them into 6 narrative items (the three
-Pillow static-library annotations share item 3):
+devDependencies, 1 Maven pin, the CPython/pip/Tesseract platform
+entries, and the observed native bundles); the items below are the
+license questions that stay open. The checker prints 10 `REVIEW:`
+annotations from the SPDX file — this list groups them into 8
+narrative items (the three Pillow static-library annotations share
+item 3):
 
 1. Pillow: confirm MIT-CMU versus HPND SPDX mapping with upstream.
 2. FFmpeg DLL: exact version and GPL-free build flags.
@@ -160,6 +189,13 @@ Pillow static-library annotations share item 3):
 6. npm transitive closure: per-package licenses unverified; confirm
    before redistributing `node_modules` (direct deps are MIT/Apache-2.0
    per installed metadata).
+7. ML Kit Terms of Service: custom Google terms (not an SPDX-listed
+   license); a human must confirm redistribution, attribution, and
+   data-processing obligations before the APK is shared beyond the
+   developer workstation.
+8. Android Maven closure: per-artifact POM license fields unverified;
+   inventory each runtime-shipped artifact individually before M5 APK
+   distribution.
 
 The checker prints the same list from the SPDX annotations:
 

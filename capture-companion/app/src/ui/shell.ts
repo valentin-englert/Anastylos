@@ -16,7 +16,8 @@ export type Route =
   | { name: 'session'; id: string }
   | { name: 'inspect'; id: string | null }
   | { name: 'bom' }
-  | { name: 'export' };
+  | { name: 'export' }
+  | { name: 'sync' };
 
 export interface Selection {
   sessionId: string | null;
@@ -49,6 +50,8 @@ export function routeToHash(route: Route): string {
       return '#/bom';
     case 'export':
       return '#/export';
+    case 'sync':
+      return '#/sync';
   }
 }
 
@@ -59,6 +62,7 @@ export function hashToRoute(hash: string): Route {
   if (parts[0] === 'inspect') return { name: 'inspect', id: parts[1] ?? null };
   if (parts[0] === 'bom') return { name: 'bom' };
   if (parts[0] === 'export') return { name: 'export' };
+  if (parts[0] === 'sync') return { name: 'sync' };
   return { name: 'capture' };
 }
 
@@ -66,6 +70,7 @@ export function hashToRoute(hash: string): Route {
  *  They surface through contextual links and, on wide screens, a quiet rail link. */
 const SECONDARY_TABS: Array<{ hash: string; label: string; route: Route['name'] }> = [
   { hash: '#/bom', label: 'BOM draft', route: 'bom' },
+  { hash: '#/sync', label: 'Sync', route: 'sync' },
 ];
 
 export function applyTheme(theme: string): void {

@@ -1,0 +1,817 @@
+{
+ "benchmark": "HARDWARE-01",
+ "date": "2026-10-27",
+ "frozen_config": {
+  "harness_canonical_sha256": "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812",
+  "kit_bytes_sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e",
+  "dictionary": "DICT_5X5_100"
+ },
+ "score": {
+  "pairs": 7,
+  "outcome_ok": 7,
+  "false_positive_pairs": 0,
+  "missed_change_pairs": 0,
+  "expected_boxes": 6,
+  "expected_boxes_hit": 6,
+  "centroid_error_mm_max": 2.36,
+  "registration_valid": 14,
+  "registration_total": 14,
+  "reprojection_rms_mm_max": 0.4787,
+  "reprojection_max_mm_max": 1.4808
+ },
+ "pairs": [
+  {
+   "pair_id": "R01",
+   "expected": "none",
+   "status": "no_change",
+   "n_regions": 0,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": null,
+   "expected_bboxes_hit": null,
+   "unmatched_regions": null,
+   "centroid_error_mm": null,
+   "regions": [],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4636,
+     "max_mm": 1.4414,
+     "rms_px": 3.0277,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.461,
+     "max_mm": 1.4393,
+     "rms_px": 3.0105,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": -0.0121,
+    "dy_mm": 0.0049,
+    "shift_mm": 0.013,
+    "phase_corr_response": 0.9465
+   },
+   "changed_fraction_roi": 0.0,
+   "diff_stats_roi": {
+    "p50": 0.33,
+    "p99": 1.4,
+    "max": 6.89
+   },
+   "result_sha256": "dce6f3fe3da3fc4096ba08f6c1913602fc8fcfde7b11c045a2e9fd6009fd24db"
+  },
+  {
+   "pair_id": "R02",
+   "expected": "none",
+   "status": "no_change",
+   "n_regions": 0,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": null,
+   "expected_bboxes_hit": null,
+   "unmatched_regions": null,
+   "centroid_error_mm": null,
+   "regions": [],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.461,
+     "max_mm": 1.4393,
+     "rms_px": 3.0105,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.459,
+     "max_mm": 1.4152,
+     "rms_px": 2.9983,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": -0.0033,
+    "dy_mm": -0.0041,
+    "shift_mm": 0.0052,
+    "phase_corr_response": 0.9489
+   },
+   "changed_fraction_roi": 0.0,
+   "diff_stats_roi": {
+    "p50": 0.32,
+    "p99": 1.38,
+    "max": 5.56
+   },
+   "result_sha256": "782d2333b38f07927667190547a7005bc813e227cb690bd22c87786c985bd228"
+  },
+  {
+   "pair_id": "R03",
+   "expected": "none",
+   "status": "no_change",
+   "n_regions": 0,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": null,
+   "expected_bboxes_hit": null,
+   "unmatched_regions": null,
+   "centroid_error_mm": null,
+   "regions": [],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.459,
+     "max_mm": 1.4152,
+     "rms_px": 2.9983,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4754,
+     "max_mm": 1.4808,
+     "rms_px": 3.1043,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": 0.0193,
+    "dy_mm": -0.0046,
+    "shift_mm": 0.0198,
+    "phase_corr_response": 0.9462
+   },
+   "changed_fraction_roi": 0.0,
+   "diff_stats_roi": {
+    "p50": 0.3,
+    "p99": 1.36,
+    "max": 7.14
+   },
+   "result_sha256": "817e436866b5dbafe02d8a65581657bb123bc8d4bec33663ad081bb1c6f89387"
+  },
+  {
+   "pair_id": "R04",
+   "expected": "single",
+   "status": "single_change",
+   "n_regions": 1,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": 1,
+   "expected_bboxes_hit": 1,
+   "unmatched_regions": [],
+   "centroid_error_mm": [
+    1.55
+   ],
+   "regions": [
+    {
+     "label": "R1",
+     "bbox_mm": [
+      174.5,
+      128.75,
+      19.75,
+      8.75
+     ],
+     "centroid_mm": [
+      184.58,
+      131.99
+     ],
+     "area_mm2": 93.0,
+     "sign": "darker_after"
+    }
+   ],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4754,
+     "max_mm": 1.4808,
+     "rms_px": 3.1043,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4283,
+     "max_mm": 1.3135,
+     "rms_px": 2.8093,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": -0.0199,
+    "dy_mm": 0.0216,
+    "shift_mm": 0.0294,
+    "phase_corr_response": 0.9326
+   },
+   "changed_fraction_roi": 0.00197,
+   "diff_stats_roi": {
+    "p50": 0.38,
+    "p99": 6.84,
+    "max": 91.71
+   },
+   "result_sha256": "c66d108f7c68240f60127342e369f52f893d209a49e0a2b790951bebcc26d540"
+  },
+  {
+   "pair_id": "R05",
+   "expected": "multiple",
+   "status": "multiple_changes",
+   "n_regions": 2,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": 2,
+   "expected_bboxes_hit": 2,
+   "unmatched_regions": [],
+   "centroid_error_mm": [
+    2.28,
+    1.59
+   ],
+   "regions": [
+    {
+     "label": "R1",
+     "bbox_mm": [
+      323.5,
+      53.25,
+      16.25,
+      19.0
+     ],
+     "centroid_mm": [
+      330.74,
+      63.04
+     ],
+     "area_mm2": 123.0,
+     "sign": "darker_after"
+    },
+    {
+     "label": "R2",
+     "bbox_mm": [
+      174.5,
+      128.75,
+      19.75,
+      8.75
+     ],
+     "centroid_mm": [
+      184.64,
+      131.96
+     ],
+     "area_mm2": 92.38,
+     "sign": "brighter_after"
+    }
+   ],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4283,
+     "max_mm": 1.3135,
+     "rms_px": 2.8093,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4645,
+     "max_mm": 1.4307,
+     "rms_px": 3.0356,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": 0.0042,
+    "dy_mm": -0.0093,
+    "shift_mm": 0.0102,
+    "phase_corr_response": 0.9342
+   },
+   "changed_fraction_roi": 0.00457,
+   "diff_stats_roi": {
+    "p50": 0.39,
+    "p99": 10.0,
+    "max": 91.99
+   },
+   "result_sha256": "d6c00acf1a52a58a3983e691df39da92c89bc174a0986bda1af7aae704cac8bc"
+  },
+  {
+   "pair_id": "R06",
+   "expected": "multiple",
+   "status": "multiple_changes",
+   "n_regions": 2,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": 2,
+   "expected_bboxes_hit": 2,
+   "unmatched_regions": [],
+   "centroid_error_mm": [
+    1.18,
+    2.36
+   ],
+   "regions": [
+    {
+     "label": "R1",
+     "bbox_mm": [
+      355.5,
+      54.25,
+      15.5,
+      19.75
+     ],
+     "centroid_mm": [
+      362.18,
+      64.45
+     ],
+     "area_mm2": 126.69,
+     "sign": "darker_after"
+    },
+    {
+     "label": "R2",
+     "bbox_mm": [
+      323.5,
+      53.25,
+      16.5,
+      19.0
+     ],
+     "centroid_mm": [
+      330.78,
+      63.11
+     ],
+     "area_mm2": 126.12,
+     "sign": "brighter_after"
+    }
+   ],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4645,
+     "max_mm": 1.4307,
+     "rms_px": 3.0356,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4717,
+     "max_mm": 1.4535,
+     "rms_px": 3.0805,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": 0.0058,
+    "dy_mm": -0.0075,
+    "shift_mm": 0.0094,
+    "phase_corr_response": 0.9513
+   },
+   "changed_fraction_roi": 0.00536,
+   "diff_stats_roi": {
+    "p50": 0.33,
+    "p99": 6.12,
+    "max": 100.85
+   },
+   "result_sha256": "e0648adcd55e6461bd8ebed350fcbf5d8216d1fc0d38733df94ae96c1e0681dd"
+  },
+  {
+   "pair_id": "R07",
+   "expected": "single",
+   "status": "single_change",
+   "n_regions": 1,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "expected_bboxes": 1,
+   "expected_bboxes_hit": 1,
+   "unmatched_regions": [],
+   "centroid_error_mm": [
+    1.15
+   ],
+   "regions": [
+    {
+     "label": "R1",
+     "bbox_mm": [
+      355.5,
+      54.25,
+      15.5,
+      19.5
+     ],
+     "centroid_mm": [
+      362.14,
+      64.35
+     ],
+     "area_mm2": 124.19,
+     "sign": "brighter_after"
+    }
+   ],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4717,
+     "max_mm": 1.4535,
+     "rms_px": 3.0805,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4787,
+     "max_mm": 1.472,
+     "rms_px": 3.1264,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": -0.0042,
+    "dy_mm": 0.0088,
+    "shift_mm": 0.0098,
+    "phase_corr_response": 0.9487
+   },
+   "changed_fraction_roi": 0.00263,
+   "diff_stats_roi": {
+    "p50": 0.33,
+    "p99": 3.38,
+    "max": 99.66
+   },
+   "result_sha256": "29d52e890dee95e1b12ce10ecda0ed3502778cbedd608921820489aef06492e0"
+  }
+ ],
+ "tray": {
+  "R01": {
+   "verdicts": {
+    "T1": "unchanged",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "unchanged",
+   "proposed_links": []
+  },
+  "R02": {
+   "verdicts": {
+    "T1": "unchanged",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "unchanged",
+   "proposed_links": []
+  },
+  "R03": {
+   "verdicts": {
+    "T1": "unchanged",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "unchanged",
+   "proposed_links": []
+  },
+  "R04": {
+   "verdicts": {
+    "T1": "unchanged",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "addition",
+   "proposed_links": []
+  },
+  "R05": {
+   "verdicts": {
+    "T1": "addition",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "removal",
+   "proposed_links": [
+    {
+     "from_device_region": "R2",
+     "to_tray": "T1",
+     "to_tray_region": "R1",
+     "basis": "removal and addition observed in the same before/after pair",
+     "area_ratio": 0.751,
+     "requires_confirmation": true,
+     "assertion": "not the same object; co-occurrence only"
+    }
+   ]
+  },
+  "R06": {
+   "verdicts": {
+    "T1": "removal",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "addition",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "unchanged",
+   "proposed_links": []
+  },
+  "R07": {
+   "verdicts": {
+    "T1": "unchanged",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "removal",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "unchanged",
+   "proposed_links": []
+  }
+ },
+ "memory_import": {
+  "session": "hardware-01/memory_test (disposable)",
+  "events": [
+   {
+    "id": "obs-0001",
+    "type": "observation",
+    "pair": "R04",
+    "region": "R1"
+   },
+   {
+    "id": "obs-0002",
+    "type": "observation",
+    "pair": "R05",
+    "region": "R1"
+   },
+   {
+    "id": "obs-0003",
+    "type": "observation",
+    "pair": "R05",
+    "region": "R2"
+   }
+  ],
+  "tray_links": 0,
+  "unconfirmed_link_rejected": true
+ },
+ "environment": {
+  "python": "3.12.10",
+  "opencv": "4.14.0",
+  "numpy": "2.5.4",
+  "pillow": "13.0.0",
+  "platform": "Windows-11-10.0.26300-SP0"
+ },
+ "artifact_sha256": {
+  "manifest.csv": "d7a9f42e27bb0cf57ee13c5ded7d2ef536c9e96d051e4fd1820e3f44360e1b1d",
+  "manifest_gt.csv": "62951db8ccaec76fb508ee781a9ae3d21f200b8d3df801d7292e5395ad4da526",
+  "inventory.json": "497e97ba0dba024b16fb8133aa2e529e23ac6877bcf036b84527f4e90163301f",
+  "gt_boxes.json": "27955ee6c0f6f1433b95acbb0b11a28a2dfba6a9fb7a0b9fe098159834d2c2f9",
+  "trays.json": "d127a2602212f07e40e1660f08e868fa83b6e06fdcfa2a08271be36660a8fab9",
+  "results/summary.csv": "0c0d7458684f553ca0902beb265075fbdfe5f96aa86b3b4f3448d1fa6973119a",
+  "results/summary.json": "f769c1c82cdcf7f5bff0173ba7e95855ff8044cc42b473d2a395bf401dcd314d",
+  "results/run_info.json": "fae856f5bd54f6f985dc19394ad303bf9f04d6573488b760530dc3ec6288fc61",
+  "results_scored/summary.csv": "c791ea95c850972354d7dbb111385eea46ba9fecbfd1f22fff0c723b1400df0f",
+  "tray_out/summary.json": "e9c98afb8b48520c6c39d8f9ba97402b536b7cbf4fb1088631b5e5eb13a0b50b",
+  "memory_test/memory.jsonl": "a6d7c5627f229eb20f995f88eb2480d9435886e59aa4bb4f734999a3efbc3836",
+  "measure_gt.py": "8e9b838a11b3d9229ae7f6d6b7f235f05d3f31c396830d9f73a72a77a30c13ba",
+  "build_evaluation.py": "c02a17eb7386916e41156310f39ba71faa27a51e80ddb858f40a6309052cca5b"
+ }
+}

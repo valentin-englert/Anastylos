@@ -1,0 +1,243 @@
+{
+  "pair_id": "R05",
+  "before": "hardware-01\\pairs\\R05_before.jpg",
+  "after": "hardware-01\\pairs\\R05_after.jpg",
+  "status": "multiple_changes",
+  "regions": [
+    {
+      "bbox_px": [
+        1350,
+        269,
+        65,
+        76
+      ],
+      "bbox_mm": [
+        323.5,
+        53.25,
+        16.25,
+        19.0
+      ],
+      "centroid_mm": [
+        330.74,
+        63.04
+      ],
+      "area_px": 1968,
+      "area_mm2": 123.0,
+      "mean_diff": 43.98,
+      "max_diff": 81.41,
+      "sign": "darker_after",
+      "label": "R1"
+    },
+    {
+      "bbox_px": [
+        754,
+        571,
+        79,
+        35
+      ],
+      "bbox_mm": [
+        174.5,
+        128.75,
+        19.75,
+        8.75
+      ],
+      "centroid_mm": [
+        184.64,
+        131.96
+      ],
+      "area_px": 1478,
+      "area_mm2": 92.38,
+      "mean_diff": 49.49,
+      "max_diff": 91.99,
+      "sign": "brighter_after",
+      "label": "R2"
+    }
+  ],
+  "warnings": [],
+  "image_size_before": [
+    3468,
+    4624
+  ],
+  "image_size_after": [
+    3468,
+    4624
+  ],
+  "view_before": {
+    "detected_counts_by_view": {
+      "surface_a3": 7,
+      "surface_a4": 0,
+      "fixture_front": 0,
+      "fixture_back": 0
+    },
+    "unknown_ids": [],
+    "view_auto": "surface_a3",
+    "view_reason": "auto",
+    "detected_ids_by_view": {
+      "surface_a3": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "view": "surface_a3"
+  },
+  "view_after": {
+    "detected_counts_by_view": {
+      "surface_a3": 7,
+      "surface_a4": 0,
+      "fixture_front": 0,
+      "fixture_back": 0
+    },
+    "unknown_ids": [],
+    "view_auto": "surface_a3",
+    "view_reason": "auto",
+    "detected_ids_by_view": {
+      "surface_a3": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "view": "surface_a3"
+  },
+  "view": "surface_a3",
+  "registration_before": {
+    "view": "surface_a3",
+    "valid": true,
+    "reasons": [
+      "1 RANSAC outliers"
+    ],
+    "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "n_markers": 7,
+    "n_corners": 28,
+    "ransac_inliers": 27,
+    "ransac_outliers": 1,
+    "reprojection_rms_mm": 0.4283,
+    "reprojection_max_mm": 1.3135,
+    "reprojection_rms_px": 2.8093,
+    "reprojection_max_px": 8.5832,
+    "H_image_to_frame_mm": [
+      [
+        -0.00010208,
+        0.15365456,
+        -221.48996038
+      ],
+      [
+        -0.15328254,
+        0.00072144,
+        392.52340618
+      ],
+      [
+        1e-08,
+        3.77e-06,
+        1.0
+      ]
+    ]
+  },
+  "registration_after": {
+    "view": "surface_a3",
+    "valid": true,
+    "reasons": [
+      "1 RANSAC outliers"
+    ],
+    "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "n_markers": 7,
+    "n_corners": 28,
+    "ransac_inliers": 27,
+    "ransac_outliers": 1,
+    "reprojection_rms_mm": 0.4645,
+    "reprojection_max_mm": 1.4307,
+    "reprojection_rms_px": 3.0356,
+    "reprojection_max_px": 9.3116,
+    "H_image_to_frame_mm": [
+      [
+        -0.00012625,
+        0.15425658,
+        -222.77856504
+      ],
+      [
+        -0.15389307,
+        0.00076273,
+        393.66114977
+      ],
+      [
+        -1.1e-07,
+        4.08e-06,
+        1.0
+      ]
+    ]
+  },
+  "residual_alignment": {
+    "dx_mm": 0.0042,
+    "dy_mm": -0.0093,
+    "shift_mm": 0.0102,
+    "phase_corr_response": 0.9342
+  },
+  "ecc": {
+    "enabled": false
+  },
+  "n_regions": 2,
+  "discarded_small_components": 0,
+  "roi_area_mm2": 47136.0,
+  "changed_fraction_roi": 0.00457,
+  "diff_stats_roi": {
+    "p50": 0.39,
+    "p99": 10.0,
+    "max": 91.99
+  },
+  "rectified": {
+    "view": "surface_a3",
+    "px_per_mm": 4.0,
+    "size_px": [
+      1696,
+      1204
+    ],
+    "origin_frame_mm": [
+      -14.0,
+      -14.0
+    ]
+  },
+  "processing_s": 0.816,
+  "evaluation": {
+    "expected": "multiple",
+    "outcome_ok": true,
+    "false_positive": false,
+    "missed_change": false,
+    "note": "",
+    "assert": true
+  },
+  "harness_config_sha256": "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812",
+  "kit_config_sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e",
+  "output_files": {
+    "overlay": "overlay.jpg",
+    "diff": "diff.png",
+    "mask": "mask.png",
+    "before_rectified": "before_rectified.jpg",
+    "after_rectified": "after_rectified.jpg",
+    "registration": "registration.jpg"
+  }
+}

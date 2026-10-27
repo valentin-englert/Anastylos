@@ -1,0 +1,127 @@
+{
+  "tool": "ANASTYLOS change detection",
+  "config_meta": {
+    "harness_config_path": "C:\\Users\\HP\\Documents\\Anastylos\\change-detection\\harness-config.json",
+    "harness_config_file_sha256": "3e6a0343f66bb52210586c3c7f32ff59ffa2df1e221049e41b86a84e61372b71",
+    "harness_config_canonical_sha256": "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812",
+    "kit_config_path": "C:\\Users\\HP\\Documents\\Anastylos\\calibration\\calibration-config.json",
+    "kit_config_sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e"
+  },
+  "harness_config_snapshot": {
+    "calibration_config": {
+      "path": "../calibration/calibration-config.json",
+      "sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e"
+    },
+    "registration": {
+      "dictionary": "DICT_5X5_100",
+      "corner_refinement": "CORNER_REFINE_SUBPIX",
+      "view_groups": [
+        [
+          "fixture_front",
+          "fixture_back"
+        ],
+        [
+          "surface_a3",
+          "surface_a4"
+        ]
+      ],
+      "min_markers_view_presence": 1,
+      "min_markers": 3,
+      "ransac_reproj_threshold_mm": 1.0,
+      "max_reprojection_rms_mm": 0.5,
+      "max_reprojection_error_mm": 1.5
+    },
+    "rectification": {
+      "px_per_mm": 4.0,
+      "extent": "fixture_board_outline_or_page",
+      "margin_mm": 2.0
+    },
+    "roi": {
+      "zones_by_view": {
+        "fixture_front": [
+          "controller_window"
+        ],
+        "fixture_back": [
+          "controller_window"
+        ],
+        "surface_a3": [
+          "work_area",
+          "tray_cell"
+        ],
+        "surface_a4": [
+          "work_area",
+          "tray_cell"
+        ]
+      },
+      "shrink_mm": 2.0,
+      "marker_mask_extra_mm": 2.0
+    },
+    "normalization": {
+      "channel": "gray",
+      "method": "local_mean_division",
+      "meanstd_target_std": 32.0,
+      "clahe_clip_limit": 2.0,
+      "clahe_tile_grid": 8,
+      "local_mean_sigma_mm": 15.0
+    },
+    "ecc": {
+      "enabled": false,
+      "motion": "translation",
+      "include_markers": true,
+      "max_iterations": 100,
+      "epsilon": 1e-05,
+      "gauss_filt_size": 5,
+      "max_shift_mm": 2.0,
+      "roi_guard_mm": 5.0
+    },
+    "change": {
+      "pre_blur_sigma_mm": 0.4,
+      "threshold": 30,
+      "open_kernel_mm": 0.75,
+      "close_kernel_mm": 1.5,
+      "min_area_mm2": 3.0
+    },
+    "diagnostics": {
+      "residual_warn_mm": 0.5,
+      "max_changed_fraction_warn": 0.2,
+      "bbox_match_tolerance_mm": 3.0,
+      "overlay_max_width_px": 1600
+    }
+  },
+  "manifest": "hardware-01\\manifest.csv",
+  "views_from_kit": {
+    "surface_a3": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "surface_a4": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "fixture_front": [
+      20,
+      21,
+      22,
+      23,
+      24,
+      25
+    ],
+    "fixture_back": [
+      30,
+      31,
+      32,
+      33,
+      34,
+      35
+    ]
+  },
+  "synthetic": false
+}

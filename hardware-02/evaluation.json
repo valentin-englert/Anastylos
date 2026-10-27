@@ -1,0 +1,499 @@
+{
+ "benchmark": "HARDWARE-02",
+ "date": "2026-10-27",
+ "frozen_config": {
+  "harness_canonical_sha256": "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812",
+  "kit_bytes_sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e"
+ },
+ "score": {
+  "pairs": 4,
+  "outcome_ok": 2,
+  "registration_invalid_pairs": 2,
+  "false_positive_pairs": 1,
+  "expected_boxes_hit": 3,
+  "expected_boxes": 3
+ },
+ "pairs": [
+  {
+   "pair_id": "AB",
+   "expected": "single",
+   "status": "registration_invalid",
+   "n_regions": null,
+   "outcome_ok": false,
+   "false_positive": false,
+   "missed_change": false,
+   "note": "not comparable",
+   "expected_bboxes": null,
+   "expected_bboxes_hit": null,
+   "unmatched_regions": null,
+   "centroid_error_mm": null,
+   "regions": [],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": false,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4833,
+     "max_mm": 1.5026,
+     "reasons": [
+      "1 RANSAC outliers",
+      "max 1.5026 mm > 1.5 mm"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4796,
+     "max_mm": 1.4538,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": null,
+   "changed_fraction_roi": null,
+   "result_sha256": "8d581ba2097a6219b9ff8ce93af6e4c3293fe6e5b02a5d6f671cf95aaaf86449"
+  },
+  {
+   "pair_id": "BC",
+   "expected": "single",
+   "status": "single_change",
+   "n_regions": 1,
+   "outcome_ok": true,
+   "false_positive": false,
+   "missed_change": false,
+   "note": "",
+   "expected_bboxes": 1,
+   "expected_bboxes_hit": 1,
+   "unmatched_regions": [],
+   "centroid_error_mm": [
+    2.18
+   ],
+   "regions": [
+    {
+     "label": "R1",
+     "bbox_mm": [
+      320.75,
+      61.75,
+      9.5,
+      10.0
+     ],
+     "centroid_mm": [
+      324.58,
+      66.16
+     ],
+     "area_mm2": 46.88,
+     "sign": "darker_after",
+     "mean_diff": 63.4,
+     "max_diff": 110.38
+    }
+   ],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4796,
+     "max_mm": 1.4538,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4856,
+     "max_mm": 1.458,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": -0.0206,
+    "dy_mm": -0.0052,
+    "shift_mm": 0.0212,
+    "phase_corr_response": 0.9467
+   },
+   "changed_fraction_roi": 0.00099,
+   "result_sha256": "1834e18d24db09615dcae81f6f463b12365fe937e445bae0e7396f8e86954202"
+  },
+  {
+   "pair_id": "AC",
+   "expected": "multiple",
+   "status": "registration_invalid",
+   "n_regions": null,
+   "outcome_ok": false,
+   "false_positive": false,
+   "missed_change": false,
+   "note": "not comparable",
+   "expected_bboxes": null,
+   "expected_bboxes_hit": null,
+   "unmatched_regions": null,
+   "centroid_error_mm": null,
+   "regions": [],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": false,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4833,
+     "max_mm": 1.5026,
+     "reasons": [
+      "1 RANSAC outliers",
+      "max 1.5026 mm > 1.5 mm"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4856,
+     "max_mm": 1.458,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": null,
+   "changed_fraction_roi": null,
+   "result_sha256": "526cd4f6853c5c75f59ebc614ea977ece8d1c4b50ac65cd1d65c02c82fd6ca96"
+  },
+  {
+   "pair_id": "CD",
+   "expected": "multiple",
+   "status": "multiple_changes",
+   "n_regions": 3,
+   "outcome_ok": true,
+   "false_positive": true,
+   "missed_change": false,
+   "note": "regions outside expected boxes: R3",
+   "expected_bboxes": 2,
+   "expected_bboxes_hit": 2,
+   "unmatched_regions": [
+    "R3"
+   ],
+   "centroid_error_mm": [
+    2.16,
+    0.77
+   ],
+   "regions": [
+    {
+     "label": "R1",
+     "bbox_mm": [
+      320.75,
+      61.75,
+      9.5,
+      10.0
+     ],
+     "centroid_mm": [
+      324.6,
+      66.17
+     ],
+     "area_mm2": 46.56,
+     "sign": "brighter_after",
+     "mean_diff": 63.79,
+     "max_diff": 111.38
+    },
+    {
+     "label": "R2",
+     "bbox_mm": [
+      154.0,
+      81.0,
+      6.75,
+      6.25
+     ],
+     "centroid_mm": [
+      157.25,
+      83.84
+     ],
+     "area_mm2": 33.62,
+     "sign": "brighter_after",
+     "mean_diff": 57.29,
+     "max_diff": 94.06
+    },
+    {
+     "label": "R3",
+     "bbox_mm": [
+      174.75,
+      126.5,
+      3.5,
+      5.0
+     ],
+     "centroid_mm": [
+      176.06,
+      128.89
+     ],
+     "area_mm2": 7.75,
+     "sign": "brighter_after",
+     "mean_diff": 33.76,
+     "max_diff": 40.32
+    }
+   ],
+   "view": "surface_a3",
+   "registration": {
+    "registration_before": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4856,
+     "max_mm": 1.458,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    },
+    "registration_after": {
+     "valid": true,
+     "n_markers": 7,
+     "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "inliers": 27,
+     "corners": 28,
+     "rms_mm": 0.4689,
+     "max_mm": 1.4486,
+     "reasons": [
+      "1 RANSAC outliers"
+     ]
+    }
+   },
+   "residual_alignment": {
+    "dx_mm": 0.0057,
+    "dy_mm": 0.0078,
+    "shift_mm": 0.0097,
+    "phase_corr_response": 0.9412
+   },
+   "changed_fraction_roi": 0.00187,
+   "result_sha256": "bbaaf6e665d476e3d461fa75ccb151211c61a15d1037f027603ab874df81b510"
+  }
+ ],
+ "tray": {
+  "AB": {
+   "detection_status": "registration_invalid",
+   "verdicts": {
+    "T1": "unknown",
+    "T2": "unknown",
+    "T3": "unknown",
+    "T4": "unknown",
+    "T5": "unknown",
+    "T6": "unknown",
+    "T7": "unknown",
+    "T8": "unknown",
+    "T9": "unknown",
+    "T10": "unknown",
+    "T11": "unknown",
+    "T12": "unknown"
+   },
+   "device_verdict": "unknown",
+   "device_reason": "detection registration_invalid is unusable: registration_invalid",
+   "proposed_links": []
+  },
+  "BC": {
+   "detection_status": "single_change",
+   "verdicts": {
+    "T1": "addition",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "unchanged",
+   "device_reason": null,
+   "proposed_links": []
+  },
+  "AC": {
+   "detection_status": "registration_invalid",
+   "verdicts": {
+    "T1": "unknown",
+    "T2": "unknown",
+    "T3": "unknown",
+    "T4": "unknown",
+    "T5": "unknown",
+    "T6": "unknown",
+    "T7": "unknown",
+    "T8": "unknown",
+    "T9": "unknown",
+    "T10": "unknown",
+    "T11": "unknown",
+    "T12": "unknown"
+   },
+   "device_verdict": "unknown",
+   "device_reason": "detection registration_invalid is unusable: registration_invalid",
+   "proposed_links": []
+  },
+  "CD": {
+   "detection_status": "multiple_changes",
+   "verdicts": {
+    "T1": "removal",
+    "T2": "unchanged",
+    "T3": "unchanged",
+    "T4": "unchanged",
+    "T5": "unchanged",
+    "T6": "unchanged",
+    "T7": "unchanged",
+    "T8": "unchanged",
+    "T9": "unchanged",
+    "T10": "unchanged",
+    "T11": "unchanged",
+    "T12": "unchanged"
+   },
+   "device_verdict": "ambiguous",
+   "device_reason": "mixed or weak candidate events in one tray",
+   "proposed_links": []
+  }
+ },
+ "memory_import": {
+  "session": "hardware-02/memory_test (disposable)",
+  "ab_import_refused": true,
+  "events": [
+   {
+    "id": "obs-0001",
+    "type": "observation",
+    "pair": "BC",
+    "region": "R1",
+    "observation_id": null,
+    "confirmed_by": null
+   },
+   {
+    "id": "obs-0002",
+    "type": "observation",
+    "pair": "CD",
+    "region": "R1",
+    "observation_id": null,
+    "confirmed_by": null
+   },
+   {
+    "id": "obs-0003",
+    "type": "observation",
+    "pair": "CD",
+    "region": "R2",
+    "observation_id": null,
+    "confirmed_by": null
+   },
+   {
+    "id": "obs-0004",
+    "type": "observation",
+    "pair": "CD",
+    "region": "R3",
+    "observation_id": null,
+    "confirmed_by": null
+   },
+   {
+    "id": "link-0001",
+    "type": "tray_link",
+    "pair": null,
+    "region": null,
+    "observation_id": "obs-0003",
+    "confirmed_by": "HARDWARE-02-operator"
+   }
+  ]
+ },
+ "environment": {
+  "python": "3.12.10",
+  "opencv": "4.14.0",
+  "numpy": "2.5.4",
+  "platform": "Windows-11-10.0.26300-SP0"
+ },
+ "artifact_sha256": {
+  "manifest.csv": "72f23f6157783a79fbb095859d6d51458e035458153f7870d63845111d7132cd",
+  "manifest_gt.csv": "e9f5df2d864b19a01e285971992889e177465d0f552e6a05401db221acd6f7e0",
+  "inventory.json": "acca3a4dc85c72ff1c2169acfb04dbf355acb2bd1092ffa3018da092f85a7143",
+  "gt_boxes.json": "266ec3e98903ebdefa329ebefc3ffc41438726086e06eb63d195aae09f293c9a",
+  "trays.json": "d127a2602212f07e40e1660f08e868fa83b6e06fdcfa2a08271be36660a8fab9",
+  "results/summary.csv": "d1578259624f2f0217389c9f0822e54cf1346063344172bf56e3788ebb79debb",
+  "results/summary.json": "da15b33199b267ab1ca26efce31db75b3983ec9c89862d368ee654eb5e182a8c",
+  "results_scored/summary.csv": "a93dd6e9315e4e061d0ac5e30fd7f8de17688d9d89b6c9a95d98a915396f361c",
+  "tray_out/summary.json": "13bd5bd4f4f8fe0d2c13465dddb9d4deb634ab653f9eb710e0584b18ff708d84",
+  "memory_test/memory.jsonl": "829d7bed692104e1fef2abcf04a8fdb34226637461ea26c6999e1c8b01e1677d",
+  "measure_gt.py": "453c9bf9f4ce1d367e55e9cd22b535908f31d172adbbec49e777a8d51690a78a",
+  "build_evaluation.py": "7afa07ddc263b372ce64e58724428ed79dac0256d42f9bc00e54e87b4b460afa"
+ }
+}

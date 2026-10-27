@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Workstation secrets never leave the device through backup transports.
+  secret_prefs.xml is owned by EncryptedPairingStore (sync/PairingStore.kt):
+  endpoint, workstation id, Bearer token, pinned certificate fingerprint.
+  pairing_preferences stays reserved for the M2 QR pairing state.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="secret_prefs.xml" />
+    <exclude domain="file" path="datastore/pairing_preferences.preferences_pb" />
+</full-backup-content>

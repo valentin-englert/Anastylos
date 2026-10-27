@@ -1,0 +1,42 @@
+[
+ {
+  "file": "20261027_154711.jpg",
+  "label": "A",
+  "bytes": 4177171,
+  "sha256": "fa87e48f86a935524c829fc64acc860cb7cddfb067ce85e1499eb1e88ce60b31",
+  "width_px": 4624,
+  "height_px": 3468,
+  "exif272": "SM-A536B",
+  "exif306": "2026:10:27 15:47:11"
+ },
+ {
+  "file": "20261027_154809.jpg",
+  "label": "B",
+  "bytes": 4166746,
+  "sha256": "c89f0537877aa62a1e9eee472c7bc775faad6a0bc24a0ee6d618d5752edfd498",
+  "width_px": 4624,
+  "height_px": 3468,
+  "exif272": "SM-A536B",
+  "exif306": "2026:10:27 15:48:09"
+ },
+ {
+  "file": "20261027_154824.jpg",
+  "label": "C",
+  "bytes": 4162954,
+  "sha256": "2291e2e2ee36e30ad3b45544962e940176d61bed9feb6dc46b727cdbf1011aa2",
+  "width_px": 4624,
+  "height_px": 3468,
+  "exif272": "SM-A536B",
+  "exif306": "2026:10:27 15:48:24"
+ },
+ {
+  "file": "20261027_154901.jpg",
+  "label": "D",
+  "bytes": 3975021,
+  "sha256": "7fc3a603f319a910e0cc8817ccf7083df6ae75f1bcda20a36b78d75efe5116a9",
+  "width_px": 4624,
+  "height_px": 3468,
+  "exif272": "SM-A536B",
+  "exif306": "2026:10:27 15:49:01"
+ }
+]

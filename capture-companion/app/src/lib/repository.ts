@@ -211,6 +211,20 @@ export class Repository {
     }
   }
 
+  /** Record a workstation-confirmed sync. Called only after the receiver
+   *  validates and stages the package; a failed upload marks nothing, so
+   *  the evidence stays pending and retryable. */
+  async markSynced(observationIds: string[], packageId: string, exportedAt: string): Promise<void> {
+    for (const id of observationIds) {
+      const obs = await this.getObservation(id);
+      if (!obs) continue;
+      if (!obs.export_history.some((h) => h.package_id === packageId)) {
+        obs.export_history.push({ package_id: packageId, exported_at: exportedAt, via: 'sync' });
+        await this.saveObservation(obs);
+      }
+    }
+  }
+
   // -- images -------------------------------------------------------------
 
   async listImages(observationId: string): Promise<EvidenceImage[]> {

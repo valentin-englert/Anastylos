@@ -1,0 +1,5 @@
+pair_id,expected,expected_bbox_mm,view,assert,notes
+AB,single,"154.5,80,7,8",surface_a3,1,top-left case screw removed; GT = mounting site from D (same hole); pair unscored (registration invalid)
+BC,single,"319.5,59,14.5,14",surface_a3,1,screw placed in tray 1
+AC,multiple,"154.5,80,7,8;319.5,59,14.5,14",surface_a3,1,case removal + tray addition; pair unscored (registration invalid)
+CD,multiple,"319.5,59,14.5,14;154.5,80,7,8",surface_a3,1,tray removal + case reinstallation

@@ -1,0 +1,8 @@
+pair_id,expected,expected_bbox_mm,view,assert,notes
+R01,none,,surface_a3,1,"144110->144119; screw outside sheet only; person leg moves at left frame edge (out of ROI)"
+R02,none,,surface_a3,1,"144119->144130; screw outside sheet only; person foot moves at left frame edge (out of ROI)"
+R03,none,,surface_a3,1,"144130->144138; screw outside sheet only; minor framing/exposure drift"
+R04,single,,surface_a3,1,"144138->144153; small metallic screw added to work area; outside-sheet screw disappears (out of ROI)"
+R05,multiple,,surface_a3,1,"144153->144201; screw moves work area -> tray 1 (removal + addition)"
+R06,multiple,,surface_a3,1,"144201->144207; screw moves tray 1 -> tray 7 (removal + addition)"
+R07,single,,surface_a3,1,"144207->144215; screw removed from tray 7; sheet fully empty"

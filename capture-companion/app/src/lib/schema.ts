@@ -123,7 +123,9 @@ export interface ComponentObservation {
     app_version: string;
     user_agent: string | null;
   };
-  export_history: Array<{ package_id: string; exported_at: string }>;
+  /** Local file exports carry no `via`; network sync marks `via: 'sync'`.
+   *  Absent means a legacy/local export — the transport marker is advisory. */
+  export_history: Array<{ package_id: string; exported_at: string; via?: 'file' | 'sync' }>;
 }
 
 export interface EvidenceImage {

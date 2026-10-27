@@ -1,0 +1,18 @@
+{
+ "boxes_mm": {
+  "tray_C": [
+   319.5,
+   59.0,
+   14.5,
+   14.0
+  ],
+  "case_D": [
+   154.5,
+   80.0,
+   7.0,
+   8.0
+  ]
+ },
+ "frame": "surface_a3 rectified, origin [-14,-14] mm, 4 px/mm",
+ "note": "sheet-fixed frame: case_D box also valid for AB/AC (same hole)"
+}

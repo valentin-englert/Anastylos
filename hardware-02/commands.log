@@ -1,0 +1,72 @@
+# HARDWARE-02 command log (chronological, Windows PowerShell)
+# Repo root: C:\Users\HP\Documents\Anastylos ; HEAD a49c4e3 (main)
+# Python: .\.venv\Scripts\python.exe (3.12.10, cv2 4.14.0, numpy 2.5.4).
+# Every python invocation ran with one-time human approval (sandbox
+# escalation). Originals in C:\ANASTYLOS\incoming were only READ.
+
+# --- 1. repo state ---------------------------------------------------------
+git status --short
+git branch --show-current            # main
+git rev-parse HEAD                    # a49c4e3 (same as HARDWARE-01)
+git worktree list                     # . + ../Anastylos-capture-ux (untouched)
+# incoming present: 20261027_154711/154809/154824/154901.jpg
+# Docs (AGENTS.md, ARCHITECTURE.md, module READMEs) read in full during
+# HARDWARE-01 earlier this session; git shows them unmodified since.
+
+# --- 2. isolate originals + inventory + inspection crops -------------------
+New-Item -ItemType Directory -Force -Path hardware-02\originals, hardware-02\pairs, hardware-02\results
+# per file: Copy-Item C:\ANASTYLOS\incoming\<f> hardware-02\originals\<f>
+# then Get-FileHash SHA256 source vs copy; all 4 matched:
+# 154711 FA87E48F...60B31 | 154809 C89F0537...FD498
+# 154824 2291E2E2...01AA2 | 154901 7FC3A603...5116A9
+.\.venv\Scripts\python.exe -c "import json,hashlib,os; from PIL import Image; ..."
+# -> hardware-02/inventory.json (4624x3468 raw, SM-A536B, EXIF times)
+# -> hardware-02/casecrop_{A,B,C,D}.jpg (center 1900x1500, label check)
+# -> hardware-02/traycrop_{C,D}.jpg (top-right quadrant, tray check)
+
+# --- 3. stage pairs --------------------------------------------------------
+# AB: 154711->154809 | BC: 154809->154824 | AC: 154711->154824 | CD: 154824->154901
+# (Copy-Item originals -> pairs\<ID>_before.jpg / <ID>_after.jpg)
+# manifest.csv written directly (counts only; see file)
+
+# --- 4. frozen baseline (config gate enforced) -----------------------------
+.\.venv\Scripts\python.exe change-detection/detect.py run --input hardware-02/pairs --out hardware-02/results --view surface_a3 --manifest hardware-02/manifest.csv --require-config-sha256 a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812
+# AB registration_invalid | AC registration_invalid | BC single(1) | CD multiple(3)
+
+# --- 5. registration-failure diagnosis (read-only reuse, no edits) --------
+# per-corner reprojection ranking via Kit/detect_markers + findHomography
+# -> marker 10 corner 0 worst in A/B/C/D (1.45-1.50mm)
+# same ranking over hardware-01/originals/*.jpg -> 10:0 worst in all 8
+# crops: marker10_{A,B}.png, corners_A.png (all quads + indices),
+#        corner10_{0,2}.png (4x closeups, print clean)
+
+# --- 6. ground truth (single-image, then visual check) ---------------------
+.\.venv\Scripts\python.exe hardware-02/measure_gt.py   # 3 window iterations for
+# case box (rim exclusions); final: tray [319.5,59,14.5,14], case [154.5,80,7,8]
+# -> gt_boxes.json, manifest_gt.csv, gt_check/{tray_C,case_D}.png
+
+# --- 7. scored re-run (same frozen config, separate dir) -------------------
+.\.venv\Scripts\python.exe change-detection/detect.py run --input hardware-02/pairs --out hardware-02/results_scored --view surface_a3 --manifest hardware-02/manifest_gt.csv --require-config-sha256 a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812
+# BC 1/1 boxes, CD 2/2 + R3 unmatched, AB/AC not comparable
+
+# --- 8. tray counter -------------------------------------------------------
+# trays.json generated from calibration-config.json surface_a3 zones verbatim
+.\.venv\Scripts\python.exe tray-counter/count.py --config hardware-02/trays.json --pairs-dir hardware-02/results --out hardware-02/tray_out
+# (stderr warnings for missing AB/AC rectified images are expected; the
+# counter reports unknown with reasons and completes all 4 pairs)
+
+# --- 9. assembly memory (disposable hardware-02/memory_test) ---------------
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test import --result-json hardware-02/results/AB/result.json --kit calibration/calibration-config.json
+# -> ValidationError: registration_invalid ... refusing import (nothing written)
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test import --result-json hardware-02/results/BC/result.json --kit calibration/calibration-config.json  # obs-0001
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test import --result-json hardware-02/results/CD/result.json --kit calibration/calibration-config.json  # obs-0002/3/4 (R1/R2/R3)
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test where --observation obs-0003   # unassigned
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test record tray-link --observation obs-0003 --sheet surface_a3 --tray 1
+# -> rejected (needs evidence or --confirmed-by)
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test record tray-link --observation obs-0003 --sheet surface_a3 --tray 1 --confirmed-by HARDWARE-02-operator  # link-0001
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test where --tray 1 --sheet surface_a3   # located + mounting evidence
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test where --observation obs-0003        # assigned
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-02/memory_test where --tray 2 --sheet surface_a3   # unknown
+
+# --- 10. evaluation bundle -------------------------------------------------
+.\.venv\Scripts\python.exe hardware-02/build_evaluation.py  # -> evaluation.json

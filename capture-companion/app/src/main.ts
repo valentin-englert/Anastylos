@@ -7,6 +7,7 @@ import { renderSessionsView, renderSessionDetailView } from './ui/view-sessions.
 import { renderInspectorView } from './ui/view-inspector.js';
 import { renderBomView } from './ui/view-bom.js';
 import { renderExportView } from './ui/view-export.js';
+import { renderSyncView } from './ui/view-sync.js';
 import { el } from './ui/dom.js';
 import './styles.css';
 
@@ -39,6 +40,7 @@ async function main(): Promise<void> {
     inspect: renderInspectorView,
     bom: renderBomView,
     export: renderExportView,
+    sync: renderSyncView,
   });
 
   if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {

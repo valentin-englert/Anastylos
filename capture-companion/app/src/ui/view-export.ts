@@ -202,9 +202,9 @@ function syncPanel(): HTMLElement {
   const panel = el('section', { class: 'panel export-sync', 'aria-label': 'Network synchronization' });
   panel.append(
     el('h2', {}, 'Sync'),
-    el('p', {}, 'Network synchronization: unavailable.'),
+    el('p', {}, 'Network synchronization is available. ', el('a', { href: '#/sync' }, 'Open the Sync screen'), ' to pair a workstation and push this same package format over TLS.'),
     el('p', { class: 'muted' },
-      'This version moves evidence by exported package files only. A future authenticated pairing protocol is designed in SYNC_PROTOCOL.md but not implemented.'),
+      'Sync is operator-triggered and optional: this ZIP download stays the offline fallback, and the protocol is documented in SYNC_PROTOCOL.md.'),
   );
   return panel;
 }

@@ -1,0 +1,83 @@
+# HARDWARE-01 command log (chronological, Windows PowerShell)
+# Repo root: C:\Users\HP\Documents\Anastylos
+# Python that works here: .\.venv\Scripts\python.exe (3.12.10). It resolves
+# its base interpreter outside the sandbox, so every python invocation below
+# ran with one-time human approval (sandbox escalation). No other escalation.
+# Originals in C:\ANASTYLOS\incoming were only READ (copied + hashed).
+
+# --- 1. repo state ---------------------------------------------------------
+git status
+git branch --show-current            # main
+git rev-parse HEAD                    # a49c4e31ddae5e0baa69e086ff0eb1ef5cec501b
+git worktree list                     # . + ../Anastylos-capture-ux (untouched)
+Get-ChildItem C:\ANASTYLOS\incoming   # 8 files present
+
+# --- 2. environment check --------------------------------------------------
+Get-Content .venv\pyvenv.cfg
+.\.venv\Scripts\python.exe --version  # Python 3.12.10
+.\.venv\Scripts\python.exe -c "import cv2, numpy, sys; print(sys.version); print('cv2', cv2.__version__); print('numpy', numpy.__version__)"
+# cv2 4.14.0, numpy 2.5.4
+
+# --- 3. isolate originals (byte copies + hash check) -----------------------
+New-Item -ItemType Directory -Force -Path hardware-01\originals
+New-Item -ItemType Directory -Force -Path hardware-01\pairs
+New-Item -ItemType Directory -Force -Path hardware-01\results
+# per file: Copy-Item C:\ANASTYLOS\incoming\<f> hardware-01\originals\<f>
+# then Get-FileHash -Algorithm SHA256 on source and copy; all 8 matched.
+
+# --- 4. inventory: bytes, dims, EXIF -> hardware-01/inventory.json ---------
+.\.venv\Scripts\python.exe -c "import json,hashlib,os; from PIL import Image; ..."
+# (hashlib sha256 + PIL size/mode/EXIF per file; see inventory.json)
+
+# --- 5. stage pairs --------------------------------------------------------
+# Copy-Item hardware-01\originals\<before>.jpg hardware-01\pairs\R0X_before.jpg
+# Copy-Item hardware-01\originals\<after>.jpg  hardware-01\pairs\R0X_after.jpg
+# R01 144110->144119, R02 144119->144130, R03 144130->144138, R04 144138->144153,
+# R05 144153->144201, R06 144201->144207, R07 144207->144215
+
+# --- 6. manifest (counts only; written directly, see hardware-01/manifest.csv)
+
+# --- 7. frozen baseline (config gate enforced) -----------------------------
+(Get-FileHash -Algorithm SHA256 calibration\calibration-config.json).Hash
+# a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e (matches pin)
+.\.venv\Scripts\python.exe change-detection/detect.py run --input hardware-01/pairs --out hardware-01/results --view surface_a3 --manifest hardware-01/manifest.csv --require-config-sha256 a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812
+# 7 pairs | false alarms 0 | missed 0 | mismatches 0
+
+# --- 8. ground-truth measurement (single-image, independent of diff) -------
+.\.venv\Scripts\python.exe hardware-01/measure_gt.py     # -> gt_boxes.json, manifest_gt.csv, gt_check/*.png
+# (two threshold iterations during development: bg-30, then bg-45 final;
+# final script state is what is committed in hardware-01/measure_gt.py)
+
+# --- 9. bbox-scored re-run (same frozen config, separate dir) --------------
+.\.venv\Scripts\python.exe change-detection/detect.py run --input hardware-01/pairs --out hardware-01/results_scored --view surface_a3 --manifest hardware-01/manifest_gt.csv --require-config-sha256 a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812
+# 7 pairs | false alarms 0 | missed 0 | mismatches 0 ; 6/6 boxes hit
+
+# --- 10. scale-consistency probes (diagnostic, see report) ------------------
+# ruler crop: cv2.imread R04_after -> img[830:1080, 150:3320] -> ruler_check_top.png
+# tick transform with registration_after H_image_to_frame_mm (400/200/100mm spans)
+# sheet strip: img[2480:2620, :] -> sheet_width_strip.png
+
+# --- 11. tray counter ------------------------------------------------------
+# trays.json generated from calibration-config.json surface_a3 zones verbatim
+# (12x tray_cell + work_area as device_area; params min_overlap 0.5,
+# delta_threshold 8.0, surface light)
+.\.venv\Scripts\python.exe tray-counter/count.py --config hardware-01/trays.json --pairs-dir hardware-01/results --out hardware-01/tray_out
+
+# --- 12. assembly memory (disposable session hardware-01/memory_test) -------
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-01/memory_test import --result-json hardware-01/results/R04/result.json --kit calibration/calibration-config.json
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-01/memory_test import --result-json hardware-01/results/R05/result.json --kit calibration/calibration-config.json
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-01/memory_test where --observation obs-0001
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-01/memory_test where --tray 1 --sheet surface_a3
+.\.venv\Scripts\python.exe assembly-memory/memory.py --session-dir hardware-01/memory_test record tray-link --observation obs-0002 --sheet surface_a3 --tray 1
+# -> rejected: "tray-link needs evidence or --confirmed-by" (nothing written)
+
+# --- 13. regression: unit suites + synthetic selftest + compliance ---------
+cd change-detection;   ..\.venv\Scripts\python.exe -m unittest discover -s tests  # 3 OK
+cd tray-counter;       ..\.venv\Scripts\python.exe -m unittest discover -s tests  # 14 OK
+cd assembly-memory;    ..\.venv\Scripts\python.exe -m unittest discover -s tests  # 21 OK
+cd calibration;        ..\.venv\Scripts\python.exe -m unittest discover -s tests  # 13 run: 9 pass, 1 failure + 3 errors (known Cairo/poppler gap)
+.\.venv\Scripts\python.exe change-detection/detect.py selftest --seed 20261026     # 16/16
+.\.venv\Scripts\python.exe tools/compliance/check.py                              # 0 errors, 8 open reviews
+
+# --- 14. evaluation bundle -------------------------------------------------
+.\.venv\Scripts\python.exe hardware-01/build_evaluation.py  # -> hardware-01/evaluation.json

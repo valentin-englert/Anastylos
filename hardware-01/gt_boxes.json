@@ -1,0 +1,96 @@
+{
+ "boxes_mm": {
+  "work_R04after": [
+   173.25,
+   127.0,
+   22.0,
+   13.0
+  ],
+  "work_R05before": [
+   173.25,
+   127.0,
+   22.0,
+   13.0
+  ],
+  "tray1_R05after": [
+   322.0,
+   52.0,
+   15.0,
+   18.25
+  ],
+  "tray1_R06before": [
+   322.0,
+   52.0,
+   15.0,
+   18.25
+  ],
+  "tray7_R06after": [
+   354.25,
+   53.0,
+   17.75,
+   21.5
+  ],
+  "tray7_R07before": [
+   354.25,
+   53.0,
+   17.75,
+   21.5
+  ]
+ },
+ "areas": {
+  "work_R04after": {
+   "largest_mm2": 105.8,
+   "ranked_mm2": [
+    105.8,
+    0.8,
+    0.5,
+    0.2
+   ]
+  },
+  "work_R05before": {
+   "largest_mm2": 105.8,
+   "ranked_mm2": [
+    105.8,
+    0.8,
+    0.5,
+    0.2
+   ]
+  },
+  "tray1_R05after": {
+   "largest_mm2": 77.4,
+   "ranked_mm2": [
+    77.4,
+    12.9,
+    3.5,
+    0.2
+   ]
+  },
+  "tray1_R06before": {
+   "largest_mm2": 77.4,
+   "ranked_mm2": [
+    77.4,
+    12.9,
+    3.5,
+    0.2
+   ]
+  },
+  "tray7_R06after": {
+   "largest_mm2": 105.1,
+   "ranked_mm2": [
+    105.1,
+    0.1,
+    0.1
+   ]
+  },
+  "tray7_R07before": {
+   "largest_mm2": 105.1,
+   "ranked_mm2": [
+    105.1,
+    0.1,
+    0.1
+   ]
+  }
+ },
+ "method": "single-image gray<180 largest-CC +1mm margin, snapped 0.25mm",
+ "frame": "surface_a3 rectified, origin [-14,-14] mm, 4 px/mm"
+}

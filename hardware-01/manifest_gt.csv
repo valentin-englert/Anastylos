@@ -1,0 +1,8 @@
+pair_id,expected,expected_bbox_mm,view,assert,notes
+R01,none,,surface_a3,1,verified empty in-ROI; out-of-sheet screw + person at frame edge
+R02,none,,surface_a3,1,verified empty in-ROI; out-of-sheet screw + person at frame edge
+R03,none,,surface_a3,1,verified empty in-ROI; out-of-sheet screw only
+R04,single,"173.25,127,22,13",surface_a3,1,screw added to work area; GT box measured single-image (see gt_boxes.json)
+R05,multiple,"322,52,15,18.25;173.25,127,22,13",surface_a3,1,screw work area -> tray 1; GT boxes measured single-image
+R06,multiple,"354.25,53,17.75,21.5;322,52,15,18.25",surface_a3,1,screw tray 1 -> tray 7; GT boxes measured single-image
+R07,single,"354.25,53,17.75,21.5",surface_a3,1,screw removed from tray 7; GT box measured single-image

@@ -1,0 +1,5 @@
+pair_id,status,expected,outcome_ok,false_positive,missed_change,n_regions,expected_bboxes,expected_bboxes_hit,unmatched_regions,centroid_error_mm,region_bboxes_mm,view_before,view_after,markers_before,markers_after,reproj_rms_mm_before,reproj_rms_mm_after,residual_shift_mm,changed_fraction_roi,note,assert,warnings
+AB,registration_invalid,single,0,0,0,,,,,,,surface_a3,surface_a3,7,7,0.4833,0.4796,,,not comparable,1,"registration invalid: before: 1 RANSAC outliers, max 1.5026 mm > 1.5 mm"
+AC,registration_invalid,multiple,0,0,0,,,,,,,surface_a3,surface_a3,7,7,0.4833,0.4856,,,not comparable,1,"registration invalid: before: 1 RANSAC outliers, max 1.5026 mm > 1.5 mm"
+BC,single_change,single,1,0,0,1,1,1,,2.18,"320.75,61.75,9.5,10.0",surface_a3,surface_a3,7,7,0.4796,0.4856,0.0212,0.00099,,1,
+CD,multiple_changes,multiple,1,1,0,3,2,2,R3,2.16 0.77,"320.75,61.75,9.5,10.0 | 154.0,81.0,6.75,6.25 | 174.75,126.5,3.5,5.0",surface_a3,surface_a3,7,7,0.4856,0.4689,0.0097,0.00187,regions outside expected boxes: R3,1,

@@ -1,0 +1,162 @@
+{
+  "pair_id": "AB",
+  "before": "hardware-02\\pairs\\AB_before.jpg",
+  "after": "hardware-02\\pairs\\AB_after.jpg",
+  "status": "registration_invalid",
+  "regions": [],
+  "warnings": [
+    "registration invalid: before: 1 RANSAC outliers, max 1.5026 mm > 1.5 mm"
+  ],
+  "image_size_before": [
+    3468,
+    4624
+  ],
+  "image_size_after": [
+    3468,
+    4624
+  ],
+  "view_before": {
+    "detected_counts_by_view": {
+      "surface_a3": 7,
+      "surface_a4": 0,
+      "fixture_front": 0,
+      "fixture_back": 0
+    },
+    "unknown_ids": [],
+    "view_auto": "surface_a3",
+    "view_reason": "auto",
+    "detected_ids_by_view": {
+      "surface_a3": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "view": "surface_a3"
+  },
+  "view_after": {
+    "detected_counts_by_view": {
+      "surface_a3": 7,
+      "surface_a4": 0,
+      "fixture_front": 0,
+      "fixture_back": 0
+    },
+    "unknown_ids": [],
+    "view_auto": "surface_a3",
+    "view_reason": "auto",
+    "detected_ids_by_view": {
+      "surface_a3": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "view": "surface_a3"
+  },
+  "view": "surface_a3",
+  "registration_before": {
+    "view": "surface_a3",
+    "valid": false,
+    "reasons": [
+      "1 RANSAC outliers",
+      "max 1.5026 mm > 1.5 mm"
+    ],
+    "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "n_markers": 7,
+    "n_corners": 28,
+    "ransac_inliers": 27,
+    "ransac_outliers": 1,
+    "reprojection_rms_mm": 0.4833,
+    "reprojection_max_mm": 1.5026,
+    "reprojection_rms_px": 3.1379,
+    "reprojection_max_px": 9.712,
+    "H_image_to_frame_mm": [
+      [
+        0.0013184,
+        0.15677699,
+        -232.77400255
+      ],
+      [
+        -0.15584836,
+        0.00241588,
+        395.85024904
+      ],
+      [
+        1.36e-06,
+        7.02e-06,
+        1.0
+      ]
+    ]
+  },
+  "registration_after": {
+    "view": "surface_a3",
+    "valid": true,
+    "reasons": [
+      "1 RANSAC outliers"
+    ],
+    "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "n_markers": 7,
+    "n_corners": 28,
+    "ransac_inliers": 27,
+    "ransac_outliers": 1,
+    "reprojection_rms_mm": 0.4796,
+    "reprojection_max_mm": 1.4538,
+    "reprojection_rms_px": 3.1154,
+    "reprojection_max_px": 9.4008,
+    "H_image_to_frame_mm": [
+      [
+        0.00130042,
+        0.15668685,
+        -232.74666342
+      ],
+      [
+        -0.15577599,
+        0.00241355,
+        395.81061641
+      ],
+      [
+        1.36e-06,
+        6.96e-06,
+        1.0
+      ]
+    ]
+  },
+  "processing_s": 0.556,
+  "evaluation": {
+    "expected": "single",
+    "outcome_ok": false,
+    "false_positive": false,
+    "missed_change": false,
+    "note": "not comparable",
+    "assert": true
+  },
+  "harness_config_sha256": "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812",
+  "kit_config_sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e",
+  "output_files": {
+    "overlay": "overlay.jpg"
+  }
+}

@@ -1,0 +1,267 @@
+{
+  "pair_id": "CD",
+  "before": "hardware-02\\pairs\\CD_before.jpg",
+  "after": "hardware-02\\pairs\\CD_after.jpg",
+  "status": "multiple_changes",
+  "regions": [
+    {
+      "bbox_px": [
+        1339,
+        303,
+        38,
+        40
+      ],
+      "bbox_mm": [
+        320.75,
+        61.75,
+        9.5,
+        10.0
+      ],
+      "centroid_mm": [
+        324.6,
+        66.17
+      ],
+      "area_px": 745,
+      "area_mm2": 46.56,
+      "mean_diff": 63.79,
+      "max_diff": 111.38,
+      "sign": "brighter_after",
+      "label": "R1"
+    },
+    {
+      "bbox_px": [
+        672,
+        380,
+        27,
+        25
+      ],
+      "bbox_mm": [
+        154.0,
+        81.0,
+        6.75,
+        6.25
+      ],
+      "centroid_mm": [
+        157.25,
+        83.84
+      ],
+      "area_px": 538,
+      "area_mm2": 33.62,
+      "mean_diff": 57.29,
+      "max_diff": 94.06,
+      "sign": "brighter_after",
+      "label": "R2"
+    },
+    {
+      "bbox_px": [
+        755,
+        562,
+        14,
+        20
+      ],
+      "bbox_mm": [
+        174.75,
+        126.5,
+        3.5,
+        5.0
+      ],
+      "centroid_mm": [
+        176.06,
+        128.89
+      ],
+      "area_px": 124,
+      "area_mm2": 7.75,
+      "mean_diff": 33.76,
+      "max_diff": 40.32,
+      "sign": "brighter_after",
+      "label": "R3"
+    }
+  ],
+  "warnings": [],
+  "image_size_before": [
+    3468,
+    4624
+  ],
+  "image_size_after": [
+    3468,
+    4624
+  ],
+  "view_before": {
+    "detected_counts_by_view": {
+      "surface_a3": 7,
+      "surface_a4": 0,
+      "fixture_front": 0,
+      "fixture_back": 0
+    },
+    "unknown_ids": [],
+    "view_auto": "surface_a3",
+    "view_reason": "auto",
+    "detected_ids_by_view": {
+      "surface_a3": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "view": "surface_a3"
+  },
+  "view_after": {
+    "detected_counts_by_view": {
+      "surface_a3": 7,
+      "surface_a4": 0,
+      "fixture_front": 0,
+      "fixture_back": 0
+    },
+    "unknown_ids": [],
+    "view_auto": "surface_a3",
+    "view_reason": "auto",
+    "detected_ids_by_view": {
+      "surface_a3": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "view": "surface_a3"
+  },
+  "view": "surface_a3",
+  "registration_before": {
+    "view": "surface_a3",
+    "valid": true,
+    "reasons": [
+      "1 RANSAC outliers"
+    ],
+    "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "n_markers": 7,
+    "n_corners": 28,
+    "ransac_inliers": 27,
+    "ransac_outliers": 1,
+    "reprojection_rms_mm": 0.4856,
+    "reprojection_max_mm": 1.458,
+    "reprojection_rms_px": 3.1539,
+    "reprojection_max_px": 9.4237,
+    "H_image_to_frame_mm": [
+      [
+        0.00130127,
+        0.15671465,
+        -232.7608937
+      ],
+      [
+        -0.1558026,
+        0.00241351,
+        395.82829999
+      ],
+      [
+        1.32e-06,
+        7.01e-06,
+        1.0
+      ]
+    ]
+  },
+  "registration_after": {
+    "view": "surface_a3",
+    "valid": true,
+    "reasons": [
+      "1 RANSAC outliers"
+    ],
+    "marker_ids_used": [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "n_markers": 7,
+    "n_corners": 28,
+    "ransac_inliers": 27,
+    "ransac_outliers": 1,
+    "reprojection_rms_mm": 0.4689,
+    "reprojection_max_mm": 1.4486,
+    "reprojection_rms_px": 3.0532,
+    "reprojection_max_px": 9.3897,
+    "H_image_to_frame_mm": [
+      [
+        0.00130374,
+        0.15626833,
+        -231.9162532
+      ],
+      [
+        -0.15536784,
+        0.00236235,
+        395.1040401
+      ],
+      [
+        1.34e-06,
+        6.73e-06,
+        1.0
+      ]
+    ]
+  },
+  "residual_alignment": {
+    "dx_mm": 0.0057,
+    "dy_mm": 0.0078,
+    "shift_mm": 0.0097,
+    "phase_corr_response": 0.9412
+  },
+  "ecc": {
+    "enabled": false
+  },
+  "n_regions": 3,
+  "discarded_small_components": 0,
+  "roi_area_mm2": 47136.0,
+  "changed_fraction_roi": 0.00187,
+  "diff_stats_roi": {
+    "p50": 0.4,
+    "p99": 11.56,
+    "max": 111.38
+  },
+  "rectified": {
+    "view": "surface_a3",
+    "px_per_mm": 4.0,
+    "size_px": [
+      1696,
+      1204
+    ],
+    "origin_frame_mm": [
+      -14.0,
+      -14.0
+    ]
+  },
+  "processing_s": 0.95,
+  "evaluation": {
+    "expected": "multiple",
+    "outcome_ok": true,
+    "false_positive": false,
+    "missed_change": false,
+    "note": "",
+    "assert": true
+  },
+  "harness_config_sha256": "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812",
+  "kit_config_sha256": "a5f32cb54b57ed49096fa7c5d4a11be6ef2e2b932b6d3d248fcf4be59c17357e",
+  "output_files": {
+    "overlay": "overlay.jpg",
+    "diff": "diff.png",
+    "mask": "mask.png",
+    "before_rectified": "before_rectified.jpg",
+    "after_rectified": "after_rectified.jpg",
+    "registration": "registration.jpg"
+  }
+}

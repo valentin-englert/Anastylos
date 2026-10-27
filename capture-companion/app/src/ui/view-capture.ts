@@ -5,21 +5,8 @@ import { intakePhoto } from '../lib/photos.js';
 import { CameraController, CameraError, cameraSupport } from './camera.js';
 import { button, clear, el, on } from './dom.js';
 import { formatBytes } from './format.js';
+import { ROLE_LABELS, ensureWorkingObservationId, nextRole } from './journey.js';
 import type { AppContext } from './shell.js';
-
-const ROLE_LABELS: Record<PhotoRole, string> = {
-  front: 'Front',
-  back: 'Back',
-  detail: 'Detail',
-  other: 'Other',
-};
-
-const ROLE_ADVANCE: Record<PhotoRole, PhotoRole> = {
-  front: 'back',
-  back: 'detail',
-  detail: 'other',
-  other: 'other',
-};
 
 export async function renderCaptureView(
   outlet: HTMLElement,
@@ -55,40 +42,68 @@ export async function renderCaptureView(
 
   const root = el('section', { class: 'capture', 'aria-label': 'Capture' });
 
-  // -- session strip ------------------------------------------------------
+  if (!session) {
+    root.append(await buildSessionGate());
+    outlet.append(root);
+    return;
+  }
+
+  // -- session context ----------------------------------------------------
   const sessionStrip = el('div', { class: 'session-strip' });
-  if (session) {
-    sessionStrip.append(
-      el('span', { class: 'session-strip-label' }, 'Session'),
-      el('strong', {}, session.name),
-      (() => {
-        const change = button('Change', { kind: 'quiet' });
-        on(change, 'click', () => ctx.navigate({ name: 'sessions' }));
-        return change;
-      })(),
-    );
-  } else {
+  sessionStrip.append(
+    el('span', { class: 'session-strip-label' }, 'Session'),
+    el('strong', { class: 'session-strip-name' }, session.name),
+    (() => {
+      const change = button('Change', { kind: 'quiet' });
+      on(change, 'click', () => ctx.navigate({ name: 'sessions' }));
+      return change;
+    })(),
+  );
+  root.append(sessionStrip);
+
+  /** First-run onboarding and resume gate. A photo needs a session; this is
+   *  the only screen between a new operator and the camera. */
+  async function buildSessionGate(): Promise<HTMLElement> {
     const sessions = await ctx.repo.listSessions();
-    const select = el('select', { id: 'capture-session', 'aria-label': 'Session' });
-    select.append(el('option', { value: '' }, 'Choose a session…'));
-    for (const s of sessions) select.append(el('option', { value: s.session_id }, s.name));
-    const use = button('Use session', { kind: 'primary' });
+    const firstRun = sessions.length === 0;
+    const gate = el('section', { class: 'gate', 'aria-label': 'Choose a session' });
+    if (firstRun) {
+      gate.append(
+        el('h1', {}, 'Start capturing'),
+        el('p', { class: 'lede' }, 'Photograph each part as you take it apart. Everything stays on this device until you choose to export it.'),
+        el('ol', { class: 'steps' },
+          el('li', {}, 'Name this teardown below.'),
+          el('li', {}, 'Photograph the front, back and details of each part.'),
+          el('li', {}, 'Review each part, then export the evidence.')),
+      );
+    } else {
+      gate.append(
+        el('h1', {}, 'Continue capturing'),
+        el('p', { class: 'lede' }, 'Photos belong to a session. Pick up a teardown, or start a new one.'),
+      );
+      const select = el('select', { id: 'capture-session', 'aria-label': 'Session' });
+      select.append(el('option', { value: '' }, 'Choose a session…'));
+      for (const s of sessions) select.append(el('option', { value: s.session_id }, s.name));
+      const use = button('Continue', { kind: 'primary' });
+      on(use, 'click', async () => {
+        if (!select.value) {
+          ctx.notice('Choose a session or create one first.', 'error');
+          return;
+        }
+        await ctx.setSelection({ sessionId: select.value });
+        ctx.refresh();
+      });
+      gate.append(el('div', { class: 'field-row' }, select, use));
+      gate.append(el('p', { class: 'gate-divider' }, 'Or start a new teardown'));
+    }
     const nameInput = el('input', {
       id: 'capture-new-session',
       type: 'text',
-      placeholder: 'New session name',
+      placeholder: firstRun ? 'Session name, e.g. Amplifier teardown' : 'New session name',
       'aria-label': 'New session name',
       maxlength: '120',
     });
-    const create = button('Create', {});
-    on(use, 'click', async () => {
-      if (!select.value) {
-        ctx.notice('Choose a session or create one first.', 'error');
-        return;
-      }
-      await ctx.setSelection({ sessionId: select.value });
-      ctx.refresh();
-    });
+    const create = button('Create session', { kind: firstRun ? 'primary' : 'plain' });
     on(create, 'click', async () => {
       const name = nameInput.value.trim();
       if (!name) {
@@ -103,20 +118,15 @@ export async function renderCaptureView(
         ctx.notice(error instanceof Error ? error.message : String(error), 'error');
       }
     });
-    sessionStrip.append(
-      el('div', { class: 'field-row' }, select, use),
-      el('div', { class: 'field-row' }, nameInput, create),
-    );
+    gate.append(el('div', { class: 'field-row' }, nameInput, create));
+    return gate;
   }
-  root.append(sessionStrip);
 
-  if (!session) {
-    root.append(
-      el('p', { class: 'muted' }, 'Photos belong to a session. Select or create one to enable the camera.'),
-    );
-    outlet.append(root);
-    return;
-  }
+  // -- stage + controls ---------------------------------------------------
+  // One column on phones (stage first), two columns on wide screens.
+  const stageCol = el('div', { class: 'capture-stage' });
+  const sideCol = el('div', { class: 'capture-side' });
+  root.append(el('div', { class: 'capture-grid' }, stageCol, sideCol));
 
   // -- role selector ------------------------------------------------------
   const roleGroup = el('div', { class: 'segmented', role: 'group', 'aria-label': 'Photo role' });
@@ -143,7 +153,7 @@ export async function renderCaptureView(
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
   }
-  root.append(roleGroup);
+  sideCol.append(roleGroup);
 
   // -- viewport -----------------------------------------------------------
   const viewport = el('div', { class: 'viewport' });
@@ -159,15 +169,15 @@ export async function renderCaptureView(
   const focusMark = el('span', { class: 'focus-mark', 'aria-hidden': 'true', hidden: 'true' });
   const reviewImg = el('img', { class: 'viewport-review', alt: 'Captured photo preview', hidden: 'true' });
   viewport.append(video, grid, reticle, focusMark, reviewImg);
-  root.append(viewport);
+  stageCol.append(viewport);
 
   const support = cameraSupport();
   const statusLine = el('p', { class: 'capture-status muted', role: 'status' }, 'Starting camera…');
-  root.append(statusLine);
+  sideCol.append(statusLine);
 
   // -- error / fallback panel ---------------------------------------------
   const fallback = el('div', { class: 'fallback', hidden: 'true' });
-  root.append(fallback);
+  stageCol.append(fallback);
 
   function showCameraError(error: CameraError): void {
     video.hidden = true;
@@ -213,8 +223,14 @@ export async function renderCaptureView(
     return wrap;
   }
 
-  // Always available, even when the live camera works.
-  root.append(fileInputs());
+  // Always available, even when the live camera works. Appended last so
+  // the shutter row keeps the thumb zone.
+  const importSection = el('section', { class: 'import-fallback', 'aria-label': 'Import photos' });
+  importSection.append(
+    el('h2', {}, 'From files'),
+    el('p', { class: 'muted' }, 'System camera or gallery import. Originals are stored unmodified.'),
+    fileInputs(),
+  );
 
   // -- shutter row ---------------------------------------------------------
   const controls = el('div', { class: 'shutter-row' });
@@ -226,7 +242,7 @@ export async function renderCaptureView(
   shutter.append(el('span', { class: 'shutter-inner', 'aria-hidden': 'true' }));
   controls.append(gridToggle, shutter, switchBtn);
   const controlsSecond = el('div', { class: 'tool-row' }, reticleToggle, torchBtn);
-  root.append(controls, controlsSecond);
+  sideCol.append(controls, controlsSecond);
 
   on(gridToggle, 'click', () => {
     const pressed = gridToggle.getAttribute('aria-pressed') === 'true';
@@ -279,7 +295,7 @@ export async function renderCaptureView(
   const acceptBtn = button('Accept', { kind: 'primary' });
   const retakeBtn = button('Retake', {});
   reviewBar.append(retakeBtn, acceptBtn);
-  root.append(reviewBar);
+  sideCol.append(reviewBar);
   let pendingBlob: Blob | null = null;
 
   on(retakeBtn, 'click', () => {
@@ -313,14 +329,15 @@ export async function renderCaptureView(
   }
 
   async function ensureWorkingObservation(source: 'camera' | 'file' | 'gallery'): Promise<string> {
-    if (workingObservationId) {
-      const existing = await ctx.repo.getObservation(workingObservationId);
-      if (existing) return workingObservationId;
-    }
-    const created = await ctx.repo.createObservation(session!.session_id, source);
-    workingObservationId = created.observation_id;
-    await ctx.setSelection({ observationId: created.observation_id });
-    return created.observation_id;
+    const resolved = await ensureWorkingObservationId(
+      ctx.repo,
+      workingObservationId,
+      session!.session_id,
+      source,
+    );
+    workingObservationId = resolved.observationId;
+    if (resolved.created) await ctx.setSelection({ observationId: resolved.observationId });
+    return resolved.observationId;
   }
 
   async function acceptPhoto(source: 'camera' | 'file' | 'gallery', file?: File): Promise<void> {
@@ -343,7 +360,7 @@ export async function renderCaptureView(
       reviewBar.hidden = true;
       video.hidden = camera.active ? false : true;
       if (camera.active) shutter.removeAttribute('disabled');
-      setRole(ROLE_ADVANCE[role]);
+      setRole(nextRole(role));
       await refreshStrip();
       if (result.duplicates.length > 0) {
         ctx.notice(
@@ -388,7 +405,7 @@ export async function renderCaptureView(
 
   // -- accepted strip + flow actions ----------------------------------------
   const strip = el('div', { class: 'strip', 'aria-label': 'Accepted photos' });
-  root.append(strip);
+  sideCol.append(strip);
 
   async function refreshStrip(): Promise<void> {
     clear(strip);
@@ -431,7 +448,7 @@ export async function renderCaptureView(
     statusLine.textContent = 'Started a new component. Take the front photo.';
   });
   flowRow.append(finishBtn, newBtn);
-  root.append(flowRow);
+  sideCol.append(flowRow, importSection);
 
   function updateFlowButtons(count: number): void {
     if (count > 0) finishBtn.removeAttribute('disabled');

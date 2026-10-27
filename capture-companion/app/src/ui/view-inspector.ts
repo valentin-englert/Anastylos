@@ -1,4 +1,4 @@
-/** Component inspector: evidence viewer, metadata editor, review state. */
+/** Component review: evidence viewer, metadata editor, review state. */
 
 import {
   COMPONENT_CATEGORIES,
@@ -6,19 +6,12 @@ import {
   type ComponentObservation,
   type EvidenceImage,
   type MeasurementProvenance,
-  type PhotoRole,
 } from '../lib/schema.js';
 import { describeIdentificationStatus } from '../lib/identify.js';
 import { hashToRoute, type AppContext } from './shell.js';
 import { button, clear, el, on } from './dom.js';
 import { formatBytes, formatDateTime, shortId } from './format.js';
-
-const ROLE_LABELS: Record<PhotoRole, string> = {
-  front: 'Front',
-  back: 'Back',
-  detail: 'Detail',
-  other: 'Other',
-};
+import { ROLE_LABELS } from './journey.js';
 
 export async function renderInspectorView(
   outlet: HTMLElement,
@@ -27,22 +20,78 @@ export async function renderInspectorView(
   const urls: string[] = [];
   const route = hashToRoute(window.location.hash);
   const observationId = route.name === 'inspect' ? route.id : null;
-  const root = el('section', { class: 'page', 'aria-label': 'Component inspector' });
+  const root = el('section', { class: 'page page-review', 'aria-label': 'Component review' });
 
   if (!observationId) {
-    root.append(
-      el('h1', {}, 'Inspect'),
-      el('p', { class: 'muted' }, 'Nothing selected. Capture a component or pick one from a session.'),
-    );
-    const row = el('div', { class: 'button-row' });
-    const capture = button('Capture', { kind: 'primary' });
-    on(capture, 'click', () => ctx.navigate({ name: 'capture' }));
-    const sessions = button('Sessions', {});
-    on(sessions, 'click', () => ctx.navigate({ name: 'sessions' }));
-    row.append(capture, sessions);
-    root.append(row);
+    await renderReviewLanding();
     outlet.append(root);
-    return;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+    };
+  }
+
+  /** Review overview: recent components across sessions, newest first. */
+  async function renderReviewLanding(): Promise<void> {
+    root.append(
+      el('h1', {}, 'Review'),
+      el('p', { class: 'lede' }, 'Confirm what the camera recorded. Nothing here is final until you say so.'),
+    );
+    const sessions = await ctx.repo.listSessions();
+    const recent: Array<{ obs: ComponentObservation; sessionName: string }> = [];
+    for (const session of sessions) {
+      for (const obs of await ctx.repo.listObservations(session.session_id)) {
+        recent.push({ obs, sessionName: session.name });
+      }
+    }
+    recent.sort((a, b) => b.obs.captured_at.localeCompare(a.obs.captured_at));
+    const shown = recent.slice(0, 12);
+    if (shown.length === 0) {
+      const empty = el('div', { class: 'empty empty-compact' });
+      const capture = button('Capture first component', { kind: 'primary' });
+      on(capture, 'click', () => ctx.navigate({ name: 'capture' }));
+      empty.append(
+        el('h2', {}, 'Nothing to review yet'),
+        el('p', { class: 'muted' }, 'Photograph a part and it will appear here for review.'),
+        capture,
+      );
+      root.append(empty);
+      return;
+    }
+    const list = el('ul', { class: 'obs-list' });
+    for (const { obs, sessionName } of shown) {
+      const images = await ctx.repo.listImages(obs.observation_id);
+      const item = el('li', { class: 'obs-item' });
+      const link = el('a', { class: 'obs-link', href: `#/inspect/${obs.observation_id}` });
+      const first = images[0];
+      const blob = first
+        ? ((await ctx.repo.getPreview(first.image_id)) ?? (await ctx.repo.getOriginal(first.image_id)))
+        : null;
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        urls.push(url);
+        link.append(el('img', { class: 'obs-thumb', src: url, alt: '' }));
+      } else {
+        link.append(el('span', { class: 'obs-thumb obs-thumb-empty', 'aria-hidden': 'true' }, '—'));
+      }
+      const summary = obs.markings.length > 0 ? obs.markings.map((m) => m.text).join(' · ') : 'Unmarked component';
+      link.append(
+        el('span', { class: 'obs-text' },
+          el('span', { class: 'obs-title' }, summary),
+          el('span', { class: 'obs-meta muted' },
+            `${sessionName} · ${formatDateTime(obs.captured_at)} · ${images.length} photo${images.length === 1 ? '' : 's'}`)),
+        el('span', { class: `state state-${obs.review_state}` }, obs.review_state),
+      );
+      item.append(link);
+      list.append(item);
+    }
+    root.append(list);
+    const row = el('div', { class: 'button-row' });
+    const captureMore = button('Capture', {});
+    on(captureMore, 'click', () => ctx.navigate({ name: 'capture' }));
+    const sessionsBtn = button('All sessions', {});
+    on(sessionsBtn, 'click', () => ctx.navigate({ name: 'sessions' }));
+    row.append(captureMore, sessionsBtn);
+    root.append(row);
   }
 
   const obs = await ctx.repo.getObservation(observationId);
@@ -67,6 +116,13 @@ export async function renderInspectorView(
     el('p', { class: 'muted' },
       `${session ? session.name : '(missing session)'} · captured ${formatDateTime(obs.captured_at)} · via ${obs.capture_source}`),
   );
+
+  // Evidence first on every viewport; side by side on wide screens.
+  const grid = el('div', { class: 'review-grid' });
+  const evidenceCol = el('div', { class: 'review-evidence' });
+  const sideCol = el('div', { class: 'review-side' });
+  grid.append(evidenceCol, sideCol);
+  root.append(grid);
 
   async function save(next: ComponentObservation, message: string): Promise<void> {
     try {
@@ -108,7 +164,7 @@ export async function renderInspectorView(
         ? `Still unknown: ${unknowns.join(', ')}. Unknowns stay unknown — nothing is guessed.`
         : 'Category, quantity and markings are all recorded.'),
   );
-  root.append(review);
+  sideCol.append(review);
 
   // -- photo viewer ------------------------------------------------------------
   const viewer = el('section', { class: 'panel', 'aria-label': 'Photo evidence' });
@@ -259,7 +315,7 @@ export async function renderInspectorView(
     viewer.append(frame, caption, thumbs, cropHint, cropRow, photoActions);
     await show(current);
   }
-  root.append(viewer);
+  evidenceCol.append(viewer);
 
   // -- observed ---------------------------------------------------------------
   const observed = el('section', { class: 'panel', 'aria-label': 'Observed information' });
@@ -315,10 +371,10 @@ export async function renderInspectorView(
     void save({ ...obs, operator_notes: value || null }, 'Notes saved.');
   });
   observed.append(notesSave);
-  root.append(observed);
+  sideCol.append(observed);
 
   // -- confirmed ----------------------------------------------------------------
-  const confirmed = el('section', { class: 'panel', 'aria-label': 'Operator-confirmed information' });
+  const confirmed = el('section', { class: 'panel panel-confirmed', 'aria-label': 'Operator-confirmed information' });
   confirmed.append(el('h2', {}, 'Confirmed'));
 
   const categoryLabel = el('label', { class: 'field' });
@@ -429,7 +485,7 @@ export async function renderInspectorView(
   });
   quantityRow.append(quantityInput, quantitySave, quantityClear);
   confirmed.append(quantityRow);
-  root.append(confirmed);
+  sideCol.append(confirmed);
 
   // -- references ---------------------------------------------------------------
   const refs = el('section', { class: 'panel', 'aria-label': 'References' });
@@ -465,7 +521,7 @@ export async function renderInspectorView(
     el('p', { class: 'field-hint' }, 'Manual identifiers only. Capture never invents links to physical trays or assemblies.'),
     refsSave,
   );
-  root.append(refs);
+  sideCol.append(refs);
 
   // -- candidates -----------------------------------------------------------------
   const candidates = el('section', { class: 'panel', 'aria-label': 'Identification candidates' });
@@ -485,7 +541,7 @@ export async function renderInspectorView(
     candidates.append(list);
     candidates.append(el('p', { class: 'field-hint' }, 'Suggestions are not identity. Confirm through the fields above.'));
   }
-  root.append(candidates);
+  sideCol.append(candidates);
 
   // -- export history ---------------------------------------------------------------
   if (obs.export_history.length > 0) {
@@ -496,7 +552,7 @@ export async function renderInspectorView(
       list.append(el('li', {}, `${shortId(entry.package_id)} · ${formatDateTime(entry.exported_at)}`));
     }
     history.append(list);
-    root.append(history);
+    sideCol.append(history);
   }
 
   // -- danger zone --------------------------------------------------------------------
@@ -519,7 +575,7 @@ export async function renderInspectorView(
     el('p', { class: 'muted' }, 'Deletion is permanent and explicit. Export first if the evidence matters.'),
     deleteBtn,
   );
-  root.append(danger);
+  sideCol.append(danger);
 
   outlet.append(root);
   return () => {

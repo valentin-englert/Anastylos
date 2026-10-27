@@ -6,12 +6,20 @@ import { button, downloadBlob, el, on } from './dom.js';
 import { formatDateTime, shortId } from './format.js';
 
 export async function renderBomView(outlet: HTMLElement, ctx: AppContext): Promise<void> {
-  const root = el('section', { class: 'page', 'aria-label': 'BOM preview' });
-  root.append(el('h1', {}, 'BOM preview'));
+  const root = el('section', { class: 'page', 'aria-label': 'BOM draft' });
+  root.append(el('h1', {}, 'BOM draft'));
 
   const sessions = await ctx.repo.listSessions();
   if (sessions.length === 0) {
-    root.append(el('p', { class: 'muted' }, 'No sessions yet. Capture components first.'));
+    const empty = el('div', { class: 'empty empty-compact' });
+    const capture = button('Capture components', { kind: 'primary' });
+    on(capture, 'click', () => ctx.navigate({ name: 'capture' }));
+    empty.append(
+      el('h2', {}, 'No sessions yet'),
+      el('p', { class: 'muted' }, 'Capture components first; confirmed rows will draft the parts list.'),
+      capture,
+    );
+    root.append(empty);
     outlet.append(root);
     return;
   }
@@ -78,7 +86,7 @@ export async function renderBomView(outlet: HTMLElement, ctx: AppContext): Promi
   on(exportBtn, 'click', async () => {
     const fresh = await bomRowsForSession(ctx.repo, selectedId, { confirmedOnly: true });
     if (fresh.rows.length === 0) {
-      ctx.notice('No confirmed rows to export. Confirm components in the inspector first.', 'error');
+      ctx.notice('No confirmed rows to export. Review and confirm components first.', 'error');
       return;
     }
     const csv = bomRowsToCsv(fresh.rows);

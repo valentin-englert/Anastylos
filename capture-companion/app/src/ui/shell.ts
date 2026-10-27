@@ -8,6 +8,7 @@
 import type { Repository } from '../lib/repository.js';
 import { appVersion } from '../lib/schema.js';
 import { button, clear, el, on } from './dom.js';
+import { activeJourneyStop, journeyStops } from './journey.js';
 
 export type Route =
   | { name: 'capture' }
@@ -61,18 +62,11 @@ export function hashToRoute(hash: string): Route {
   return { name: 'capture' };
 }
 
-const TABS: Array<{ route: Route; label: string }> = [
-  { route: { name: 'capture' }, label: 'Capture' },
-  { route: { name: 'sessions' }, label: 'Sessions' },
-  { route: { name: 'inspect', id: null }, label: 'Inspect' },
-  { route: { name: 'bom' }, label: 'BOM' },
-  { route: { name: 'export' }, label: 'Export' },
+/** Secondary destinations stay out of the journey bar but keep their routes.
+ *  They surface through contextual links and, on wide screens, a quiet rail link. */
+const SECONDARY_TABS: Array<{ hash: string; label: string; route: Route['name'] }> = [
+  { hash: '#/bom', label: 'BOM draft', route: 'bom' },
 ];
-
-function tabFor(route: Route): string {
-  if (route.name === 'session') return 'sessions';
-  return route.name;
-}
 
 export function applyTheme(theme: string): void {
   document.documentElement.dataset['theme'] = theme;
@@ -240,21 +234,33 @@ export function createShell(
 
   function renderTabs(route: Route): void {
     clear(tabbar);
-    const active = tabFor(route);
-    for (const tab of TABS) {
-      const name = tab.route.name;
+    const active = activeJourneyStop(route.name);
+    for (const stop of journeyStops(ctx.selection.observationId)) {
+      const current = stop.id === active;
       const link = el(
         'a',
         {
-          class: `tab${name === active ? ' tab-active' : ''}`,
-          href: tab.route.name === 'inspect' && ctx.selection.observationId
-            ? routeToHash({ name: 'inspect', id: ctx.selection.observationId })
-            : routeToHash(tab.route),
-          ...(name === active ? { 'aria-current': 'page' } : {}),
+          class: `tab${stop.id === 'capture' ? ' tab-primary' : ''}${current ? ' tab-active' : ''}`,
+          href: stop.hash,
+          ...(current ? { 'aria-current': 'page' } : {}),
         },
-        tab.label,
+        stop.label,
       );
       tabbar.append(link);
+    }
+    for (const secondary of SECONDARY_TABS) {
+      const current = secondary.route === route.name;
+      tabbar.append(
+        el(
+          'a',
+          {
+            class: `tab tab-secondary${current ? ' tab-active' : ''}`,
+            href: secondary.hash,
+            ...(current ? { 'aria-current': 'page' } : {}),
+          },
+          secondary.label,
+        ),
+      );
     }
     void updateExportBadge();
   }

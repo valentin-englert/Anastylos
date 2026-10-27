@@ -12,7 +12,7 @@ import { button, clear, downloadBlob, el, on } from './dom.js';
 import { formatBytes, formatDateTime, shortId } from './format.js';
 
 export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Promise<void> {
-  const root = el('section', { class: 'page', 'aria-label': 'Export' });
+  const root = el('section', { class: 'page page-export', 'aria-label': 'Export' });
   root.append(el('h1', {}, 'Export'));
 
   // -- storage status ----------------------------------------------------------
@@ -26,7 +26,7 @@ export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Pr
     for (const image of images) photoBytes += image.byte_length;
   }
   const estimate = await storageEstimate();
-  const storage = el('section', { class: 'panel', 'aria-label': 'Storage status' });
+  const storage = el('section', { class: 'panel export-storage', 'aria-label': 'Storage status' });
   storage.append(el('h2', {}, 'Local storage'));
   storage.append(
     el('dl', { class: 'facts' },
@@ -48,7 +48,15 @@ export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Pr
   root.append(storage);
 
   if (observations.length === 0) {
-    root.append(el('p', { class: 'muted' }, 'Nothing to export yet. Capture a component first.'));
+    const empty = el('div', { class: 'empty empty-compact' });
+    const capture = button('Capture a component', { kind: 'primary' });
+    on(capture, 'click', () => ctx.navigate({ name: 'capture' }));
+    empty.append(
+      el('h2', {}, 'Nothing to export yet'),
+      el('p', { class: 'muted' }, 'Capture a component first; the evidence package builds here.'),
+      capture,
+    );
+    root.append(empty);
     root.append(syncPanel());
     outlet.append(root);
     return;
@@ -59,7 +67,7 @@ export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Pr
   const exported = observations.filter((o) => o.export_history.length > 0);
   const checked = new Set(pending.map((o) => o.observation_id));
 
-  const selection = el('section', { class: 'panel', 'aria-label': 'Select evidence' });
+  const selection = el('section', { class: 'panel export-select', 'aria-label': 'Select evidence' });
   selection.append(el('h2', {}, `Pending (${pending.length})`));
   if (pending.length === 0) {
     selection.append(el('p', { class: 'muted' }, 'Everything is exported. Select below to re-export.'));
@@ -100,7 +108,7 @@ export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Pr
   }
 
   // -- validation + export ------------------------------------------------------------
-  const validation = el('section', { class: 'panel', 'aria-label': 'Evidence validation' });
+  const validation = el('section', { class: 'panel export-validation', 'aria-label': 'Evidence validation' });
   validation.append(el('h2', {}, 'Validation'));
   const validationBody = el('div', {});
   validation.append(validationBody);
@@ -147,7 +155,7 @@ export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Pr
 
   on(checkBtn, 'click', () => void recheck());
 
-  const result = el('section', { class: 'panel', 'aria-label': 'Export result', hidden: 'true' });
+  const result = el('section', { class: 'panel export-result', 'aria-label': 'Export result', hidden: 'true' });
   root.append(result);
 
   on(exportBtn, 'click', async () => {
@@ -179,13 +187,19 @@ export async function renderExportView(outlet: HTMLElement, ctx: AppContext): Pr
     }
   });
 
+  root.append(
+    el('p', { class: 'related' },
+      'Need a parts list? ',
+      el('a', { href: '#/bom' }, 'Open the BOM draft'),
+      '.'),
+  );
   root.append(syncPanel());
   outlet.append(root);
   await recheck();
 }
 
 function syncPanel(): HTMLElement {
-  const panel = el('section', { class: 'panel', 'aria-label': 'Network synchronization' });
+  const panel = el('section', { class: 'panel export-sync', 'aria-label': 'Network synchronization' });
   panel.append(
     el('h2', {}, 'Sync'),
     el('p', {}, 'Network synchronization: unavailable.'),

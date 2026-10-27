@@ -5,7 +5,7 @@ in the app when it is not.
 
 ## Not implemented (labeled as such in the UI)
 
-- **Automatic identification.** No provider exists; the inspector's
+- **Automatic identification.** No provider exists; the review screen's
   identification section states this and no photo leaves the device. The
   provider-neutral interface is declared in `app/src/lib/identify.ts`.
 - **Network sync.** Export produces a local ZIP file only. The Sync panel

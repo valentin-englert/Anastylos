@@ -89,7 +89,7 @@ validator never modifies `memory.jsonl` and never asserts relationships.
    Screen"); the installed app opens standalone and survives airplane
    mode after one online load.
 2. Create a session; photograph front/back/detail of a component; accept,
-   retake, add via gallery; finish and review in the inspector.
+   retake, add via gallery; finish and review the component.
 3. Reload mid-session: sessions, photos and metadata persist (IndexedDB).
 4. Add markings, category, a measurement with units, a quantity; advance
    review state; confirm the BOM screen shows states honestly.
@@ -118,8 +118,8 @@ app/src/
   lib/          # UI-free core: schema, storage backends, repository,
                 # zip writer, export builder, csv, photo intake,
                 # provider-neutral identify interface
-  ui/           # shell/router + 5 views (capture, sessions, inspector,
-                # bom, export) + camera controller + monochrome styles
+  ui/           # shell/router + journey views (capture, review,
+                # sessions, export) + BOM draft + camera controller
   main.ts       # boot: open repo, build shell, register service worker
 app/public/     # manifest, hand-written service worker, generated icons
 app/tests/      # vitest suite (node env) + independent ZIP test oracle

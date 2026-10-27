@@ -15,6 +15,10 @@ baseline, no learned models, no cloud calls.
 ..\.venv\Scripts\python missing.py eval --labels labels.json --pairs-dir pairs\ --out missing_eval_out
 ```
 
+The `selftest_output` paths above are generated, not committed: run the
+change-detection synthetic selftest first (see
+[`change-detection/README.md`](../change-detection/README.md)).
+
 ## Workflows
 
 A. Visual state comparison: an original reference image with a current

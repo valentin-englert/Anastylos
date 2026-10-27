@@ -66,3 +66,4 @@ cd screw-reader
   class on top rather than `ok`.
 - Real-photo validation has not been performed: no real screw
   images exist in this environment yet.
+- No Assembly Memory writes in this iteration.

@@ -26,7 +26,7 @@ Prerequisites: Node.js 20+ with npm, and Python 3.12 for the validator.
 
 ```powershell
 cd capture-companion/app
-npm install          # exact-pinned dev toolchain, no runtime deps
+npm ci               # reproducible install from the committed lockfile; exact-pinned dev toolchain, no runtime deps
 npm run dev          # serve with hot reload at http://localhost:5173/
 ```
 
@@ -135,8 +135,12 @@ explicit and confirmed.
 ## Compliance
 
 Frontend/build attribution lives in `app/THIRD_PARTY.md` (5 pinned
-dev-only packages, MIT/Apache-2.0, zero runtime deps). The root checker
-and SPDX inventory cover only the Python calibration environment and are
-unaffected; shared compliance files were left untouched — the module doc
-reports what a future root-inventory update would add. No LICENSE file
-was created: licensing remains deferred per repository policy.
+dev-only packages, MIT/Apache-2.0, zero runtime deps). The root SPDX
+inventory (`tools/compliance/spdx.json`) and `THIRD_PARTY_NOTICES.md`
+list the same 5 direct npm devDependencies (plus one grouped review
+item for the unverified transitive closure) since the feature-batch
+integration. The root checker compares only `pkg:pypi` entries
+against `calibration/requirements.txt`, so npm bumps never turn it
+red — but the SPDX rows and notice table must still be updated by
+hand when a pin changes. No LICENSE file was created: licensing
+remains deferred per repository policy.

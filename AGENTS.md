@@ -77,8 +77,9 @@ unrelated changes. Cross-module work needs explicit task authorization.
   `memory.jsonl`, capture packages, calibration JSON). No silent
   schema changes.
 - Never silently change coordinate or measurement semantics
-  (origin top-left, +x right, +y down; mm only with cited
-  calibration). A semantic change needs a migration, not an edit.
+  (dominant pixel convention is origin top-left, +x right, +y down;
+  mm only with cited calibration — see `ARCHITECTURE.md` for the
+  per-kind inventory). A semantic change needs a migration, not an edit.
 - Never promote detection candidates into confirmed findings. Only
   operator confirmation confirms (see `ARCHITECTURE.md` for the full
   inventory: tray links, `confirmed_missing`, graph edges, capture
@@ -145,7 +146,7 @@ unrelated changes. Cross-module work needs explicit task authorization.
 
 - Zero real-hardware validation anywhere; no end-to-end real-photo run.
 - No top-level orchestrator: recognizers are independent experiments,
-  most without memory integration.
+  none writes to memory yet (read-only consumers only).
 - Capture sync is design-only; provider seams (embeddings, SAM-style
   segmentation, identification) are unimplemented interfaces.
 - Calibration needs native Cairo/poppler on Windows for 4 of 13 kit

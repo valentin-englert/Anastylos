@@ -11,6 +11,10 @@ No new dependencies.
 ..\.venv\Scripts\python count.py --config trays.json --result-json ..\change-detection\selftest_output\results\single_01\result.json --out tray_out
 ```
 
+The `selftest_output` paths above are generated, not committed: run the
+change-detection synthetic selftest first (see
+[`change-detection/README.md`](../change-detection/README.md)).
+
 ## Configuration
 
 Trays are named millimetre rectangles in calibrated frame coordinates

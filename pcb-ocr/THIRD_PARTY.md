@@ -14,4 +14,6 @@ License notes: Apache-2.0 and BSD-3-Clause are permissive licenses
 requiring preservation of copyright/license notices, which live with
 their distributions. No GPL/AGPL code is introduced. If a different
 OCR backend is added later, extend this table instead of silently
-depending on it.
+depending on it. For bundled-component detail (FFmpeg DLL, NumPy
+composite) see the root [`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md)
+and [`tools/compliance/spdx.json`](../tools/compliance/spdx.json).

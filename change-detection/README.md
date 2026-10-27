@@ -8,7 +8,7 @@ Compare a before photo and an after photo of the same sheet. The pipeline reads 
 4. Divide by a local mean, blur, absolute difference, threshold, close, open.
 5. Write each region as a bounding box in pixels and millimetres.
 
-Status is only the region count: `no_change`, `single_change`, `multiple_changes`, `registration_invalid`, `view_mismatch`, or `input_error`. Several regions are not merged into one event.
+`status` counts regions once registration succeeds: `no_change`, `single_change`, or `multiple_changes` (regions are never merged into one event). Registration verdicts are separate: `registration_invalid` (no view confirmed — including a `--view`/manifest mismatch, views from different view groups, too few markers, a failed homography, or an empty ROI), `view_mismatch` (before/after views differ but stay within one view group, e.g. `surface_a3` → `surface_a4`), and `input_error` (an unreadable image or a missing before/after file). Only the three region-count statuses carry `rectified` coordinates; the other three never do.
 
 Use the calibration virtualenv. No extra packages.
 
@@ -27,7 +27,7 @@ ctrl_01,none,,fixture_back,1,no contact
 screw_01,single,"52.0,40.5,6,6",fixture_back,1,one screw
 ```
 
-`expected` is `none`, `single`, `multiple`, `invalid`, or `view_mismatch`. Several boxes are separated by `;`. `view` confirms the sheet; a mismatch is `registration_invalid`.
+`expected` accepts short manifest aliases — `none`, `single`, `multiple`, `invalid`, `view_mismatch` — plus the full `registration_invalid` spelling. These are input aliases, not emitted statuses: `none`/`single`/`multiple` map to the region-count statuses, and both `invalid` and `registration_invalid` map to `registration_invalid`. Several boxes are separated by `;`. `view` confirms the sheet; a mismatch aborts that pair as `registration_invalid`.
 
 ```bash
 .venv/bin/python change-detection/detect.py run --input photos/monday --out results/monday
@@ -37,7 +37,7 @@ screw_01,single,"52.0,40.5,6,6",fixture_back,1,one screw
 
 Each pair folder gets `overlay.jpg`, `diff.png`, `mask.png`, `before_rectified.jpg`, `after_rectified.jpg`, `registration.jpg`, and `result.json`. The run also writes `summary.csv`, `summary.json`, and `run_info.json`.
 
-`--require-config-sha256` aborts when `harness-config.json` is not the frozen parameter set. The calibration file has its own sha256 inside that config; a different kit file aborts as well. Changing a threshold changes the hash. Treat that as a new run. Do not retune on the scored set.
+`--require-config-sha256` aborts unless `harness-config.json` parses to the frozen parameter set. Three hashes are involved, computed two ways (see `anastylos_diff/config.py`): the calibration hash is SHA-256 over the raw bytes of `calibration/calibration-config.json`, pinned inside the harness config as `calibration_config.sha256` — a different kit file aborts before any work. The harness hash is `canonical_sha256` over the parsed harness JSON object — `json.dumps` with sorted keys, compact `(",", ":")` separators, no ASCII escaping, hashed as UTF-8 — so file whitespace and key order do not matter, but changing any threshold changes the hash. Every `result.json` embeds both values (`harness_config_sha256`, `kit_config_sha256`). (Run metadata also records a raw-bytes `harness_config_file_sha256`, but the frozen gate is the canonical hash.) `result_sha256` is something else: the per-file hash downstream consumers compute themselves — see [`assembly-memory/README.md`](../assembly-memory/README.md) and [`ARCHITECTURE.md`](../ARCHITECTURE.md). Treat a hash change as a new run. Do not retune on the scored set.
 
 Current freeze (this tree):
 
@@ -53,7 +53,7 @@ cd change-detection && ../.venv/bin/python -m unittest discover -s tests -v
 
 `selftest` builds planar scenes from the kit config (markers, a flat placeholder controller, perspective, light, noise, JPEG). It is not a photograph of a real controller. The report lists every pair, including false alarms and misses. Expected labels are fixed when the images are built.
 
-Seed `20261026` on this machine: **16/16** asserted cases, **0** false alarms on unchanged pairs, **8/8** expected boxes hit, max centroid error **0.46 mm**, max registration RMS **0.115 mm**. One unscored soft-shadow pair stayed `no_change`. That shadow result is a single synthetic example.
+Reference synthetic run, seed `20261026`: **16/16** asserted cases, **0** false alarms on unchanged pairs, **8/8** expected boxes hit, max centroid error **0.46 mm**, max registration RMS **0.115 mm**. One unscored soft-shadow pair stayed `no_change`. That shadow result is a single synthetic example. Re-run the selftest locally; do not treat these numbers as measured on your machine.
 
 ## Limits
 

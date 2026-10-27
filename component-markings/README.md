@@ -91,3 +91,4 @@ cd component-markings
   the mapping itself is operator-owned evidence.
 - Non-Latin scripts, logos, and symbol-only marks (aside from
   `+`/`-`) are not interpreted.
+- No Assembly Memory writes in this iteration.

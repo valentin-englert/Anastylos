@@ -12,7 +12,9 @@ Event kinds:
 
 - `observation` — a removal seen in a source view: `source_view`, `bbox_mm`,
   `centroid_mm`, and an evidence reference (`result_json`, `pair_id`,
-  `region`, plus the file's sha256 when it is on disk).
+  `region`, plus `result_sha256`: SHA-256 over the result file's bytes,
+  computed by the importer at import time — null when the file is not
+  readable — never read from inside the result file itself).
 - `tray_link` — an observation placed in a tray cell. The tray snapshot
   (`sheet_id`, `number`, `rect_frame_mm`) is resolved from
   `calibration/calibration-config.json` at record time. Every link carries
@@ -33,8 +35,12 @@ py -3.12 assembly-memory\memory.py --session-dir sessions\day1 where --tray 3 --
 `import` reads one change-detection `result.json` verbatim (view, regions,
 provenance) and appends one observation per region (`--region R1` imports a
 single region). Results without trustworthy coordinates
-(`registration_invalid`, `view_mismatch`, `input_error`) are refused. Manual
-`record observation` remains for observations without a result file.
+(`registration_invalid`, `view_mismatch`, `input_error`) are refused, as is
+any result without a `rectified.view`. `--kit` optionally records the kit
+config's bytes hash as `kit_sha256`. Manual `record observation` remains
+for observations without a result file. These are the only producer paths
+into the log: no recognition reader writes here (see
+[`ARCHITECTURE.md`](../ARCHITECTURE.md)).
 
 Query answers are JSON on stdout. `where --tray` reports `located` for one
 candidate, `ambiguous` with every candidate's source location when a tray

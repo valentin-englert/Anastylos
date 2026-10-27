@@ -39,11 +39,13 @@ cd capture-companion/app
 node -e "for (const d of ['vite','typescript','vitest','fake-indexeddb','@types/node']) { const p = require('./node_modules/' + d + '/package.json'); console.log(d, p.version, '|', p.license); }"
 ```
 
-Root compliance note (for the repository owner, not actioned here): the
-root checker (`tools/compliance/check.py`) currently inventories only the
-Python calibration environment from `calibration/requirements.txt`, so it
-is unaffected by these npm dev-dependencies. If the project later wants
-npm packages in the root SPDX inventory, add a `pkg:npm` entry per direct
-dependency above to `tools/compliance/spdx.json` plus a human-readable row
-in `THIRD_PARTY_NOTICES.md`. Shared compliance files were deliberately
-left untouched in this worktree.
+Root compliance note: the root SPDX inventory already lists the five
+direct dependencies above as `pkg:npm` entries (added during the
+feature-batch integration), with one grouped review item for the
+transitive closure, and the root `THIRD_PARTY_NOTICES.md` carries the
+matching human-readable rows. The root checker compares only
+`pkg:pypi` entries, so it stays green across npm bumps — but after
+any version bump, update the `pkg:npm` rows in
+`tools/compliance/spdx.json` and the frontend table in
+`THIRD_PARTY_NOTICES.md` by hand (same versions as `package.json`,
+same licenses as the installed `node_modules` metadata).

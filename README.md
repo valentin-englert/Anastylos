@@ -60,7 +60,8 @@ been validated on real hardware.
 - All vision accuracy claims rest on **synthetic fixtures and unit
   tests**. No real-hardware validation has been performed.
 - Recognizers are **independent experiments**, not a connected pipeline:
-  most have no Assembly Memory integration yet.
+  none writes to Assembly Memory yet (read-only consumers of the log:
+  `missing-parts` reconcile and the `cable-routing` graph).
 - Capture network sync is a **design document only**
   ([`SYNC_PROTOCOL.md`](capture-companion/SYNC_PROTOCOL.md)); evidence
   moves by file export.

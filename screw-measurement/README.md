@@ -110,3 +110,4 @@ pipeline; `None` keeps the built-in segmentation.
   calibration plane.
 - Heavy glare, strong perspective, and large occlusions report
   `ambiguous` or `unknown` by design.
+- No Assembly Memory writes in this iteration.

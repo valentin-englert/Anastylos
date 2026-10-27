@@ -13,9 +13,10 @@ below come from synthetic fixtures and unit tests.
 
 - Append-only memory: `assembly-memory` events are never edited or
   deleted; corrections append a new event with `supersedes`.
-- Read-only analyzers: integrators (`missing-parts`, `cable-routing`
-  graph, `tray-counter`) read detection output and memory logs but
-  never write back to them; they write only to their own `--out` dir.
+- Read-only analyzers: integrators read detection output and (for
+  `missing-parts` and the `cable-routing` graph only) memory logs,
+  but never write back to them; they write only to their own
+  `--out` dir. `tray-counter` reads detection output only.
 - Explicit epistemics: recognizers return `ok` / `ambiguous` /
   `unknown` with reasons; candidates never self-promote.
 - Stable tiers: `assembly-memory` and the capture validator are
@@ -35,26 +36,27 @@ calibration/  ── sheets + px/mm frames ──> change-detection/
 change-detection/ ── result.json + rectified pairs ──> tray-counter/
                                                   ──> missing-parts/
                                                   ──> assembly-memory (import)
-readers/ ── observations ──> assembly-memory/ (append-only memory.jsonl)
+readers/ - - planned observations (future; no reader writes to memory yet) - → assembly-memory/
 assembly-memory/ + change-detection/ ──> cable-routing/ (read-only graph)
 capture-companion/ ── validated .zip packages ──> (human review; never
     auto-imported into Core memory)
 ```
 
-Four subsystems, one evidence philosophy:
+Five subsystems, one evidence philosophy:
 
 - **Spatial foundation** (`calibration/`, `change-detection/`): printed
   millimetre frames and planar before/after comparison. Produces the
   `result.json` evidence artifact everything downstream cites.
 - **Memory core** (`assembly-memory/`): the append-only log of what was
   removed from where. Standard-library-only; the stability anchor.
-- **Recognition experiments** (resistor/smd/screw/polarity/washer/
-  pcb-ocr/markings/fingerprints/connectors readers): independent
-  single-purpose CLIs. Most have no memory integration yet — see
-  "Actual integration status".
+- **Recognition experiments** (resistor/smd/screw-reader/
+  screw-measurement/polarity/washer/pcb-ocr/markings/fingerprints/
+  connectors readers): independent single-purpose CLIs. None writes
+  to memory yet — see "Actual integration status".
 - **Integrators** (`tray-counter/`, `missing-parts/`, `cable-routing/`
-  graph): read-only consumers that combine detection output and memory
-  logs into higher-level candidates. Never write back.
+  graph): read-only consumers that combine detection output (and, for
+  `missing-parts` and the graph, memory logs) into higher-level
+  candidates. Never write back.
 - **Capture edge** (`capture-companion/`): offline phone PWA plus a
   stdlib-only package validator. Human-reviewed staging only.
 
@@ -72,11 +74,12 @@ flowchart TD
     CD -->|result.json + rectified pairs| TRAY
     CD -->|result.json| MISS
     CD -->|result.json import| MEM
-    READERS -->|observations| MEM
+    READERS -.->|planned observations; no writes yet| MEM
     MEM -->|memory.jsonl read-only| CAB
     CD -->|cited regions read-only| CAB
     MEM -->|memory.jsonl read-only| MISS
-    CAP -->|validated .zip → human review| MEM
+    CAP -->|validated .zip| REV[human review]
+    REV -.->|manual step; never auto-imported| MEM
 ```
 
 ## Module / status index
@@ -96,12 +99,18 @@ Integration baseline: five feature branches
 `feat/polarity`, `feat/screw-measurement`) merged via
 `integrate/feature-batch` into `main` at `20be578`
 (`fix(integration): stabilize feature-batch verification gates`).
-Verification at that commit: 750 Python tests (746 passed, 1 failure +
-3 errors — all 4 are calibration tests needing native Cairo/poppler on
-Windows, see limitation 1); 66/66 capture frontend tests; capture
-TypeScript compilation and production build clean; compliance check
-0 errors with 8 open review items. No real-hardware validation
-reported. Test counts below are per-module
+Verification at that commit: 750 Python module/validator tests (746
+passed; 1 failure + 3 errors — all 4 are calibration tests needing
+native Cairo/poppler on Windows, see limitation 1), plus the
+5-test compliance-checker self-suite (755 Python test methods in
+total when the checker suite is counted); 66/66 capture frontend unit tests
+executed; TypeScript compilation (`tsc`) and the production build
+(`vite build`) also clean — those two are static checks, not test
+executions. The compliance check reported 0 errors with 8 open
+review items (8 SPDX annotations, grouped into 6 narrative items in
+`THIRD_PARTY_NOTICES.md`). No real-hardware validation reported.
+This hygiene branch is docs-only, so it inherits those results;
+test counts below are per-module
 (`python -m unittest discover -s tests` from the module directory
 unless noted) and match the current tree's test methods exactly.
 
@@ -134,8 +143,19 @@ fixtures; see each module README for its stated validation scope.
 - Detection `result.json`: `status` (`no_change`, `single_change`,
   `multiple_changes`, `registration_invalid`, `view_mismatch`,
   `input_error`), `view`, `rectified.px_per_mm`, `regions[]` with
-  `label`, `bbox_mm`, `centroid_mm`, `result_sha256` provenance.
-  Consumed verbatim by `tray-counter`, `missing-parts`, `cable-routing`.
+  `label`, `bbox_mm`, `centroid_mm`. Every file embeds
+  `harness_config_sha256` (canonical hash of the parameter set) and
+  `kit_config_sha256` (bytes hash of the calibration config); the
+  per-file `result_sha256` is NOT embedded — it is computed
+  downstream: `assembly-memory import` and `missing-parts` hash the
+  file bytes at read time, the `cable-routing` graph reuses the
+  hash recorded in memory evidence, and `tray-counter` cites file
+  paths without hashing. Consumed verbatim by `tray-counter`,
+  `missing-parts`, `cable-routing`, and `assembly-memory import`.
+  `registration_invalid` covers unconfirmed views, cross-group
+  views, and failed registration; `view_mismatch` only covers a
+  before/after view change within one view group (see
+  `change-detection/README.md` for the exact conditions).
 - Memory log: `<session>/memory.jsonl`, one JSON event per line
   (`observation` / `tray_link`), SHA-256 file provenance, coordinates
   stored verbatim and never transformed.
@@ -144,15 +164,19 @@ fixtures; see each module README for its stated validation scope.
   `pair_id`, `region`, plus the file's SHA-256 when on disk) or a
   manual basis; `tray_link` binds an observation to a tray cell with
   the tray snapshot (`sheet_id`, `number`, `rect_frame_mm`) resolved
-  from `calibration-config.json` at record time, plus either an
+  from `calibration/calibration-config.json` at record time, plus either an
   evidence basis or a human confirmation — anything else is rejected
   and nothing is written. Queries answer `located` / `ambiguous` /
   `unknown` / `unassigned`, never a bare claim.
-- Calibration JSON: `pixels_per_mm` (+`_std`, `frame`) for
-  screw/cable frame metadata; `px_per_mm` inside rectified detection
-  output. Same physical meaning, different key spellings per module;
-  each module validates its own input. Do not invent a unified schema
-  without a migration.
+- Calibration JSON: two key spellings share one physical meaning
+  (image pixels per millimetre) and are NOT interchangeable across
+  modules — `pixels_per_mm` (`screw-measurement`, which adds
+  `pixels_per_mm_std` and `frame`, plus `cable-routing`,
+  `polarity-reader`, `washer-spacer`)
+  versus `px_per_mm` (`pcb-ocr`, `component-fingerprints`,
+  `connector-matching`, `missing-parts`, plus the rectified
+  detection output itself). Each module validates its own input.
+  Do not invent a unified schema without a migration.
 - Capture package (schema v1, `capture-companion/SCHEMA.md`):
   manifest + assets zip; mirrored TypeScript/Python validators must
   keep agreeing (round-trip test enforces this). Every interpreted
@@ -162,22 +186,52 @@ fixtures; see each module README for its stated validation scope.
 
 ## Coordinate systems and calibration semantics
 
-- All image frames share one convention: origin top-left, +x right,
-  +y down, angles clockwise from +x in degrees. Millimetre frames add
-  named origins: top-left of marker 0, 10, 20, 30 per sheet.
-- Named frames reuse the calibration-kit vocabulary: `surface_a3`,
-  `surface_a4`, `fixture_front`, `fixture_back`, `charuco_board`
-  (plus `custom:<name>` where a module allows it). Front and back
-  share no transform.
+Several coordinate kinds exist; every measurement states which one
+it uses. There is no single universal convention — the statements
+below are per kind:
+
+- Source image pixels: origin top-left, +x right, +y down. The
+  modules that name a pixel convention (`cable-routing`
+  `coordinate_convention`, `polarity-reader`, `washer-spacer`) all
+  use this one; the remaining crop readers report source-frame
+  pixels or boxes without restating the origin. Angles, where
+  reported (`polarity-reader`, `washer-spacer`), run clockwise
+  from +x in degrees over [0, 360).
+- Rectified detection millimetres: `change-detection` warps each
+  pair onto a millimetre grid for one named view (`rectified.view`,
+  `rectified.px_per_mm`, `rectified.origin_frame_mm`). Frame axes
+  are x right, y down per
+  `calibration/calibration-config.json`; the named frame origins
+  are the top-left of marker 0 (`surface_a4`), 10 (`surface_a3`),
+  20 (`fixture_front`), and 30 (`fixture_back`).
+- Operator-supplied calibration millimetres: readers convert
+  pixels to mm only from a validated `--frame-meta` /
+  `--calibration` file with provenance, using their own spelling
+  (`pixels_per_mm` vs `px_per_mm` — see "Stable data interfaces"
+  for the per-module inventory).
+- Connector-local housing coordinates are the exception: contact,
+  keying, and latch positions live in a housing-fixed canonical
+  frame (rotation-invariant), not in image pixels; millimetre
+  pitch additionally needs a frontal mating face and valid
+  `px_per_mm`.
+- View identifiers double as frame identifiers for the four
+  detection sheets (`surface_a3`, `surface_a4`, `fixture_front`,
+  `fixture_back`). `charuco_board` is calibration-only: its sheet
+  carries no ArUco registration markers, the detector reads only
+  `DICT_5X5_100`, and the harness `view_groups` list just the
+  four sheets — so detection never reports it as a view.
+  `screw-measurement` additionally accepts `custom:<name>` frames.
+- Front and back share no transform.
 - Homographies are exact on the paper plane only; controller/part
   height is unmeasured, so off-plane content suffers uncorrected
   parallax. The camera must stay fixed between before/after shots.
 - Millimetres appear in a result only with cited, validated
-  calibration (frozen `harness-config.json` + kit SHA-256 for
-  detection; `--frame-meta` / `--calibration` files with provenance
-  elsewhere). Without it: pixels plus an explicit error or null —
-  never silently converted pixels. Never change these semantics
-  without a migration and a version bump of the affected contract.
+  calibration (frozen `change-detection/harness-config.json` + kit
+  SHA-256 for detection; `--frame-meta` / `--calibration` files
+  with provenance elsewhere). Without it: pixels plus an explicit
+  error or null — never silently converted pixels. Never change
+  these semantics without a migration and a version bump of the
+  affected contract.
 
 ## Current dependency relationships
 
@@ -194,12 +248,14 @@ Code-level (Python imports across module boundaries) — only these:
 File-contract coupling (no imports; consumers read produced files):
 
 - `change-detection` reads `calibration/calibration-config.json` via
-  the pinned path + SHA-256 in `harness-config.json`.
+  the pinned path + SHA-256 in `change-detection/harness-config.json`.
 - `assembly-memory` reads the kit config for tray-cell resolution
   and imports detection `result.json` files verbatim.
-- `tray-counter`, `missing-parts`, `cable-routing` graph read
-  detection `result.json` (+ rectified images) and/or `memory.jsonl`
-  verbatim; they never import producer code.
+- `tray-counter` reads detection `result.json` files (+ rectified
+  images) only; `missing-parts` reads detection output plus
+  `memory.jsonl` (reconcile); the `cable-routing` graph reads
+  `memory.jsonl` plus the cited detection regions. All three read
+  verbatim; none imports producer code.
 
 No other cross-module imports exist (verified by search). In
 particular `missing-parts` and `tray-counter` consume files only,
@@ -212,14 +268,19 @@ way: new coupling goes through versioned file contracts, not imports.
 1. `calibration/` prints the physical reference; its config pins
    marker geometry and tray zones with a SHA-256 identity.
 2. `change-detection/` registers before/after pairs onto that frame,
-   writes rectified images and `result.json` (regions in mm + SHA-256
-   provenance). Parameter set is frozen by canonical hash.
+   writes rectified images and `result.json` (regions in mm,
+   embedding the harness canonical hash and the kit bytes hash).
+   The parameter set is frozen by canonical hash: `canonical_sha256`
+   over the parsed harness JSON (`json.dumps` with sorted keys,
+   compact separators, UTF-8 — see
+   `change-detection/anastylos_diff/config.py`).
 3. Recognition readers classify tight crops independently
-   (`ok`/`ambiguous`/`unknown` + reasons); most stop at their own
-  `--out` dir today.
+   (`ok`/`ambiguous`/`unknown` + reasons); all stop at their own
+   `--out` dir today and none writes to memory.
 4. `assembly-memory import` turns cited `result.json` regions into
-   append-only observations; operators add tray links with
-   confirmation.
+   append-only observations (hashing each file's bytes into
+   `result_sha256` evidence at import time); operators add tray
+   links and manual observations with confirmation.
 5. Read-only integrators derive candidates (tray add/remove, missing
    parts, assembly-order graph) without mutating their inputs.
 6. Anything promoted toward "confirmed" requires an operator
@@ -282,9 +343,14 @@ What "integrated" concretely means today — and does not:
   consistent.
 - Does not mean: a single runnable pipeline. There is no top-level
   orchestrator, no shared runner, and no end-to-end real-photo run.
-  Most recognizers write only to their own `--out` dir; wiring them
-  into memory import is future work requiring per-module contract
-  decisions — not a bulk edit.
+  All recognizers write only to their own `--out` dir and none
+  writes to memory; wiring them into memory import is future work
+  requiring per-module contract decisions — not a bulk edit. The
+  only producer paths into `memory.jsonl` today are
+  `assembly-memory import` (change-detection `result.json`) and the
+  manual `record observation` / `record tray-link` commands; the
+  only read-only consumers of the log are `missing-parts`
+  reconcile and the `cable-routing` graph.
 
 ## Reproducible test commands
 
@@ -293,7 +359,7 @@ Python (from the repo root; `.venv` per `calibration/README.md`):
 ```powershell
 cd <module>; ..\.venv\Scripts\python -m unittest discover -s tests
 .venv\Scripts\python change-detection/detect.py selftest --seed 20261026
-.venv\Scripts\python tools/compliance/check.py
+py -3.12 tools/compliance/check.py   # stdlib-only; no venv needed
 ```
 
 Capture PWA (from `capture-companion/app`, after `npm ci`):
@@ -328,8 +394,9 @@ not on devices; calibration print masters unmeasured
    SVG with a warning. Setup is documented in
    `calibration/README.md`; committed print/preview fixtures are
    intact and consistent.
-2. `pixels_per_mm` vs `px_per_mm` key spellings differ by module (see
-   above). No live incompatibility; unify only with a migration.
+2. `pixels_per_mm` vs `px_per_mm` key spellings differ by module
+   (per-module inventory under "Stable data interfaces"). No live
+   incompatibility; unify only with a migration.
 3. npm transitive closure licenses unverified (compliance review
    item); direct capture devDeps are MIT/Apache-2.0 per installed
    metadata.

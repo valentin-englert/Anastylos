@@ -7,7 +7,7 @@ dependencies verified 2026-10-27 against
 `capture-companion/app/package.json`, its lockfile, and installed
 `node_modules` metadata. Machine-readable
 form: [`tools/compliance/spdx.json`](tools/compliance/spdx.json) (SPDX 2.3).
-Module notes live on: [`pcb-ocr/THIRD_PARTY.md`](pcb-ocr/THIRD_PARTY.md)
+Module-level notes in [`pcb-ocr/THIRD_PARTY.md`](pcb-ocr/THIRD_PARTY.md)
 and [`capture-companion/app/THIRD_PARTY.md`](capture-companion/app/THIRD_PARTY.md)
 are preserved and referenced here, not duplicated.
 
@@ -30,7 +30,7 @@ declaration). Direct requirements per that file:
 `opencv-contrib-python`, `CairoSVG`; the rest is transitive. A second
 manifest, `capture-companion/app/package.json` (npm, exact pins plus a
 committed lockfile), declares development-only frontend tooling; see
-below. No other manifest exists.
+below. These are the only two manifests in the tree.
 
 | Package | Version | SPDX license | Evidence |
 |---|---|---|---|
@@ -143,6 +143,13 @@ repo; packaging for redistribution must carry them from these sources.
    redistributed; normal use shells out to an operator install.
 
 ## Open review items (need a human)
+
+Every pinned dependency is directly inventoried (11 Python pins, 5 npm
+devDependencies, the CPython/pip/Tesseract platform entries, and the
+observed native bundles); the items below are the license questions
+that stay open. The checker prints 8 `REVIEW:` annotations from the
+SPDX file — this list groups them into 6 narrative items (the three
+Pillow static-library annotations share item 3):
 
 1. Pillow: confirm MIT-CMU versus HPND SPDX mapping with upstream.
 2. FFmpeg DLL: exact version and GPL-free build flags.

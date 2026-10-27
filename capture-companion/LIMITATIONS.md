@@ -109,6 +109,27 @@ slice, not the full native product:
   screen rendering clean as control; viewfinder rendering stays a
   physical-device gate. Screenshots live under
   `.toolchain/emu-shots/` (gitignored toolchain output, not evidence).
+- **M3 live-transfer pass (emulator + localhost receiver, 2026-10-27).**
+  Proven against a running TLS receiver: in-app manual pairing over
+  cert-pinned TLS, two-phase QR redeem→approve→verify at protocol
+  level with openssl-verified SPKI pin, 13 genuine CameraX frames
+  uploaded as schema-v1 packages (standalone validator 13/13 valid),
+  13/13 staged assets byte-identical to phone originals and manifest
+  hashes, duplicate redelivery collapsing to `duplicate:true` with no
+  extra staged record, honest failure + clean retry across receiver
+  restart, pending survival across force-stop and emulator reboot,
+  and fail-closed wrong-fingerprint / consumed-code / revoked-token
+  behavior. No `memory.jsonl` was created or touched. Limits found:
+  (a) optical QR decode is untestable on this emulator — injecting
+  any custom image via `virtualscene-image` wedges the virtual camera
+  HAL and the app ANRs at startup until a cold emulator restart;
+  ML Kit decode of a real QR stays a hardware gate; (b) the startup
+  ANR itself exposed a real app defect for M4 — the CameraX provider
+  bind runs on the UI thread (`SessionScreen` → `CameraStillSource`),
+  so any camera stall becomes an app-killing ANR instead of an error
+  state; (c) the "Paired" header is local-only and still shows after
+  server-side revocation until the next upload attempt surfaces the
+  401. Screenshots under `.toolchain/m3-shots/` (gitignored).
 
 ## Platform and browser constraints
 

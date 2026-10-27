@@ -61,7 +61,9 @@ library only, offline). One invocation writes `assembly_state.json` and
     "region_resolved": true,
     "region": {"bbox_mm": […], "centroid_mm": […], "bbox_px": […],
       "view": "surface_a3", "result_json": "…", "pair_id": "CD", "region": "R2",
-      "result_sha256": "…", "rectified": {"px_per_mm": 4.0, "size_px": […], "origin_frame_mm": […]}},
+      "result_sha256": "…", "result_sha256_current": "…",
+      "provenance_verified": true, "provenance_note": "…",
+      "rectified": {"px_per_mm": 4.0, "size_px": […], "origin_frame_mm": […]}},
     "missing_reason": null
   },
   "crops": [
@@ -95,6 +97,13 @@ Rules:
   presented as an uninterrupted pair — the projector never states which
   one shows the component.
 - `exploded` positions come only from the layout algorithm below.
+- Provenance: the current SHA-256 of each cited `result.json` is
+  recomputed and compared with the cited `result_sha256`. A mismatch
+  rejects the region (`missing_reason`, plus a `missing_evidence`
+  entry carrying both `cited_sha256` and `current_sha256`); no crops
+  are attempted from rejected bytes. A region with no usable cited
+  hash still resolves, but with `provenance_verified: false` — never
+  as verified.
 
 ## Relationships (verbatim or unknown)
 

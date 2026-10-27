@@ -38,6 +38,33 @@ def _sha256_file(path: Path) -> str | None:
         return None
 
 
+_HEXDIGITS = frozenset("0123456789abcdefABCDEF")
+
+
+def _check_cited_hash(cited, current: str) -> tuple[str, str]:
+    """Verdict for a cited hash against current file bytes.
+
+    Returns (verdict, note). "verified": the 64-hex cited hash matches
+    the bytes on disk. "mismatch": a well-formed cited hash differs --
+    the file was substituted or edited after import; reject. Anything
+    else is "unverified": resolve the region for continuity with
+    historical logs, but never mark it verified.
+    """
+    if (isinstance(cited, str) and len(cited) == 64
+            and all(char in _HEXDIGITS for char in cited)):
+        if cited.lower() == current:
+            return "verified", \
+                "cited result_sha256 matches the result file bytes"
+        return "mismatch", \
+            f"cited result_sha256 {cited} != current file hash {current}"
+    if cited is None or cited == "":
+        return "unverified", \
+            "no result_sha256 cited; region geometry is unverified"
+    return "unverified", \
+        f"cited result_sha256 {cited!r} is malformed; " \
+        "region geometry is unverified"
+
+
 def _is_number(value) -> bool:
     return (
         isinstance(value, (int, float))
@@ -174,22 +201,37 @@ def _attach_region(
     results_dir: str | None,
     memory_path: Path,
     provenance_files: dict,
-) -> tuple[dict | None, str | None, list[dict], str | None]:
+) -> tuple[dict | None, str | None, list[dict], str | None, dict]:
     """Resolve the cited region and its crops. Returns region, missing
-    reason, crops, crop-unavailable reason."""
+    reason, crops, crop-unavailable reason, and provenance diagnostics
+    (cited/current result hashes). A hash mismatch rejects the region:
+    substituted bytes are never trusted."""
     evidence = observation.get("evidence") or {}
     cited = evidence.get("result_json") or ""
     label = evidence.get("region") or ""
+    cited_hash = evidence.get("result_sha256")
     result, used = _resolve_result(cited, results_dir, memory_path)
     if result is None:
         return None, f"result file unreadable ({cited or 'no citation'})", [], \
-            "region unresolved, no crop attempted"
+            "region unresolved, no crop attempted", \
+            {"cited_sha256": cited_hash, "current_sha256": None}
     key = str(used)
-    provenance_files.setdefault(key, _sha256_file(used))
+    current = _sha256_file(used)
+    provenance_files.setdefault(key, current)
+    if current is None:
+        return None, f"result file unreadable for hashing ({key})", [], \
+            "region unresolved, no crop attempted", \
+            {"cited_sha256": cited_hash, "current_sha256": None}
+    verdict, note = _check_cited_hash(cited_hash, current)
+    if verdict == "mismatch":
+        return None, f"result hash mismatch for {key}: {note}", [], \
+            "region rejected: provenance mismatch; no crop attempted", \
+            {"cited_sha256": cited_hash, "current_sha256": current}
     region = _find_region(result, label)
     if region is None:
         return None, f"region {label!r} not found in {key}", [], \
-            "region unresolved, no crop attempted"
+            "region unresolved, no crop attempted", \
+            {"cited_sha256": cited_hash, "current_sha256": current}
     rectified = result.get("rectified") or {}
     resolved = {
         "bbox_mm": region.get("bbox_mm"),
@@ -199,16 +241,21 @@ def _attach_region(
         "result_json": key,
         "pair_id": evidence.get("pair_id"),
         "region": label,
-        "result_sha256": evidence.get("result_sha256"),
+        "result_sha256": cited_hash,
+        "result_sha256_current": current,
+        "provenance_verified": verdict == "verified",
+        "provenance_note": note,
         "rectified": {
             "px_per_mm": rectified.get("px_per_mm"),
             "size_px": rectified.get("size_px"),
             "origin_frame_mm": rectified.get("origin_frame_mm"),
         },
     }
+    proven = {"cited_sha256": cited_hash, "current_sha256": current}
     clip = region.get("bbox_px")
     if not _is_box(clip, 4):
-        return resolved, None, [], "region has no bbox_px; crop coordinates unknown"
+        return resolved, None, [], \
+            "region has no bbox_px; crop coordinates unknown", proven
     found, reason = _resolve_crops(result, used)
     crops = [
         {
@@ -223,8 +270,8 @@ def _attach_region(
         for item in found
     ]
     if not crops:
-        return resolved, None, [], reason
-    return resolved, None, crops, None
+        return resolved, None, [], reason, proven
+    return resolved, None, crops, None, proven
 
 
 def _layout(components: list[dict]) -> None:
@@ -335,7 +382,7 @@ def build_state(
     missing_evidence: list[dict] = []
     warnings: list[str] = []
     for index, observation in enumerate(live_obs):
-        region, missing_reason, crops, crop_reason = _attach_region(
+        region, missing_reason, crops, crop_reason, proven = _attach_region(
             observation, results_dir, memory, provenance_files)
         if missing_reason is not None:
             missing_evidence.append({
@@ -343,6 +390,8 @@ def build_state(
                 "cited": (observation.get("evidence") or {}).get("result_json"),
                 "region": (observation.get("evidence") or {}).get("region"),
                 "reason": missing_reason,
+                "cited_sha256": proven["cited_sha256"],
+                "current_sha256": proven["current_sha256"],
             })
         linked = links_by_obs.get(observation["id"], [])
         tray: dict | None = None

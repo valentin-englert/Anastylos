@@ -16,8 +16,43 @@ timeline is a reassembly PROPOSAL, never a verified procedure.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
+
+_HEXDIGITS = frozenset("0123456789abcdefABCDEF")
+
+
+def _sha256_file(path: Path) -> str | None:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _check_cited_hash(cited, current: str) -> tuple[str, str]:
+    """Verdict for a cited hash against current file bytes.
+
+    Returns (verdict, note). "verified": the 64-hex cited hash matches
+    the bytes on disk. "mismatch": a well-formed cited hash differs --
+    the file was substituted or edited after import; reject. Anything
+    else is "unverified": resolve the region for continuity with
+    historical logs, but never mark it verified.
+    """
+    if (isinstance(cited, str) and len(cited) == 64
+            and all(char in _HEXDIGITS for char in cited)):
+        if cited.lower() == current:
+            return "verified", \
+                "cited result_sha256 matches the result file bytes"
+        return "mismatch", \
+            f"cited result_sha256 {cited} != current file hash {current}"
+    if cited is None or cited == "":
+        return "unverified", \
+            "no result_sha256 cited; region geometry is unverified"
+    return "unverified", \
+        f"cited result_sha256 {cited!r} is malformed; " \
+        "region geometry is unverified"
+
 
 def _load_store():
     """Import the memory reader lazily; cable.py puts it on sys.path."""
@@ -52,12 +87,19 @@ def _region_lookup(result: dict | None, label: str) -> dict | None:
 
 
 def _attach_regions(observations: list[dict], results_dir: str | None,
-                    memory_path: Path) -> tuple[dict, list[dict]]:
-    """Resolve each observation's cited region. Missing refs are reported."""
-    regions, missing = {}, []
+                    memory_path: Path) -> tuple[dict, list[dict], list[dict]]:
+    """Resolve each observation's cited region, verifying its hash.
+
+    Returns (regions, missing, unverified). A hash mismatch excludes the
+    region, so substituted bytes can never feed a candidate edge.
+    Regions without a usable cited hash still resolve -- for continuity
+    with historical logs -- but are listed as unverified, never trusted.
+    """
+    regions, missing, unverified = {}, [], []
     for event in observations:
         evidence = event.get("evidence") or {}
         cited = evidence.get("result_json") or ""
+        cited_hash = evidence.get("result_sha256")
         candidates = [Path(cited)]
         if results_dir:
             candidates.append(Path(results_dir) / Path(cited).name)
@@ -68,13 +110,40 @@ def _attach_regions(observations: list[dict], results_dir: str | None,
             if result is not None:
                 used = candidate
                 break
+        if result is None:
+            missing.append({"observation_id": event.get("id"),
+                            "cited": cited or None,
+                            "region": evidence.get("region") or None,
+                            "reason": "result file unreadable",
+                            "cited_sha256": cited_hash,
+                            "current_sha256": None})
+            continue
+        current = _sha256_file(used)
+        if current is None:
+            missing.append({"observation_id": event.get("id"),
+                            "cited": cited or None,
+                            "region": evidence.get("region") or None,
+                            "reason": "result file unreadable for hashing",
+                            "cited_sha256": cited_hash,
+                            "current_sha256": None})
+            continue
+        verdict, note = _check_cited_hash(cited_hash, current)
+        if verdict == "mismatch":
+            missing.append({"observation_id": event.get("id"),
+                            "cited": cited or None,
+                            "region": evidence.get("region") or None,
+                            "reason": f"result hash mismatch: {note}",
+                            "cited_sha256": cited_hash,
+                            "current_sha256": current})
+            continue
         region = _region_lookup(result, evidence.get("region", ""))
         if region is None:
             missing.append({"observation_id": event.get("id"),
                             "cited": cited or None,
                             "region": evidence.get("region") or None,
-                            "reason": "result file unreadable"
-                            if result is None else "region label not found"})
+                            "reason": "region label not found",
+                            "cited_sha256": cited_hash,
+                            "current_sha256": current})
             continue
         regions[event["id"]] = {
             "bbox_mm": region.get("bbox_mm"),
@@ -83,9 +152,17 @@ def _attach_regions(observations: list[dict], results_dir: str | None,
             "result_json": str(used),
             "pair_id": evidence.get("pair_id"),
             "region": evidence.get("region"),
-            "result_sha256": evidence.get("result_sha256"),
+            "result_sha256": cited_hash,
+            "result_sha256_current": current,
+            "provenance_verified": verdict == "verified",
+            "provenance_note": note,
         }
-    return regions, missing
+        if verdict == "unverified":
+            unverified.append({"observation_id": event.get("id"),
+                               "cited": cited or None,
+                               "region": evidence.get("region") or None,
+                               "reason": note})
+    return regions, missing, unverified
 
 
 def _contains(outer, point) -> bool:
@@ -300,7 +377,8 @@ def build_graph(memory_path: str, results_dir: str | None = None,
               "timestamp": event.get("timestamp"),
               "evidence": event.get("evidence")}
              for event in live]
-    regions, missing_regions = _attach_regions(live, results_dir, path)
+    regions, missing_regions, unverified_regions = _attach_regions(
+        live, results_dir, path)
     known = {node["id"] for node in nodes}
     confirmed, missing_confirm = _load_confirmations(confirmations_path, known)
     reason = reasoner or default_reasoner
@@ -357,6 +435,7 @@ def build_graph(memory_path: str, results_dir: str | None = None,
         "superseded": superseded,
         "regions_resolved": len(regions),
         "missing_regions": missing_regions,
+        "unverified_regions": unverified_regions,
         "confirmed": confirmed,
         "candidates": candidates,
         "contradictions": contradictions,

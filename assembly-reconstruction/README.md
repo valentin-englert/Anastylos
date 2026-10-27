@@ -105,9 +105,11 @@ the existing confirmation channels.
 python -m unittest discover -s tests -v
 ```
 
-46 tests: projector contract (order, verbatim geometry, unknown
+52 tests: projector contract (order, verbatim geometry, unknown
 identity, tray bases, verbatim relationships, provenance hashes,
-determinism, read-only inputs), edge cases (missing/malformed/empty
+determinism, read-only inputs), provenance verification
+(match/mismatch/missing/malformed hashes, tampered-byte rejection),
+edge cases (missing/malformed/empty
 logs, ambiguous multi-links), renderer structure (valid XML, section
 separation, badges, honest labels), linked crops (browser-safe
 relative hrefs resolving to real files, underlay), embedded crops
@@ -134,7 +136,7 @@ Regenerate (don't hand-edit) the graph if the log changes.
 
 ## Validation scope
 
-- Synthetic: full 46-test suite green; byte-reproducible.
+- Synthetic: full 52-test suite green; byte-reproducible.
 - Real hardware: replayed read-only over `hardware-02` (4
   observations, 1 human tray link, BC/CD results): state `ok`,
   4/4 regions resolved, self-contained SVG with 4 embedded rectified

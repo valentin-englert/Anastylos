@@ -28,7 +28,30 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python -m pip install -r calibration\requirements.txt
 ```
 
-`cairocffi` needs a native Cairo library. On Windows that is `libcairo-2.dll`. If it is missing, `generate` still writes every SVG and skips PDF/PNG with a warning. Print from the SVGs only after installing Cairo, or use the PDFs already in `print/`.
+## Native prerequisites on Windows
+
+Two system components sit outside `requirements.txt`:
+
+- `libcairo-2.dll`, loadable by `cairocffi` (a directory on `PATH`).
+  Any Windows Cairo build works, e.g. the `bin` directory of the GTK 3
+  Windows runtime or a conda-forge `cairo` install. Without it,
+  `generate` still writes every SVG and skips PDF/PNG with a warning,
+  and 4 of the 13 kit tests fail. The Tesseract install ships a
+  private copy that is not on `PATH` and cannot be used.
+- `pdftoppm` (poppler) on `PATH`, test-only: two kit tests rasterize
+  fresh PDFs through it. Product code never calls it.
+
+Verify, then re-run the kit tests:
+
+```powershell
+.\.venv\Scripts\python -c "import cairocffi; print('cairo ok')"
+where.exe pdftoppm
+cd calibration
+..\.venv\Scripts\python -m unittest discover -s tests
+```
+
+Print from the SVGs only after installing Cairo, or use the PDFs
+already in `print/`.
 
 ## Generate and test
 

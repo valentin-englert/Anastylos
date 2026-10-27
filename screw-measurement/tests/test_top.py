@@ -11,6 +11,7 @@ Run from the screw-measurement directory:
 from __future__ import annotations
 
 import json
+import math
 import sys
 import unittest
 from pathlib import Path
@@ -23,7 +24,7 @@ import numpy as np
 from anastylos_screw_measure.calibration import blank
 from anastylos_screw_measure.compare import compare_measurements
 from anastylos_screw_measure.synthetic import PIXELS_PER_MM, blank as blank_image, render_top
-from anastylos_screw_measure.vision import analyze
+from anastylos_screw_measure.vision import _hex_widths, analyze
 
 CAL = {"valid": True, "pixels_per_mm": PIXELS_PER_MM, "pixels_per_mm_std": 0.02,
        "frame": "surface_a3", "provenance": "synthetic test", "reasons": []}
@@ -257,6 +258,36 @@ class CompareTest(unittest.TestCase):
         left = analyze(render_top(seed=1)[0], mode="top", calibration=CAL)
         right = analyze(render_side(seed=1)[0], mode="side", calibration=CAL)
         self.assertEqual(compare_measurements(left, right)["verdict"], "uncertain")
+
+
+class HexWidthsTest(unittest.TestCase):
+    """Unit checks for across-flats geometry on exact hexagons.
+
+    Regression cover for the NumPy 2.x removal of 2-D np.cross: the
+    perpendicular distance between parallel flats must not depend on
+    np.cross at all.
+    """
+
+    def _hexagon(self, radius, rotation_deg=0.0):
+        angles = np.deg2rad(np.arange(6) * 60.0 + 90.0 + rotation_deg)
+        return np.stack([radius * np.cos(angles),
+                         radius * np.sin(angles)], axis=1)
+
+    def test_regular_hexagon_reports_exact_widths(self):
+        mean, std, corners = _hex_widths(self._hexagon(100.0))
+        self.assertAlmostEqual(mean, 100.0 * math.sqrt(3), places=5)
+        self.assertAlmostEqual(std, 0.0, places=5)
+        self.assertAlmostEqual(corners, 200.0, places=5)
+
+    def test_rotated_hexagons_keep_widths(self):
+        for rotation in (10.0, 20.0, 35.0):
+            with self.subTest(rotation=rotation):
+                mean, _std, corners = _hex_widths(self._hexagon(100.0, rotation))
+                self.assertAlmostEqual(mean, 100.0 * math.sqrt(3), places=5)
+                self.assertAlmostEqual(corners, 200.0, places=5)
+
+    def test_non_hexagon_returns_none(self):
+        self.assertIsNone(_hex_widths(np.zeros((5, 2))))
 
 
 if __name__ == "__main__":

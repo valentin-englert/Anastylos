@@ -218,7 +218,10 @@ class ValidateTests(PackageCase):
         self.assertTrue(any("missing from the archive" in issue for issue in report["issues"]))
 
     def test_unsafe_zip_paths_are_rejected(self):
-        for unsafe in ("../evil.bin", "/abs.bin", "C:/x.bin", "a\\b.bin", "a/../../b.bin"):
+        # Backslash names cannot round-trip through stdlib zipfile on
+        # Windows (write and read both normalize to '/'); they are
+        # covered by test_backslash_member_is_rejected below.
+        for unsafe in ("../evil.bin", "/abs.bin", "C:/x.bin", "a/../../b.bin"):
             with self.subTest(path=unsafe):
                 manifest, members = self.build_valid()
                 members = dict(members)
@@ -231,6 +234,43 @@ class ValidateTests(PackageCase):
                     any("unsafe ZIP path" in issue for issue in report["issues"]),
                     report["issues"],
                 )
+
+    def test_backslash_member_is_rejected(self):
+        # No real archive can present a backslash name on Windows, so the
+        # rule is pinned directly and validate_package's member scan is
+        # exercised with a hostile name injected below the archive layer.
+        self.assertEqual(validator.unsafe_path_reason("a\\b.bin"),
+                         "backslashes are forbidden")
+        manifest, members = self.build_valid()
+        path = self.package_path()
+        write_package(path, manifest, members)
+        real_zipfile = validator.zipfile.ZipFile
+
+        class HostileZip:
+            """A real archive plus one member stdlib could never surface."""
+
+            def __init__(self, *args, **kwargs):
+                self._real = real_zipfile(*args, **kwargs)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return self._real.__exit__(*exc)
+
+            def namelist(self):
+                return self._real.namelist() + ["a\\b.bin"]
+
+            def __getattr__(self, name):
+                return getattr(self._real, name)
+
+        with mock.patch.object(validator.zipfile, "ZipFile", HostileZip):
+            report = validator.validate_package(path)
+        self.assertEqual(report["status"], "invalid")
+        self.assertTrue(
+            any("unsafe ZIP path" in issue for issue in report["issues"]),
+            report["issues"],
+        )
 
     def test_duplicate_zip_entries_are_rejected(self):
         manifest, members = self.build_valid()

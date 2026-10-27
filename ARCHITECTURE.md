@@ -59,12 +59,12 @@ verified there on 2026-10-27. Test counts are that run
 | `component-markings/` | component marking recognition | `markings.py` | integrated | 54 pass |
 | `component-fingerprints/` | visual fingerprint enroll/match gallery | `fingerprints.py` | integrated | 61 pass |
 | `connector-matching/` | plug/socket mating-geometry match | `connectors.py` | integrated | 68 pass |
-| `screw-measurement/` | calibrated screw geometry (top/side) | `measure.py` | integrated | 78 run, 61 pass (17 pre-existing `np.cross` failures; owner fix needed) |
+| `screw-measurement/` | calibrated screw geometry (top/side) | `measure.py` | integrated | 81 pass (incl. 3 `_hex_widths` regression tests) |
 | `polarity-reader/` | polarity/orientation markers + rules | `polarity.py` | integrated | 60 pass |
 | `washer-spacer/` | washer/spacer recognition + classifier | `washer.py` | integrated | 82 pass |
 | `missing-parts/` | missing/displaced-part candidates | `missing.py` | integrated | 81 pass |
 | `cable-routing/` | cable paths + assembly-order graph | `cable.py` | integrated | 53 pass |
-| `capture-companion/` | offline-first capture PWA + validator | app + `python/anastylos_capture_validate.py` | integrated | TS 66 pass, `tsc` clean, `vite build` ok; validator 21 run, 20 pass (1 pre-existing Windows-only failure) |
+| `capture-companion/` | offline-first capture PWA + validator | app + `python/anastylos_capture_validate.py` | integrated | TS 66 pass, `tsc` clean, `vite build` ok; validator 22 pass |
 | `tools/compliance/` | third-party inventory checker (SPDX) | `check.py` | integrated | 5 pass; `check.py`: 0 errors, 8 open reviews |
 
 Hardware-validated: none. Every vision claim above rests on synthetic
@@ -114,18 +114,16 @@ the documented runner.
 
 ## Integration limitations and remaining work
 
-1. `screw-measurement`: 17 failures from `np.cross` on 2-D vectors,
-   removed in NumPy 2.x (`vision.py`, pinned numpy is 2.5.4).
-   Feature-owner fix; integration did not touch the code.
-2. Capture validator: 1 failure; Windows `zipfile` rewrites `\` to
-   `/` on write, so the `a\b.bin` unsafe-path case cannot trigger on
-   Windows. Test-only issue; the validator still rejects the package.
-3. Calibration PDF/PNG tests (4) need a native `libcairo-2.dll`,
-   absent on Windows. Documented upstream limitation.
-4. `pixels_per_mm` vs `px_per_mm` key spellings differ by module (see
+1. Calibration kit tests (4 of 13) need native Windows components
+   outside `requirements.txt`: `libcairo-2.dll` on `PATH` (PDF/PNG
+   generation) and poppler `pdftoppm` on `PATH` (test-only PDF
+   rasterizing). Product code degrades gracefully to SVG with a
+   warning. Setup is documented in `calibration/README.md`;
+   committed print/preview fixtures are intact and consistent.
+2. `pixels_per_mm` vs `px_per_mm` key spellings differ by module (see
    above). No live incompatibility; unify only with a migration.
-5. npm transitive closure licenses unverified (compliance review
+3. npm transitive closure licenses unverified (compliance review
    item); direct capture devDeps are MIT/Apache-2.0 per installed
    metadata.
-6. No end-to-end real-hardware run exists. Synthetic selftests and
+4. No end-to-end real-hardware run exists. Synthetic selftests and
    fixtures do not substitute for it.

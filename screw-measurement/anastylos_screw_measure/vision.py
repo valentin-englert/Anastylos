@@ -222,6 +222,15 @@ def _contour_support(edges: np.ndarray, contour: np.ndarray) -> float:
     return round(float(dilated[inside[:, 1], inside[:, 0]].mean() / 255.0), 3)
 
 
+def _cross2(a: np.ndarray, b: np.ndarray) -> float:
+    """Scalar z-component of the cross product of two 2-D vectors.
+
+    NumPy 2.x removed 2-D support from np.cross, so the perpendicular
+    distance this hex-width geometry needs is spelled out directly.
+    """
+    return float(a[0] * b[1] - a[1] * b[0])
+
+
 def _hex_widths(vertices: np.ndarray) -> tuple[float, float, float] | None:
     """Across-flats mean/std plus across-corners for 6 ordered vertices."""
     pts = vertices.reshape(-1, 2).astype(float)
@@ -250,7 +259,7 @@ def _hex_widths(vertices: np.ndarray) -> tuple[float, float, float] | None:
         norm = float(np.linalg.norm(direction))
         if norm <= 0:
             return None
-        widths.append(abs(float(np.cross(direction / norm, a2 - a1))))
+        widths.append(abs(_cross2(direction / norm, a2 - a1)))
     if len(widths) != 3:
         return None
     return float(np.mean(widths)), float(np.std(widths)), corners

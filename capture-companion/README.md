@@ -14,7 +14,7 @@ through an explicit operator export.
 - Validator: `capture-companion/python/anastylos_capture_validate.py`
   (standard library only)
 - Data contract: [`SCHEMA.md`](SCHEMA.md)
-- Future sync design (not implemented): [`SYNC_PROTOCOL.md`](SYNC_PROTOCOL.md)
+- Workstation sync (v1, prototype): [`SYNC_PROTOCOL.md`](SYNC_PROTOCOL.md) + [`receiver/README.md`](receiver/README.md)
 - Honest boundaries: [`LIMITATIONS.md`](LIMITATIONS.md)
 
 Existing ANASTYLOS recognition modules and shared root files are untouched;
@@ -44,13 +44,14 @@ context, so the live camera works there (see below).
 
 ```powershell
 cd capture-companion/app
-npm test             # 66 vitest tests: schema, storage, zip, export, csv, intake
+npm test             # 98 vitest tests: schema, storage, zip, export, csv, intake, sync
 npm run typecheck    # tsc --noEmit, must stay clean
 ```
 
 ```powershell
-# From the repository root:
+# Validator from the repository root; receiver from its own directory:
 py -3.12 -m unittest discover -s capture-companion/python/tests -v
+cd capture-companion/receiver; py -3.12 -m unittest discover -s tests -v   # 34 receiver tests (real loopback HTTP + TLS)
 ```
 
 The app suite includes a cross-language round trip
@@ -95,7 +96,8 @@ validator never modifies `memory.jsonl` and never asserts relationships.
    review state; confirm the BOM screen shows states honestly.
 5. Export a package; transfer the ZIP to a PC; run the validator — expect
    `status: valid` and both captures accepted for review.
-6. Deny camera permission once: the recovery instructions must match the
+6. Sync instead of sneakernet (optional): pair the workstation over TLS from the Sync tab, check the connection, sync, and confirm the staged report on the PC matches.
+7. Deny camera permission once: the recovery instructions must match the
    actual OS/browser settings path.
 
 ### Browser-support requirements
@@ -125,6 +127,7 @@ app/public/     # manifest, hand-written service worker, generated icons
 app/tests/      # vitest suite (node env) + independent ZIP test oracle
 app/scripts/    # zero-dependency PNG icon generator
 python/         # stdlib-only validator CLI + unittest suite
+receiver/       # stdlib-only workstation sync receiver + tests (see receiver/README.md)
 ```
 
 Storage: IndexedDB (`sessions`, `observations`, `images`, `binaries`,

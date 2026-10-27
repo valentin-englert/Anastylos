@@ -5,3 +5,10 @@ app/*.tsbuildinfo
 __pycache__/
 *.py[cod]
 .pytest_cache/
+# Local Android toolchain + Gradle state (never commit; reproducible, see android/README.md)
+/.toolchain/
+/.gradle-home/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

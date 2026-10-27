@@ -70,12 +70,14 @@ measurements: Measurement[],          # { label, value, unit, provenance }
 quantity: ConfirmedField<number>,     # positive int when confirmed
 candidates: IdentificationCandidate[],# suggested only, [] in v1
 provenance: { app, app_version, user_agent },
-export_history: [{ package_id, exported_at }]
+export_history: [{ package_id, exported_at, via? }]   # via is 'sync' for workstation-confirmed transfers, absent for local file exports
 ```
 
 Rules: `quantity` is NEVER inferred from the photo count. `measurements`
 require an explicit `unit` and `provenance`
-(`operator-measured` | `operator-estimated` | `unknown`).
+(`operator-measured` | `operator-estimated` | `unknown`). `via` is advisory
+transport metadata only: validators check that `export_history` is an array
+and ignore the marker, so packages with and without it validate identically.
 
 ### EvidenceImage
 

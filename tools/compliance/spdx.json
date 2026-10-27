@@ -323,7 +323,33 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: transitive npm packages of the five direct capture devDependencies (lockfile v3 closure recorded in capture-companion/app/package-lock.json) are not inventoried individually and their licenses are unverified. None ships in the PWA bundle. Confirm per-package licenses before redistributing node_modules."}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-maven-mlkit-barcode-scanning",
+      "name": "ML Kit barcode scanning (com.google.mlkit:barcode-scanning)",
+      "versionInfo": "17.3.0",
+      "downloadLocation": "https://repo.maven.apache.org/maven2/com/google/mlkit/barcode-scanning/17.3.0/barcode-scanning-17.3.0.aar",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-MLKit-Terms",
+      "licenseDeclared": "LicenseRef-MLKit-Terms",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:maven/com.google.mlkit/barcode-scanning@17.3.0"}],
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-android-shipped; source=capture-companion/android/gradle/libs.versions.toml (exact pin mlkit-barcode = 17.3.0); evidence=<license><name>ML Kit Terms of Service</name> in cached barcode-scanning-17.3.0.pom; note=bundled on-device barcode model, runs offline, ships inside the APK"}, {"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: ML Kit Terms of Service (https://developers.google.com/ml-kit/terms) is a custom Google terms document, not an SPDX-listed license. A human must read the current terms and confirm redistribution, attribution, and data-processing obligations before the APK is shared beyond the developer workstation."}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-maven-android-closure",
+      "name": "Android Maven pins (AndroidX, CameraX, Kotlinx; direct + transitive)",
+      "versionInfo": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct + transitive Maven closure of capture-companion/android (libs.versions.toml: AndroidX Compose/CameraX/Room/DataStore/WorkManager/Navigation/Security, Kotlinx coroutines/serialization, test and build tooling). Per-artifact POM license fields are unverified; inventory each runtime-shipped artifact individually before M5 APK distribution."}]
     }
+  ],
+  "hasExtractedLicensingInfos": [
+    {"licenseId": "LicenseRef-MLKit-Terms", "name": "ML Kit Terms of Service", "extractedText": "Custom Google terms document declared by the com.google.mlkit:barcode-scanning POM (<name>ML Kit Terms of Service</name>) at https://developers.google.com/ml-kit/terms. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.", "seeAlsos": ["https://developers.google.com/ml-kit/terms"], "comment": "LicenseRef documents the POM-declared terms without inventing an SPDX identifier."}
   ],
   "relationships": [
     {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
@@ -347,6 +373,7 @@
     {"spdxElementId": "SPDXRef-Package-npm-typescript", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
     {"spdxElementId": "SPDXRef-Package-npm-vitest", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
     {"spdxElementId": "SPDXRef-Package-npm-fake-indexeddb", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-npm-types-node", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"}
+    {"spdxElementId": "SPDXRef-Package-npm-types-node", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
+    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-maven-mlkit-barcode-scanning"}
   ]
 }

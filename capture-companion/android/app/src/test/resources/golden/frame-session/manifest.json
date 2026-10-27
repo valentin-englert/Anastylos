@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "package_id": "44444444-4444-4444-8444-444444444444",
+  "exported_at": "2026-10-27T09:01:00.000Z",
+  "generator": {
+    "app": "anastylos-capture",
+    "app_version": "0.1.0"
+  },
+  "sessions": [
+    {
+      "schema_version": 1,
+      "session_id": "11111111-1111-4111-8111-111111111111",
+      "name": "SNES teardown",
+      "created_at": "2026-10-27T09:00:00.000Z",
+      "updated_at": "2026-10-27T09:00:00.000Z",
+      "assembly_memory_session": null,
+      "tray_default": null
+    }
+  ],
+  "observations": [
+    {
+      "schema_version": 1,
+      "observation_id": "22222222-2222-4222-8222-222222222222",
+      "session_id": "11111111-1111-4111-8111-111111111111",
+      "component_reference": null,
+      "tray_reference": null,
+      "captured_at": "2026-10-27T09:00:05.000Z",
+      "capture_source": "camera",
+      "review_state": "unreviewed",
+      "operator_notes": null,
+      "markings": [],
+      "category": {
+        "value": null,
+        "state": "unknown"
+      },
+      "measurements": [],
+      "quantity": {
+        "value": null,
+        "state": "unknown"
+      },
+      "candidates": [],
+      "provenance": {
+        "app": "anastylos-capture",
+        "app_version": "dev",
+        "user_agent": null
+      },
+      "export_history": [],
+      "images": [
+        {
+          "schema_version": 1,
+          "image_id": "33333333-3333-4333-8333-333333333333",
+          "observation_id": "22222222-2222-4222-8222-222222222222",
+          "role": "other",
+          "filename": "frame-0001.jpg",
+          "mime": "image/jpeg",
+          "byte_length": 16,
+          "sha256": "daf267dc7888c4779ac262cefde1eca4457b0b363ff04752f56c715ad3f4ddba",
+          "captured_at": "2026-10-27T09:00:05.000Z",
+          "crop": null
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "22222222-2222-4222-8222-222222222223",
+      "session_id": "11111111-1111-4111-8111-111111111111",
+      "component_reference": null,
+      "tray_reference": null,
+      "captured_at": "2026-10-27T09:00:10.000Z",
+      "capture_source": "camera",
+      "review_state": "unreviewed",
+      "operator_notes": null,
+      "markings": [],
+      "category": {
+        "value": null,
+        "state": "unknown"
+      },
+      "measurements": [],
+      "quantity": {
+        "value": null,
+        "state": "unknown"
+      },
+      "candidates": [],
+      "provenance": {
+        "app": "anastylos-capture",
+        "app_version": "dev",
+        "user_agent": null
+      },
+      "export_history": [],
+      "images": [
+        {
+          "schema_version": 1,
+          "image_id": "33333333-3333-4333-8333-333333333334",
+          "observation_id": "22222222-2222-4222-8222-222222222223",
+          "role": "other",
+          "filename": "frame-0002.jpg",
+          "mime": "image/jpeg",
+          "byte_length": 16,
+          "sha256": "75d07916b4606a4df0f328525b899b2c0452aef4b936bda0edece7398e857e39",
+          "captured_at": "2026-10-27T09:00:10.000Z",
+          "crop": {
+            "x": 0.1,
+            "y": 0.2,
+            "width": 0.5,
+            "height": 0.4
+          }
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "assets/22222222-2222-4222-8222-222222222222/frame-0001.jpg",
+      "kind": "original",
+      "observation_id": "22222222-2222-4222-8222-222222222222",
+      "image_id": "33333333-3333-4333-8333-333333333333",
+      "sha256": "daf267dc7888c4779ac262cefde1eca4457b0b363ff04752f56c715ad3f4ddba",
+      "bytes": 16,
+      "mime": "image/jpeg"
+    },
+    {
+      "path": "assets/22222222-2222-4222-8222-222222222223/frame-0002.jpg",
+      "kind": "original",
+      "observation_id": "22222222-2222-4222-8222-222222222223",
+      "image_id": "33333333-3333-4333-8333-333333333334",
+      "sha256": "75d07916b4606a4df0f328525b899b2c0452aef4b936bda0edece7398e857e39",
+      "bytes": 16,
+      "mime": "image/jpeg"
+    }
+  ]
+}

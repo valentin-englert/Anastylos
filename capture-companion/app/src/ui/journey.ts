@@ -53,7 +53,7 @@ export function journeyStops(observationId: string | null): JourneyStop[] {
 }
 
 /** Shell route names that can be on screen. BOM is secondary: no journey stop. */
-export type ScreenRoute = 'capture' | 'sessions' | 'session' | 'inspect' | 'bom' | 'export';
+export type ScreenRoute = 'capture' | 'sessions' | 'session' | 'inspect' | 'bom' | 'export' | 'sync';
 
 export function activeJourneyStop(route: ScreenRoute): JourneyStopId | null {
   switch (route) {
@@ -66,6 +66,7 @@ export function activeJourneyStop(route: ScreenRoute): JourneyStopId | null {
       return 'sessions';
     case 'export':
       return 'export';
+    case 'sync':
     case 'bom':
       return null;
   }

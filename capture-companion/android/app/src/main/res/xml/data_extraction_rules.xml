@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="secret_prefs.xml" />
+        <exclude domain="file" path="datastore/pairing_preferences.preferences_pb" />
+    </cloud-backup>
+</data-extraction-rules>

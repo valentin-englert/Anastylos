@@ -54,9 +54,11 @@ in the app when it is not.
   ZIP round-trips, export planning/building, CSV, photo intake, SHA-256
   vectors, and package structure; the Python leg of the round trip runs
   only where an interpreter exists.
-- The Python unittest suite was authored with the validator but **could
-  not be executed in the sandboxed build environment** (no interpreter
-  available); run it before relying on it — see `README.md`.
+- The Python unittest suite was authored with the validator but could
+  not be executed in the capture branch's sandboxed build environment
+  (no interpreter available). The later feature-batch integration run
+  reports all 22 validator tests passing (see `../ARCHITECTURE.md`);
+  re-run it locally before relying on it — see `README.md`.
 - Camera, installability and offline-reload behavior were verified by
   code inspection, capability probing and build checks, not on physical
   devices in this session; the manual checklist in `README.md` covers

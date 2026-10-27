@@ -64,7 +64,7 @@ cd pcb-ocr
 ..\.venv\Scripts\python -m unittest discover -s tests -v
 ```
 
-26 deterministic tests: parser cases (prefixes, alternates, false
+31 deterministic tests: parser cases (prefixes, alternates, false
 positives) run on plain Python; pipeline and eval-harness cases use
 programmable stub backends (rotation search, polarity, duplicates,
 low confidence, missing backend, millimetre math, CLI, overlays).

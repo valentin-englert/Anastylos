@@ -30,11 +30,11 @@ Use the existing calibration virtualenv; install nothing.
 
 ```powershell
 # from the cable-routing directory
-..\Anastylos\.venv\Scripts\python.exe cable.py read photo.png --out cable_out
-..\Anastylos\.venv\Scripts\python.exe cable.py compare before.json after.json
-..\Anastylos\.venv\Scripts\python.exe cable.py graph ..\assembly-memory\memory.jsonl --out graph_out
-..\Anastylos\.venv\Scripts\python.exe cable.py eval --labels labels.json --images-dir photos
-..\Anastylos\.venv\Scripts\python.exe cable.py eval --graph-fixtures fixtures
+..\.venv\Scripts\python cable.py read photo.png --out cable_out
+..\.venv\Scripts\python cable.py compare before.json after.json
+..\.venv\Scripts\python cable.py graph ..\assembly-memory\memory.jsonl --out graph_out
+..\.venv\Scripts\python cable.py eval --labels labels.json --images-dir photos
+..\.venv\Scripts\python cable.py eval --graph-fixtures fixtures
 ```
 
 `cable.py` adds both `cable-routing/` and `assembly-memory/` to `sys.path`.
@@ -127,7 +127,7 @@ real-photo set exists yet.
 
 ```powershell
 # from the cable-routing directory
-..\Anastylos\.venv\Scripts\python.exe -m unittest discover -s tests -v
+..\.venv\Scripts\python -m unittest discover -s tests -v
 ```
 
 53 tests: 15 synthetic kinds with exact counts and junction degrees,

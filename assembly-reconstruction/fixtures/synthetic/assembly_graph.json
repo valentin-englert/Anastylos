@@ -1,0 +1,184 @@
+{
+  "status": "ok",
+  "reason": null,
+  "memory": "memory.jsonl",
+  "nodes": [
+    {
+      "id": "obs-0001",
+      "session": "synthetic",
+      "source_view": "fixture_back",
+      "timestamp": "2026-01-01T00:00:00Z",
+      "evidence": {
+        "pair_id": "p_back",
+        "region": "R1",
+        "result_json": "results/back.json",
+        "result_sha256": null
+      }
+    },
+    {
+      "id": "obs-0003",
+      "session": "synthetic",
+      "source_view": "surface_a3",
+      "timestamp": "2026-01-01T00:00:02Z",
+      "evidence": {
+        "pair_id": "p_tray",
+        "region": "R1",
+        "result_json": "results/tray.json",
+        "result_sha256": null
+      }
+    },
+    {
+      "id": "obs-0004",
+      "session": "synthetic",
+      "source_view": "fixture_back",
+      "timestamp": "2026-01-01T00:00:03Z",
+      "evidence": {
+        "pair_id": "p_missing",
+        "region": "R9",
+        "result_json": "results/missing.json",
+        "result_sha256": null
+      }
+    },
+    {
+      "id": "obs-0005",
+      "session": "synthetic",
+      "source_view": "fixture_back",
+      "timestamp": "2026-01-01T00:00:04Z",
+      "evidence": {
+        "pair_id": "p_back",
+        "region": "R2",
+        "result_json": "results/back.json",
+        "result_sha256": null
+      }
+    },
+    {
+      "id": "obs-0006",
+      "session": "synthetic",
+      "source_view": "fixture_back",
+      "timestamp": "2026-01-01T00:00:05Z",
+      "evidence": {
+        "pair_id": "p_back",
+        "region": "R3",
+        "result_json": "results/back.json",
+        "result_sha256": null
+      }
+    }
+  ],
+  "timeline": [
+    "obs-0001",
+    "obs-0003",
+    "obs-0004",
+    "obs-0005",
+    "obs-0006"
+  ],
+  "superseded": [
+    "obs-0002"
+  ],
+  "regions_resolved": 4,
+  "missing_regions": [
+    {
+      "observation_id": "obs-0004",
+      "cited": "results/missing.json",
+      "region": "R9",
+      "reason": "result file unreadable"
+    }
+  ],
+  "confirmed": [
+    {
+      "before": "obs-0001",
+      "after": "obs-0005",
+      "kind": "confirmed",
+      "evidence": {
+        "type": "human",
+        "note": "cover screw first (synthetic)"
+      },
+      "basis": "operator confirmation",
+      "confirmed_by": "fixture-operator"
+    }
+  ],
+  "candidates": [
+    {
+      "before": "obs-0001",
+      "after": "obs-0006",
+      "kind": "candidate",
+      "evidence": {
+        "type": "spatial+temporal",
+        "view": "fixture_back",
+        "overlap_fraction": 1.0,
+        "covers": true,
+        "covered_by": true,
+        "timeline": [
+          0,
+          4
+        ],
+        "regions": [
+          "R1",
+          "R3"
+        ]
+      },
+      "basis": "regions overlap; timeline order only suggests",
+      "confirmed_by": null
+    },
+    {
+      "before": "obs-0005",
+      "after": "obs-0006",
+      "kind": "candidate",
+      "evidence": {
+        "type": "spatial+temporal",
+        "view": "fixture_back",
+        "overlap_fraction": 0.444,
+        "covers": true,
+        "covered_by": true,
+        "timeline": [
+          3,
+          4
+        ],
+        "regions": [
+          "R2",
+          "R3"
+        ]
+      },
+      "basis": "regions overlap; timeline order only suggests",
+      "confirmed_by": null
+    }
+  ],
+  "contradictions": [],
+  "missing_confirmations": [],
+  "cycles": [],
+  "orderings": {
+    "canonical_disassembly": [
+      "obs-0001",
+      "obs-0003",
+      "obs-0004",
+      "obs-0005",
+      "obs-0006"
+    ],
+    "count_valid": 60,
+    "parallel_groups": [
+      [
+        "obs-0001",
+        "obs-0003",
+        "obs-0004",
+        "obs-0006"
+      ],
+      [
+        "obs-0005"
+      ]
+    ]
+  },
+  "reassembly": {
+    "proposal": [
+      "obs-0006",
+      "obs-0005",
+      "obs-0004",
+      "obs-0003",
+      "obs-0001"
+    ],
+    "unresolved": [
+      "obs-0003",
+      "obs-0004",
+      "obs-0006"
+    ],
+    "warning": "proposal only: reversed disassembly order is NOT a verified reassembly procedure; every step needs operator confirmation"
+  }
+}

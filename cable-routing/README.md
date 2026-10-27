@@ -85,6 +85,12 @@ The default reasoner emits a candidate only for region pairs sharing one
 Pure temporal pairs yield nothing. Pass `reasoner=` to `build_graph` for a
 custom adapter (it receives nodes plus resolved regions).
 
+Provenance: each cited `result.json` is re-hashed and compared with the
+cited `result_sha256`. A mismatch excludes the region (reported under
+`missing_regions` with both hashes), so substituted bytes can never
+feed a candidate edge. Regions without a usable cited hash still
+resolve, but are listed under `unverified_regions` — never trusted.
+
 Operator confirmations are a JSON list (or `{"edges": [...]}`):
 
 ```json
@@ -130,12 +136,14 @@ real-photo set exists yet.
 ..\.venv\Scripts\python -m unittest discover -s tests -v
 ```
 
-53 tests: 15 synthetic kinds with exact counts and junction degrees,
+60 tests: 15 synthetic kinds with exact counts and junction degrees,
 rotation/lighting/glare/shadow bounds, calibration valid/absent/invalid,
 ROI, segmenter adapters, determinism, JSON serialization, comparison,
 annotation, CLI, graph cases (sequence, parallel, temporal-only,
 confirmed, candidate, contradiction, cycle, multiple orders, missing refs,
-superseded, adapters, read-only), DOT export, and both eval workflows.
+superseded, adapters, read-only), graph provenance verification
+(match/mismatch/missing/malformed hashes, tampered-geometry exclusion),
+DOT export, and both eval workflows.
 
 ## Known limitations
 

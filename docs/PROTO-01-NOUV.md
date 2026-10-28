@@ -237,7 +237,7 @@ observable from overhead in pre-flight B". Next is E2.
 | `nouv-E2.script.json` | `f2b6c0948ef9970e2c8fec058ad787e7ac0585d42c45cc5f3971ae5318b24d07` (rolled with `tools/proto-01/roll_e2_script.py` @ 46f5f331) | E2 take |
 | E2 site inventory (`C:\ANASTYLOS\data\proto-01\E2\E2.inventory.json`: W-GREEN, W-YELLOW, W-BLUE, W-RED; D-pad and Start/Select excluded as wider than a cell) | `b66e1e0881e67438f19e082d5e4207d41a3e9ec8939cdd2a6394e1ab4c14ed1a` | E2 `observe` |
 | E2 outputs | take `E2.mp4` `bfc1bb491de3b1dec86f4ace8cb637588ab51cece06353c638371068a5e3624f`; `run1/events.json` `57c5487067ec2686dd57b9aac96b73b010b9dba106b60c9c1c202ef1c260e113`; `run1/custody.json` `72c9d64077cc729882cc9294eb1794e555c0029bb352794bad1a2b2ad90976ed`. Producer predictions (frozen, before reveal): L-0001 W-YELLOW→cell-6, L-0002 W-BLUE→cell-1, L-0003 W-GREEN→cell-5, L-0005 W-RED→cell-4 (all `candidate_temporal_exclusive`); L-0004 cell-9 `unattributed` (follows cell-5 `vacated`). 7/7 markers, 63/63 drift fits, no realignment, no sampling gaps | E2 ground-truth reveal |
-| `nouv-E2.actual.json` | pending | E2 scoring |
+| `nouv-E2.actual.json` | `eab5b7bee107c4fdac76c40477a70bb1d30d7360378ae7ecd3a1f063913774f9` (recorded with `tools/proto-01/record_e2_actual.py` @ 40ab8c54) | E2 scoring |
 
 ## Anhang: Ablauf heute (Operator, Deutsch)
 

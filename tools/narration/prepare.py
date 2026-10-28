@@ -24,6 +24,15 @@ Rules, all mandatory:
 5. Times in seconds exactly as in the bundle. At most 180 words. Language: {language}.
 """
 
+# Fixed wording for viewers who do not know the event vocabulary; each term keeps the status meaning.
+PLAIN_STYLE = """6. Audience: viewers of a demo video who do not know the system. Write flowing sentences,
+   no field names or status codes. Use exactly these German terms:
+   site_changed = "die Mulde ist danach leer"; appeared = "in der Zelle liegt danach ein Teil";
+   vacated = "die Zelle ist danach leer"; candidate_temporal_exclusive = "Zuordnungsvorschlag, noch unbestätigt";
+   unattributed = "ohne zugeordnete Herkunft". Times rounded to one decimal, e.g. "nach 12,6 s".
+   Keep the square-bracket citations. End with one sentence on what the operator still has to do.
+"""
+
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -56,15 +65,18 @@ def main() -> None:
     parser.add_argument("--custody", required=True, type=Path)
     parser.add_argument("--score", type=Path)
     parser.add_argument("--language", default="German")
+    parser.add_argument("--style", choices=("exact", "plain"), default="exact")
+    parser.add_argument("--prompt-name", default="prompt.txt")
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     bundle = build_bundle(args.events, args.custody, args.score)
     bundle_text = json.dumps(bundle, indent=1, ensure_ascii=False)
     (args.out / "bundle.json").write_bytes(bundle_text.encode("utf-8"))
-    prompt = (RULES.format(language=args.language) + "\nJSON bundle:\n" + bundle_text).encode("utf-8")
-    (args.out / "prompt.txt").write_bytes(prompt)  # bytes, so the file hash equals the printed hash on Windows
-    print(f"prompt.txt sha256 {hashlib.sha256(prompt).hexdigest()}, {len(prompt)} bytes")
+    rules = RULES.format(language=args.language) + (PLAIN_STYLE if args.style == "plain" else "")
+    prompt = (rules + "\nJSON bundle:\n" + bundle_text).encode("utf-8")
+    (args.out / args.prompt_name).write_bytes(prompt)  # bytes, so the file hash equals the printed hash on Windows
+    print(f"{args.prompt_name} sha256 {hashlib.sha256(prompt).hexdigest()}, {len(prompt)} bytes")
 
 
 if __name__ == "__main__":

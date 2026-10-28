@@ -112,3 +112,24 @@ Run 2 outputs, hashed before comparison with ground truth
 `regions.json` `7baf99dbf2dc63480854606b283bfe5e7adf05dbae2655c991438300ed0a0027`,
 `region-events.json` `2da470d2c3f5ebf0e227041ac583b0c23d61034d366e0e7b03a6759ae70c97fa`,
 `custody.json` `1bb2d1efe04c718884e3a11e7285c6436a97f7b6e6527f3eb16763e4bebe47a6`.
+
+## 7. Result run 2 (2026-10-29): PASS (retrospective)
+
+| Measure | Value |
+|---|---|
+| Wells discovered | 3 of 4: S-1 → W-YELLOW, S-2 → W-BLUE, S-3 → W-GREEN; each region's time window equals the true removal window |
+| Missed | W-RED: the five grid sites over it (G-10-25, G-10-26, G-11-25, G-11-26, G-11-27) were `inventory_not_observable` from the start (never clean within the 2 s initialisation tolerance); cause not yet diagnosed |
+| False-positive regions | 0 |
+| Links | 3 correct (S-1 → cell-6, S-2 → cell-1, S-3 → cell-5, all `candidate_temporal_exclusive`, all matching the sealed E2 actual file), 0 incorrect; cell-9 (C4 move) and cell-4 (red, source missed) `unattributed` |
+| Pose epoch breaks | 0 (21 `anchor_ring_changed`) |
+| Interventions | none: no inventory, no names, no coordinates |
+
+Outcome by §4: **PASS** (not STRONG: one well missed). Retrospective on
+footage whose results were known; it justifies an independent recording,
+not a generalization claim. SNES-specific assumptions: none in code or
+parameters; the assumptions listed in §5 (contrast with white paper,
+parts larger than about 8 mm, device at rest, fixed camera) remain.
+
+Next: diagnose the unobservable sites over W-RED, then preregister an
+independent take (new device or new arrangement, no inventory) before
+any generalization claim.

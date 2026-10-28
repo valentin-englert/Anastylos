@@ -88,6 +88,8 @@ Preconditions (stop and report if any fails, no workaround):
   1. Frozen software hashes match docs/PROTO-01.md §2.
   2. Sheet registration on CAM1 passes with the calibration kit config
      (check marker dictionary and ids against calibration-config.json first).
+     Technical Lead check 2026-10-28: the first 15 s of CAM1 register with
+     7 markers, RMS 0.406 mm; confirm it in your own run.
 Before running the observer:
   3. Write gt/snes02u.gt.json: for each unique part moved in 132–181 s, its
      source well label and destination cell, from your existing stills.
@@ -106,6 +108,7 @@ Deliver: appended section "§11 SNES-02-U (exploratory)" in
 snes-02/OBSERVABILITY_REPORT.md with correct / incorrect / ambiguous /
 unattributed link counts, sources detected, interventions, all hashes,
 and the label "exploratory, development data, non-blind ground truth".
+Qualify every automatic link as "given an operator-defined site inventory".
 A correct link here does not satisfy the MVP gate; PROTO-01 does.
 ```
 
@@ -116,10 +119,12 @@ A correct link here does not satisfy the MVP gate; PROTO-01 does.
 ```text
 Role: Muse A, PROTO-01 producer. You never receive proto01.sealed.json or
 proto01.cells.json.
-Follow docs/PROTO-01.md §5 (pre-flight on the owner's 15 s setup clip) and
-§7 (processing). Verify §2 hashes before each run. Write the site inventory
+Follow docs/PROTO-01.md §7 (processing); pre-flight clips are run by the
+Technical Lead. Verify §2 hashes before each run. Write the site inventory
 from the owner's labelled hole photo before running observe. Outputs to
 C:\ANASTYLOS\data\proto-01\<run>\ with SHA-256 of every output file.
 Hand the frozen outputs and hashes to the Technical Lead; do not score.
+Any automatic link is "given an operator-defined site inventory"; record the
+inventory as an intervention.
 Stop and report on any hash mismatch or registration rejection.
 ```

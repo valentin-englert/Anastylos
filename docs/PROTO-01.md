@@ -17,6 +17,12 @@ protocol P with N interventions". It does not support free, natural
 disassembly, instance identity of identical parts beyond their custody
 chain, or generalization beyond this unit.
 
+The source sites are initialized manually: an operator-defined site
+inventory (hole positions) is written before the observer runs. Every
+automatic result is therefore reported as "automatic link given an
+operator-defined source-site inventory". PROTO-01 does not test
+autonomous site discovery, and the inventory counts as an intervention.
+
 ## 2. Frozen software (verify before every run)
 
 The observer is not on `main`. It runs read-only from the sibling
@@ -64,38 +70,131 @@ for this experiment.
 - Empty, numbered tray cells of the calibration kit.
 - One phone on a fixed overhead stand, **4K 30 fps** (SNES-02's 720p
   overhead gave ~7 px per screw). Diffuse light, all markers in frame.
-- Screwdriver, calipers, UV marker pen, UV flashlight, one die.
+- Screwdriver, calipers, one die, and a ground-truth marking kit: UV
+  marker pen and UV flashlight, or the fallback in §4.3 (nail polish or
+  paint markers in distinct colours).
+- A USB stick or a phone to hold the sealed files off the workstation.
 
 ## 4. Sealed ground truth (owner, before recording)
 
-1. Photograph the controller in the jig and label every screw hole
-   `H1`…`Hn` on that photo (positions only, no answers).
-2. Measure each screw (length, head diameter, thread) with calipers.
-3. Mark each screw with a unique UV code on the shank (1, 2, 3 … dots),
-   invisible under normal light.
-4. Roll the die to fix the removal order and which cells receive which
-   removal; choose the hole for control C1 (still present when touched).
-5. Write `proto01.sealed.json` with: hole → UV code, screw measurements,
-   scripted order of holes and target cells, control definitions,
-   operator name, date. Compute its SHA-256 and send only the hash to the
-   Technical Lead before recording. Keep the file away from the
-   processing lane until scoring.
+The ground truth must identify each screw physically, be fixed and
+sealed before recording, stay unavailable to the processing lane until
+its outputs are frozen, and be readable after the session without the
+video.
 
-After recording: read each cell's UV code under UV light, photograph
-each cell, and add the result to a second sealed file (`proto01.cells.json`,
-hashed the same way).
+### 4.1 Coding and reinstalling the screws
 
-## 5. Pre-flight (mandatory, same setup, before the real take)
+1. With all screws in place, photograph the controller in the jig and
+   label every hole `H1`…`Hn` on the photo (positions only). This photo
+   may go to the processing lane.
+2. Remove all screws off camera. Keep each next to a label of its
+   original hole.
+3. Measure each screw: length, head diameter, thread diameter. If all
+   agree within 0.2 mm and look identical, the assignment in step 5 is
+   random. Otherwise each screw goes back into its original hole.
+4. Give each screw a unique code on the last 2 mm of the thread (tip
+   end): UV ink dots (1, 2, 3 …) or, without UV ink, the fallback in
+   §4.3. The code must be hidden while the screw is installed. Let it
+   dry.
+5. Assign screws to holes: roll the die (or shuffle) for identical
+   screws; otherwise use the original holes.
+6. Reinstall each screw in its assigned hole, snug with the
+   screwdriver as before, not tighter.
+7. Photograph the installed back again (codes hidden) to document that
+   every hole is filled.
 
-Record 15 s of the empty, static setup and run `custody.py observe` on
-it with the frozen configuration. Required: sheet registration accepted
-and no zone event. If registration is rejected (known risk: marker-10
-corner bias, see `ARCHITECTURE.md`), report to the Technical Lead before
-recording; do not tune.
+### 4.2 Script and sealing
+
+1. Roll the die for: the removal order of the holes, the empty target
+   cell of each removal (one cell each), the hole for control C1
+   (touched while its screw is still in), and the cell from which C2
+   moves a screw.
+2. Write `proto01.sealed.json`: hole → code, measurements, assignment
+   rule used, scripted order and target cells, controls, operator,
+   date, and a `nonce` of at least 32 random characters. Without the
+   nonce, the few possible hole → code permutations could be recovered
+   from the hash.
+3. Compute the hash: `Get-FileHash proto01.sealed.json -Algorithm SHA256`
+   (PowerShell) or `certutil -hashfile proto01.sealed.json SHA256`.
+4. Send only the hash to the Technical Lead, who commits it to §11
+   before recording.
+5. Move the file off the workstation (USB stick, phone or an encrypted
+   archive) and delete the copy on the PC: agents on this PC can read
+   any local file, so a local copy is not sealed. Keep a paper copy.
+
+### 4.3 Fallback without UV ink
+
+Use distinct, durable colours (nail polish or paint marker; one colour
+per screw, or one to four dots of one colour) on the thread tip, as in
+§4.1 step 4. This is acceptable for PROTO-01 because:
+
+- the custody observer and linker never use part appearance; they
+  decide from site and cell changes over time, so a visible mark cannot
+  steer the automatic result;
+- the code is hidden while the screws are installed, so the site
+  inventory, written from the first static frame, cannot encode it;
+- the hole → code mapping stays sealed, and the codes are read
+  physically after the session.
+
+Report it as "visible code on thread tip" instead of UV. Do not use
+this fallback in later experiments whose methods read appearance
+(matcher appearance fields, Muse vision).
+
+If no marking is possible at all: sealed script plus an independent
+witness camera (a second phone close to device and tray whose video is
+never given to the processing lane). The Technical Lead annotates the
+witness video before opening the custody outputs. This is weaker
+(visual, and dependent on script compliance) and is labelled
+"script + witness ground truth".
+
+### 4.4 After recording
+
+Read each cell's code (UV light or by eye), photograph each cell, and
+write `proto01.cells.json` (cell → code, with its own nonce). Hash it
+the same way, send the hash, and store the file like the first one.
+
+## 5. Pre-flight (mandatory, same setup, before coding the screws)
+
+Pre-flight clips are setup checks and are never scored. The Technical
+Lead runs them with the frozen software.
+
+**Pre-flight A (registration).** Record 15 s of the static setup with
+all screws in place and hands out of frame. Run `custody.py observe`
+without inventory. Pass: exit 0, `registration.report.valid` true,
+0 events, all camera-drift fits accepted. Record `n_markers`,
+`reprojection_rms_mm` and whether earlier attempts failed.
+
+If registration becomes valid only after attempts with all markers
+failed, the setup depends on a marker being hidden. Fix it physically
+(sheet flat and taped, camera perpendicular and centred, no glare on
+markers) and repeat. Never tune software; covering a marker on purpose
+needs owner approval and is reported.
+
+**Pre-flight B (signal check, one screw).** Same setup, about 30 s:
+static, hands off; remove one screw with the pauses of §6 and put it
+into an empty cell; static. Run `observe` with a one-hole inventory,
+then `link`. Pass: a `site_changed` event for that hole and an
+`appeared` event for that cell. Otherwise change only lighting, camera
+height or framing, log the change and repeat. Reinstall the screw
+afterwards. After pre-flight A, do not touch camera or sheet; if either
+moves, repeat pre-flight A.
+
+**Verification of the pre-flight path on existing footage**
+(2026-10-28, frozen software, first 15 s of each recording, outputs in
+the Technical Lead's scratchpad):
+
+| Clip | Result |
+|---|---|
+| SNES-02 CAM1 (720p overhead) | valid at frame 0 with 7 markers, RMS 0.406 mm, 0 events, 13/13 drift fits |
+| SNES-01 (4K overhead) | 12 attempts with all markers rejected (1 RANSAC outlier, max error 1.50–1.58 mm > 1.5 mm); valid at 2.55 s with 6 markers (15 not used), RMS 0.36 mm, 0 events, 13/13 drift fits |
+
+Whether registration passes therefore depends on the physical setup;
+pre-flight A decides it for the PROTO-01 setup.
 
 ## 6. Capture script (~3–4 min, one continuous take)
 
-1. 5 s static, hands out of frame.
+1. 10 s static, hands out of frame (registration is searched only in
+   the first 15 s).
 2. For each scripted hole in order: hands fully off device and tray for
    ≥2 s → unscrew and remove one screw → carry it → put it alone into its
    scripted empty cell → hands fully off device and tray for ≥2 s.
@@ -139,6 +238,9 @@ written before `observe` runs.
 - Report separately: correct, incorrect, ambiguous and unattributed
   links; sources detected per hole; control outcomes; interventions;
   protocol deviations.
+- State every automatic result as "automatic link given an
+  operator-defined source-site inventory" (§1), and name the ground-truth
+  variant used (UV code, visible code on thread tip, or script + witness).
 
 ## 9. Acceptance criteria (proposed preregistration thresholds)
 
@@ -166,3 +268,68 @@ operator-declared source (see
 
 Keep every run, including failed ones, and write the experiment card
 in the format of research log §9.
+
+## 11. Commitment ledger
+
+SHA-256 of sealed files, committed before the step they protect.
+
+| File | SHA-256 | Committed before |
+|---|---|---|
+| `proto01.sealed.json` | pending | recording |
+| `proto01.cells.json` | pending | hand-off of custody outputs to scoring |
+
+## Anhang A: Checkliste Aufbau und Aufnahme (Operator)
+
+Zeitbedarf grob: Aufbau 30–45 min, Vorab-Tests 15 min plus Auswertung,
+Ground Truth 30–45 min, Aufnahme 5 min.
+
+**A. Material**
+- [ ] Controller, alle Rückschrauben eingesetzt
+- [ ] A3-Markerbogen `surface_a3` (Marker 10–16, Tray-Zellen 1–12)
+- [ ] Halterung aus Klötzen und Klebeband, verdeckt keinen Marker und keine Zelle
+- [ ] Smartphone mit starrem Stativ über dem Bogen, mehrere GB frei
+- [ ] Diffuses Licht ohne Spiegelung auf den Markern
+- [ ] Schraubendreher, Messschieber, Würfel
+- [ ] UV-Stift und UV-Lampe, sonst Nagellack oder Lackstift in 5 Farben
+- [ ] USB-Stick oder Handy für die versiegelten Dateien, Papier und Stift
+
+**B. Aufbau**
+- [ ] Bogen flach, Ränder abgeklebt, keine Wellen
+- [ ] Controller in der Halterung, Rückseite oben, alle Löcher frei sichtbar
+- [ ] Zellen 1–12 leer
+- [ ] Kamera senkrecht über der Bogenmitte; alle 7 Marker und alle 12 Zellen im Bild
+- [ ] 4K, 30 fps; Fokus und Belichtung gesperrt; kein Zoom; Nicht stören an
+- [ ] Ab jetzt Kamera und Bogen nicht mehr berühren
+
+**C. Vorab-Test A (Registrierung)**
+- [ ] 15 s statisch aufnehmen, Hände außerhalb des Bildes
+- [ ] Original nach `C:\ANASTYLOS\incoming\proto-01\preflight-A.mp4` kopieren, Bescheid geben
+- [ ] Erst weiter nach „A bestanden“
+
+**D. Vorab-Test B (eine Schraube)**
+- [ ] Ca. 30 s: 10 s statisch, eine Schraube mit Pausen herausdrehen, allein in eine leere Zelle legen, Hände weg, 10 s statisch
+- [ ] Als `preflight-B.mp4` ablegen; Loch und Zelle mitteilen
+- [ ] Schraube wieder einsetzen; erst weiter nach „B bestanden“
+
+**E. Ground Truth (§4)**
+- [ ] Foto mit Lochlabels H1…Hn, Schrauben eingesetzt
+- [ ] Schrauben ohne Kamera entfernen, messen, notieren
+- [ ] Gewindespitzen codieren, trocknen lassen
+- [ ] Zuordnung festlegen (Würfel bei identischen Schrauben), wieder einsetzen, Foto
+- [ ] Skript auswürfeln: Reihenfolge, Zielzellen, Loch für C1, Zelle für C2
+- [ ] `proto01.sealed.json` mit Nonce schreiben, Hash berechnen, nur den Hash schicken
+- [ ] Datei vom PC entfernen, Papierkopie behalten
+
+**F. Aufnahme (§6), erst nach „Hash committet“**
+- [ ] Skript ausgedruckt neben dem Aufbau
+- [ ] 10 s statisch
+- [ ] Je Schraube: ≥2 s Hände ganz weg, herausdrehen, tragen, allein in die Zielzelle, ≥2 s Hände ganz weg
+- [ ] C1 und C2 an ihrer Skriptstelle
+- [ ] 5 s statisch am Ende
+- [ ] Jede Abweichung sofort mit Uhrzeit notieren
+
+**G. Danach**
+- [ ] Original-MP4 unverändert nach `C:\ANASTYLOS\incoming\proto-01\` kopieren
+- [ ] Codes in den Zellen ablesen, jede Zelle fotografieren
+- [ ] `proto01.cells.json` mit Nonce, Hash schicken, Datei vom PC entfernen
+- [ ] Tray bis zur Auswertung unverändert lassen

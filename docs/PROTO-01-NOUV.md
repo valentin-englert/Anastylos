@@ -311,3 +311,30 @@ folder `narration-plain\`): `bundle.json` `3ea3a6f82606b67db886e95728895c6e7a413
 (same content as above, LF), `prompt.txt` `a4e97646f924b398da663c7eeac6200956ba3e2613614bfd5133150a49969962`,
 `narration-2.md` `09e31fac08d0232ae05012eb7d17c45c67304e0c991b9e4ac79ea577994b0dfd`. `check.py`: ACCEPTED.
 Budget used: 2 of 30 calls; free credit 140.31 → 140.30 USD.
+
+
+## 12. E2 in Assembly Memory and exploded view (2026-10-28)
+
+Evidence: `custody.py export-pairs` for E-0017/20/21/25 (removals) and
+E-0018/19/22/26 plus E-0024 (deposits), unchanged change-detection
+(harness `a2308f66…`), `custody.py bind` (one region per zone).
+`memory.py import --region` wrote obs-0001…0004 (W-YELLOW, W-BLUE,
+W-GREEN, W-RED; centroids within 1.2 mm of the inventory well centres).
+Tray links link-0001…0004 were written with `--confirmed-by
+"valentin-englert (owner)"` after the owner confirmed them in chat (one
+basis per link by contract; deposit pair ids in each note): obs-0001→6,
+obs-0002→1, obs-0003→9 (custody proposal L-0003 said cell 5; control C4
+moved it to cell 9), obs-0004→4. `where --tray` returns `located` with
+the right well for all four.
+
+| File in `C:\ANASTYLOS\data\proto-01\E2\` | SHA-256 of file bytes | SHA-256 reported by `reconstruct.py` (LF text) |
+|---|---|---|
+| `memory\memory.jsonl` | `867fe05d4fc3e302fa1d12e7414e5066cc64b4087a023689d35437a500b0568a` | same |
+| `svg\assembly_state.json` | `736d87058f03a3650d492458ed43ea8bd72e26a1b29fd4ec6d120e29acb87633` | `32c62481e67b3d20e603a3631c96029facbceef3663066023f6aedec8002b990` |
+| `svg\exploded.svg` (`--embed-crops`) | `47939f7cffeedea08fa2c613f08870249d2da26ae0e585c544ebe1995f9c606b` | `9cfe980d475e2cd0c389100bc585eebf9d98b7818140ef8c239d8ad827eacbfb` |
+| `svg-light\exploded.svg` (linked crops) | `ab37bffeec1e34c4d0aa4fab8696c32993b76e441d4b5fd74d7cf22308d52582` | `1806168fae04f30af6a5e06982fc53f22ee0b5517b1783c51a05a42c8f1933cb` |
+
+The two hash columns differ only by CRLF: `assembly-reconstruction`
+hashes its text but writes it with `write_text`, which on Windows
+translates line endings (finding for that module's owner). The SVG was
+checked by its text content (labels, links, provenance), not yet by eye.

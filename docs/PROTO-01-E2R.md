@@ -107,3 +107,18 @@ At most two takes; criteria are not changed after results are seen.
    der Hand (Pinzette erlaubt), Hände danach ganz raus, ~2 s. 5 s statisch.
 5. Original nach `C:\ANASTYLOS\incoming\E2R.mp4`; Zeugen-Video, `actual`
    (`record_e2_actual.py --experiment E2R`) und Endfotos wie bei E2.
+
+## 9. Pre-flight result (2026-10-29): pass
+
+`E2R-static.mp4` (`5e204c41c43beb149cb095b022c6faf2895252ce1d917320f23222162d1087fd`,
+16.1 s) with observer v1.1 `86122666` (file hashes as in §2 verified) and
+the E2R inventory (`d56188ee…`): registration valid with 7 markers, RMS
+0.307 mm; 0 events; 14/14 drift fits; no device realignment, no
+`pose_epoch_break`; all four wells `observing` with declared start `empty`.
+`static\events.json` `6c77a92684b96adb81f24e57999397031edae2a953a474eccc282a91b7768f5f`.
+
+Shell position against E2 (the observer cannot see this, it compares
+with the clip's own first frame): phase correlation of the rectified
+static frames of E2 and E2R gives a shift of (−0.14, +0.03) mm; the E2
+well rectangles sit on the now empty wells. The E2 inventory geometry
+stays valid; no new baseline needed.

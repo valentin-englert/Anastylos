@@ -27,11 +27,13 @@ def cmd_build(args) -> int:
     out.mkdir(parents=True, exist_ok=True)
     state_path = out / "assembly_state.json"
     svg_path = out / "exploded.svg"
+    # Write bytes so the reported SHA-256 matches the file on every OS
+    # (write_text would turn "\n" into "\r\n" on Windows).
     state_text = json.dumps(state, indent=2) + "\n"
-    state_path.write_text(state_text, encoding="utf-8")
+    state_path.write_bytes(state_text.encode("utf-8"))
     svg_text = render_svg(state, svg_path=str(svg_path),
                           embed_crops=args.embed_crops)
-    svg_path.write_text(svg_text, encoding="utf-8")
+    svg_path.write_bytes(svg_text.encode("utf-8"))
     print(json.dumps({
         "status": state["status"],
         "reason": state["reason"],

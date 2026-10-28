@@ -140,7 +140,7 @@ unless noted) and match the current tree's test methods exactly.
 | `sam-tracking/` | SAM 3.1 segmentation/tracking eval (cloud-isolated experiment) | `sam.py` | implemented | 55 pass; live runs ledgered, none claimed yet |
 | `tools/retrospective-custody/` | offline inspection of cached tool-mask endpoints in a video clip (diagnostic) | `retrospective_custody.py` | implemented, experimental geometry gate only | 8 pass; cached real-clip execution; physical contact, removals, deposits and correspondence are not implemented in this tool |
 | `tools/retrospective-custody/matcher/` | deposit-triggered source-to-tray correspondence over supplied `anastylos-observation-v1` events (see "Correspondence contracts and owner decisions") | `match.py`, `validate.py` | implemented, synthetic only | 22 pass; no real observation file has been consumed; owner decisions V1, V2, V4, V5 not yet implemented |
-| `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 52 pass; real replay on hardware-02 memory only |
+| `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 53 pass; real replay on hardware-02 and PROTO-01-NOUV E2 memory |
 
 Hardware-validated: none. Every vision claim above rests on synthetic
 fixtures; see each module README for its stated validation scope.

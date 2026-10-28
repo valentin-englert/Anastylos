@@ -338,3 +338,9 @@ The two hash columns differ only by CRLF: `assembly-reconstruction`
 hashes its text but writes it with `write_text`, which on Windows
 translates line endings (finding for that module's owner). The SVG was
 checked by its text content (labels, links, provenance), not yet by eye.
+
+Update: `assembly-reconstruction` now writes bytes (regression test
+`test_reported_sha256_matches_written_files`). The E2 outputs were rebuilt
+from the same inputs; their file bytes now equal the reported hashes
+(state `32c62481…`, `svg\exploded.svg` `9cfe980d…`, `svg-light\exploded.svg`
+`1806168f…`), so the right-hand column above is now also the file hash.

@@ -8,6 +8,7 @@ Run from the assembly-reconstruction directory:
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import sys
@@ -55,6 +56,17 @@ class CliBuild(unittest.TestCase):
             self.assertTrue(svg_path.is_file())
             validate_state(json.loads(state_path.read_text(encoding="utf-8")))
             ET.parse(str(svg_path))
+
+    def test_reported_sha256_matches_written_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "out"
+            code, summary_text = _run(["build", str(FIX / "memory.jsonl"), "--out", str(out)])
+            self.assertEqual(code, 0)
+            summary = json.loads(summary_text)
+            for name, key in (("assembly_state.json", "state_sha256"), ("exploded.svg", "svg_sha256")):
+                data = (out / name).read_bytes()
+                self.assertNotIn(b"\r\n", data)
+                self.assertEqual(hashlib.sha256(data).hexdigest(), summary[key])
 
     def test_build_without_optional_inputs(self):
         with tempfile.TemporaryDirectory() as tmp:

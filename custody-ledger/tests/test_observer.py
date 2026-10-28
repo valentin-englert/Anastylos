@@ -107,5 +107,62 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(run(observer, frames), [])
 
 
+class _StillDevice:
+    """Device whose re-registration always succeeds without moving (the device rests)."""
+
+    region = (0, 0, SIZE[1], SIZE[0])
+
+    def __init__(self):
+        self.realignments = []
+        self.reference = None
+
+    def initialize(self, t_s, gray, motion, skin):
+        self.reference = gray
+
+    def realign(self, t_s, gray, skin):
+        self.realignments.append({"t_s": t_s, "accepted": True, "shift_px": 0.0, "rotation_deg": 0.0})
+        return True
+
+    def aligned_layers(self, t_s, gray, motion, skin):
+        return gray, motion, skin
+
+
+def ring_part_frame(t, *, ring_part):
+    signals = frame(t)
+    if ring_part:
+        signals.gray[10:18, 10:50] = 20.0  # a strip of the anchor ring, outside guard and content
+    return signals
+
+
+class RingRuleTests(unittest.TestCase):
+    """v1.2: what a changed anchor ring means once the device pose is verified."""
+
+    def _site(self, rule):
+        ring = np.zeros((40, 40), bool)
+        ring[:, :] = True
+        ring[8:32, 8:32] = False  # context (10..50) minus the guard (18..42)
+        geometry = ZoneGeometry(CELL.content, CELL.guard, CELL.context, ring)
+        params = ObserverParams(**{**PARAMS.__dict__, "ring_change_with_verified_pose": rule})
+        return ZoneObserver("G-01-01", "site", geometry, params, device=_StillDevice())
+
+    def _run_ring_removal(self, observer):
+        frames = [ring_part_frame(round(0.2 * i, 3), ring_part=i < 10) for i in range(40)]
+        for index, signals in enumerate(frames):
+            observer.observe(signals, index)
+        return [event["kind"] for event in observer.events if event["kind"] != "reference_set"]
+
+    def test_default_rule_keeps_pose_break(self):
+        observer = self._site("pose_break")
+        self.assertIn("pose_epoch_break", self._run_ring_removal(observer))
+        self.assertEqual(observer.status, "epoch_broken")
+
+    def test_content_rule_adopts_the_ring_and_keeps_observing(self):
+        observer = self._site("content")
+        kinds = self._run_ring_removal(observer)
+        self.assertIn("anchor_ring_changed", kinds)
+        self.assertNotIn("pose_epoch_break", kinds)
+        self.assertEqual(observer.status, "observing")
+
+
 if __name__ == "__main__":
     unittest.main()

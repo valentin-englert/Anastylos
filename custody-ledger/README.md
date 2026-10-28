@@ -108,6 +108,12 @@ never run by this module.
   | site, occupied (default) | `site_changed` | `site_restored` |
   | site, declared empty | `site_filled` | `site_emptied` |
 
+  Observer v1.2 adds `content.ring_change_with_verified_pose` (default
+  `pose_break`, identical to v1.1). With `content`, a site whose anchor ring
+  still differs after an accepted device re-registration adopts the ring
+  and keeps observing (`anchor_ring_changed`) instead of ending its pose
+  epoch: meant for dense anonymous site grids, where a neighbouring part
+  lies inside the ring. `custody-config.grid.json` sets it.
   A change between two states that both differ from the start is
   `changed_while_occupied` (empty-start cell) or
   `changed_while_away_from_start` (occupied-start cell).

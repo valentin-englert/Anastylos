@@ -88,6 +88,7 @@ def _observer_params(custody: dict, ppm: float) -> ObserverParams:
         min_changed_area_px=float(content["min_changed_area_mm2"]) * ppm ** 2,
         confirm_hold_s=float(content["confirm_hold_s"]),
         max_anchor_changed_fraction=float(content["max_anchor_changed_fraction"]),
+        ring_change_with_verified_pose=_ring_rule(content.get("ring_change_with_verified_pose", "pose_break")),
     )
 
 
@@ -142,3 +143,9 @@ def _sampling_report(times: list[float], step: int, max_gap_s: float) -> dict:
         "max_interval_s": round(max((b - a for a, b in zip(times, times[1:])), default=0.0), 3),
         "gaps_over_max": [[round(a, 3), round(b, 3)] for a, b in gaps],
     }
+
+
+def _ring_rule(value: str) -> str:
+    if value not in ("pose_break", "content"):
+        raise SystemExit(f"content.ring_change_with_verified_pose must be 'pose_break' or 'content', not {value!r}")
+    return value

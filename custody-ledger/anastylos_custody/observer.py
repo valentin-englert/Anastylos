@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.1.0"
+OBSERVER_VERSION = "1.2.0"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -58,6 +58,10 @@ class ObserverParams:
     confirm_hold_s: float
     max_anchor_changed_fraction: float
     init_tolerance_s: float = 2.0
+    # What a still-changed anchor ring means after the device re-registration was
+    # accepted: "pose_break" (v1.0/v1.1) or "content" (v1.2 option for dense site
+    # grids, where a neighbouring part lies inside the ring).
+    ring_change_with_verified_pose: str = "pose_break"
 
 
 @dataclass
@@ -209,6 +213,13 @@ class ZoneObserver:
             if report["anchor_changed_fraction_after"] <= self.params.max_anchor_changed_fraction:
                 self._anchor_moved_since = None
                 self.events.append({"zone": self.zone_id, "zone_kind": self.zone_kind, "kind": "device_realigned", "t_s": round(now.t_s, 3), "frame": now.frame_index, **report})
+                return context
+            if self.params.ring_change_with_verified_pose == "content":
+                # The device pose is verified globally, so the ring changed by its own content
+                # (e.g. a neighbouring part was removed): adopt the ring and keep observing.
+                self._anchor_moved_since = None
+                self._anchor_reference = context.copy()
+                self.events.append({"zone": self.zone_id, "zone_kind": self.zone_kind, "kind": "anchor_ring_changed", "t_s": round(now.t_s, 3), "frame": now.frame_index, **report})
                 return context
         elif self.device.realignments:
             report["device_realignment"] = self.device.realignments[-1]

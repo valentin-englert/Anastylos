@@ -21,9 +21,13 @@ deferred; nothing here declares a project license.
 ANASTYLOS distributes source code plus version pins. No third-party
 binaries are committed to this repository. Everything below is either
 installed into a local virtualenv at setup time or provided as a
-system tool by the operator. The obligations in the copyleft rows
-trigger when a built environment (wheel set, virtualenv, installer
-image) is redistributed — not when this source tree is shared.
+system tool by the operator — with one exception: the vendored
+`meta-sam-parser` SOURCES are committed under `sam-tracking/vendor/`
+(see "Vendored source dependencies"). The obligations in the copyleft
+rows trigger when a built environment (wheel set, virtualenv,
+installer image) is redistributed — not when this source tree is
+shared; the vendored sources instead travel with their own license
+file wherever the tree goes.
 
 ## Runtime Python dependencies (pinned)
 
@@ -98,6 +102,22 @@ scanning works airplane-mode offline, and no image or scan content
 leaves the phone through this library. The custom terms still need a
 human read before the APK is shared (review item 7).
 
+## Vendored source dependencies (committed)
+
+Unlike everything above, these third-party SOURCES are committed to
+this repository (no PyPI/npm/Gradle pin; no purl in the SPDX file by
+design). Module-level notes in
+[`sam-tracking/THIRD_PARTY.md`](sam-tracking/THIRD_PARTY.md) are
+preserved and referenced here, not duplicated.
+
+| Package | Version | SPDX license | Role | Evidence |
+|---|---|---|---|---|
+| meta-sam-parser (vendored) | 0.1.0 | LicenseRef-SAM-License (custom Meta terms, not an SPDX-listed license) | Official SAM 3.x wire-grammar parser + mask decoder used by `sam-tracking/` only | `sam-tracking/vendor/VENDOR.md` (pinned commit `40318970…`, per-file SHA-256) + `sam-tracking/vendor/LICENSE.meta-sam` |
+
+The SAM License file travels with the tree per its section 1.b.i.
+Obligations (publication acknowledgment, termination) need a human
+read before the tree is shared (review item 9).
+
 ## Bundled native components (inside wheels, not the repo)
 
 - OpenCV wheel: `opencv_videoio_ffmpeg4140_64.dll` (LGPL-2.1, section
@@ -122,12 +142,14 @@ human read before the APK is shared (review item 7).
 | Cairo native (libcairo) | not installed | Upstream dual LGPL-2.1-only OR MPL-1.1, unverified primary | Optional; absent from `.venv`/System32. Tesseract's private copy is not on PATH and unusable by cairocffi |
 
 Python tests use unittest from the standard library; the capture PWA's
-TypeScript tests use vitest (development-only, see above). No external
-AI services are called at runtime. Python has no network, HTTP, or
-cloud imports anywhere (verified by search 2026-10-27 across all
-modules); the PWA's only network use is same-origin service-worker
-caching of its own app shell (no evidence upload, no third-party
-calls).
+TypeScript tests use vitest (development-only, see above). The offline
+core calls no external AI services. Python has no network, HTTP, or
+cloud imports anywhere except the explicitly isolated
+`sam-tracking/anastylos_sam/client.py` (verified by search 2026-10-28;
+it speaks to `https://api.meta.ai/v1` only under explicit
+`--live --upload-ok` operator opt-in with a ledgered budget); the
+PWA's only network use is same-origin service-worker caching of its
+own app shell (no evidence upload, no third-party calls).
 
 ## Mandatory notices versus acknowledgments
 
@@ -169,16 +191,19 @@ repo; packaging for redistribution must carry them from these sources.
    required before sharing the APK beyond the developer workstation.
 6. Android Maven closure (AndroidX, CameraX, Kotlinx, …) — ships in
    the APK; per-artifact licenses unverified until M5.
+7. meta-sam-parser sources (LicenseRef-SAM-License) — committed
+   under `sam-tracking/vendor/`; shared with every copy of this tree
+   (review item 9).
 
 ## Open review items (need a human)
 
 Every pinned dependency is directly inventoried (11 Python pins, 5 npm
-devDependencies, 1 Maven pin, the CPython/pip/Tesseract platform
-entries, and the observed native bundles); the items below are the
-license questions that stay open. The checker prints 10 `REVIEW:`
-annotations from the SPDX file — this list groups them into 8
-narrative items (the three Pillow static-library annotations share
-item 3):
+devDependencies, 1 Maven pin, 1 vendored source tree, the
+CPython/pip/Tesseract platform entries, and the observed native
+bundles); the items below are the license questions that stay open.
+The checker prints 11 `REVIEW:` annotations from the SPDX file — this
+list groups them into 9 narrative items (the three Pillow
+static-library annotations share item 3):
 
 1. Pillow: confirm MIT-CMU versus HPND SPDX mapping with upstream.
 2. FFmpeg DLL: exact version and GPL-free build flags.
@@ -196,6 +221,10 @@ item 3):
 8. Android Maven closure: per-artifact POM license fields unverified;
    inventory each runtime-shipped artifact individually before M5 APK
    distribution.
+9. SAM License: custom Meta terms (not an SPDX-listed license); a
+   human must confirm redistribution, publication-acknowledgment, and
+   termination obligations before this tree is shared beyond the
+   developer workstation.
 
 The checker prints the same list from the SPDX annotations:
 

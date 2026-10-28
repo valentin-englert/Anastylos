@@ -346,10 +346,22 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct + transitive Maven closure of capture-companion/android (libs.versions.toml: AndroidX Compose/CameraX/Room/DataStore/WorkManager/Navigation/Security, Kotlinx coroutines/serialization, test and build tooling). Per-artifact POM license fields are unverified; inventory each runtime-shipped artifact individually before M5 APK distribution."}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-vendored-metasam-parser",
+      "name": "meta-sam-parser (vendored source)",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "https://github.com/meta-models/meta-sam/tree/40318970a81301f31e97cdd7d605117293332b0f/python/src/meta_sam_parser",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-SAM-License",
+      "licenseDeclared": "LicenseRef-SAM-License",
+      "copyrightText": "Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.",
+      "annotations": [{"annotationDate": "2026-10-28T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=vendored-source-committed; source=sam-tracking/vendor (meta-sam-parser 0.1.0 at commit 40318970a81301f31e97cdd7d605117293332b0f, per-file SHA-256 in sam-tracking/vendor/VENDOR.md); evidence=LICENSE.meta-sam shipped alongside per SAM License 1.b.i; used-by=sam-tracking SAM 3.1 wire-grammar parsing and mask decoding only; not a PyPI pin, no purl by design"}, {"annotationDate": "2026-10-28T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: SAM License (Last Updated November 19, 2025) is a custom Meta terms document, not an SPDX-listed license. A human must read sam-tracking/vendor/LICENSE.meta-sam and confirm redistribution, publication-acknowledgment, and termination obligations before this tree is shared beyond the developer workstation."}]
     }
   ],
   "hasExtractedLicensingInfos": [
-    {"licenseId": "LicenseRef-MLKit-Terms", "name": "ML Kit Terms of Service", "extractedText": "Custom Google terms document declared by the com.google.mlkit:barcode-scanning POM (<name>ML Kit Terms of Service</name>) at https://developers.google.com/ml-kit/terms. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.", "seeAlsos": ["https://developers.google.com/ml-kit/terms"], "comment": "LicenseRef documents the POM-declared terms without inventing an SPDX identifier."}
+    {"licenseId": "LicenseRef-MLKit-Terms", "name": "ML Kit Terms of Service", "extractedText": "Custom Google terms document declared by the com.google.mlkit:barcode-scanning POM (<name>ML Kit Terms of Service</name>) at https://developers.google.com/ml-kit/terms. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.", "seeAlsos": ["https://developers.google.com/ml-kit/terms"], "comment": "LicenseRef documents the POM-declared terms without inventing an SPDX identifier."},
+    {"licenseId": "LicenseRef-SAM-License", "name": "SAM License", "extractedText": "Custom Meta terms document (Last Updated November 19, 2025) shipped as sam-tracking/vendor/LICENSE.meta-sam. Grants use/reproduction/distribution/derivatives with a copy of the agreement (1.b.i); requires publication acknowledgment (1.b.ii); California governing law. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.", "seeAlsos": ["https://github.com/meta-models/meta-sam/blob/main/LICENSE"], "comment": "LicenseRef documents the shipped license text without inventing an SPDX identifier."}
   ],
   "relationships": [
     {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
@@ -374,6 +386,7 @@
     {"spdxElementId": "SPDXRef-Package-npm-vitest", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
     {"spdxElementId": "SPDXRef-Package-npm-fake-indexeddb", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
     {"spdxElementId": "SPDXRef-Package-npm-types-node", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-maven-mlkit-barcode-scanning"}
+    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-maven-mlkit-barcode-scanning"},
+    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-vendored-metasam-parser"}
   ]
 }

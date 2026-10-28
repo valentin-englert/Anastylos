@@ -1,0 +1,23 @@
+{
+ "t0_cam1": 4.0,
+ "t1_cam1": 4.0,
+ "fps": "1",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "ST1-c1-001.jpg",
+    "pts": 3.999311,
+    "frame": 120
+   },
+   "cam2": {
+    "file": "ST1-c2-001.jpg",
+    "pts": 4.766678,
+    "frame": 143
+   },
+   "residual_ms": -1.59,
+   "sync_ok": true
+  }
+ ]
+}

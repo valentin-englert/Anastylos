@@ -59,3 +59,10 @@ graph_out/
 sessions/
 memory.jsonl
 !**/fixtures/**/memory.jsonl
+
+# SNES-02 analysis stills/contact sheets: regenerable from the original
+# footage + snes-02/work scripts (see snes-02/sync-manifest.json
+# provenance). Excluded from Git per 2026-10-28 decision; the committed
+# pair logs (*-pairs.json) preserve exact frame/PTS references.
+snes-02/**/*.jpg
+snes-02/**/*.JPG

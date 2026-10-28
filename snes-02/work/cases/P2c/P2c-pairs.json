@@ -1,0 +1,158 @@
+{
+ "t0_cam1": 37.5,
+ "t1_cam1": 56.5,
+ "fps": "0.5",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "P2c-c1-001.jpg",
+    "pts": 37.493522,
+    "frame": 1125
+   },
+   "cam2": {
+    "file": "P2c-c2-001.jpg",
+    "pts": 38.266933,
+    "frame": 1148
+   },
+   "residual_ms": 4.45,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "P2c-c1-002.jpg",
+    "pts": 39.493167,
+    "frame": 1185
+   },
+   "cam2": {
+    "file": "P2c-c2-002.jpg",
+    "pts": 40.266889,
+    "frame": 1208
+   },
+   "residual_ms": 4.76,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "P2c-c1-003.jpg",
+    "pts": 41.492822,
+    "frame": 1245
+   },
+   "cam2": {
+    "file": "P2c-c2-003.jpg",
+    "pts": 42.266611,
+    "frame": 1268
+   },
+   "residual_ms": 4.83,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "P2c-c1-004.jpg",
+    "pts": 43.492478,
+    "frame": 1305
+   },
+   "cam2": {
+    "file": "P2c-c2-004.jpg",
+    "pts": 44.266756,
+    "frame": 1328
+   },
+   "residual_ms": 5.32,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "P2c-c1-005.jpg",
+    "pts": 45.492133,
+    "frame": 1365
+   },
+   "cam2": {
+    "file": "P2c-c2-005.jpg",
+    "pts": 46.266767,
+    "frame": 1388
+   },
+   "residual_ms": 5.67,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "P2c-c1-006.jpg",
+    "pts": 47.491789,
+    "frame": 1425
+   },
+   "cam2": {
+    "file": "P2c-c2-006.jpg",
+    "pts": 48.2666,
+    "frame": 1448
+   },
+   "residual_ms": 5.85,
+   "sync_ok": true
+  },
+  {
+   "k": 6,
+   "cam1": {
+    "file": "P2c-c1-007.jpg",
+    "pts": 49.491444,
+    "frame": 1485
+   },
+   "cam2": {
+    "file": "P2c-c2-007.jpg",
+    "pts": 50.2666,
+    "frame": 1508
+   },
+   "residual_ms": 6.2,
+   "sync_ok": true
+  },
+  {
+   "k": 7,
+   "cam1": {
+    "file": "P2c-c1-008.jpg",
+    "pts": 51.4911,
+    "frame": 1545
+   },
+   "cam2": {
+    "file": "P2c-c2-008.jpg",
+    "pts": 52.266744,
+    "frame": 1568
+   },
+   "residual_ms": 6.68,
+   "sync_ok": true
+  },
+  {
+   "k": 8,
+   "cam1": {
+    "file": "P2c-c1-009.jpg",
+    "pts": 53.490744,
+    "frame": 1605
+   },
+   "cam2": {
+    "file": "P2c-c2-009.jpg",
+    "pts": 54.266756,
+    "frame": 1628
+   },
+   "residual_ms": 7.05,
+   "sync_ok": true
+  },
+  {
+   "k": 9,
+   "cam1": {
+    "file": "P2c-c1-010.jpg",
+    "pts": 55.4904,
+    "frame": 1665
+   },
+   "cam2": {
+    "file": "P2c-c2-010.jpg",
+    "pts": 56.266756,
+    "frame": 1688
+   },
+   "residual_ms": 7.4,
+   "sync_ok": true
+  }
+ ]
+}

@@ -1,0 +1,158 @@
+{
+ "t0_cam1": 103.0,
+ "t1_cam1": 112.0,
+ "fps": "1",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "N5-c1-001.jpg",
+    "pts": 103.015522,
+    "frame": 3091
+   },
+   "cam2": {
+    "file": "N5-c2-001.jpg",
+    "pts": 103.766511,
+    "frame": 3113
+   },
+   "residual_ms": -17.97,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "N5-c1-002.jpg",
+    "pts": 104.015344,
+    "frame": 3121
+   },
+   "cam2": {
+    "file": "N5-c2-002.jpg",
+    "pts": 104.7667,
+    "frame": 3143
+   },
+   "residual_ms": -17.6,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "N5-c1-003.jpg",
+    "pts": 105.015167,
+    "frame": 3151
+   },
+   "cam2": {
+    "file": "N5-c2-003.jpg",
+    "pts": 105.766789,
+    "frame": 3173
+   },
+   "residual_ms": -17.34,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "N5-c1-004.jpg",
+    "pts": 106.014989,
+    "frame": 3181
+   },
+   "cam2": {
+    "file": "N5-c2-004.jpg",
+    "pts": 106.766511,
+    "frame": 3203
+   },
+   "residual_ms": -17.44,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "N5-c1-005.jpg",
+    "pts": 107.014822,
+    "frame": 3211
+   },
+   "cam2": {
+    "file": "N5-c2-005.jpg",
+    "pts": 107.766511,
+    "frame": 3233
+   },
+   "residual_ms": -17.27,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "N5-c1-006.jpg",
+    "pts": 108.014644,
+    "frame": 3241
+   },
+   "cam2": {
+    "file": "N5-c2-006.jpg",
+    "pts": 108.766756,
+    "frame": 3263
+   },
+   "residual_ms": -16.85,
+   "sync_ok": true
+  },
+  {
+   "k": 6,
+   "cam1": {
+    "file": "N5-c1-007.jpg",
+    "pts": 109.014511,
+    "frame": 3271
+   },
+   "cam2": {
+    "file": "N5-c2-007.jpg",
+    "pts": 109.7665,
+    "frame": 3293
+   },
+   "residual_ms": -16.97,
+   "sync_ok": true
+  },
+  {
+   "k": 7,
+   "cam1": {
+    "file": "N5-c1-008.jpg",
+    "pts": 110.014311,
+    "frame": 3301
+   },
+   "cam2": {
+    "file": "N5-c2-008.jpg",
+    "pts": 110.7665,
+    "frame": 3323
+   },
+   "residual_ms": -16.77,
+   "sync_ok": true
+  },
+  {
+   "k": 8,
+   "cam1": {
+    "file": "N5-c1-009.jpg",
+    "pts": 111.014144,
+    "frame": 3331
+   },
+   "cam2": {
+    "file": "N5-c2-009.jpg",
+    "pts": 111.7668,
+    "frame": 3353
+   },
+   "residual_ms": -16.3,
+   "sync_ok": true
+  },
+  {
+   "k": 9,
+   "cam1": {
+    "file": "N5-c1-010.jpg",
+    "pts": 112.013956,
+    "frame": 3361
+   },
+   "cam2": {
+    "file": "N5-c2-010.jpg",
+    "pts": 112.766733,
+    "frame": 3383
+   },
+   "residual_ms": -16.18,
+   "sync_ok": true
+  }
+ ]
+}

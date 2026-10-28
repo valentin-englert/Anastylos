@@ -1,0 +1,248 @@
+{
+ "t0_cam1": 82.5,
+ "t1_cam1": 87.5,
+ "fps": "3",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "P3d-c1-001.jpg",
+    "pts": 82.485733,
+    "frame": 2475
+   },
+   "cam2": {
+    "file": "P3d-c2-001.jpg",
+    "pts": 83.266567,
+    "frame": 2498
+   },
+   "residual_ms": 11.87,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "P3d-c1-002.jpg",
+    "pts": 82.819011,
+    "frame": 2485
+   },
+   "cam2": {
+    "file": "P3d-c2-002.jpg",
+    "pts": 83.6001,
+    "frame": 2508
+   },
+   "residual_ms": 12.13,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "P3d-c1-003.jpg",
+    "pts": 83.152278,
+    "frame": 2495
+   },
+   "cam2": {
+    "file": "P3d-c2-003.jpg",
+    "pts": 83.933233,
+    "frame": 2518
+   },
+   "residual_ms": 12.0,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "P3d-c1-004.jpg",
+    "pts": 83.485567,
+    "frame": 2505
+   },
+   "cam2": {
+    "file": "P3d-c2-004.jpg",
+    "pts": 84.266567,
+    "frame": 2528
+   },
+   "residual_ms": 12.04,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "P3d-c1-005.jpg",
+    "pts": 83.818856,
+    "frame": 2515
+   },
+   "cam2": {
+    "file": "P3d-c2-005.jpg",
+    "pts": 84.599889,
+    "frame": 2538
+   },
+   "residual_ms": 12.07,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "P3d-c1-006.jpg",
+    "pts": 84.152111,
+    "frame": 2525
+   },
+   "cam2": {
+    "file": "P3d-c2-006.jpg",
+    "pts": 84.933222,
+    "frame": 2548
+   },
+   "residual_ms": 12.15,
+   "sync_ok": true
+  },
+  {
+   "k": 6,
+   "cam1": {
+    "file": "P3d-c1-007.jpg",
+    "pts": 84.485389,
+    "frame": 2535
+   },
+   "cam2": {
+    "file": "P3d-c2-007.jpg",
+    "pts": 85.266556,
+    "frame": 2558
+   },
+   "residual_ms": 12.21,
+   "sync_ok": true
+  },
+  {
+   "k": 7,
+   "cam1": {
+    "file": "P3d-c1-008.jpg",
+    "pts": 84.818722,
+    "frame": 2545
+   },
+   "cam2": {
+    "file": "P3d-c2-008.jpg",
+    "pts": 85.600033,
+    "frame": 2568
+   },
+   "residual_ms": 12.35,
+   "sync_ok": true
+  },
+  {
+   "k": 8,
+   "cam1": {
+    "file": "P3d-c1-009.jpg",
+    "pts": 85.151933,
+    "frame": 2555
+   },
+   "cam2": {
+    "file": "P3d-c2-009.jpg",
+    "pts": 85.933444,
+    "frame": 2578
+   },
+   "residual_ms": 12.55,
+   "sync_ok": true
+  },
+  {
+   "k": 9,
+   "cam1": {
+    "file": "P3d-c1-010.jpg",
+    "pts": 85.485211,
+    "frame": 2565
+   },
+   "cam2": {
+    "file": "P3d-c2-010.jpg",
+    "pts": 86.266556,
+    "frame": 2588
+   },
+   "residual_ms": 12.38,
+   "sync_ok": true
+  },
+  {
+   "k": 10,
+   "cam1": {
+    "file": "P3d-c1-011.jpg",
+    "pts": 85.818489,
+    "frame": 2575
+   },
+   "cam2": {
+    "file": "P3d-c2-011.jpg",
+    "pts": 86.600033,
+    "frame": 2598
+   },
+   "residual_ms": 12.58,
+   "sync_ok": true
+  },
+  {
+   "k": 11,
+   "cam1": {
+    "file": "P3d-c1-012.jpg",
+    "pts": 86.151767,
+    "frame": 2585
+   },
+   "cam2": {
+    "file": "P3d-c2-012.jpg",
+    "pts": 86.933222,
+    "frame": 2608
+   },
+   "residual_ms": 12.49,
+   "sync_ok": true
+  },
+  {
+   "k": 12,
+   "cam1": {
+    "file": "P3d-c1-013.jpg",
+    "pts": 86.485033,
+    "frame": 2595
+   },
+   "cam2": {
+    "file": "P3d-c2-013.jpg",
+    "pts": 87.266789,
+    "frame": 2618
+   },
+   "residual_ms": 12.8,
+   "sync_ok": true
+  },
+  {
+   "k": 13,
+   "cam1": {
+    "file": "P3d-c1-014.jpg",
+    "pts": 86.818311,
+    "frame": 2605
+   },
+   "cam2": {
+    "file": "P3d-c2-014.jpg",
+    "pts": 87.600067,
+    "frame": 2628
+   },
+   "residual_ms": 12.8,
+   "sync_ok": true
+  },
+  {
+   "k": 14,
+   "cam1": {
+    "file": "P3d-c1-015.jpg",
+    "pts": 87.151589,
+    "frame": 2615
+   },
+   "cam2": {
+    "file": "P3d-c2-015.jpg",
+    "pts": 87.933478,
+    "frame": 2638
+   },
+   "residual_ms": 12.93,
+   "sync_ok": true
+  },
+  {
+   "k": 15,
+   "cam1": {
+    "file": "P3d-c1-016.jpg",
+    "pts": 87.484867,
+    "frame": 2625
+   },
+   "cam2": {
+    "file": "P3d-c2-016.jpg",
+    "pts": 88.266711,
+    "frame": 2648
+   },
+   "residual_ms": 12.88,
+   "sync_ok": true
+  }
+ ]
+}

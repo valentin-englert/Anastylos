@@ -1,0 +1,128 @@
+{
+ "t0_cam1": 95.0,
+ "t1_cam1": 98.5,
+ "fps": "2",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "N4-c1-001.jpg",
+    "pts": 94.983567,
+    "frame": 2850
+   },
+   "cam2": {
+    "file": "N4-c2-001.jpg",
+    "pts": 95.766544,
+    "frame": 2873
+   },
+   "residual_ms": 14.02,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "N4-c1-002.jpg",
+    "pts": 95.483478,
+    "frame": 2865
+   },
+   "cam2": {
+    "file": "N4-c2-002.jpg",
+    "pts": 96.266544,
+    "frame": 2888
+   },
+   "residual_ms": 14.11,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "N4-c1-003.jpg",
+    "pts": 95.983389,
+    "frame": 2880
+   },
+   "cam2": {
+    "file": "N4-c2-003.jpg",
+    "pts": 96.766544,
+    "frame": 2903
+   },
+   "residual_ms": 14.19,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "N4-c1-004.jpg",
+    "pts": 96.516644,
+    "frame": 2896
+   },
+   "cam2": {
+    "file": "N4-c2-004.jpg",
+    "pts": 97.266756,
+    "frame": 2918
+   },
+   "residual_ms": -18.85,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "N4-c1-005.jpg",
+    "pts": 97.016556,
+    "frame": 2911
+   },
+   "cam2": {
+    "file": "N4-c2-005.jpg",
+    "pts": 97.766511,
+    "frame": 2933
+   },
+   "residual_ms": -19.01,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "N4-c1-006.jpg",
+    "pts": 97.516467,
+    "frame": 2926
+   },
+   "cam2": {
+    "file": "N4-c2-006.jpg",
+    "pts": 98.266667,
+    "frame": 2948
+   },
+   "residual_ms": -18.76,
+   "sync_ok": true
+  },
+  {
+   "k": 6,
+   "cam1": {
+    "file": "N4-c1-007.jpg",
+    "pts": 98.016378,
+    "frame": 2941
+   },
+   "cam2": {
+    "file": "N4-c2-007.jpg",
+    "pts": 98.766678,
+    "frame": 2963
+   },
+   "residual_ms": -18.66,
+   "sync_ok": true
+  },
+  {
+   "k": 7,
+   "cam1": {
+    "file": "N4-c1-008.jpg",
+    "pts": 98.516289,
+    "frame": 2956
+   },
+   "cam2": {
+    "file": "N4-c2-008.jpg",
+    "pts": 99.266678,
+    "frame": 2978
+   },
+   "residual_ms": -18.57,
+   "sync_ok": true
+  }
+ ]
+}

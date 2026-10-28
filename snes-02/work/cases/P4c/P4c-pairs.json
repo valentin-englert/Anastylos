@@ -1,0 +1,113 @@
+{
+ "t0_cam1": 85.5,
+ "t1_cam1": 91.5,
+ "fps": "1",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "P4c-c1-001.jpg",
+    "pts": 85.485211,
+    "frame": 2565
+   },
+   "cam2": {
+    "file": "P4c-c2-001.jpg",
+    "pts": 86.266556,
+    "frame": 2588
+   },
+   "residual_ms": 12.38,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "P4c-c1-002.jpg",
+    "pts": 86.485033,
+    "frame": 2595
+   },
+   "cam2": {
+    "file": "P4c-c2-002.jpg",
+    "pts": 87.266789,
+    "frame": 2618
+   },
+   "residual_ms": 12.8,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "P4c-c1-003.jpg",
+    "pts": 87.484867,
+    "frame": 2625
+   },
+   "cam2": {
+    "file": "P4c-c2-003.jpg",
+    "pts": 88.266711,
+    "frame": 2648
+   },
+   "residual_ms": 12.88,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "P4c-c1-004.jpg",
+    "pts": 88.484689,
+    "frame": 2655
+   },
+   "cam2": {
+    "file": "P4c-c2-004.jpg",
+    "pts": 89.266556,
+    "frame": 2678
+   },
+   "residual_ms": 12.91,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "P4c-c1-005.jpg",
+    "pts": 89.484522,
+    "frame": 2685
+   },
+   "cam2": {
+    "file": "P4c-c2-005.jpg",
+    "pts": 90.2667,
+    "frame": 2708
+   },
+   "residual_ms": 13.22,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "P4c-c1-006.jpg",
+    "pts": 90.484344,
+    "frame": 2715
+   },
+   "cam2": {
+    "file": "P4c-c2-006.jpg",
+    "pts": 91.266722,
+    "frame": 2738
+   },
+   "residual_ms": 13.42,
+   "sync_ok": true
+  },
+  {
+   "k": 6,
+   "cam1": {
+    "file": "P4c-c1-007.jpg",
+    "pts": 91.484167,
+    "frame": 2745
+   },
+   "cam2": {
+    "file": "P4c-c2-007.jpg",
+    "pts": 92.266722,
+    "frame": 2768
+   },
+   "residual_ms": 13.6,
+   "sync_ok": true
+  }
+ ]
+}

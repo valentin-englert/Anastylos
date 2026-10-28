@@ -1,0 +1,248 @@
+{
+ "t0_cam1": 90.0,
+ "t1_cam1": 95.0,
+ "fps": "3",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "P4d-c1-001.jpg",
+    "pts": 89.984433,
+    "frame": 2700
+   },
+   "cam2": {
+    "file": "P4d-c2-001.jpg",
+    "pts": 90.766544,
+    "frame": 2723
+   },
+   "residual_ms": 13.15,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "P4d-c1-002.jpg",
+    "pts": 90.317711,
+    "frame": 2710
+   },
+   "cam2": {
+    "file": "P4d-c2-002.jpg",
+    "pts": 91.099878,
+    "frame": 2733
+   },
+   "residual_ms": 13.21,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "P4d-c1-003.jpg",
+    "pts": 90.650989,
+    "frame": 2720
+   },
+   "cam2": {
+    "file": "P4d-c2-003.jpg",
+    "pts": 91.433222,
+    "frame": 2743
+   },
+   "residual_ms": 13.27,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "P4d-c1-004.jpg",
+    "pts": 90.984267,
+    "frame": 2730
+   },
+   "cam2": {
+    "file": "P4d-c2-004.jpg",
+    "pts": 91.766744,
+    "frame": 2753
+   },
+   "residual_ms": 13.52,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "P4d-c1-005.jpg",
+    "pts": 91.317533,
+    "frame": 2740
+   },
+   "cam2": {
+    "file": "P4d-c2-005.jpg",
+    "pts": 92.099878,
+    "frame": 2763
+   },
+   "residual_ms": 13.39,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "P4d-c1-006.jpg",
+    "pts": 91.650811,
+    "frame": 2750
+   },
+   "cam2": {
+    "file": "P4d-c2-006.jpg",
+    "pts": 92.433211,
+    "frame": 2773
+   },
+   "residual_ms": 13.44,
+   "sync_ok": true
+  },
+  {
+   "k": 6,
+   "cam1": {
+    "file": "P4d-c1-007.jpg",
+    "pts": 91.984078,
+    "frame": 2760
+   },
+   "cam2": {
+    "file": "P4d-c2-007.jpg",
+    "pts": 92.766711,
+    "frame": 2783
+   },
+   "residual_ms": 13.67,
+   "sync_ok": true
+  },
+  {
+   "k": 7,
+   "cam1": {
+    "file": "P4d-c1-008.jpg",
+    "pts": 92.317367,
+    "frame": 2770
+   },
+   "cam2": {
+    "file": "P4d-c2-008.jpg",
+    "pts": 93.099878,
+    "frame": 2793
+   },
+   "residual_ms": 13.55,
+   "sync_ok": true
+  },
+  {
+   "k": 8,
+   "cam1": {
+    "file": "P4d-c1-009.jpg",
+    "pts": 92.650633,
+    "frame": 2780
+   },
+   "cam2": {
+    "file": "P4d-c2-009.jpg",
+    "pts": 93.433211,
+    "frame": 2803
+   },
+   "residual_ms": 13.62,
+   "sync_ok": true
+  },
+  {
+   "k": 9,
+   "cam1": {
+    "file": "P4d-c1-010.jpg",
+    "pts": 92.983922,
+    "frame": 2790
+   },
+   "cam2": {
+    "file": "P4d-c2-010.jpg",
+    "pts": 93.766556,
+    "frame": 2813
+   },
+   "residual_ms": 13.67,
+   "sync_ok": true
+  },
+  {
+   "k": 10,
+   "cam1": {
+    "file": "P4d-c1-011.jpg",
+    "pts": 93.317189,
+    "frame": 2800
+   },
+   "cam2": {
+    "file": "P4d-c2-011.jpg",
+    "pts": 94.099878,
+    "frame": 2823
+   },
+   "residual_ms": 13.73,
+   "sync_ok": true
+  },
+  {
+   "k": 11,
+   "cam1": {
+    "file": "P4d-c1-012.jpg",
+    "pts": 93.650467,
+    "frame": 2810
+   },
+   "cam2": {
+    "file": "P4d-c2-012.jpg",
+    "pts": 94.433211,
+    "frame": 2833
+   },
+   "residual_ms": 13.78,
+   "sync_ok": true
+  },
+  {
+   "k": 12,
+   "cam1": {
+    "file": "P4d-c1-013.jpg",
+    "pts": 93.983733,
+    "frame": 2820
+   },
+   "cam2": {
+    "file": "P4d-c2-013.jpg",
+    "pts": 94.766533,
+    "frame": 2843
+   },
+   "residual_ms": 13.84,
+   "sync_ok": true
+  },
+  {
+   "k": 13,
+   "cam1": {
+    "file": "P4d-c1-014.jpg",
+    "pts": 94.317011,
+    "frame": 2830
+   },
+   "cam2": {
+    "file": "P4d-c2-014.jpg",
+    "pts": 95.100189,
+    "frame": 2853
+   },
+   "residual_ms": 14.22,
+   "sync_ok": true
+  },
+  {
+   "k": 14,
+   "cam1": {
+    "file": "P4d-c1-015.jpg",
+    "pts": 94.6503,
+    "frame": 2840
+   },
+   "cam2": {
+    "file": "P4d-c2-015.jpg",
+    "pts": 95.433222,
+    "frame": 2863
+   },
+   "residual_ms": 13.96,
+   "sync_ok": true
+  },
+  {
+   "k": 15,
+   "cam1": {
+    "file": "P4d-c1-016.jpg",
+    "pts": 94.983567,
+    "frame": 2850
+   },
+   "cam2": {
+    "file": "P4d-c2-016.jpg",
+    "pts": 95.766544,
+    "frame": 2873
+   },
+   "residual_ms": 14.02,
+   "sync_ok": true
+  }
+ ]
+}

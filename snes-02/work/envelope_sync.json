@@ -1,0 +1,33 @@
+{
+  "global_lag_s": -0.98,
+  "windows": [
+    {
+      "window": 0,
+      "t_mid_s": 22.6,
+      "lag_s": -0.32,
+      "ncc": 0.0386,
+      "runner_up_ncc": 0.0381
+    },
+    {
+      "window": 1,
+      "t_mid_s": 67.8,
+      "lag_s": -0.04,
+      "ncc": 0.0644,
+      "runner_up_ncc": 0.0393
+    },
+    {
+      "window": 2,
+      "t_mid_s": 113.0,
+      "lag_s": -0.43,
+      "ncc": 0.0521,
+      "runner_up_ncc": 0.034
+    },
+    {
+      "window": 3,
+      "t_mid_s": 158.2,
+      "lag_s": -0.76,
+      "ncc": 0.0643,
+      "runner_up_ncc": 0.0529
+    }
+  ]
+}

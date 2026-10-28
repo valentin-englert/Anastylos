@@ -1,0 +1,98 @@
+{
+ "t0_cam1": 7.5,
+ "t1_cam1": 12.5,
+ "fps": "1",
+ "D": 0.76896,
+ "pairs": [
+  {
+   "k": 0,
+   "cam1": {
+    "file": "N1-c1-001.jpg",
+    "pts": 7.4987,
+    "frame": 225
+   },
+   "cam2": {
+    "file": "N1-c2-001.jpg",
+    "pts": 8.266667,
+    "frame": 248
+   },
+   "residual_ms": -0.99,
+   "sync_ok": true
+  },
+  {
+   "k": 1,
+   "cam1": {
+    "file": "N1-c1-002.jpg",
+    "pts": 8.498533,
+    "frame": 255
+   },
+   "cam2": {
+    "file": "N1-c2-002.jpg",
+    "pts": 9.266867,
+    "frame": 278
+   },
+   "residual_ms": -0.63,
+   "sync_ok": true
+  },
+  {
+   "k": 2,
+   "cam1": {
+    "file": "N1-c1-003.jpg",
+    "pts": 9.498356,
+    "frame": 285
+   },
+   "cam2": {
+    "file": "N1-c2-003.jpg",
+    "pts": 10.266656,
+    "frame": 308
+   },
+   "residual_ms": -0.66,
+   "sync_ok": true
+  },
+  {
+   "k": 3,
+   "cam1": {
+    "file": "N1-c1-004.jpg",
+    "pts": 10.498189,
+    "frame": 315
+   },
+   "cam2": {
+    "file": "N1-c2-004.jpg",
+    "pts": 11.266811,
+    "frame": 338
+   },
+   "residual_ms": -0.34,
+   "sync_ok": true
+  },
+  {
+   "k": 4,
+   "cam1": {
+    "file": "N1-c1-005.jpg",
+    "pts": 11.498011,
+    "frame": 345
+   },
+   "cam2": {
+    "file": "N1-c2-005.jpg",
+    "pts": 12.2668,
+    "frame": 368
+   },
+   "residual_ms": -0.17,
+   "sync_ok": true
+  },
+  {
+   "k": 5,
+   "cam1": {
+    "file": "N1-c1-006.jpg",
+    "pts": 12.497833,
+    "frame": 375
+   },
+   "cam2": {
+    "file": "N1-c2-006.jpg",
+    "pts": 13.266656,
+    "frame": 398
+   },
+   "residual_ms": -0.14,
+   "sync_ok": true
+  }
+ ]
+}

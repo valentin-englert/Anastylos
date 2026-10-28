@@ -1,0 +1,303 @@
+"""Per-zone clean-state observation: when is a zone visible, and did its content change?
+
+A zone is *clean* when its context window has been quiet for a hold time and
+no hand covers it: a fresh-skin component that overlaps the zone's narrow
+guard box and also reaches outside it (fingers attach to a hand). A
+skin-coloured part lying inside the zone is not a hand. Only clean samples
+are compared with the zone's reference. A content change becomes an event
+only after it stays stable while clean for the confirm time. Occluded or
+moving time is never read as "unchanged".
+
+Device sites are read in the device's reference pose (``DevicePose``). Each
+site also watches an anchor ring on the device around it; when the ring no
+longer matches, the device is re-registered, and if the ring still does not
+match the site's pose epoch ends and the site is unknown from then on.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+import cv2
+import numpy as np
+
+from anastylos_custody.device_alignment import DevicePose
+from anastylos_custody.signals import FrameSignals
+
+KEYFRAME_CANDIDATES = 10
+Box = tuple[int, int, int, int]
+
+
+@dataclass(frozen=True)
+class ZoneGeometry:
+    """Half-open pixel boxes (x0, y0, x1, y1) on the rectified image."""
+
+    content: Box
+    guard: Box
+    context: Box
+    anchor_mask: np.ndarray | None = None  # bool, context-window shaped; None for tray cells
+
+
+@dataclass(frozen=True)
+class ObserverParams:
+    change_threshold: float
+    quiet_hold_s: float
+    max_motion_fraction: float
+    intrusion_min_area_px: float
+    min_changed_area_px: float
+    confirm_hold_s: float
+    max_anchor_changed_fraction: float
+    init_tolerance_s: float = 2.0
+
+
+@dataclass
+class _Snapshot:
+    t_s: float
+    frame_index: int
+
+
+@dataclass
+class _Layers:
+    """Signal planes in one coordinate frame, plus that frame's offset on the rectified image."""
+
+    gray: np.ndarray
+    motion: np.ndarray
+    fresh_skin: np.ndarray
+    offset: tuple[int, int]
+
+    def crop(self, plane: np.ndarray, box: Box) -> np.ndarray:
+        return _crop_at(plane, box, self.offset)
+
+
+@dataclass
+class ZoneObserver:
+    zone_id: str
+    zone_kind: str
+    geometry: ZoneGeometry
+    params: ObserverParams
+    valid_from_s: float = 0.0
+    device: DevicePose | None = None
+    events: list[dict] = field(default_factory=list)
+    status: str = "waiting"  # waiting | observing | epoch_broken | inventory_not_observable
+    clean_s: float = 0.0
+    not_clean_s: float = 0.0
+    trace: list[dict] | None = None  # per-sample diagnostics when not None
+    _baseline: np.ndarray | None = None
+    _reference: np.ndarray | None = None
+    _anchor_reference: np.ndarray | None = None
+    _quiet_since: float | None = None
+    _last_t: float | None = None
+    _last_clean: _Snapshot | None = None
+    _clean_run: list[int] = field(default_factory=list)
+    _run_broken: bool = True
+    _candidate: np.ndarray | None = None
+    _candidate_at: _Snapshot | None = None
+    _candidate_frames: list[int] = field(default_factory=list)
+    _anchor_moved_since: _Snapshot | None = None
+
+    def observe(self, signals: FrameSignals, frame_index: int) -> None:
+        t = signals.t_s
+        dt = 0.0 if self._last_t is None else t - self._last_t
+        self._last_t = t
+        if t < self._starts_at() or self.status in ("epoch_broken", "inventory_not_observable"):
+            return
+        if self._reference is None and t - self.valid_from_s > self.params.init_tolerance_s and self.zone_kind == "site":
+            self.status = "inventory_not_observable"
+            return
+        layers = self._layers(signals)
+        if not self._is_clean(layers, t):
+            self.not_clean_s += dt
+            self._run_broken = True
+            return
+        self.clean_s += dt
+        now = _Snapshot(t, frame_index)
+        context = layers.crop(layers.gray, self.geometry.context)
+        if self._reference is None:
+            self._initialize(context, now)
+            return
+        if self.geometry.anchor_mask is not None:
+            context = self._verified_device_context(signals, context, now)
+            if context is None:
+                return
+        content = _crop(context, _relative(self.geometry.content, self.geometry.context))
+        changed = self._changed_area(content, self._reference)
+        if changed < self.params.min_changed_area_px:
+            self._settle(now)
+            return
+        self._track_candidate(content, now, changed)
+
+    def summary(self) -> dict:
+        return {
+            "zone": self.zone_id,
+            "kind": self.zone_kind,
+            "status": self.status,
+            "clean_s": round(self.clean_s, 2),
+            "not_clean_s": round(self.not_clean_s, 2),
+            "events": len(self.events),
+        }
+
+    # -- frames and cleanliness -----------------------------------------------
+
+    def _layers(self, signals: FrameSignals) -> _Layers:
+        if self.device is None:
+            return _Layers(signals.gray, signals.motion, signals.fresh_skin, (0, 0))
+        device = self.device
+        if device.reference is None:
+            device.initialize(signals.t_s, signals.gray, signals.motion, signals.fresh_skin)
+        gray, motion, skin = device.aligned_layers(signals.t_s, signals.gray, signals.motion, signals.fresh_skin)
+        return _Layers(gray, motion, skin, device.region[:2])
+
+    def _is_clean(self, layers: _Layers, t: float) -> bool:
+        motion = float(layers.crop(layers.motion, self.geometry.context).mean())
+        intrusion = _hand_over_zone(layers.crop(layers.fresh_skin, self.geometry.context),
+                                    _relative(self.geometry.guard, self.geometry.context), self.params.intrusion_min_area_px)
+        if motion > self.params.max_motion_fraction:
+            self._quiet_since = None
+        elif self._quiet_since is None:
+            self._quiet_since = t
+        clean = self._quiet_since is not None and not intrusion and t - self._quiet_since >= self.params.quiet_hold_s
+        if self.trace is not None:
+            self.trace.append({"t_s": round(t, 3), "motion": round(motion, 5), "intrusion": intrusion, "clean": clean})
+        if not clean and (intrusion or self._quiet_since is None):
+            self._drop_candidate()
+        return clean
+
+    # -- state transitions ---------------------------------------------------
+
+    def _starts_at(self) -> float:
+        return self.valid_from_s - self.params.init_tolerance_s if self.zone_kind == "site" else self.valid_from_s
+
+    def _initialize(self, context: np.ndarray, now: _Snapshot) -> None:
+        content = _crop(context, _relative(self.geometry.content, self.geometry.context))
+        self._baseline = content.copy()
+        self._reference = content.copy()
+        self._anchor_reference = context.copy()
+        self.status = "observing"
+        self._settle(now)
+        self.events.append({"zone": self.zone_id, "zone_kind": self.zone_kind, "kind": "reference_set", "t_s": round(now.t_s, 3), "frame": now.frame_index})
+
+    def _anchor_changed_fraction(self, context: np.ndarray) -> float:
+        diff = np.abs(context - self._anchor_reference) > self.params.change_threshold
+        return float(diff[self.geometry.anchor_mask].mean())
+
+    def _verified_device_context(self, signals: FrameSignals, context: np.ndarray, now: _Snapshot) -> np.ndarray | None:
+        """The context in the device's reference pose when the anchor ring confirms it, else None."""
+        fraction = self._anchor_changed_fraction(context)
+        if fraction <= self.params.max_anchor_changed_fraction:
+            self._anchor_moved_since = None
+            return context
+        report = {"anchor_changed_fraction": round(fraction, 4)}
+        if self.device.realign(now.t_s, signals.gray, signals.fresh_skin):
+            gray, _motion, _skin = self.device.aligned_layers(now.t_s, signals.gray, signals.motion, signals.fresh_skin)
+            context = _crop_at(gray, self.geometry.context, self.device.region[:2])
+            report["anchor_changed_fraction_after"] = round(self._anchor_changed_fraction(context), 4)
+            report["device_realignment"] = self.device.realignments[-1]
+            if report["anchor_changed_fraction_after"] <= self.params.max_anchor_changed_fraction:
+                self._anchor_moved_since = None
+                self.events.append({"zone": self.zone_id, "zone_kind": self.zone_kind, "kind": "device_realigned", "t_s": round(now.t_s, 3), "frame": now.frame_index, **report})
+                return context
+        elif self.device.realignments:
+            report["device_realignment"] = self.device.realignments[-1]
+        self._drop_candidate()
+        if self._anchor_moved_since is None:
+            self._anchor_moved_since = now
+        elif now.t_s - self._anchor_moved_since.t_s >= self.params.confirm_hold_s:
+            self.status = "epoch_broken"
+            self.events.append(self._event("pose_epoch_break", self._anchor_moved_since, now, report))
+        return None
+
+    def _settle(self, now: _Snapshot) -> None:
+        self._drop_candidate()
+        self._last_clean = now
+        run = [] if self._run_broken else self._clean_run
+        self._clean_run = (run + [now.frame_index])[-KEYFRAME_CANDIDATES:]
+        self._run_broken = False
+
+    def _track_candidate(self, content: np.ndarray, now: _Snapshot, changed: int) -> None:
+        if self._candidate is None or self._changed_area(content, self._candidate) >= self.params.min_changed_area_px:
+            self._candidate = content.copy()
+            self._candidate_at = now
+            self._candidate_frames = [now.frame_index]
+            return
+        self._candidate_frames = (self._candidate_frames + [now.frame_index])[:KEYFRAME_CANDIDATES]
+        if now.t_s - self._candidate_at.t_s < self.params.confirm_hold_s:
+            return
+        occupancy_before = self._changed_area(self._reference, self._baseline)
+        occupancy_after = self._changed_area(self._candidate, self._baseline)
+        details = {
+            "changed_area_px": changed,
+            "occupancy_before_px": occupancy_before,
+            "occupancy_after_px": occupancy_after,
+            "before_keyframe_candidates": list(reversed(self._clean_run)),
+            "after_keyframe_candidates": list(self._candidate_frames),
+            "t_confirmed_s": round(now.t_s, 3),
+        }
+        if self.device is not None:
+            details["device_warp"] = [[round(float(value), 5) for value in row] for row in self.device.warp]
+        self.events.append(self._event(self._change_kind(occupancy_before, occupancy_after), self._last_clean, self._candidate_at, details))
+        self._reference = self._candidate
+        self._run_broken = True
+        self._settle(now)
+
+    def _change_kind(self, occupancy_before: int, occupancy_after: int) -> str:
+        occupied_before = occupancy_before >= self.params.min_changed_area_px
+        occupied_after = occupancy_after >= self.params.min_changed_area_px
+        if self.zone_kind == "site":
+            return "site_changed" if occupied_after else "site_restored"
+        if not occupied_before and occupied_after:
+            return "appeared"
+        if occupied_before and not occupied_after:
+            return "vacated"
+        return "changed_while_occupied"
+
+    def _event(self, kind: str, before: _Snapshot, after: _Snapshot, details: dict) -> dict:
+        return {
+            "zone": self.zone_id,
+            "zone_kind": self.zone_kind,
+            "kind": kind,
+            "t_before_s": round(before.t_s, 3),
+            "t_after_s": round(after.t_s, 3),
+            "frame_before": before.frame_index,
+            "frame_after": after.frame_index,
+            **details,
+        }
+
+    def _changed_area(self, a: np.ndarray, b: np.ndarray) -> int:
+        return int((np.abs(a - b) > self.params.change_threshold).sum())
+
+    def _drop_candidate(self) -> None:
+        self._candidate = None
+        self._candidate_at = None
+        self._candidate_frames = []
+
+
+def _crop(image: np.ndarray, box: Box) -> np.ndarray:
+    x0, y0, x1, y1 = box
+    return image[y0:y1, x0:x1]
+
+
+def _crop_at(plane: np.ndarray, box: Box, offset: tuple[int, int]) -> np.ndarray:
+    """Crop a rectified-image box from a plane whose origin sits at ``offset``."""
+    x0, y0, x1, y1 = box
+    ox, oy = offset
+    return plane[y0 - oy:y1 - oy, x0 - ox:x1 - ox]
+
+
+def _relative(box: Box, window: Box) -> Box:
+    return box[0] - window[0], box[1] - window[1], box[2] - window[0], box[3] - window[1]
+
+
+def _hand_over_zone(fresh_skin: np.ndarray, guard: Box, min_area_px: float) -> bool:
+    """True when a fresh-skin component overlaps the guard box and also extends beyond it."""
+    gx0, gy0, gx1, gy1 = guard
+    if int(fresh_skin[gy0:gy1, gx0:gx1].sum()) < min_area_px:
+        return False
+    _count, labels, stats, _ = cv2.connectedComponentsWithStats(fresh_skin.astype(np.uint8), connectivity=8)
+    for index in np.unique(labels[gy0:gy1, gx0:gx1]):
+        if index == 0:
+            continue
+        x, y, w, h, _area = stats[index]
+        overlap = int((labels[gy0:gy1, gx0:gx1] == index).sum())
+        if overlap >= min_area_px and (x < gx0 or y < gy0 or x + w > gx1 or y + h > gy1):
+            return True
+    return False

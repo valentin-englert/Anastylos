@@ -226,6 +226,32 @@ retry, because the failure is screw-well observability, not the fixture
 (§7 "marginal" confirmed). E1 is reported as "not run: source change not
 observable from overhead in pre-flight B". Next is E2.
 
+## 10. Result E2 (2026-10-28)
+
+Scored against `nouv-E2.actual.json` with the unchanged §6 criteria;
+both ground-truth files matched their committed hashes. Score file:
+`C:\ANASTYLOS\data\proto-01\E2\E2.score.json`
+(`2691d41d019f9783bb9417959fcbe62f610a3deeab67d968c994c131d951eac2`).
+
+| Link | Predicted | Actual step | Verdict |
+|---|---|---|---|
+| L-0001 | W-YELLOW → cell-6 | 1 | correct |
+| L-0002 | W-BLUE → cell-1 | 3 | correct |
+| L-0003 | W-GREEN → cell-5 | 4 | correct |
+| L-0005 | W-RED → cell-4 | 6 | correct |
+
+Counts: 4 correct, 0 incorrect, 0 ambiguous, 1 unattributed (cell-9,
+the C4 move). Sources detected: 4/4 wells. Controls: C3 (W-GREEN lifted
+and returned) produced no removal and no link; C4 (W-GREEN cell-5 →
+cell-9) produced no new-source link. Deviation: W-GREEN dropped once
+during C4, final cell photo consistent; the script is not broken.
+
+**Outcome: STRONG PASS.** Claim boundary: automatic source-to-deposit
+correspondence given an operator-defined site inventory of four wells,
+one take, one setup, owner-reviewed witness ground truth. Not instance
+re-identification; D-pad, Start/Select and screws (E1) unsupported in
+this setup. Every link still requires operator confirmation.
+
 ## 9. Commitment ledger
 
 | Item | SHA-256 | Committed before |

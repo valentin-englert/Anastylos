@@ -6,8 +6,11 @@ bare claims: millimetre coordinates cite their calibration, verdicts
 stay `unknown`/`ambiguous` when evidence is weak, and nothing is
 confirmed without explicit operator confirmation.
 
-No real-hardware validation has been performed: all vision results
-below come from synthetic fixtures and unit tests.
+Real-hardware validation is limited to one result: PROTO-01-NOUV E2
+(2026-10-28, `docs/PROTO-01-NOUV.md` §10), four correct automatic
+source-to-deposit links on a real controller, given an operator-defined
+site inventory. All other vision results below come from synthetic
+fixtures and unit tests.
 
 ## Design rules (observed, keep them)
 
@@ -478,8 +481,9 @@ not on devices; calibration print masters unmeasured
 3. npm transitive closure licenses unverified (compliance review
    item); direct capture devDeps are MIT/Apache-2.0 per installed
    metadata.
-4. No end-to-end real-hardware run exists. Synthetic selftests and
-   fixtures do not substitute for it.
+4. One real-hardware run exists: PROTO-01-NOUV E2 (custody observer
+   on `feat/custody-ledger`, not merged; one take, operator-defined
+   inventory). No other module has a real-hardware result.
 5. Current priority: real-hardware validation and end-to-end demo
    readiness — print and measure the calibration sheets, photograph a
    real disassembly, score the `eval` harnesses on labelled real

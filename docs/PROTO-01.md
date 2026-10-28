@@ -20,10 +20,16 @@ chain, or generalization beyond this unit.
 ## 2. Frozen software (verify before every run)
 
 The observer is not on `main`. It runs read-only from the sibling
-worktree `C:\Users\HP\Documents\Anastylos-custody` (`feat/custody-ledger`,
-uncommitted) with `C:\Users\HP\Documents\Anastylos\.venv` (Python
-3.12.10, OpenCV 4.14.0, NumPy 2.5.4). Checked 2026-10-28: 20/20 tests
-pass.
+worktree `C:\Users\HP\Documents\Anastylos-custody`, branch
+`feat/custody-ledger`, committed unchanged as `496e323f` (2026-10-28),
+with `C:\Users\HP\Documents\Anastylos\.venv` (Python 3.12.10,
+OpenCV 4.14.0, NumPy 2.5.4). Checked 2026-10-28: 20/20 tests pass.
+
+The hashes below are of the working files in that worktree. Nine of
+them had CRLF line endings, which `.gitattributes` stores as LF, so a
+fresh checkout of `496e323f` elsewhere differs byte-wise (the canonical
+config hash does not change). Run PROTO-01 from that worktree; anywhere
+else, identify the code by the commit instead of these file hashes.
 
 | File | SHA-256 |
 |---|---|

@@ -416,9 +416,9 @@ What "integrated" concretely means today — and does not:
   only read-only consumers of the log are `missing-parts`
   reconcile, the `cable-routing` graph and `assembly-reconstruction`.
 - Outside `main`: `custody-ledger/` (event-sourced tray/site observer
-  plus temporal-exclusive linker) exists only uncommitted in the
-  `Anastylos-custody` worktree (`feat/custody-ledger`). Checked
-  2026-10-28 from that worktree without modifying it: 20/20 tests
+  plus temporal-exclusive linker) is committed unchanged on branch
+  `feat/custody-ledger` as `496e323f` (worktree `Anastylos-custody`),
+  not merged. Checked 2026-10-28: 20/20 tests
   pass; `custody-config.json` file SHA-256 `ba84253d…`, canonical
   `10b58c2d…`, identical to the configuration cited by its SNES-01
   development run. It is the only module with a real-video observer

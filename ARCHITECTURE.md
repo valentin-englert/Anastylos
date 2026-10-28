@@ -133,7 +133,11 @@ unless noted) and match the current tree's test methods exactly.
 | `missing-parts/` | missing/displaced-part candidates | `missing.py` | integrated | 81 pass |
 | `cable-routing/` | cable paths + assembly-order graph | `cable.py` | integrated | 53 pass |
 | `capture-companion/` | offline-first capture PWA + validator | app + `python/anastylos_capture_validate.py` | integrated | TS 66 pass, `tsc` clean, `vite build` ok; validator 22 pass |
-| `tools/compliance/` | third-party inventory checker (SPDX) | `check.py` | integrated | 5 pass; `check.py`: 0 errors, 8 open reviews |
+| `tools/compliance/` | third-party inventory checker (SPDX) | `check.py` | integrated | 5 pass; `check.py`: 0 errors, 11 open reviews |
+| `sam-tracking/` | SAM 3.1 segmentation/tracking eval (cloud-isolated experiment) | `sam.py` | implemented | 55 pass; live runs ledgered, none claimed yet |
+| `tools/retrospective-custody/` | offline inspection of cached tool-mask endpoints in a video clip (diagnostic) | `retrospective_custody.py` | implemented, experimental geometry gate only | 8 pass; cached real-clip execution; physical contact, removals, deposits and correspondence are not implemented in this tool |
+| `tools/retrospective-custody/matcher/` | deposit-triggered source-to-tray correspondence over supplied `anastylos-observation-v1` events (see "Correspondence contracts and owner decisions") | `match.py`, `validate.py` | implemented, synthetic only | 22 pass; no real observation file has been consumed; owner decisions V1, V2, V4, V5 not yet implemented |
+| `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 52 pass; real replay on hardware-02 memory only |
 
 Hardware-validated: none. Every vision claim above rests on synthetic
 fixtures; see each module README for its stated validation scope.
@@ -184,7 +188,59 @@ fixtures; see each module README for its stated validation scope.
   `suggested` / `confirmed` / `unknown`); only the operator can set
   `confirmed`, and quantities are never inferred from photo counts.
 
+## Correspondence contracts and owner decisions
+
+Canonical contract files (owner decision V1, 2026-10-28):
+
+- `tools/retrospective-custody/matcher/SCHEMA.md` defines
+  `anastylos-observation-v1`, `anastylos-sync-v1` and
+  `anastylos-correspondence-v1`, enforced by `validate.py` and
+  `match.py`. It is the only valid definition of these schema ids.
+- `snes-02/observation-contract-v1.md` is WITHDRAWN. The quarantined
+  `snes-02/observations/snes02-observations.v1a-WITHDRAWN.json` must
+  not be consumed (it is also not valid JSON).
+- `snes-02/sync-manifest.json` (`snes02-sync-manifest-v1`) is a dataset
+  provenance record, not a matcher input; see V5.
+
+Owner decisions of 2026-10-28. These are binding decisions; the
+status column states what the code does today.
+
+| ID | Decision | Implementation status |
+|---|---|---|
+| V1 | `matcher/SCHEMA.md` is canonical. The withdrawn SNES-02 contract's provenance fields (`evidence.frames[{frame, pts_seconds, role}]`, `evidence.basis_event_ids`) become additive optional fields. | not implemented |
+| V2 | Human and automatic producers are both permitted and must be identified per event (additive optional `producer: {kind: automatic \| human, ref, config_sha256}`). A result that cites human-produced `site_ref`, `verified` or `target_ref` is operator-assisted and never counts as an autonomous success. `verified` means observed and confirmed by the producer's documented criterion. | not implemented |
+| V3 | Existing occlusion behavior stays: any observed material gap in the transit window yields `AMBIGUOUS`. A narrower gap rule may be evaluated only on physical evidence (PROTO-01 / adversarial captures) with preregistered criteria. | current code is the decision |
+| V4 | Fail-closed inventory guard: additive optional `site_inventory: {complete, basis, pose_epoch}`; if absent or not complete, a would-be `PROPOSED` becomes `AMBIGUOUS` with reason `INVENTORY_INCOMPLETE`. A regression test reproduces adversarial case P2 (uninventoried true source plus a later absence of an inventoried site). | not implemented |
+| V5 | Canonical sync adapter: dataset manifests are translated into `anastylos-sync-v1`; the original manifest stays and is cited with its hash in `basis_ref`; uncertainty is carried as offset bounds (SNES-02: `cam1-pts` → `cam2-pts`, 698.96–838.96 ms). | not implemented |
+| V6 | Loose-part and multi-agent removal cases (e.g. SNES-02 S5: loosened by tool, dropped, deposited by fingers) remain `UNKNOWN` for the MVP; no new event kind. | current code is the decision |
+| V7 | Transport or count evidence as an alternative proof of removal is deferred until after PROTO-01. | current code is the decision |
+
+Implementation order: this section, then `SCHEMA.md`, then
+`validate.py` / `match.py` with tests, then producers. No observation
+file in the canonical format may be produced before V1, V2 and V4 are
+implemented. A contract and its consumers are never changed in one
+edit.
+
 ## Coordinate systems and calibration semantics
+
+The experimental `tools/retrospective-custody/` output
+(`retrospective-custody-origin-trace-v1`) is a diagnostic artifact, not a
+new Assembly Memory event. It verifies the supplied clip, cached transcript
+and consumed mask hashes, then records mask-endpoint geometry, decoded
+clip-local frame indices/PTS and a bounded set of hashed image crops.
+An optional fixed work-area ROI is disclosed operator setup; it is not
+a supplied removal event or confirmed origin. A mask endpoint does not
+establish a tool tip, contact, removal or physical identity.
+
+This tool uses rotated display pixels (origin top-left, +x right,
++y down), never millimetres. It records the decoder's rotation metadata
+and leaves the original video's timeline mapping unverified rather than
+adding the nominal clip-cut offset. Source presence/absence, deposit
+detection and retrospective correspondence are explicitly
+`NOT_IMPLEMENTED` in this tool; their counts are null. (The separate
+`matcher/` submodule decides correspondence from supplied observations;
+it does not detect them.) It has no network calls, no
+Assembly Memory writes and no downstream Core consumer.
 
 Several coordinate kinds exist; every measurement states which one
 it uses. There is no single universal convention — the statements
@@ -309,9 +365,15 @@ never be set by analysis code:
 
 ## Offline and future AI-provider boundaries
 
-- Python is fully offline: no network, HTTP, or cloud imports
-  anywhere (verified by search). The PWA's only network use is
-  same-origin service-worker caching of its app shell.
+- Python is offline except two explicit, isolated carve-outs:
+  `sam-tracking/anastylos_sam/client.py` (outbound, stdlib `urllib`
+  only, imported lazily by `sam.py` live paths alone) and
+  `capture-companion/receiver/anastylos_capture_receiver.py` (inbound
+  stdlib `http.server` + `ssl` workstation receiver for capture
+  packages). Verified by import search 2026-10-28: no other Python
+  module outside `.venv/` imports HTTP, socket or TLS modules. The
+  PWA caches its app shell and, since the M2 sync prototype, transfers
+  packages to a paired receiver (`capture-companion/SYNC_PROTOCOL.md`).
 - Future models plug in behind narrow, documented seams — all
   currently unimplemented, advisory-only by contract:
   - `missing-parts`: `run_comparison(..., aligner, segmenter)`
@@ -327,7 +389,9 @@ never be set by analysis code:
     labels identification as future functionality.
 - Seam contract: providers may add evidence or notes, never change a
   verdict, never confirm an identity, never call the network from
-  Python. No Meta Muse / SAM integration, automated BOM sourcing, CAD
+  Python. SAM exists only as the isolated `sam-tracking/` experiment
+  with no pipeline consumer. No Meta Muse integration (the Gate 2A
+  client lives outside `main`), automated BOM sourcing, CAD
   reconstruction, or live sync exists — do not document any as
   present.
 
@@ -350,7 +414,21 @@ What "integrated" concretely means today — and does not:
   `assembly-memory import` (change-detection `result.json`) and the
   manual `record observation` / `record tray-link` commands; the
   only read-only consumers of the log are `missing-parts`
-  reconcile and the `cable-routing` graph.
+  reconcile, the `cable-routing` graph and `assembly-reconstruction`.
+- Outside `main`: `custody-ledger/` (event-sourced tray/site observer
+  plus temporal-exclusive linker) exists only uncommitted in the
+  `Anastylos-custody` worktree (`feat/custody-ledger`). Checked
+  2026-10-28 from that worktree without modifying it: 20/20 tests
+  pass; `custody-config.json` file SHA-256 `ba84253d…`, canonical
+  `10b58c2d…`, identical to the configuration cited by its SNES-01
+  development run. It is the only module with a real-video observer
+  (SNES-01: tray events 13/15 by interval overlap, 0/5 source
+  removals). Its module-local schemas are not `anastylos-observation-v1`.
+- `snes-02/` (commit `4d1d5b3a`) is a research checkpoint, not a
+  module: a dual-camera observability study in which the overhead
+  view localized 0/5 screw sites and the oblique view 4/5, all five
+  screws went into one shared tray cell, and no camera observed a
+  complete custody event. See `snes-02/OBSERVABILITY_REPORT.md`.
 
 ## Reproducible test commands
 
@@ -406,4 +484,8 @@ not on devices; calibration print masters unmeasured
    readiness — print and measure the calibration sheets, photograph a
    real disassembly, score the `eval` harnesses on labelled real
    photos, and run the capture manual checklist on a physical phone
-   (see `capture-companion/README.md`).
+   (see `capture-companion/README.md`). The first physically verified
+   source-to-deposit correspondence is the critical path: a protocol
+   capture (device at rest, one part per cell, hands-off pauses)
+   evaluated by the frozen custody observer against sealed physical
+   ground truth (`docs/PROTO-01.md`).

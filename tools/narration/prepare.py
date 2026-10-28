@@ -61,10 +61,10 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     bundle = build_bundle(args.events, args.custody, args.score)
     bundle_text = json.dumps(bundle, indent=1, ensure_ascii=False)
-    (args.out / "bundle.json").write_text(bundle_text, encoding="utf-8")
-    prompt = RULES.format(language=args.language) + "\nJSON bundle:\n" + bundle_text
-    (args.out / "prompt.txt").write_text(prompt, encoding="utf-8")
-    print(f"prompt.txt sha256 {hashlib.sha256(prompt.encode('utf-8')).hexdigest()}, {len(prompt)} chars")
+    (args.out / "bundle.json").write_bytes(bundle_text.encode("utf-8"))
+    prompt = (RULES.format(language=args.language) + "\nJSON bundle:\n" + bundle_text).encode("utf-8")
+    (args.out / "prompt.txt").write_bytes(prompt)  # bytes, so the file hash equals the printed hash on Windows
+    print(f"prompt.txt sha256 {hashlib.sha256(prompt).hexdigest()}, {len(prompt)} bytes")
 
 
 if __name__ == "__main__":

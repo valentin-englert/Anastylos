@@ -289,3 +289,19 @@ this setup. Every link still requires operator confirmation.
 8. Zeugen-Video ansehen, `nouv-E1.actual.json` schreiben, Hash schicken,
    Datei vom PC entfernen.
 9. Schrauben messen (Länge, Kopf-Ø, Gewinde-Ø) und notieren.
+
+## 11. Advisory narration of E2 (2026-10-28)
+
+Owner-approved Muse narration (`muse-spark-1.3-contributor`, effort max,
+run by the owner in Muse Code 1.4.14 started inside the narration folder).
+Advisory only: it changes no verdict and is not written to memory.
+
+| File in `C:\ANASTYLOS\data\proto-01\E2\narration\` | SHA-256 |
+|---|---|
+| `bundle.json` (from `tools/narration/prepare.py`) | `5cf49a50f1a08b6fb62ac17138af0ef85eff1b74ec0a90f981b292cd9cff0f37` |
+| `prompt.txt` (CRLF on disk; LF content `014200e7c8b89672b8002ce2bde86998eed851e668030851991ea2c5950bc78f`) | `6fc604a3c51e30a8d3839fba8b8c5b4ca7e1722e211fd58cccb7f223970e53dd` |
+| `narration-1.md` | `d1ad6d85ed4a8a874a5f4d34df2b4b7ae3a8a2e7358a2175e60abc5b2e9326c3` |
+
+`tools/narration/check.py`: ACCEPTED (no unknown id, cell, site or time;
+no confirmation or identity claim; every sentence cited). Budget used:
+1 of 30 calls; owner-reported free credit 140.33 → 140.31 USD.

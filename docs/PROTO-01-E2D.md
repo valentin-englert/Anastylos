@@ -133,3 +133,16 @@ parts larger than about 8 mm, device at rest, fixed camera) remain.
 Next: diagnose the unobservable sites over W-RED, then preregister an
 independent take (new device or new arrangement, no inventory) before
 any generalization claim.
+
+### Diagnosis of the missed W-RED source (2026-10-29)
+
+Traced with v1.2 grid config (`E2D\diag-red\`): the five grid sites over
+W-RED report `intrusion = true` on every sample from t = 0 while motion is
+0, so they never become clean and are never initialised. The red part is
+skin-coloured; the hand test treats a fresh-skin component as a hand when
+it overlaps a zone's guard and reaches outside it. A 13 mm named site
+contained the whole part (the "skin-coloured part inside the zone" case),
+a 5 mm grid site does not. Generic consequence: any skin-coloured part
+larger than a grid site is unobservable. Candidate fix for a later
+version (not applied): treat a skin component as a hand only if it moves
+or connects to the edge of the device region.

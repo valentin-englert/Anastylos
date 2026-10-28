@@ -221,6 +221,11 @@ balance 5600 K, manual focus 0.6, UHD 30 fps. The phone shows EV +0.4,
 which is not adjustable in this mode and has no effect with ISO and
 shutter fixed. Lighting stays unchanged during a take.
 
+Owner decision 2026-10-28: E1 is skipped without a further pre-flight B
+retry, because the failure is screw-well observability, not the fixture
+(§7 "marginal" confirmed). E1 is reported as "not run: source change not
+observable from overhead in pre-flight B". Next is E2.
+
 ## 9. Commitment ledger
 
 | Item | SHA-256 | Committed before |

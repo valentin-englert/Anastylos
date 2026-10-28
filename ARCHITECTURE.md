@@ -377,6 +377,18 @@ never be set by analysis code:
   module outside `.venv/` imports HTTP, socket or TLS modules. The
   PWA caches its app shell and, since the M2 sync prototype, transfers
   packages to a paired receiver (`capture-companion/SYNC_PROTOCOL.md`).
+- Approved, not yet implemented (owner, 2026-10-28): a third outbound
+  carve-out for an advisory Muse narration of custody runs
+  (`muse-spark-1.3-contributor`, effort max; budget at most 30 calls,
+  about 0.25 M input / 0.6 M output tokens, text only, no images). It
+  will live only in `tools/narration/`, be imported by no module, and
+  write only beside its run. The offline parts exist: `prepare.py`
+  builds a hashed input bundle and prompt, `check.py` rejects any
+  narration citing ids, cells, sites or times absent from the bundle,
+  claiming confirmation or identity, or stating facts without
+  citation. A narration never changes a verdict and is never written
+  to memory. This contributor tier lets the provider use inputs and
+  outputs for training; only the derived event bundle is sent.
 - Future models plug in behind narrow, documented seams — all
   currently unimplemented, advisory-only by contract:
   - `missing-parts`: `run_comparison(..., aligner, segmenter)`

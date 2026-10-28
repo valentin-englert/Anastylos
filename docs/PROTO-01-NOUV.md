@@ -305,3 +305,9 @@ Advisory only: it changes no verdict and is not written to memory.
 `tools/narration/check.py`: ACCEPTED (no unknown id, cell, site or time;
 no confirmation or identity claim; every sentence cited). Budget used:
 1 of 30 calls; owner-reported free credit 140.33 → 140.31 USD.
+
+Second narration, plain-language style (`prepare.py --style plain`,
+folder `narration-plain\`): `bundle.json` `3ea3a6f82606b67db886e95728895c6e7a413cd3fdc6f5792464f83732113a17`
+(same content as above, LF), `prompt.txt` `a4e97646f924b398da663c7eeac6200956ba3e2613614bfd5133150a49969962`,
+`narration-2.md` `09e31fac08d0232ae05012eb7d17c45c67304e0c991b9e4ac79ea577994b0dfd`. `check.py`: ACCEPTED.
+Budget used: 2 of 30 calls; free credit 140.31 → 140.30 USD.

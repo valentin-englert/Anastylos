@@ -203,6 +203,24 @@ E2 (§8). For E2, its 15 s static clip must pass the sheet-to-camera row;
 the controller-to-sheet values of the E2 take are reported with its
 result. These are setup gates; they do not change the scoring in §6.
 
+## 8b. Pre-flight results and capture standard (2026-10-28)
+
+Run by the Technical Lead with the frozen software (§2 of `PROTO-01.md`,
+all file hashes matched). Pre-flight clips are never scored.
+
+| Clip (SHA-256) | Result |
+|---|---|
+| `preflight-A.mp4` first take (`eb0fe53d…`) | no-go: valid with 6 markers only; the cable covered marker 15 |
+| `preflight-A.mp4` retake (`bf66eff8…`) | pass: 7/7 markers, RMS 0.281 mm, 0 events, 14/14 drift fits |
+| `preflight-B.mp4` (`ced2883b…`), 5-hole inventory, H2 removed to cell 1 | fail: no `site_changed` for H2 (recessed screw well looks the same with and without the screw); auto exposure jumped while hands were in view, giving `appeared`/`vacated` on all 12 cells and a spurious H5 change. Fixture stable: no realignment, no `pose_epoch_break` |
+| `preflight-EXPO.mp4` (`47f0c44f…`), hand sweep over device and cells | pass: 7/7 markers, 0 events, 19/19 drift fits, no realignment; paper brightness 164.0–164.7 throughout |
+
+Capture standard for every further take (phone "Pro video" mode, all
+values manual): ISO 400, shutter 1/50 s (matches 50 Hz mains), white
+balance 5600 K, manual focus 0.6, UHD 30 fps. The phone shows EV +0.4,
+which is not adjustable in this mode and has no effect with ISO and
+shutter fixed. Lighting stays unchanged during a take.
+
 ## 9. Commitment ledger
 
 | Item | SHA-256 | Committed before |

@@ -50,3 +50,37 @@ well rectangle grown by 3 mm, during that well's true removal window.
 
 Reported regardless: missed wells, false positives, interventions, and
 every assumption that would not hold for another device.
+
+## 5. Result run 1 (2026-10-29): FAIL
+
+Method `tools/discovery/discover.py` (grid, cluster), observer v1.1
+`86122666`. Outputs in `C:\ANASTYLOS\data\proto-01\E2D\`, hashed before
+the comparison: `grid.inventory.json` `5b25d130051cd08c65ac227d87f147a548c54a1ba431f7252935cd8f47558575`
+(121 anonymous sites, no device-specific input), `run1\events.json`
+`16a8eecc723d843567740265f23d27a628776c3cccff621e1986203bb5b52947`,
+`run1\regions.json` `dc4b320b16c2dd2d560b4bae62d9d061b0d93c83496c3c0902df1e3233b36e95`,
+`run1\custody.json` `34da5e35bda68e96c33ceb1f8442d0f7b85b995030f17a3aa2e1c7b0e8cc9070`.
+
+| Measure | Value |
+|---|---|
+| Wells discovered (via `site_changed`) | 0 of 4 |
+| False-positive regions | 0 |
+| Links | 0 correct, 0 incorrect, 5 deposits `unattributed` |
+| Grid sites | 111 observing, 17 `epoch_broken`, 5 `inventory_not_observable` |
+| Interventions | none (no inventory, no names) |
+
+Cause: with a dense grid, a part lies inside the anchor rings of its
+neighbouring sites. Its removal changes those rings; the global device
+re-registration is accepted (shift ≈ 0.08 px, the device did not move), but
+the local ring still differs, so the observer declares `pose_epoch_break`
+instead of a content change.
+
+Exploratory only, not scored (uses ground truth after the fact): the
+epoch breaks cluster at the right times and places — 2.0 mm from W-YELLOW
+(5 sites), 1.3 mm from W-BLUE (8), 2.8 mm from W-GREEN (3), 9.2 mm from
+W-RED (1 site; 5 sites near it were unobservable from the start).
+
+Assumptions that would not hold for every device: the device contrasts
+with white paper (a white device would vanish from the mask); parts are
+larger than about one grid pitch (8 mm); the device rests still on the
+sheet; a fixed overhead camera.

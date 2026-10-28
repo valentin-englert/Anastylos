@@ -344,3 +344,25 @@ Update: `assembly-reconstruction` now writes bytes (regression test
 from the same inputs; their file bytes now equal the reported hashes
 (state `32c62481…`, `svg\exploded.svg` `9cfe980d…`, `svg-light\exploded.svg`
 `1806168f…`), so the right-hand column above is now also the file hash.
+
+## 13. First grounded guide session on E2 memory (2026-10-29)
+
+Owner asked five questions in Muse Code (`muse-spark-1.3-contributor`,
+max) started in `C:\ANASTYLOS\data\proto-01\guide-E2\`, which held only
+the session package from `tools/guide/package.py` and the guide rules.
+No live video; progress came only from the owner's chat statement.
+
+| File | SHA-256 |
+|---|---|
+| `session.json` | `05f2769fe14f1a7cfba53db8652ad7e360daee3f126cfba03dba49fa43012541` |
+| `GUIDE_RULES.md` | `911165bb44d77efc1360518d993abf8c5ab31b0b70d28d6ef38b26b1769241ae` |
+| `answers.md` | `3ff74d8d29395e896d9b426f77b96df29f0f83fecbe8e4c73f716897a8f5fedd` |
+
+`tools/guide/check.py`: 5/5 OK. Technical Lead reading: all five correct.
+Location (cell 9 → W-GREEN) and first install step (cell 4 → W-RED) cited
+with obs/link ids and the stated order basis; the membrane-order question
+and an invented screw in cell 2 were both answered "nicht beobachtet" with
+a clarifying question; the chat progress statement was marked as operator
+statement, not evidence, and the part was called "das Teil aus Zelle 4",
+not by colour. Limits: one session, five questions, four parts, no
+dependencies in memory, so dependency-aware answers are untested.

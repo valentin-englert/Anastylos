@@ -157,6 +157,52 @@ Unsupported parts are reported as unsupported, never as successes.
   spend a further day on screws.
 - From the video freeze on, no new takes.
 
+## 8a. Fixture and stability gate
+
+The sheet is printed paper permanently mounted on 5 mm MDF. Nothing is
+taped or stuck to the paper; small holes in paper and MDF are accepted.
+
+**Preferred fixture: nail pegs.** Four to six thin nails stand
+vertically in the MDF around the controller outline, 10–15 mm proud,
+each touching the controller's side wall lightly (snug, not
+squeezing): one at each end lobe, and one or two along the top and the
+bottom edge, offset so that the controller cannot rotate. Drive them
+only about 4 mm deep so they do not go through the board.
+
+**Fallback: pinned stop blocks.** If pegs do not hold, place a small
+wooden or MDF block against each end lobe and fix each block with one
+nail through the block into the MDF. Larger contact, still no adhesive.
+The machine vise is not used: it occludes the view, clamps the plastic
+shell and lifts the part off the sheet plane.
+
+**Placement.** Everything stays inside the printed work area (frame mm
+x 60–310, y 52–224), which keeps the marker quiet zones free. Keep the
+controller and pegs left of x ≈ 290 mm, so they stay out of the 20 mm
+context windows of the tray cells (x ≥ 318 mm). Long axis parallel to
+the sheet's long side, back up. Route the cable towards the top edge
+between markers 10 and 14, slack, and off the board; never across a
+marker or a tray cell. Pegs belong to the scene: set them before
+pre-flight A.
+
+**E1 vs E2.** E1 needs the pegs: unscrewing applies torque about the
+screw axis and downward pressure. E2 (front shell interior up, parts
+lifted with tweezers) needs little force; the front shell has the same
+outline, so it goes into the same pegs. There is no cable in E2.
+
+**Two separate stability questions.**
+
+| Relation | Checked by | Go criterion |
+|---|---|---|
+| Sheet to camera (board, stand) | pre-flight A, and the observer's drift fits during every take | registration valid on a static frame with all 7 markers; 0 events; all camera-drift fits accepted |
+| Controller to sheet (fixture) | pre-flight B with an inventory of **all** holes | `site_changed` only for the removed screw's hole and `appeared` only for its cell; no `site_changed` for any other hole; no `pose_epoch_break`; `device.realignments` empty, or all accepted with `shift_px` ≤ 3 (≈1 mm at 3 px/mm) and `rotation_deg` within ±0.5 |
+
+**Go / no-go for the E1 take:** go only if both rows pass. If the
+controller-to-sheet row fails, add or move pegs (or switch to the
+fallback) and repeat pre-flight B, at most twice; then skip E1 and go to
+E2 (§8). For E2, its 15 s static clip must pass the sheet-to-camera row;
+the controller-to-sheet values of the E2 take are reported with its
+result. These are setup gates; they do not change the scoring in §6.
+
 ## 9. Commitment ledger
 
 | Item | SHA-256 | Committed before |
@@ -173,14 +219,17 @@ Unsupported parts are reported as unsupported, never as successes.
 ## Anhang: Ablauf heute (Operator, Deutsch)
 
 1. Aufbau nach `docs/PROTO-01.md` Anhang A, Abschnitte A und B
-   (UV-Material entfällt). Zusätzlich das zweite Handy als Zeugen-Kamera
-   schräg und nah an Gerät und Tray, außerhalb des Overhead-Bildes.
+   (UV-Material entfällt; nichts auf das Papier kleben). Halterung nach
+   §8a: Nagel-Anschläge im MDF. Zusätzlich das zweite Handy als
+   Zeugen-Kamera schräg und nah an Gerät und Tray, außerhalb des
+   Overhead-Bildes.
 2. Vorab-Test A: 15 s statisch, Hände raus, als
    `C:\ANASTYLOS\incoming\proto-01\preflight-A.mp4` ablegen, Bescheid
    geben, auf „A bestanden“ warten.
 3. Foto mit Lochlabels H1…Hn an mich.
-4. Vorab-Test B (eine Schraube, ca. 30 s) als `preflight-B.mp4`,
-   Bescheid geben, Schraube wieder einsetzen, auf „B bestanden“ warten.
+4. Vorab-Test B (eine Schraube, ca. 30 s, mit echtem Drehmoment) als
+   `preflight-B.mp4`, Bescheid geben, Schraube wieder einsetzen, auf
+   „B bestanden“ warten. B prüft zugleich die Halterung (§8a).
 5. Skript auswürfeln, `nouv-E1.script.json` mit Nonce schreiben, nur
    den Hash schicken, Datei vom PC entfernen. Auf „Hash committet“ warten.
 6. Take E1: Zeugen-Handy starten, dann Overhead. 10 s statisch, je

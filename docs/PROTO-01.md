@@ -67,8 +67,10 @@ for this experiment.
 ## 3. Materials (owner)
 
 - The SNES-style controller, back-shell screws in place.
-- A simple jig on the A3 marker sheet (`surface_a3`) that keeps the
-  controller from moving and covers no marker.
+- A simple fixture on the A3 marker sheet (`surface_a3`) that keeps the
+  controller from moving and covers no marker: nail pegs in the MDF as
+  in `docs/PROTO-01-NOUV.md` §8a. Nothing is taped or stuck to the
+  paper.
 - Empty, numbered tray cells of the calibration kit.
 - One phone on a fixed overhead stand, **4K 30 fps** (SNES-02's 720p
   overhead gave ~7 px per screw). Diffuse light, all markers in frame.
@@ -168,7 +170,7 @@ without inventory. Pass: exit 0, `registration.report.valid` true,
 
 If registration becomes valid only after attempts with all markers
 failed, the setup depends on a marker being hidden. Fix it physically
-(sheet flat and taped, camera perpendicular and centred, no glare on
+(board lying flat, camera perpendicular and centred, no glare on
 markers) and repeat. Never tune software; covering a marker on purpose
 needs owner approval and is reported.
 
@@ -288,7 +290,7 @@ Ground Truth 30–45 min, Aufnahme 5 min.
 **A. Material**
 - [ ] Controller, alle Rückschrauben eingesetzt
 - [ ] A3-Markerbogen `surface_a3` (Marker 10–16, Tray-Zellen 1–12)
-- [ ] Halterung aus Klötzen und Klebeband, verdeckt keinen Marker und keine Zelle
+- [ ] Nagel-Anschläge im MDF (`docs/PROTO-01-NOUV.md` §8a), verdecken keinen Marker und keine Zelle; nichts auf das Papier kleben
 - [ ] Smartphone mit starrem Stativ über dem Bogen, mehrere GB frei
 - [ ] Diffuses Licht ohne Spiegelung auf den Markern
 - [ ] Schraubendreher, Messschieber, Würfel
@@ -296,8 +298,8 @@ Ground Truth 30–45 min, Aufnahme 5 min.
 - [ ] USB-Stick oder Handy für die versiegelten Dateien, Papier und Stift
 
 **B. Aufbau**
-- [ ] Bogen flach, Ränder abgeklebt, keine Wellen
-- [ ] Controller in der Halterung, Rückseite oben, alle Löcher frei sichtbar
+- [ ] MDF-Platte liegt flach und rutschfest auf dem Tisch (Unterlage oder Anschlag unter bzw. neben der Platte, nicht auf dem Papier)
+- [ ] Controller zwischen den Nagel-Anschlägen, Rückseite oben, alle Löcher frei sichtbar, Kabel locker nach oben vom Brett geführt
 - [ ] Zellen 1–12 leer
 - [ ] Kamera senkrecht über der Bogenmitte; alle 7 Marker und alle 12 Zellen im Bild
 - [ ] 4K, 30 fps; Fokus und Belichtung gesperrt; kein Zoom; Nicht stören an

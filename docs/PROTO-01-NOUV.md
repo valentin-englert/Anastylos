@@ -235,7 +235,7 @@ observable from overhead in pre-flight B". Next is E2.
 | E1 outputs (`events.json`, `custody.json`) | pending | E1 ground-truth reveal |
 | `nouv-E1.actual.json` | pending | E1 scoring |
 | `nouv-E2.script.json` | pending | E2 take |
-| E2 site inventory (`C:ANASTYLOSdataproto-0122.inventory.json`: W-GREEN, W-YELLOW, W-BLUE, W-RED; D-pad and Start/Select excluded as wider than a cell) | `b66e1e0881e67438f19e082d5e4207d41a3e9ec8939cdd2a6394e1ab4c14ed1a` | E2 `observe` |
+| E2 site inventory (`C:\ANASTYLOS\data\proto-01\E2\E2.inventory.json`: W-GREEN, W-YELLOW, W-BLUE, W-RED; D-pad and Start/Select excluded as wider than a cell) | `b66e1e0881e67438f19e082d5e4207d41a3e9ec8939cdd2a6394e1ab4c14ed1a` | E2 `observe` |
 | E2 outputs | pending | E2 ground-truth reveal |
 | `nouv-E2.actual.json` | pending | E2 scoring |
 

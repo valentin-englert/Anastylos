@@ -1,6 +1,8 @@
 # PROTO-01: protocol capture for the first physical correspondence
 
 Status: protocol ready, not executed. Owner: Technical Lead (verifier).
+A variant without UV instance coding is preregistered separately in
+`docs/PROTO-01-NOUV.md`; neither replaces the other.
 Prepared 2026-10-28 against `main` @ `027ab2b0`. Contract context:
 `ARCHITECTURE.md` → "Correspondence contracts and owner decisions".
 

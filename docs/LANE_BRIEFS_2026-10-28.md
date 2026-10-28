@@ -116,6 +116,10 @@ A correct link here does not satisfy the MVP gate; PROTO-01 does.
 
 ## Brief A2 — Muse A: PROTO-01 producer (after A1, when the owner's video exists)
 
+Status 2026-10-28: on hold. For PROTO-01-NOUV the Technical Lead is the
+producer (`docs/PROTO-01-NOUV.md` §3). A2 applies only if the UV protocol
+runs later.
+
 ```text
 Role: Muse A, PROTO-01 producer. You never receive proto01.sealed.json or
 proto01.cells.json.

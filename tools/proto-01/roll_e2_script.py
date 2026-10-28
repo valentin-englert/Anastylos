@@ -69,6 +69,11 @@ def paper_line(step: dict) -> str:
         return f"{step['n']}. KONTROLLE C3: {step['well']} anheben und in DIESELBE Mulde zurücklegen"
     if step.get("control") == "C4":
         return f"{step['n']}. KONTROLLE C4: Teil aus {step['from_cell']} ({step['part']}) nach {step['to']} umlegen"
+    if step.get("control") == "C5":
+        return f"{step['n']}. KONTROLLE C5: Teil in {step['cell']} anheben und in DIESELBE Zelle zurücklegen"
+    if step.get("control") == "C6":
+        return (f"{step['n']}. KONTROLLE C6: Teil aus {step['from']} ABSICHTLICH in die FALSCHE Mulde {step['wrong_well']} "
+                f"legen, Hände weg, 3 s warten, dann in {step['to']} umsetzen")
     return f"{step['n']}. {step['from']} -> {step['to']}"
 
 

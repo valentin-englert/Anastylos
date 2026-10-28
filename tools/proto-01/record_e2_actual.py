@@ -1,4 +1,4 @@
-"""Record and seal what was actually performed in the PROTO-01-NOUV E2 take (owner tool).
+"""Record and seal what was actually performed in a PROTO-01-NOUV take (E2, E2R) (owner tool).
 
 Run by the owner after reviewing the witness video. Reads the sealed
 nouv-E2.script.json from --dir (USB stick), asks step by step whether it
@@ -31,21 +31,22 @@ def record_step(step: dict) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--dir", required=True, help="folder holding nouv-E2.script.json (USB stick)")
+    parser.add_argument("--dir", required=True, help="folder holding nouv-<experiment>.script.json (USB stick)")
+    parser.add_argument("--experiment", default="E2", help="E2 or E2R")
     args = parser.parse_args()
     folder = Path(args.dir)
-    script_path = folder / "nouv-E2.script.json"
-    out_path = folder / "nouv-E2.actual.json"
+    script_path = folder / f"nouv-{args.experiment}.script.json"
+    out_path = folder / f"nouv-{args.experiment}.actual.json"
     if out_path.exists():
         raise SystemExit(f"{out_path} exists already")
     script_bytes = script_path.read_bytes()
     script = json.loads(script_bytes)
     steps = [record_step(step) for step in script["steps"]]
     extra = ask("\nZusätzliche Ereignisse (Teil fallen gelassen, zweimal gegriffen ...), sonst leer: ")
-    cells = ask("Zellinhalt am Ende laut Foto, z. B. 'cell-6=YELLOW, cell-1=BLUE': ")
+    cells = ask("Endzustand laut Foto (Zellen bzw. Mulden), z. B. 'cell-6=YELLOW' oder 'W-RED=RED': ")
     actual = {
         "schema": "proto01-nouv-actual@1",
-        "experiment": "E2",
+        "experiment": args.experiment,
         "nonce": secrets.token_hex(24),
         "script_sha256": hashlib.sha256(script_bytes).hexdigest(),
         "basis": "owner review of the witness video and photos of the cells",

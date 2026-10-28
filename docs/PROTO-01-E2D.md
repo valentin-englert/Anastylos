@@ -105,3 +105,10 @@ new recording; it does not show generalization.
 - Unchanged from run 1: the grid inventory `grid.inventory.json`
   (`5b25d130…`), `discover.py cluster`, the unchanged linker, and the
   criteria of §4. No parameter of the grid or the clustering is changed.
+
+Run 2 outputs, hashed before comparison with ground truth
+(`C:\ANASTYLOS\data\proto-01\E2D\run2\`): `events.json`
+`5e08a9e80ee575dc2ea5fca3c60769d210c19e1ac2cb8832e38517bb797d83ce`,
+`regions.json` `7baf99dbf2dc63480854606b283bfe5e7adf05dbae2655c991438300ed0a0027`,
+`region-events.json` `2da470d2c3f5ebf0e227041ac583b0c23d61034d366e0e7b03a6759ae70c97fa`,
+`custody.json` `1bb2d1efe04c718884e3a11e7285c6436a97f7b6e6527f3eb16763e4bebe47a6`.

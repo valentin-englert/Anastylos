@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 INVENTORY_SCHEMA = "custody-site-inventory@1"
@@ -23,6 +23,9 @@ class Zone:
     valid_from_s: float = 0.0
     cell_number: int | None = None
     excluded_from_anchor: tuple[tuple[float, float, float, float], ...] = field(default=())
+    # Declared occupancy at the zone's first reference; None keeps the v1.0
+    # convention (tray cells start empty, inventoried sites start occupied).
+    initially_occupied: bool | None = None
 
 
 def grow(rect_mm, by_mm: float) -> list[float]:
@@ -49,5 +52,23 @@ def load_inventory(path: Path, view: str) -> tuple[list[Zone], dict]:
     zones = []
     for site in sites:
         others = tuple(tuple(other["rect_mm"]) for other in sites if other["id"] != site["id"])
-        zones.append(Zone(site["id"], "site", tuple(site["rect_mm"]), valid_from_s=start, excluded_from_anchor=others))
+        zones.append(Zone(site["id"], "site", tuple(site["rect_mm"]), valid_from_s=start, excluded_from_anchor=others,
+                          initially_occupied=_declared_occupancy(path, site["id"], site.get("initially"))))
     return zones, inventory
+
+
+def apply_tray_occupancy(cells: list[Zone], inventory: dict | None, path: Path | None) -> list[Zone]:
+    """Set the declared start occupancy of tray cells from the inventory's optional ``tray_initially`` map."""
+    declared = (inventory or {}).get("tray_initially") or {}
+    unknown = sorted(set(declared) - {cell.id for cell in cells})
+    if unknown:
+        raise SystemExit(f"{path}: tray_initially names unknown cells {unknown}")
+    return [replace(cell, initially_occupied=_declared_occupancy(path, cell.id, declared.get(cell.id))) for cell in cells]
+
+
+def _declared_occupancy(path, zone_id: str, value: str | None) -> bool | None:
+    if value is None:
+        return None
+    if value not in ("occupied", "empty"):
+        raise SystemExit(f"{path}: {zone_id}: initially must be 'occupied' or 'empty', not {value!r}")
+    return value == "occupied"

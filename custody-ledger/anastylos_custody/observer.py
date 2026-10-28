@@ -12,6 +12,15 @@ Device sites are read in the device's reference pose (``DevicePose``). Each
 site also watches an anchor ring on the device around it; when the ring no
 longer matches, the device is re-registered, and if the ring still does not
 match the site's pose epoch ends and the site is unknown from then on.
+
+Occupancy is always measured as difference from the zone's first reference.
+Event names state what that difference means. Without a declaration (v1.0
+convention) tray cells start empty and sites start occupied, so a site
+change is a removal (``site_changed``) and a cell change is a deposit
+(``appeared``). v1.1 accepts a declared start occupancy per zone, so the
+same names stay true when a take starts with full cells and empty sites:
+cells then report ``vacated`` when a part leaves, sites ``site_filled`` when
+a part is placed and ``site_emptied`` when it leaves again.
 """
 
 from __future__ import annotations
@@ -24,6 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
+OBSERVER_VERSION = "1.1.0"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -82,6 +92,7 @@ class ZoneObserver:
     clean_s: float = 0.0
     not_clean_s: float = 0.0
     trace: list[dict] | None = None  # per-sample diagnostics when not None
+    initially_occupied: bool | None = None  # None: v1.0 convention (see module docstring)
     _baseline: np.ndarray | None = None
     _reference: np.ndarray | None = None
     _anchor_reference: np.ndarray | None = None
@@ -127,7 +138,7 @@ class ZoneObserver:
         self._track_candidate(content, now, changed)
 
     def summary(self) -> dict:
-        return {
+        summary = {
             "zone": self.zone_id,
             "kind": self.zone_kind,
             "status": self.status,
@@ -135,6 +146,9 @@ class ZoneObserver:
             "not_clean_s": round(self.not_clean_s, 2),
             "events": len(self.events),
         }
+        if self.initially_occupied is not None:
+            summary["initially"] = "occupied" if self.initially_occupied else "empty"
+        return summary
 
     # -- frames and cleanliness -----------------------------------------------
 
@@ -240,13 +254,21 @@ class ZoneObserver:
         self._settle(now)
 
     def _change_kind(self, occupancy_before: int, occupancy_after: int) -> str:
-        occupied_before = occupancy_before >= self.params.min_changed_area_px
-        occupied_after = occupancy_after >= self.params.min_changed_area_px
+        differs_before = occupancy_before >= self.params.min_changed_area_px
+        differs_after = occupancy_after >= self.params.min_changed_area_px
         if self.zone_kind == "site":
-            return "site_changed" if occupied_after else "site_restored"
-        if not occupied_before and occupied_after:
+            if self.initially_occupied is False:
+                return "site_filled" if differs_after else "site_emptied"
+            return "site_changed" if differs_after else "site_restored"
+        if self.initially_occupied:
+            if not differs_before and differs_after:
+                return "vacated"
+            if differs_before and not differs_after:
+                return "appeared"
+            return "changed_while_away_from_start"
+        if not differs_before and differs_after:
             return "appeared"
-        if occupied_before and not occupied_after:
+        if differs_before and not differs_after:
             return "vacated"
         return "changed_while_occupied"
 

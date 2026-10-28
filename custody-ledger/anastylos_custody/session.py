@@ -10,10 +10,10 @@ import numpy as np
 from anastylos_diff.config import sha256_file
 from anastylos_custody import footage
 from anastylos_custody.device_alignment import AlignmentLimits, DevicePose
-from anastylos_custody.observer import ObserverParams, ZoneGeometry, ZoneObserver
+from anastylos_custody.observer import OBSERVER_VERSION, ObserverParams, ZoneGeometry, ZoneObserver
 from anastylos_custody.sheet import DriftTracker, Rectifier, SheetReader, find_registration
 from anastylos_custody.signals import SignalTracker
-from anastylos_custody.zones import Zone, grow, load_inventory, tray_cells
+from anastylos_custody.zones import Zone, apply_tray_occupancy, grow, load_inventory, tray_cells
 
 EVENTS_SCHEMA = "custody-events@1"
 
@@ -30,11 +30,12 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
     inventory_doc = None
     if inventory is not None:
         sites, inventory_doc = load_inventory(inventory, custody["view"])
-        zones += sites
+        zones = apply_tray_occupancy(zones, inventory_doc, inventory) + sites
     params = _observer_params(custody, rectifier.ppm)
     device = _device_pose([zone for zone in zones if zone.kind == "site"], rectifier, custody)
     observers = [ZoneObserver(zone.id, zone.kind, _geometry(zone, rectifier, custody["zones"]), params, zone.valid_from_s,
-                              device if zone.kind == "site" else None) for zone in zones]
+                              device if zone.kind == "site" else None, initially_occupied=zone.initially_occupied)
+                 for zone in zones]
     for observer in observers:
         if observer.zone_id in trace_zones:
             observer.trace = []
@@ -59,6 +60,7 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
         "schema": EVENTS_SCHEMA,
         "provenance": {
             **provenance,
+            "observer_version": OBSERVER_VERSION,
             "video": {**footage.describe(video), "sha256": footage.sha256_file(video)},
             "inventory_path": None if inventory is None else str(inventory),
             "inventory_sha256": None if inventory is None else sha256_file(inventory),

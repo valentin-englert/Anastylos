@@ -80,6 +80,25 @@ class ObserverTests(unittest.TestCase):
         events = run(observer, timeline([(2, {}), (2, {"moving": True}), (2, {})]))
         self.assertEqual(events, [])
 
+    def test_cell_declared_occupied_reports_vacated_then_appeared(self):
+        observer = ZoneObserver("cell-4", "tray_cell", CELL, PARAMS, initially_occupied=True)
+        events = run(observer, timeline([(2, {"part": True}), (1, {"hand": True, "moving": True}), (3, {}),
+                                         (1, {"hand": True, "moving": True}), (3, {"part": True})]))
+        self.assertEqual([event["kind"] for event in events], ["vacated", "appeared"])
+        self.assertEqual(observer.summary()["initially"], "occupied")
+
+    def test_site_declared_empty_reports_filled_then_emptied(self):
+        observer = ZoneObserver("W-RED", "site", CELL, PARAMS, initially_occupied=False)
+        events = run(observer, timeline([(2, {}), (1, {"hand": True, "moving": True}), (3, {"part": True}),
+                                         (1, {"hand": True, "moving": True}), (3, {})]))
+        self.assertEqual([event["kind"] for event in events], ["site_filled", "site_emptied"])
+
+    def test_undeclared_zones_keep_v1_0_event_names(self):
+        site = ZoneObserver("H1", "site", CELL, PARAMS)
+        events = run(site, timeline([(2, {"part": True}), (1, {"hand": True, "moving": True}), (3, {})]))
+        self.assertEqual([event["kind"] for event in events], ["site_changed"])
+        self.assertNotIn("initially", site.summary())
+
     def test_unstable_candidate_is_not_confirmed(self):
         frames = timeline([(2, {})])
         for index in range(10):

@@ -94,9 +94,26 @@ never run by this module.
 - `custody-config@1`: frozen parameters. Its canonical SHA-256 is cited in
   every `events.json`.
 - `custody-site-inventory@1`: sites as sheet-frame mm rectangles at
-  `inventory_t_s`, plus who made the inventory (`basis`).
+  `inventory_t_s`, plus who made the inventory (`basis`). Observer v1.1
+  adds two optional fields: `initially: "occupied" | "empty"` per site and
+  `tray_initially: {"cell-N": "occupied" | "empty"}`. Undeclared zones keep
+  the v1.0 convention (cells start empty, sites start occupied).
+- Event names (occupancy is always measured against the zone's first
+  reference, and the name states what that means):
+
+  | Zone, start state | away from start | back to start |
+  |---|---|---|
+  | cell, empty (default) | `appeared` | `vacated` |
+  | cell, declared occupied | `vacated` | `appeared` |
+  | site, occupied (default) | `site_changed` | `site_restored` |
+  | site, declared empty | `site_filled` | `site_emptied` |
+
+  A change between two states that both differ from the start is
+  `changed_while_occupied` (empty-start cell) or
+  `changed_while_away_from_start` (occupied-start cell).
 - `custody-events@1`: the main event log, which also records:
-  - provenance (video SHA-256, config and kit hashes, inventory hash);
+  - provenance (video SHA-256, config and kit hashes, inventory hash,
+    `observer_version` since 1.1.0);
   - registration, drift fits, sampling gaps;
   - per-zone clean/not-clean seconds and status;
   - device realignments and optional traces.

@@ -1,0 +1,13 @@
+{
+  "schema_version": "anastylos-sync-v1",
+  "offsets": [
+    {
+      "from_clock": "cam-a",
+      "to_clock": "cam-b",
+      "offset_min_ms": -5.0,
+      "offset_max_ms": 5.0,
+      "validated": true,
+      "basis_ref": "example clap-sync measurement (synthetic)"
+    }
+  ]
+}

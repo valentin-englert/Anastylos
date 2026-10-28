@@ -1,0 +1,62 @@
+{
+  "schema_version": "anastylos-observation-v1",
+  "session_ref": "example cross-camera without sync (synthetic)",
+  "events": [
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-present-1",
+      "kind": "source_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 0.0, "end_ms": 100.0},
+      "location": {"camera_id": "cam-a", "xy_px": [412.5, 208.0],
+                   "uncertainty_px": 6.0, "pose_epoch": null, "frame": "display"},
+      "state": {"site_ref": "site-1", "presence": "present", "verified": true,
+                "appearance": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 0, "pts_ms": 0.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "grasp-1",
+      "kind": "tool_interaction",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 200.0, "end_ms": 300.0},
+      "location": {"camera_id": "cam-a", "xy_px": [410.0, 210.0],
+                   "uncertainty_px": 8.0, "pose_epoch": null, "frame": "display"},
+      "state": {"actor": "hand:right", "action": "grasp", "target_ref": "site-1",
+                "contact_verified": true, "handoff_from": null, "handoff_to": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 6, "pts_ms": 200.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-absent-1",
+      "kind": "source_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 400.0, "end_ms": 500.0},
+      "location": {"camera_id": "cam-a", "xy_px": [412.5, 208.0],
+                   "uncertainty_px": 6.0, "pose_epoch": null, "frame": "display"},
+      "state": {"site_ref": "site-1", "presence": "absent", "verified": true,
+                "appearance": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 12, "pts_ms": 400.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "tray-add-1",
+      "kind": "tray_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-b", "start_ms": 600.0, "end_ms": 700.0},
+      "location": {"camera_id": "cam-b", "xy_px": [900.0, 150.0],
+                   "uncertainty_px": 10.0, "pose_epoch": null, "frame": "display"},
+      "state": {"tray_ref": "tray-1", "cell_ref": "A1", "change": "addition",
+                "supported": true, "appearance": null},
+      "evidence": {"camera_id": "cam-b", "frame_index": 18, "pts_ms": 600.0,
+                   "source_ref": "clip-b.mp4", "source_sha256": null},
+      "limitations": ["tray view is a separate unsynchronized camera"]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schema_version": "anastylos-observation-v1",
+  "session_ref": "example competing sources (synthetic)",
+  "events": [
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-a-present",
+      "kind": "source_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 0.0, "end_ms": 100.0},
+      "location": null,
+      "state": {"site_ref": "site-a", "presence": "present", "verified": true,
+                "appearance": {"component_class": "screw", "head_drive": "phillips",
+                               "length_mm": null, "diameter_mm": null, "marks": null}},
+      "evidence": {"camera_id": "cam-a", "frame_index": 0, "pts_ms": 0.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-a-grasp",
+      "kind": "tool_interaction",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 200.0, "end_ms": 300.0},
+      "location": null,
+      "state": {"actor": "hand:right", "action": "grasp", "target_ref": "site-a",
+                "contact_verified": true, "handoff_from": null, "handoff_to": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 6, "pts_ms": 200.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-a-absent",
+      "kind": "source_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 400.0, "end_ms": 500.0},
+      "location": null,
+      "state": {"site_ref": "site-a", "presence": "absent", "verified": true,
+                "appearance": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 12, "pts_ms": 400.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-b-present",
+      "kind": "source_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 50.0, "end_ms": 150.0},
+      "location": null,
+      "state": {"site_ref": "site-b", "presence": "present", "verified": true,
+                "appearance": {"component_class": "screw", "head_drive": "phillips",
+                               "length_mm": null, "diameter_mm": null, "marks": null}},
+      "evidence": {"camera_id": "cam-a", "frame_index": 1, "pts_ms": 50.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-b-grasp",
+      "kind": "tool_interaction",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 250.0, "end_ms": 350.0},
+      "location": null,
+      "state": {"actor": "hand:right", "action": "grasp", "target_ref": "site-b",
+                "contact_verified": true, "handoff_from": null, "handoff_to": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 7, "pts_ms": 250.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "src-b-absent",
+      "kind": "source_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 450.0, "end_ms": 550.0},
+      "location": null,
+      "state": {"site_ref": "site-b", "presence": "absent", "verified": true,
+                "appearance": null},
+      "evidence": {"camera_id": "cam-a", "frame_index": 13, "pts_ms": 450.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": []
+    },
+    {
+      "schema_version": "anastylos-observation-v1",
+      "event_id": "tray-add-1",
+      "kind": "tray_state",
+      "status": "observed",
+      "time": {"clock_id": "cam-a", "start_ms": 600.0, "end_ms": 700.0},
+      "location": null,
+      "state": {"tray_ref": "tray-1", "cell_ref": "A1", "change": "addition",
+                "supported": true,
+                "appearance": {"component_class": "screw", "head_drive": "phillips",
+                               "length_mm": null, "diameter_mm": null, "marks": null}},
+      "evidence": {"camera_id": "cam-a", "frame_index": 18, "pts_ms": 600.0,
+                   "source_ref": "clip-a.mp4", "source_sha256": null},
+      "limitations": ["identical screws; appearance does not distinguish site-a from site-b"]
+    }
+  ]
+}

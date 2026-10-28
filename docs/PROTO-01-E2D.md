@@ -84,3 +84,24 @@ Assumptions that would not hold for every device: the device contrasts
 with white paper (a white device would vanish from the mask); parts are
 larger than about one grid pitch (8 mm); the device rests still on the
 sheet; a fixed overhead camera.
+
+## 6. Run 2 preregistration (2026-10-29, before running)
+
+Method revised after the run 1 failure and evaluated on the same E2
+footage. A pass here is retrospective and only justifies an independent
+new recording; it does not show generalization.
+
+- Observer **v1.2**: branch `feat/custody-v1.2`, commit `30718b86`,
+  worktree `Anastylos-custody-v12` (v1.1 stays untouched in
+  `Anastylos-custody` for E2R). `observer.py`
+  `61ee588519ad75db52ddde7d79de3106e6352fc3b5b2d472d16952457178bfdf`,
+  `session.py` `c87c4fb8e954e8b54fb3b204deb1d6bb70395597882c119bb463344e04dd0b60`,
+  28/28 tests. With the default config, v1.2 on E2 gives events and links
+  identical to v1.1 (`E2\regression-v1.2\`).
+- Config `custody-config.grid.json`
+  (`3a16c58e8f3f3c67141d85fdce2d4257671cc4c765c4e0bbab24bdeadb1153a5`,
+  canonical `085f2d97237a192f904a165c533f84aa3414c47590e480eb0283c90e77a918e5`):
+  the default config plus `ring_change_with_verified_pose = content`.
+- Unchanged from run 1: the grid inventory `grid.inventory.json`
+  (`5b25d130…`), `discover.py cluster`, the unchanged linker, and the
+  criteria of §4. No parameter of the grid or the clustering is changed.

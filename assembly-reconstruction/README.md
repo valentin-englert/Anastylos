@@ -146,6 +146,17 @@ Regenerate (don't hand-edit) the graph if the log changes.
   live-video tracking, not a SNES controller, and not identity
   verification. No video, CAD, or Muse work was done in this lane.
 
+## Trusted CAD worker (separate runtime)
+
+The `cad/` subdirectory is the CAD-ENGINE lane's isolated CadQuery/OCP
+worker: a trusted restricted compiler from validated
+`cad-feature-model-v1` documents to regenerable scripts, genuine STEP
+solids, previews, and evidence bundles. It is a separate runtime with
+its own pinned virtualenv and 46-test suite -- see
+[`cad/README.md`](cad/README.md) and [`cad/EVIDENCE.md`](cad/EVIDENCE.md).
+This projector stays stdlib-only and unchanged; nothing here imports the
+CAD worker or vice versa.
+
 ## Known limitations
 
 - Single-column wrap at 10 rows per column; large logs produce tall

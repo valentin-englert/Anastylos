@@ -44,6 +44,14 @@ uncovers many sites at once is then one removal, not many. Same time alone
 never groups distant sites, a site that changes twice gives two removals
 (stacked parts), and operator-declared removals are never grouped. Without
 geometry nothing is grouped.
+
+Linker 1.4: fragments join when they *start* in the same observed interval
+(start within ``same_interval_s``) and their windows overlap; the end may
+differ because one site can stay covered longer. A grouped removal event
+whose total changed area is below ``min_removal_area_mm2`` (the same
+minimum a tray cell needs to count a part) is reported under
+``minor_site_changes`` and not used as a removal: a part that small could
+never be seen deposited. Both rules apply only with site geometry.
 """
 
 from __future__ import annotations
@@ -52,16 +60,20 @@ LINKS_SCHEMA = "custody-links@1"
 DECLARED_SCHEMA = "custody-declared-removals@1"
 DECLARED_DEPOSITS_SCHEMA = "custody-declared-deposits@1"
 DEPOSIT_KINDS = ("appeared", "changed_while_occupied")
-GROUPING = {"same_interval_s": 0.25, "min_gap_mm": 2.0, "size_ratio": 0.5}
+GROUPING = {"same_interval_s": 0.25, "min_gap_mm": 2.0, "size_ratio": 0.5, "min_removal_area_mm2": 25.0}
 SCOPE_NOTE = "exclusive only among inventoried sites and watched tray cells; parts taken from anywhere else are invisible to this check"
 
 
 def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict | None = None,
          site_rects: dict | None = None) -> dict:
     events = events_doc["events"]
-    removals = [_observed_removal(event) for event in events if event["kind"] == "site_changed"]
+    ppm = (events_doc.get("rectified") or {}).get("px_per_mm")
+    removals = [_observed_removal(event, ppm) for event in events if event["kind"] == "site_changed"]
+    minor = []
     if site_rects is not None:
         removals = group_removals(removals, site_rects)
+        minor = [r for r in removals if r.get("changed_area_mm2") is not None and r["changed_area_mm2"] < GROUPING["min_removal_area_mm2"]]
+        removals = [r for r in removals if r not in minor]
     if declared is not None:
         removals += _declared_removals(declared)
     removals.sort(key=lambda item: item["t_after_s"])
@@ -100,6 +112,7 @@ def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict
         doc["declared_external_deposits"] = externals
     if site_rects is not None:
         doc["removal_grouping"] = {**GROUPING, "groups": sum(1 for r in removals if len(r.get("events", [])) > 1)}
+        doc["minor_site_changes"] = minor
     return doc
 
 
@@ -125,7 +138,9 @@ def group_removals(removals: list[dict], site_rects: dict) -> list[dict]:
     for i, a in enumerate(observed):
         for j in range(i + 1, len(observed)):
             b = observed[j]
-            if abs(a["t_before_s"] - b["t_before_s"]) > GROUPING["same_interval_s"] or abs(a["t_after_s"] - b["t_after_s"]) > GROUPING["same_interval_s"]:
+            same_start = abs(a["t_before_s"] - b["t_before_s"]) <= GROUPING["same_interval_s"]
+            overlap = a["t_before_s"] < b["t_after_s"] and b["t_before_s"] < a["t_after_s"]
+            if not (same_start and overlap):
                 continue
             ra, rb = site_rects[a["site"]], site_rects[b["site"]]
             larger = max(ra[2] * ra[3], rb[2] * rb[3])
@@ -144,8 +159,10 @@ def group_removals(removals: list[dict], site_rects: dict) -> list[dict]:
             grouped.append(items[0])
             continue
         first = min(items, key=lambda r: (r["t_before_s"], r["event"]))
+        areas = [r.get("changed_area_mm2") for r in items]
         grouped.append({**first, "events": sorted(r["event"] for r in items), "sites": sorted(r["site"] for r in items),
                         "t_before_s": min(r["t_before_s"] for r in items), "t_after_s": max(r["t_after_s"] for r in items),
+                        "changed_area_mm2": None if None in areas else round(sum(areas), 1),
                         "grouping": [{"a": observed[i]["event"], "b": observed[j]["event"], "gap_mm": g, "limit_mm": lim}
                                      for i, j, g, lim in joins if i in members]})
     return sorted(grouped + others, key=lambda r: r["t_after_s"])
@@ -310,8 +327,11 @@ def _source_blind_spots(events_doc: dict) -> list[dict]:
     return spots
 
 
-def _observed_removal(event: dict) -> dict:
-    return {"event": event["id"], "site": event["zone"], "t_before_s": event["t_before_s"], "t_after_s": event["t_after_s"], "basis": "observed"}
+def _observed_removal(event: dict, ppm: float | None = None) -> dict:
+    removal = {"event": event["id"], "site": event["zone"], "t_before_s": event["t_before_s"], "t_after_s": event["t_after_s"], "basis": "observed"}
+    if ppm and "changed_area_px" in event:
+        removal["changed_area_mm2"] = round(event["changed_area_px"] / ppm ** 2, 1)
+    return removal
 
 
 def _declared_removals(declared: dict) -> list[dict]:

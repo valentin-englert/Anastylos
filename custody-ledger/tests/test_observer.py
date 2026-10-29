@@ -207,6 +207,17 @@ class RingRuleTests(unittest.TestCase):
         self.assertIn("pose_epoch_break", self._run_ring_removal(observer))
         self.assertEqual(observer.status, "epoch_broken")
 
+    def test_empty_ring_relies_on_the_device_pose_without_nan(self):
+        import warnings
+        geometry = ZoneGeometry(CELL.content, CELL.guard, CELL.context, np.zeros((40, 40), bool))
+        observer = ZoneObserver("G-02-02", "site", geometry, PARAMS, device=_StillDevice())
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            for index in range(20):
+                observer.observe(frame(round(0.2 * index, 3)), index)
+        self.assertEqual(observer.status, "observing")
+        self.assertNotIn("pose_epoch_break", [e["kind"] for e in observer.events])
+
     def test_content_rule_adopts_the_ring_and_keeps_observing(self):
         observer = self._site("content")
         kinds = self._run_ring_removal(observer)

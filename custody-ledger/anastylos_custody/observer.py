@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.4.0"
+OBSERVER_VERSION = "1.4.1"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -228,6 +228,10 @@ class ZoneObserver:
 
     def _verified_device_context(self, signals: FrameSignals, context: np.ndarray, now: _Snapshot) -> np.ndarray | None:
         """The context in the device's reference pose when the anchor ring confirms it, else None."""
+        if not self.geometry.anchor_mask.any():
+            # No ring of its own (all ring pixels belong to other sites): rely on the device pose,
+            # which the other sites keep verified. Before v1.4.1 this was a silent NaN and a pose break.
+            return context
         fraction = self._anchor_changed_fraction(context)
         if fraction <= self.params.max_anchor_changed_fraction:
             self._anchor_moved_since = None

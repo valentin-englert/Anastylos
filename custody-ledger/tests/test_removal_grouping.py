@@ -81,5 +81,43 @@ class RemovalGroupingTests(unittest.TestCase):
         self.assertEqual(doc["proposals"][0]["autonomy"], "operator_assisted")
 
 
+
+def sized(event_id, site, before, after, area_mm2):
+    return {**removal(event_id, site, before, after), "changed_area_px": area_mm2 * 9.0}  # 3 px/mm
+
+
+def sized_doc(events):
+    return {**events_doc(events), "rectified": {"px_per_mm": 3.0}}
+
+
+class NoiseRuleTests(unittest.TestCase):
+    """Linker 1.4: tiny site changes are not removals; late fragments of one start still group."""
+
+    def test_change_smaller_than_any_countable_part_is_not_a_removal(self):
+        events = [sized("E-1", "FAR", 5, 6, 8.0), sized("E-2", "F1", 10, 12, 60.0), deposit("E-3", "cell-1", 13, 15)]
+        doc = link(sized_doc(events), site_rects=RECTS)
+        self.assertEqual(doc["proposals"][0]["status"], "candidate_temporal_exclusive")
+        self.assertEqual([m["event"] for m in doc["minor_site_changes"]], ["E-1"])
+
+    def test_fragments_small_alone_but_large_together_stay_a_removal(self):
+        events = [sized("E-1", "F1", 10, 12, 10.0), sized("E-2", "F2", 10, 12, 20.0), deposit("E-3", "cell-1", 13, 15)]
+        doc = link(sized_doc(events), site_rects=RECTS)
+        self.assertEqual(doc["proposals"][0]["status"], "candidate_temporal_exclusive")
+        self.assertEqual(doc["minor_site_changes"], [])
+
+    def test_without_geometry_small_changes_still_count(self):
+        events = [sized("E-1", "FAR", 5, 6, 8.0), sized("E-2", "F1", 10, 12, 60.0), deposit("E-3", "cell-1", 13, 15)]
+        self.assertEqual(link(sized_doc(events))["proposals"][0]["status"], "ambiguous")
+
+    def test_late_confirmed_fragment_of_the_same_start_joins(self):
+        events = [sized("E-1", "F1", 10, 12, 60.0), sized("E-2", "F2", 10.1, 15, 20.0), deposit("E-3", "cell-1", 16, 18)]
+        doc = link(sized_doc(events), site_rects=RECTS)
+        self.assertEqual(doc["proposals"][0]["removal"]["sites"], ["F1", "F2"])
+
+    def test_close_fragment_with_a_different_start_stays_separate(self):
+        events = [sized("E-1", "F1", 10, 12, 60.0), sized("E-2", "F2", 11, 15, 60.0), deposit("E-3", "cell-1", 16, 18)]
+        self.assertEqual(link(sized_doc(events), site_rects=RECTS)["proposals"][0]["status"], "ambiguous")
+
+
 if __name__ == "__main__":
     unittest.main()

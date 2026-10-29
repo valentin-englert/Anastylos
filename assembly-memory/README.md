@@ -21,6 +21,30 @@ Event kinds:
   either an evidence basis or a human confirmation; anything else is rejected
   and nothing is written.
 
+Operator-declared events for complete disassemblies (owner decision
+2026-10-29; each names who declared it and never counts as automatic
+evidence):
+
+- `phase` — a pose phase (`label`, optional `pose_note`, `starts_after`
+  the previous phase); orders removals across pose changes.
+- `declared_removal` — a removal without image evidence: `operator_label`
+  (the operator's own words), `source`, `phase`, `declared_by`, optional
+  `t_s`, `observation_id` (an automatic observation it refers to) and
+  `evidence_note`. No mm geometry is required or invented.
+- `storage_link` — where an `observation` or `declared_removal` is stored:
+  `location` (`cell-N` or free text such as `OUT-A`), human basis with
+  `confirmed_by`.
+- `compatible_group` — interchangeable parts without per-part identity:
+  `members`, basis `operator_statement` (`declared_by`) or `measured`
+  (`measurement`).
+
+```powershell
+py -3.12 assembly-memory\memory.py --session-dir s record phase --label "P2 opening" --starts-after phase-0001
+py -3.12 assembly-memory\memory.py --session-dir s record declared-removal --label "back shell" --source device --phase phase-0002 --declared-by owner
+py -3.12 assembly-memory\memory.py --session-dir s record storage-link --target dec-0001 --location OUT-B --confirmed-by owner
+py -3.12 assembly-memory\memory.py --session-dir s record group --members dec-0002,dec-0003 --declared-by owner
+```
+
 "Where does this go?" returns the part's ORIGINAL source location with its
 evidence. The tray only locates the stored part and resolves the removal
 observation behind it.

@@ -228,7 +228,7 @@ occlusion). Binding for every custody observer version after v1.2; v1.1
 
 | H2 | Spatial discovery is adaptive: grids or other sampling only propose candidate changes; discovered sources carry stable ids, mask geometry in device-relative coordinates, confidence and provenance; neighbouring proposals merge when they describe one persistent change and split only when independent changes are shown; geometry refinements are appended, never rewriting earlier evidence; uncertain segmentation or correspondence stays `ambiguous`/`unknown`. Assessment and next experiment: [`docs/P2-ADAPTIVE-DISCOVERY.md`](docs/P2-ADAPTIVE-DISCOVERY.md). | not implemented; E2-D uses a fixed 8 mm grid as an experimental baseline only |
 
-Proposed 2026-10-29, **not decided, not implemented**: additive Assembly
+Owner decision 2026-10-29, **implemented in `assembly-memory`** (readers opt in separately): additive Assembly
 Memory events for a complete disassembly (needed by FULL-01). Existing
 `observation` and `tray_link` stay unchanged; readers ignore unknown types
 until they opt in.

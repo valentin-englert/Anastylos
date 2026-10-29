@@ -25,7 +25,11 @@ class CorruptLogError(ValueError):
 # Observation events describe what was seen, never what a part is called.
 IDENTITY_KEYS = ("part", "part_name", "part_id", "name")
 
-EVENT_TYPES = ("observation", "tray_link")
+EVENT_TYPES = ("observation", "tray_link", "declared_removal", "storage_link", "compatible_group", "phase")
+# Operator-declared content (complete disassemblies): parts without image evidence, storage outside
+# tray cells, interchangeable groups and pose phases. Each names who declared it; none of it is
+# automatic evidence.
+DECLARABLE_TARGETS = ("observation", "declared_removal")
 
 
 def utc_now() -> str:
@@ -124,6 +128,72 @@ def validate_tray_link(event: dict, known_ids: set[str], successors: dict[str, s
         raise ValidationError(f"tray_link supersedes unknown id {supersedes!r}")
 
 
+def _require_known(target: str, events_by_id: dict[str, dict], types: tuple, what: str) -> dict:
+    event = events_by_id.get(target)
+    if event is None or event.get("type") not in types:
+        raise ValidationError(f"{what} points at unknown {' or '.join(types)} {target!r}")
+    return event
+
+
+def _require_supersedes(event: dict, events_by_id: dict[str, dict], what: str) -> None:
+    supersedes = event.get("supersedes")
+    if supersedes is not None and supersedes not in events_by_id:
+        raise ValidationError(f"{what} supersedes unknown id {supersedes!r}")
+
+
+def validate_phase(event: dict, events_by_id: dict[str, dict]) -> None:
+    _require_text(event, "session", "phase")
+    _require_text(event, "label", "phase")
+    after = event.get("starts_after")
+    if after is not None:
+        _require_known(after, events_by_id, ("phase",), "phase starts_after")
+    _require_supersedes(event, events_by_id, "phase")
+
+
+def validate_declared_removal(event: dict, events_by_id: dict[str, dict]) -> None:
+    _require_text(event, "session", "declared_removal")
+    _require_text(event, "operator_label", "declared_removal")
+    _require_text(event, "source", "declared_removal")
+    _require_text(event, "declared_by", "declared_removal")
+    _require_known(_require_text(event, "phase", "declared_removal"), events_by_id, ("phase",), "declared_removal")
+    if event.get("t_s") is not None and not _is_number(event["t_s"]):
+        raise ValidationError("declared_removal needs 't_s' as a finite number or null")
+    related = event.get("observation_id")
+    if related is not None:
+        _require_known(related, events_by_id, ("observation",), "declared_removal observation_id")
+    _require_supersedes(event, events_by_id, "declared_removal")
+
+
+def validate_storage_link(event: dict, events_by_id: dict[str, dict]) -> None:
+    _require_text(event, "session", "storage_link")
+    _require_known(_require_text(event, "target_id", "storage_link"), events_by_id, DECLARABLE_TARGETS, "storage_link")
+    _require_text(event, "location", "storage_link")
+    basis = event.get("basis")
+    if not isinstance(basis, dict) or basis.get("kind") != "human" or not str(basis.get("confirmed_by", "")).strip():
+        raise ValidationError("storage_link needs a human basis with 'confirmed_by'")
+    _require_supersedes(event, events_by_id, "storage_link")
+
+
+def validate_compatible_group(event: dict, events_by_id: dict[str, dict]) -> None:
+    _require_text(event, "session", "compatible_group")
+    members = event.get("members")
+    if not isinstance(members, list) or len(members) < 2 or len(set(members)) != len(members):
+        raise ValidationError("compatible_group needs at least two distinct 'members'")
+    for member in members:
+        _require_known(member, events_by_id, DECLARABLE_TARGETS, "compatible_group member")
+    basis = event.get("basis")
+    kind = basis.get("kind") if isinstance(basis, dict) else None
+    if kind == "operator_statement":
+        if not str(basis.get("declared_by", "")).strip():
+            raise ValidationError("compatible_group operator_statement needs 'declared_by'")
+    elif kind == "measured":
+        if not isinstance(basis.get("measurement"), dict) or not basis["measurement"]:
+            raise ValidationError("compatible_group measured basis needs a 'measurement'")
+    else:
+        raise ValidationError("compatible_group basis kind must be 'operator_statement' or 'measured'")
+    _require_supersedes(event, events_by_id, "compatible_group")
+
+
 def load_events(path: str | Path) -> list[dict]:
     """Read every event. Any malformed line aborts the whole read."""
     path = Path(path)
@@ -138,7 +208,7 @@ def load_events(path: str | Path) -> list[dict]:
         except json.JSONDecodeError as exc:
             raise CorruptLogError(f"{path} line {lineno}: invalid JSON ({exc})") from exc
         if not isinstance(event, dict) or event.get("type") not in EVENT_TYPES:
-            raise CorruptLogError(f"{path} line {lineno}: not an observation or tray_link event")
+            raise CorruptLogError(f"{path} line {lineno}: not a known event type {EVENT_TYPES}")
         if not event.get("id"):
             raise CorruptLogError(f"{path} line {lineno}: event without an id")
         events.append(event)

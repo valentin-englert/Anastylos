@@ -332,5 +332,67 @@ class MemoryTest(unittest.TestCase):
             resolve_tray(kit, "surface_a3", 99)
 
 
+class DeclaredEventsTest(unittest.TestCase):
+    """Additive events for complete disassemblies: phases, declared removals, storage, groups."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.session = Path(self.tmp.name) / "full"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def rec(self, *argv: str) -> dict:
+        return json.loads(run(["--session-dir", str(self.session), "record", *argv]))
+
+    def test_declared_sequence_round_trips_and_old_queries_still_work(self):
+        p1 = self.rec("phase", "--label", "P1 back up")
+        p2 = self.rec("phase", "--label", "P2 opening", "--starts-after", p1["id"])
+        shell = self.rec("declared-removal", "--label", "back shell", "--source", "device", "--phase", p2["id"],
+                         "--declared-by", "owner", "--note", "witness video")
+        stored = self.rec("storage-link", "--target", shell["id"], "--location", "OUT-B", "--confirmed-by", "owner")
+        self.assertEqual(stored["basis"]["kind"], "human")
+        obs = record_observation(self.session)
+        record_link(self.session, obs["id"], tray=3)
+        events = load_events(self.session / "memory.jsonl")
+        self.assertEqual([e["type"] for e in events],
+                         ["phase", "phase", "declared_removal", "storage_link", "observation", "tray_link"])
+        answer = where_tray(events, load_kit(KIT)[0], "surface_a3", 3)
+        self.assertEqual(answer["status"], "located")
+
+    def test_group_of_declared_screws_with_operator_statement(self):
+        phase = self.rec("phase", "--label", "P1")
+        screws = [self.rec("declared-removal", "--label", "screw", "--source", f"hole {i}", "--phase", phase["id"],
+                           "--declared-by", "owner")["id"] for i in range(1, 4)]
+        group = self.rec("group", "--members", ",".join(screws), "--label", "back-shell screws", "--declared-by", "owner")
+        self.assertEqual(group["basis"]["kind"], "operator_statement")
+        measured = self.rec("group", "--members", ",".join(screws), "--declared-by", "owner",
+                            "--measurement", json.dumps({"length_mm": [8.0, 8.0, 8.1]}), "--supersedes", group["id"])
+        self.assertEqual(measured["basis"]["kind"], "measured")
+
+    def test_rejects_declared_removal_without_known_phase_or_declarer(self):
+        with self.assertRaises(ValidationError):
+            self.rec("declared-removal", "--label", "x", "--source", "y", "--phase", "phase-9", "--declared-by", "owner")
+        phase = self.rec("phase", "--label", "P1")
+        with self.assertRaises(ValidationError):
+            self.rec("declared-removal", "--label", "x", "--source", "y", "--phase", phase["id"], "--declared-by", " ")
+
+    def test_rejects_storage_and_groups_pointing_at_unknown_or_wrong_targets(self):
+        phase = self.rec("phase", "--label", "P1")
+        with self.assertRaises(ValidationError):
+            self.rec("storage-link", "--target", "dec-0042", "--location", "OUT-A", "--confirmed-by", "owner")
+        with self.assertRaises(ValidationError):
+            self.rec("storage-link", "--target", phase["id"], "--location", "OUT-A", "--confirmed-by", "owner")
+        one = self.rec("declared-removal", "--label", "nub", "--source", "s", "--phase", phase["id"], "--declared-by", "owner")
+        with self.assertRaises(ValidationError):
+            self.rec("group", "--members", one["id"], "--declared-by", "owner")
+
+    def test_unknown_event_type_still_fails_loudly(self):
+        self.session.mkdir(parents=True)
+        (self.session / "memory.jsonl").write_text(json.dumps({"type": "guess", "id": "g-1"}) + chr(10), encoding="utf-8")
+        with self.assertRaises(CorruptLogError):
+            load_events(self.session / "memory.jsonl")
+
+
 if __name__ == "__main__":
     unittest.main()

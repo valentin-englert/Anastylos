@@ -16,7 +16,11 @@ from anastylos_memory.store import (
     sha256_file,
     successors,
     utc_now,
+    validate_compatible_group,
+    validate_declared_removal,
     validate_observation,
+    validate_phase,
+    validate_storage_link,
     validate_tray_link,
 )
 
@@ -95,6 +99,45 @@ def cmd_record_tray_link(args) -> int:
     append_event(store_path, event)
     print(json.dumps(event, indent=2))
     return 0
+
+
+def _append_declared(args, prefix: str, body: dict, validate) -> int:
+    store_path = resolve_store(args.session_dir, args.store)
+    events = load_events(store_path)
+    event = {"type": body.pop("type"), "id": next_id(events, prefix),
+             "session": args.session or default_session(store_path), "timestamp": utc_now(), **body,
+             "supersedes": args.supersedes}
+    validate(event, {item["id"]: item for item in events})
+    append_event(store_path, event)
+    print(json.dumps(event, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_record_phase(args) -> int:
+    return _append_declared(args, "phase", {"type": "phase", "label": args.label, "pose_note": args.pose_note,
+                                            "starts_after": args.starts_after}, validate_phase)
+
+
+def cmd_record_declared_removal(args) -> int:
+    return _append_declared(args, "dec", {
+        "type": "declared_removal", "operator_label": args.label, "source": args.source, "phase": args.phase,
+        "t_s": args.t_s, "observation_id": args.observation, "declared_by": args.declared_by,
+        "evidence_note": args.note}, validate_declared_removal)
+
+
+def cmd_record_storage_link(args) -> int:
+    return _append_declared(args, "store", {
+        "type": "storage_link", "target_id": args.target, "location": args.location,
+        "basis": {"kind": "human", "confirmed_by": args.confirmed_by, "note": args.note}}, validate_storage_link)
+
+
+def cmd_record_group(args) -> int:
+    if args.measurement:
+        basis = {"kind": "measured", "measurement": json.loads(args.measurement), "measured_by": args.declared_by}
+    else:
+        basis = {"kind": "operator_statement", "declared_by": args.declared_by, "note": args.note}
+    return _append_declared(args, "grp", {"type": "compatible_group", "members": args.members.split(","),
+                                          "label": args.label, "basis": basis}, validate_compatible_group)
 
 
 def cmd_import(args) -> int:
@@ -185,6 +228,41 @@ def build_parser() -> argparse.ArgumentParser:
     link.add_argument("--note", default=None)
     link.add_argument("--supersedes", default=None, help="earlier link id this corrects")
     link.set_defaults(func=cmd_record_tray_link)
+
+    phase = record_sub.add_parser("phase", help="start a pose phase (orders a complete disassembly)")
+    phase.add_argument("--label", required=True)
+    phase.add_argument("--pose-note", default=None)
+    phase.add_argument("--starts-after", default=None, help="previous phase id")
+    phase.add_argument("--supersedes", default=None)
+    phase.set_defaults(func=cmd_record_phase)
+
+    dec = record_sub.add_parser("declared-removal", help="operator-declared removal without image evidence")
+    dec.add_argument("--label", required=True, help="the operator's own words for the part")
+    dec.add_argument("--source", required=True, help="where it came from, in the operator's words or a site id")
+    dec.add_argument("--phase", required=True, help="phase id")
+    dec.add_argument("--declared-by", required=True)
+    dec.add_argument("--t-s", type=float, default=None, help="video time, if known")
+    dec.add_argument("--observation", default=None, help="automatic observation this declaration refers to")
+    dec.add_argument("--note", default=None, help="evidence note (e.g. witness video)")
+    dec.add_argument("--supersedes", default=None)
+    dec.set_defaults(func=cmd_record_declared_removal)
+
+    store = record_sub.add_parser("storage-link", help="where a removed part is stored (cell or any other place)")
+    store.add_argument("--target", required=True, help="observation or declared_removal id")
+    store.add_argument("--location", required=True, help="cell-N or free text such as OUT-A")
+    store.add_argument("--confirmed-by", required=True)
+    store.add_argument("--note", default=None)
+    store.add_argument("--supersedes", default=None)
+    store.set_defaults(func=cmd_record_storage_link)
+
+    grp = record_sub.add_parser("group", help="interchangeable parts (no per-part identity)")
+    grp.add_argument("--members", required=True, help="comma-separated observation/declared_removal ids")
+    grp.add_argument("--label", default=None)
+    grp.add_argument("--declared-by", required=True)
+    grp.add_argument("--measurement", default=None, help="JSON object; makes the basis 'measured'")
+    grp.add_argument("--note", default=None)
+    grp.add_argument("--supersedes", default=None)
+    grp.set_defaults(func=cmd_record_group)
 
     imp = sub.add_parser("import", help="import a change-detection result.json as observations")
     imp.add_argument("--result-json", required=True, help="change-detection result.json")

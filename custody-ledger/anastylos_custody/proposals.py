@@ -31,7 +31,7 @@ REGISTRY_SCHEMA = "custody-source-registry@1"
 # that margin so their first reference is taken in the quiet moment the epoch was re-acquired, not during
 # the change that ended the previous epoch.
 EPOCH_START_MARGIN_S = 2.0
-PROPOSALS_VERSION = "0.3.1"
+PROPOSALS_VERSION = "0.4.0"
 DEFAULTS = {
     "paper_min_value": 150, "paper_max_saturation": 40, "mask_closing_mm": 3.0,
     "quiet_hold_s": 0.6, "confirm_hold_s": 1.0, "min_area_mm2": 8.0,
@@ -39,6 +39,9 @@ DEFAULTS = {
     "same_interval_s": 0.25, "proximity_ratio": 0.5,
     # 0.3.0: after a pose epoch ends, wait for a quiet scene and re-acquire the device (new epoch).
     "reacquire": True, "scene_quiet_motion_fraction": 0.0005,
+    # 0.4.0: candidate features (holes, wells, buttons) in each epoch's reference; a source covering two or
+    # more of them is "coarse" and never stands for one of them.
+    "feature_background_mm": 7.0, "feature_min_mm2": 6.0, "feature_max_mm2": 400.0, "feature_min_fill": 0.4,
 }
 
 
@@ -124,6 +127,23 @@ class ProposalTracker:
             self._candidate_since[pixels] = np.nan
 
 
+def candidate_features(reference: np.ndarray, device: np.ndarray, ppm: float, change_threshold: float,
+                       params: dict) -> list[dict]:
+    """Compact spots that stand out from their surroundings on the device (no names, no colour)."""
+    k = max(3, int(params["feature_background_mm"] * ppm) | 1)
+    background = cv2.medianBlur(np.clip(reference, 0, 255).astype(np.uint8), k).astype(np.float32)
+    inner = cv2.erode(device.astype(np.uint8), np.ones((max(1, int(ppm)),) * 2, np.uint8)) > 0
+    spots = (np.abs(reference - background) > change_threshold) & inner
+    count, labels, stats, centres = cv2.connectedComponentsWithStats(spots.astype(np.uint8))
+    features = []
+    for i in range(1, count):
+        area = stats[i, cv2.CC_STAT_AREA] / ppm ** 2
+        fill = stats[i, cv2.CC_STAT_AREA] / max(1, stats[i, cv2.CC_STAT_WIDTH] * stats[i, cv2.CC_STAT_HEIGHT])
+        if params["feature_min_mm2"] <= area <= params["feature_max_mm2"] and fill >= params["feature_min_fill"]:
+            features.append({"centre_px": [float(centres[i][0]), float(centres[i][1])], "area_mm2": round(area, 1)})
+    return features
+
+
 def mask_gap_mm(a: np.ndarray, b: np.ndarray, ppm: float) -> float:
     """Smallest distance between two masks in mm (0 when they touch or overlap)."""
     if (a & b).any():
@@ -157,7 +177,7 @@ class EpochSequence:
         if self._quiet_since is not None and t_s - self._quiet_since >= self.params["quiet_hold_s"]:
             mask = find_device()
             if mask.any():
-                self.epochs.append({"epoch": len(self.epochs) + 1, "start_s": round(t_s, 3),
+                self.epochs.append({"epoch": len(self.epochs) + 1, "start_s": round(t_s, 3), "reference": gray.copy(),
                                     "tracker": ProposalTracker(mask, gray.copy(), self.ppm, self.change_threshold, self.params)})
                 self._quiet_since = None
 
@@ -264,11 +284,16 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
     def to_mm(x, y):
         return float(x) / rectifier.ppm + rectifier.x0, float(y) / rectifier.ppm + rectifier.y0
 
-    sources = []
+    sources, features = [], {}
     for epoch in epochs:
+        found = candidate_features(epoch["reference"], epoch["tracker"].mask, rectifier.ppm,
+                                   float(custody["signal"]["change_threshold"]), params)
+        features[epoch["epoch"]] = [{"id": f"F{epoch['epoch']}-{n}", "centre_mm": [round(v, 2) for v in to_mm(*f["centre_px"])],
+                                     "area_mm2": f["area_mm2"]} for n, f in enumerate(found, start=1)]
         for group in merge_into_sources(epoch["tracker"].proposals, rectifier.ppm, params):
             record = source_record(len(sources) + 1, group, to_mm, rectifier.ppm)
             record["epoch"] = epoch["epoch"]
+            record.update(_precision(record["geometry"]["bbox_mm"], features[epoch["epoch"]]))
             record["geometry"]["frame"] = f"sheet mm (device at rest, pose epoch {epoch['epoch']})"
             sources.append(record)
     starts = {epoch["epoch"]: epoch["start_s"] for epoch in epochs}
@@ -281,7 +306,8 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
         "provenance": {**provenance, "video": {**footage.describe(video), "sha256": footage.sha256_file(video)}},
         "epochs": [{"epoch": e["epoch"], "mask_from_t_s": e["start_s"],
                     "mask_area_mm2": round(float(e["tracker"].mask.sum()) / rectifier.ppm ** 2, 1),
-                    "pose_epoch_end_s": e["tracker"].pose_epoch_end_s, "proposals": len(e["tracker"].proposals)} for e in epochs],
+                    "pose_epoch_end_s": e["tracker"].pose_epoch_end_s, "proposals": len(e["tracker"].proposals),
+                    "candidate_features": features[e["epoch"]]} for e in epochs],
         "proposal_count": sum(len(e["tracker"].proposals) for e in epochs),
         "sources": sources,
         "unknowns": ([f"last device pose epoch ended at {tracker.pose_epoch_end_s} s and no quiet scene followed; "
@@ -304,6 +330,15 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
                   for s in sources],
     }
     return registry, inventory
+
+
+def _precision(bbox_mm: list[float], features: list[dict], margin_mm: float = 1.0) -> dict:
+    """coarse: the source covers two or more candidate features; specific: exactly one; no_feature: none."""
+    x, y, w, h = bbox_mm
+    inside = [f["id"] for f in features
+              if x - margin_mm <= f["centre_mm"][0] <= x + w + margin_mm and y - margin_mm <= f["centre_mm"][1] <= y + h + margin_mm]
+    precision = "coarse" if len(inside) >= 2 else "specific" if inside else "no_feature"
+    return {"precision": precision, "candidate_features": inside}
 
 
 def _submask(member: dict, to_mm, ppm: float) -> dict:

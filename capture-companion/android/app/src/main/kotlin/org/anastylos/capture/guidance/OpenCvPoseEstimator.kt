@@ -60,26 +60,37 @@ class OpenCvPoseEstimator(
             "DICT_6X6_250" -> Objdetect.DICT_6X6_250
             else -> null
         }
+        val quality = try {
+            if (input.yPlane.size == input.width * input.height) {
+                FrameQuality.measure(input.yPlane, input.width, input.height)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
         if (dictionaryId == null || input.yPlane.size != input.width * input.height) {
-            return lost(input)
+            return lost(input, quality)
         }
         val detections = try {
             backend.detect(input.yPlane, input.width, input.height, dictionaryId)
         } catch (_: Exception) {
-            return lost(input)
+            return lost(input, quality)
         }
-        if (detections.isEmpty()) return lost(input)
+        if (detections.isEmpty()) return lost(input, quality)
         val seen = detections.map { it.id }
         val corners = detections.sumOf { it.corners.size }
+        val cornersPx = detections.map { PoseEstimator.MarkerCorners(it.id, it.corners) }
         val correspondences = PoseMath.assembleCorrespondences(detections, board)
         if (correspondences.size < 4 || intrinsics == null) {
-            return degraded(input, seen, corners)
+            return degraded(input, seen, corners, cornersPx, quality)
         }
         if (!saneIntrinsics(intrinsics, input)) {
             return PoseEstimator.Estimate(
                 tBC = null, markerIdsSeen = seen, cornerCount = corners,
                 rmsPx = null, status = WireRegistration.BAD_CALIBRATION,
                 sensorTimestampNs = input.sensorTimestampNs, monotonicNs = input.monotonicNs,
+                cornersPx = cornersPx, frameQuality = quality,
             )
         }
         val solution = try {
@@ -90,30 +101,39 @@ class OpenCvPoseEstimator(
             )
         } catch (_: Exception) {
             null
-        } ?: return degraded(input, seen, corners)
-        return qualify(input, seen, corners, correspondences, solution, intrinsics)
+        } ?: return degraded(input, seen, corners, cornersPx, quality)
+        return qualify(input, seen, corners, cornersPx, quality, correspondences, solution, intrinsics)
     }
 
-    private fun lost(input: PoseEstimator.Input) = PoseEstimator.Estimate(
+    private fun lost(
+        input: PoseEstimator.Input,
+        quality: FrameQuality.Measurement?,
+    ) = PoseEstimator.Estimate(
         tBC = null, markerIdsSeen = emptyList(), cornerCount = 0,
         rmsPx = null, status = WireRegistration.LOST,
         sensorTimestampNs = input.sensorTimestampNs, monotonicNs = input.monotonicNs,
+        frameQuality = quality,
     )
 
     private fun degraded(
         input: PoseEstimator.Input,
         seen: List<Int>,
         corners: Int,
+        cornersPx: List<PoseEstimator.MarkerCorners>,
+        quality: FrameQuality.Measurement?,
     ) = PoseEstimator.Estimate(
         tBC = null, markerIdsSeen = seen, cornerCount = corners,
         rmsPx = null, status = WireRegistration.DEGRADED,
         sensorTimestampNs = input.sensorTimestampNs, monotonicNs = input.monotonicNs,
+        cornersPx = cornersPx, frameQuality = quality,
     )
 
     private fun qualify(
         input: PoseEstimator.Input,
         seen: List<Int>,
         corners: Int,
+        cornersPx: List<PoseEstimator.MarkerCorners>,
+        quality: FrameQuality.Measurement?,
         correspondences: List<PoseMath.Correspondence>,
         solution: ArucoBackend.PnpSolution,
         intrinsics: PoseEstimator.Intrinsics,
@@ -147,6 +167,7 @@ class OpenCvPoseEstimator(
             markerIdsSeen = seen, cornerCount = corners, rmsPx = rms,
             status = if (gated) WireRegistration.VALID else WireRegistration.AMBIGUOUS,
             sensorTimestampNs = input.sensorTimestampNs, monotonicNs = input.monotonicNs,
+            cornersPx = cornersPx, frameQuality = quality,
         )
     }
 

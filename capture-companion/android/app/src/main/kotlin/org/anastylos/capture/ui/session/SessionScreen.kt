@@ -44,7 +44,7 @@ import org.anastylos.capture.camera.CameraStillSource
  * The product design system arrives in a later milestone.
  */
 @Composable
-fun SessionScreen(viewModel: SessionViewModel, onConnect: () -> Unit) {
+fun SessionScreen(viewModel: SessionViewModel, onConnect: () -> Unit, onGuided: () -> Unit) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.refreshPairing() }
     val context = LocalContext.current
@@ -82,6 +82,10 @@ fun SessionScreen(viewModel: SessionViewModel, onConnect: () -> Unit) {
                 sampling = state.sampling,
                 onStop = { viewModel.stopSampling() },
             )
+        }
+
+        Button(onClick = onGuided) {
+            Text("Guided capture")
         }
 
         SessionSection(

@@ -17,6 +17,7 @@ import org.anastylos.capture.di.CaptureApp
 import org.anastylos.capture.ui.pair.PairViewModel
 import org.anastylos.capture.ui.pair.QrPairRoute
 import org.anastylos.capture.ui.session.SessionScreen
+import org.anastylos.capture.ui.guided.GuidedCaptureScreen
 import org.anastylos.capture.ui.session.SessionViewModel
 
 class MainActivity : ComponentActivity() {
@@ -39,7 +40,14 @@ fun AnastylosApp(container: AppContainer) {
                     val sessionViewModel: SessionViewModel = viewModel(
                         factory = container.sessionViewModelFactory(),
                     )
-                    SessionScreen(sessionViewModel, onConnect = { navController.navigate("pair") })
+                    SessionScreen(
+                        sessionViewModel,
+                        onConnect = { navController.navigate("pair") },
+                        onGuided = { navController.navigate("guided") },
+                    )
+                }
+                composable("guided") {
+                    GuidedCaptureScreen(container, onBack = { navController.popBackStack() })
                 }
                 composable("pair") {
                     val pairViewModel: PairViewModel = viewModel(

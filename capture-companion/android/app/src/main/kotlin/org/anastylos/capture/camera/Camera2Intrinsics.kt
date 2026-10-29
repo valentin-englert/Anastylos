@@ -2,6 +2,7 @@ package org.anastylos.capture.camera
 
 import android.hardware.camera2.CameraCharacteristics
 import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.Camera
 import org.anastylos.capture.guidance.PoseEstimator
 
@@ -15,6 +16,7 @@ import org.anastylos.capture.guidance.PoseEstimator
  * characteristic or geometry mismatch yields null (detection-only).
  */
 object Camera2Intrinsics {
+    @ExperimentalCamera2Interop
     fun forAnalysisStream(camera: Camera, analysisWidth: Int, analysisHeight: Int): PoseEstimator.Intrinsics? {
         if (analysisWidth <= 0 || analysisHeight <= 0) return null
         return try {
@@ -24,6 +26,7 @@ object Camera2Intrinsics {
         }
     }
 
+    @ExperimentalCamera2Interop
     private fun read(camera: Camera, analysisWidth: Int, analysisHeight: Int): PoseEstimator.Intrinsics? {
         val info = Camera2CameraInfo.from(camera.cameraInfo)
         val focalMm = info.getCameraCharacteristic(

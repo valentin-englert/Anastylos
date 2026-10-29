@@ -41,7 +41,7 @@ class GuidedCameraSource(
     private val providerSource: CameraProviderSource,
     private val estimator: PoseEstimator,
     private val nowUtc: () -> java.time.Instant,
-) {
+) : GuidedCamera {
     data class GuidedStill(
         val bytes: ByteArray,
         val capturedAt: java.time.Instant,
@@ -59,22 +59,24 @@ class GuidedCameraSource(
     private var board: PoseEstimator.BoardSpec? = null
     private var intrinsics: PoseEstimator.Intrinsics? = null
     private var lastEstimateNs: Long? = null
+    @Volatile private var geometry: GuidedCamera.StreamGeometry? = null
+    @Volatile private var lastAnalysisRotation: Int = 0
 
     private val _estimates = MutableSharedFlow<PoseEstimator.Estimate>(
         replay = 0,
         extraBufferCapacity = 1,
     )
     /** Latest-only estimate stream (conflated; slow collectors drop). */
-    val estimates: SharedFlow<PoseEstimator.Estimate> = _estimates.asSharedFlow()
+    override val estimates: SharedFlow<PoseEstimator.Estimate> = _estimates.asSharedFlow()
 
     /** Intrinsics resolved for the bound stream, or null (detection-only). */
-    fun currentIntrinsics(): PoseEstimator.Intrinsics? = intrinsics
+    override fun currentIntrinsics(): PoseEstimator.Intrinsics? = intrinsics
 
-    fun attachPreview(view: PreviewView?) {
+    override fun attachPreview(view: PreviewView?) {
         previewView = view
     }
 
-    fun setBoard(board: PoseEstimator.BoardSpec?) {
+    override fun setBoard(board: PoseEstimator.BoardSpec?) {
         this.board = board
     }
 
@@ -82,11 +84,13 @@ class GuidedCameraSource(
      * Binds preview + analysis + capture. Returns false (no throw)
      * when the provider, a camera, or the bind itself is unavailable.
      */
-    suspend fun bindAsync(analysisWidth: Int = 1280, analysisHeight: Int = 720): Boolean {
+    @androidx.camera.camera2.interop.ExperimentalCamera2Interop
+    override suspend fun bindAsync(analysisWidth: Int, analysisHeight: Int): Boolean {
         val cameraProvider = acquireProviderOrNull(providerSource) ?: return false
         return withContext(Dispatchers.Main.immediate) { bindProvider(cameraProvider, analysisWidth, analysisHeight) }
     }
 
+    @androidx.camera.camera2.interop.ExperimentalCamera2Interop
     private fun bindProvider(
         cameraProvider: ProcessCameraProvider,
         analysisWidth: Int,
@@ -102,28 +106,35 @@ class GuidedCameraSource(
             else -> CameraSelector.LENS_FACING_FRONT
         }
         val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
-        val preview = Preview.Builder().build()
+        // Preview and analysis request the same resolution so the
+        // detection overlay can map analysis pixels onto the FIT_CENTER
+        // preview analytically (no restricted transform APIs).
+        val resolutionSelector =
+            androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
+                .setResolutionStrategy(
+                    androidx.camera.core.resolutionselector.ResolutionStrategy(
+                        android.util.Size(analysisWidth, analysisHeight),
+                        androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
+                    ),
+                )
+                .build()
+        val preview = Preview.Builder().setResolutionSelector(resolutionSelector).build()
         previewView?.let { preview.setSurfaceProvider(it.surfaceProvider) }
         val analysis = ImageAnalysis.Builder()
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setResolutionSelector(
-                androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
-                    .setResolutionStrategy(
-                        androidx.camera.core.resolutionselector.ResolutionStrategy(
-                            android.util.Size(analysisWidth, analysisHeight),
-                            androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER,
-                        ),
-                    )
-                    .build(),
-            )
+            .setResolutionSelector(resolutionSelector)
             .build()
         val capture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
             .setJpegQuality(95)
             .setFlashMode(ImageCapture.FLASH_MODE_OFF)
             .build()
-        previewView?.display?.rotation?.let { capture.targetRotation = it }
+        previewView?.display?.rotation?.let {
+            preview.targetRotation = it
+            analysis.targetRotation = it
+            capture.targetRotation = it
+        }
         val executor = Executors.newSingleThreadExecutor()
         analysisExecutor?.shutdownNow()
         analysisExecutor = executor
@@ -133,16 +144,49 @@ class GuidedCameraSource(
             val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, analysis, capture)
             imageCapture = capture
             intrinsics = Camera2Intrinsics.forAnalysisStream(camera, analysisWidth, analysisHeight)
+            geometry = readGeometry(preview, analysis, analysisWidth, analysisHeight)
             true
         } catch (_: Exception) {
             imageCapture = null
             intrinsics = null
+            geometry = null
             false
         }
     }
 
+    override fun streamGeometry(): GuidedCamera.StreamGeometry? = geometry
+
+    private fun readGeometry(
+        preview: Preview,
+        analysis: ImageAnalysis,
+        requestedWidth: Int,
+        requestedHeight: Int,
+    ): GuidedCamera.StreamGeometry? =
+        try {
+            val resolvedAnalysis = analysis.resolutionInfo?.resolution
+            val resolvedPreview = preview.resolutionInfo?.resolution
+            GuidedCamera.StreamGeometry(
+                analysisWidth = resolvedAnalysis?.width ?: requestedWidth,
+                analysisHeight = resolvedAnalysis?.height ?: requestedHeight,
+                analysisRotationDeg = lastAnalysisRotation,
+                previewWidth = resolvedPreview?.width ?: requestedWidth,
+                previewHeight = resolvedPreview?.height ?: requestedHeight,
+            )
+        } catch (_: Exception) {
+            null
+        }
+
     private fun analyzeFrame(image: ImageProxy) {
         try {
+            val frameRotation = try {
+                image.imageInfo.rotationDegrees
+            } catch (_: Exception) {
+                0
+            }
+            if (frameRotation != lastAnalysisRotation) {
+                lastAnalysisRotation = frameRotation
+                geometry = geometry?.copy(analysisRotationDeg = frameRotation)
+            }
             if (image.format != android.graphics.ImageFormat.YUV_420_888) return
             val plane = image.planes.getOrNull(0) ?: return
             if (plane.pixelStride != 1) return
@@ -185,7 +229,7 @@ class GuidedCameraSource(
         }
     }
 
-    fun unbind() {
+    override fun unbind() {
         try {
             provider?.unbindAll()
         } catch (_: Exception) {
@@ -197,6 +241,8 @@ class GuidedCameraSource(
         analysisExecutor = null
         imageCapture = null
         intrinsics = null
+        geometry = null
+        lastAnalysisRotation = 0
     }
 
     /**
@@ -205,7 +251,7 @@ class GuidedCameraSource(
      * analyzer timestamp is informational only, and the sidecar
      * stays explicitly unqualified until a real exposure link exists.
      */
-    suspend fun takeGuidedStill(): GuidedStill {
+    override suspend fun takeGuidedStill(): GuidedStill {
         val capture = imageCapture ?: throw ImageCaptureException(
             ImageCapture.ERROR_UNKNOWN,
             "guided camera is not bound",

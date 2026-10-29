@@ -12,7 +12,14 @@ import org.anastylos.capture.data.DataStoreSamplingPrefs
 import org.anastylos.capture.data.EvidenceFileStorePort
 import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.RoomEvidenceRepository
+import org.anastylos.capture.camera.DefaultCameraProviderSource
+import org.anastylos.capture.camera.GuidedCameraSource
+import org.anastylos.capture.data.DataStoreGuidedPrefs
+import org.anastylos.capture.data.GuidedPrefs
 import org.anastylos.capture.data.SamplingPrefs
+import org.anastylos.capture.guidance.OpenCvPoseEstimator
+import org.anastylos.capture.guidance.PoseEstimator
+import org.anastylos.capture.ui.guided.GuidanceViewModel
 import org.anastylos.capture.data.files.EvidenceFileStore
 import org.anastylos.capture.data.local.CaptureDatabase
 import org.anastylos.capture.domain.nowUtc
@@ -69,6 +76,31 @@ class AppContainer(context: Context) {
             },
         )
     }
+
+    private val guidedPrefs: GuidedPrefs by lazy { DataStoreGuidedPrefs(appContext) }
+    private val poseEstimator: PoseEstimator by lazy { OpenCvPoseEstimator() }
+
+    @Suppress("UNCHECKED_CAST")
+    fun guidedViewModelFactory(): ViewModelProvider.Factory =
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                GuidanceViewModel(
+                    repo = repository,
+                    sampler = sampler,
+                    cameraFactory = { owner, preview ->
+                        GuidedCameraSource(
+                            appContext,
+                            owner,
+                            DefaultCameraProviderSource(appContext),
+                            poseEstimator,
+                            { java.time.Instant.now() },
+                        ).also { it.attachPreview(preview) }
+                    },
+                    prefs = guidedPrefs,
+                    nanoClock = { System.nanoTime() },
+                    utcClock = { java.time.Instant.now() },
+                ) as T
+        }
 
     fun sessionViewModelFactory(): ViewModelProvider.Factory {
         val container = this

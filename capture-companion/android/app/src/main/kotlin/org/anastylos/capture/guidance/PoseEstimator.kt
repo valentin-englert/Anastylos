@@ -74,6 +74,12 @@ interface PoseEstimator {
      * down, z into plane — preserved, never flipped). Null `tBC`
      * means no pose (see [status]); callers must not reuse a stale one.
      */
+    /** Detected marker corners in analysis pixels (TL/TR/BR/BL). */
+    data class MarkerCorners(
+        val id: Int,
+        val corners: List<List<Double>>,
+    )
+
     data class Estimate(
         val tBC: List<Double>?,
         val markerIdsSeen: List<Int>,
@@ -82,6 +88,10 @@ interface PoseEstimator {
         val status: WireRegistration,
         val sensorTimestampNs: Long,
         val monotonicNs: Long,
+        /** Detected corners for overlay + motion tracking (may be empty). */
+        val cornersPx: List<MarkerCorners> = emptyList(),
+        /** Luma quality of this frame, when measurable. */
+        val frameQuality: FrameQuality.Measurement? = null,
     )
 
     /**

@@ -102,6 +102,8 @@ class OpenCvPoseEstimatorTest {
         assertThat(estimate.status).isEqualTo(WireRegistration.VALID)
         assertThat(estimate.markerIdsSeen).containsExactly(10, 11, 12, 13, 14).inOrder()
         assertThat(estimate.cornerCount).isEqualTo(20)
+        assertThat(estimate.cornersPx.map { it.id }).containsExactly(10, 11, 12, 13, 14).inOrder()
+        assertThat(estimate.cornersPx.first().corners.size).isEqualTo(4)
         assertThat(estimate.rmsPx!!).isLessThan(1e-6)
         val center = translationOfRowMajor(estimate.tBC!!)
         assertThat(center.z).isLessThan(0.0)

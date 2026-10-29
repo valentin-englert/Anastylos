@@ -192,3 +192,12 @@ identical to the take-1 inventory except `inventory_t_s` = 5.0 s and the
 basis note. Checker `tools/reassembly/returns.py`
 `4e9f61d2db7520dc32bd6763c5522433f0805adc180b1ddf4e2591afdfe4f5a6` (as
 fixed in §11). Video name `E2R-take2.mp4`. Take 1 is not re-run.
+
+Owner decision (2026-10-29, before processing): instead of a new
+recording, take 1's video `E2R.mp4` is re-analysed with the take-2
+inventory (`edb3deb4…`). Reported as **"take 1, re-analysis after a
+setup failure"**, not as an independent take: the change was decided
+after take 1's wells were seen to be unobservable, but before any return
+result or ground truth was seen. Software, checker, script and criteria
+unchanged. The flicker itself is not fixed; the later `inventory_t_s`
+only avoids it.

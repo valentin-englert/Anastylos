@@ -298,3 +298,23 @@ next version.
 
 None of these are verified correspondences: FULL-01 has no sealed ground
 truth, and the owner compares them with the videos.
+
+## 13. Owner's video review of the linker 1.4 links (2026-10-29)
+
+Not sealed ground truth: the owner reviewed the witness video
+(`FULL-01-Zeuge.mp4`) and the overhead clips after the outputs existed.
+
+| Link | Owner's review | Technical Lead's check | Verdict |
+|---|---|---|---|
+| P3 cell-3 ← SRC-14+SRC-2 | green button emptied first, put in cell 3 | sources at ≈ 241/144 and 237/154 mm = green well; removal 51–55 s, deposit 51–56 s | **consistent** |
+| P3 cell-6 ← SRC-16+SRC-17 | blue button right after, cell 6 | sources at ≈ 255/154 and 265/156 mm = blue well; removal 59–63 s, deposit 58–64 s | **consistent** |
+| P1 cell-1 ← SRC-16/33/6 | unscrewing lasted until ≈ 89 s (the long window is real); first screw from the top-left hole H2 | holes in the P1 static frame: H1 151/135, **H2 183/162**, H3 215/125, H4 249/162, H5 281/135 mm. SRC-33's box (135–195 × 114–176 mm, 1050 mm²) contains H1 **and** H2; SRC-16 and SRC-6 (8–12 mm²) contain no hole | **not wrong, but not hole-level**: the source region covers two holes |
+
+So FULL-01 now has 2 automatic links that the owner's video review
+supports, at the level of a well, and 1 link whose source is too coarse to
+name the hole. None is an independent validation.
+
+Next for P1-type cases: a source whose geometry covers several candidate
+sources (here two holes) should be reported as `coarse` and never stated
+as a specific hole; screw holes themselves are not observable from
+overhead (pre-flight B), so screws stay an operator-declared case.

@@ -151,3 +151,33 @@ read time-window fields from every event, so `reference_set` events
 (no window) crashed it. Fix: events that are neither a departure nor an
 arrival are skipped before reading them. New `returns.py` `4e9f61d2db7520dc32bd6763c5522433f0805adc180b1ddf4e2591afdfe4f5a6`,
 test added (8/8).
+
+## 12. Take 1 result (2026-10-29): NOT PASS — 0 return links
+
+Processed blind; outputs committed before any reveal (§10). Registration
+7 markers, RMS 0.29 mm; 81/81 drift fits; no realignment; no sampling gap.
+
+| Measure | Value |
+|---|---|
+| Cell departures (`vacated`) | 4: cell-4 (12.1–25.3 s), cell-9 (43.5–46.9 s), cell-6 (55.9–64.5 s), cell-1 (67.5–70.1 s) |
+| Other cell event | cell-6 `changed_while_away_from_start` 79.1–90.3 s |
+| Well placements | 0 — all four wells `inventory_not_observable` |
+| Return links | 0 correct, 0 incorrect; C5/C6 not evaluable |
+
+No criterion of §7 for FAIL or INCONCLUSIVE applies; PASS needs at least
+one correct link, so the take does not pass.
+
+Cause (diagnosed by tracing the frozen observer, not by ground truth):
+the first 1.2 s of the recording contain small whole-frame flicker without
+hands (motion fraction 0.7–2.9 % at 0.32 s and 1.12 s, likely the phone
+settling after recording start). Sites get only 2 s after `inventory_t_s`
+(= 0 s) to reach a first clean reference (`init_tolerance_s`); none did,
+so every well stayed unobservable. Tray cells have no such limit, which is
+why the four departures were seen.
+
+Proposed take 2 (the protocol allows two takes; needs owner approval
+before recording): same frozen software and the same sealed script, with
+a new inventory that only moves `inventory_t_s` to 5.0 s (inside the 10 s
+static start); its hash is committed before the take. Take 1 stays
+reported as above and is not re-run with the new inventory. The sealed
+files of take 1 stay sealed until take 2 is processed.

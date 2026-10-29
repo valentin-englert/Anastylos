@@ -451,3 +451,33 @@ FULL-01 memory written automatically: 3 phases, 5 observations with
 change-detection evidence, 5 evidence-based tray links; 11 open questions.
 The owner confirmed both P2 links from the video (2026-10-29): L went to
 cell 8, R to cell 11. Owner video review, not sealed ground truth.
+
+## 19. Coarse sources marked (2026-10-29) — development data
+
+Discovery (proposals 0.4.0, `feat/custody-v1.3` commit `27e7f4ed`) finds
+**candidate features** in each epoch's reference: compact spots that
+stand out from a 7 mm median background on the device (holes, wells,
+buttons), without names or colour. In P1 it finds exactly the five screw
+holes plus one extra spot. The session run measures precision on the
+change-detection region it writes to memory: `coarse` when the region
+covers two or more candidate features and is more than twice the
+deposited part's area (or that area is unknown), `specific` when it
+covers features but the part is about as large as the region, otherwise
+`no_feature`. The result goes into the observation's `note`; the guide
+rules say to name a coarse area with its candidates and never one of
+them (`tools/session` 8/8, `tools/guide` 8/8).
+
+FULL-01 memory (`C:\ANASTYLOS\data\session-runs-v17b\FULL-01\`):
+
+| Link | Precision | Basis |
+|---|---|---|
+| P1 screw → cell 1 | specific, H2 (184/161 mm) | written region 10 mm² over H2; matches the owner's "first screw from H2" |
+| P2 L → cell 8 | specific | region 553 mm², part 350 mm² |
+| P2 R → cell 11 | coarse | region 887 mm² > 2 × part 355 mm²; likely includes a neighbouring change |
+| P3 green → cell 3 | specific | green well |
+| P3 blue → cell 6 | specific | region 165 mm², part 176 mm² |
+
+The earlier "coarse P1 link" (§13) came from the group's 60 × 63 mm
+source box; at the level of the written change-detection region the
+evidence points to H2 alone. Thresholds (2 × part area, 7 mm background,
+6–400 mm² features) come from development data.

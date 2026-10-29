@@ -64,7 +64,8 @@ def _storage_by_target(events: list[dict]) -> dict[str, dict]:
 def _part(event: dict, index: int, phase: str | None, stored: dict | None, sites: list[dict], custody: dict | None) -> dict:
     if event["type"] == "observation":
         source = {**_source_site(event["centroid_mm"], sites), "centroid_mm": event["centroid_mm"], "bbox_mm": event["bbox_mm"],
-                  "evidence_pair": event["evidence"]["pair_id"], "evidence_result_sha256": event["evidence"].get("result_sha256")}
+                  "evidence_pair": event["evidence"]["pair_id"], "evidence_result_sha256": event["evidence"].get("result_sha256"),
+                  "note": event.get("note")}
         basis, label = "automatic", None
     else:
         source = {"described_as": event["source"], "evidence_note": event.get("evidence_note")}

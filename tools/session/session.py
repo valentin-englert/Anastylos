@@ -59,6 +59,29 @@ def _best_region(binding: dict) -> str | None:
     return max(regions, key=lambda r: r.get("overlap_mm2", 0))["region"]
 
 
+def source_precision(region_bbox: list[float], features: list[dict], part_area_mm2: float | None = None,
+                     margin_mm: float = 1.0) -> dict:
+    """Precision of the written source region.
+
+    coarse: the region covers two or more candidate features *and* is more than twice the deposited part's
+    area (the part could have come from several of them, like a screw in a region over two holes), or the
+    part's area is unknown; a part about as large as the region simply covers several features itself.
+    """
+    x, y, w, h = region_bbox
+    inside = [f for f in features if x - margin_mm <= f["centre_mm"][0] <= x + w + margin_mm
+              and y - margin_mm <= f["centre_mm"][1] <= y + h + margin_mm]
+    region_area = w * h
+    part_smaller = part_area_mm2 is None or region_area > 2 * part_area_mm2
+    level = "coarse" if len(inside) >= 2 and part_smaller else "specific" if inside else "no_feature"
+    note = (f"source precision {level}: covers candidate features "
+            + ", ".join(f"{f['id']} at {f['centre_mm'][0]:.0f}/{f['centre_mm'][1]:.0f} mm" for f in inside)
+            if inside else "source precision no_feature: no candidate feature inside the region")
+    if level == "coarse":
+        note += "; never state one of them as the source"
+    note += f" (region {region_area:.0f} mm², deposited part {'unknown' if part_area_mm2 is None else f'{part_area_mm2:.0f} mm²'})"
+    return {"precision": level, "candidate_features": [f["id"] for f in inside], "note": note}
+
+
 def run_pipeline(video: Path, custody_dir: Path, config: str, out: Path) -> dict:
     cli = [PYTHON, custody_dir / "custody.py"]
     _run([*cli, "discover", "--config", config, "--video", video, "--out", out], cwd=custody_dir)
@@ -85,7 +108,8 @@ def export_evidence(video: Path, custody_dir: Path, out: Path, event_ids: list[s
     return {b["event"]: b for b in _json(evidence / "bindings.json")["bindings"]}
 
 
-def write_memory(session: Path, phase_label: str, parts: list[dict], bindings: dict[str, dict], kit: Path) -> dict:
+def write_memory(session: Path, phase_label: str, parts: list[dict], bindings: dict[str, dict], kit: Path,
+                 features_of=lambda part: [], part_area_of=lambda part: None) -> dict:
     """Phase event, then for each automatic linked part an evidence-backed observation and tray link."""
     phase = _memory(session, "record", "phase", "--label", phase_label,
                     *(["--starts-after", _last_phase(session)] if _last_phase(session) else []))
@@ -98,7 +122,11 @@ def write_memory(session: Path, phase_label: str, parts: list[dict], bindings: d
         if not source_region or not cell_region:
             part["memory"] = {"status": "not written", "why": "no bound change-detection region for removal or deposit"}
             continue
-        imported = _memory(session, "import", "--result-json", removal["result_json"], "--region", source_region, "--kit", kit)
+        region = next(r for r in removal["regions"] if r["region"] == source_region)
+        precision = source_precision(region["bbox_mm"], features_of(part), part_area_of(part))
+        part["precision"] = precision
+        imported = _memory(session, "import", "--result-json", removal["result_json"], "--region", source_region, "--kit", kit,
+                           "--note", precision["note"])
         obs = (imported["imported"] or [{}])[0].get("id")
         if obs is None:
             part["memory"] = {"status": "not written", "why": "evidence already imported"}
@@ -131,7 +159,24 @@ def main() -> None:
     linked = [p for p in parts if p["status"] in LINKED and p["autonomy"] == "automatic"]
     events = sorted({e for p in linked for e in (p["removal_event"], p["deposit_event"])})
     bindings = export_evidence(args.video.resolve(), args.custody_dir.resolve(), args.out.resolve(), events)
-    memory = write_memory(args.memory, args.phase_label or args.phase, parts, bindings, args.kit)
+    registry_doc = _json(args.out / "registry.json")
+    epoch_features = {e["epoch"]: e.get("candidate_features", []) for e in registry_doc.get("epochs", [])}
+
+    def features_of(part):
+        epochs = {registry[s["site"]].get("epoch") for s in part.get("sources", []) if s["site"] in registry}
+        return [f for epoch in epochs for f in epoch_features.get(epoch, [])]
+
+    events_doc = _json(args.out / "pass2" / "events.json")
+    ppm = events_doc["rectified"]["px_per_mm"]
+    deposits = {e["id"]: e for e in events_doc["events"] if e.get("zone_kind") == "tray_cell"}
+
+    def part_area_of(part):
+        """Deposited part's area from the cell's grey or colour cue; None when only edges saw it."""
+        cues = deposits.get(part["deposit_event"], {}).get("cues_after") or {}
+        area_px = max(cues.get("grey_px", 0), cues.get("saturated_px", 0))
+        return area_px / ppm ** 2 if area_px > 0 else None
+
+    memory = write_memory(args.memory, args.phase_label or args.phase, parts, bindings, args.kit, features_of, part_area_of)
 
     provenance = _json(args.out / "pass2" / "events.json")["provenance"]
     report = {"schema": "anastylos-session-run@1", "phase": args.phase, "video": str(args.video),

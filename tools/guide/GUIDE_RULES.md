@@ -26,6 +26,10 @@ taken apart. Read it before answering.
    … aus <Ort> in eine der Stellen …" and add the group's basis (for
    example "laut Operator identisch, nicht vermessen"). Never assign a
    specific part to a specific hole within a group.
+5b2. If a source's `note` says `source precision coarse`, the source is an
+   area that covers several candidate places: name the area and list the
+   candidates, and say the session cannot tell which one. Never present
+   one of them as the source.
 5c. Storage places outside the tray (for example `OUT-B`) are the
    operator's labels for places off the sheet; repeat them as given.
 6. Progress you are told in the chat ("Rot ist drin") is the operator's

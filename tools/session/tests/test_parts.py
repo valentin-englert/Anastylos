@@ -46,5 +46,35 @@ class NumberPartsTest(unittest.TestCase):
         self.assertEqual(self.questions[0]["candidates"][0]["removal_event"], "E-3")
 
 
+
+class SourcePrecisionTest(unittest.TestCase):
+    FEATURES = [{"id": "F1-1", "centre_mm": [151.6, 134.9]}, {"id": "F1-2", "centre_mm": [183.8, 161.2]},
+                {"id": "F1-3", "centre_mm": [242.3, 141.8]}]
+
+    def test_region_over_two_holes_is_coarse_and_says_so(self):
+        from session import source_precision
+        result = source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES)
+        self.assertEqual(result["precision"], "coarse")
+        self.assertEqual(result["candidate_features"], ["F1-1", "F1-2"])
+        self.assertIn("never state one of them", result["note"])
+
+    def test_region_over_one_well_is_specific(self):
+        from session import source_precision
+        self.assertEqual(source_precision([236.5, 137.5, 12.5, 12.3], self.FEATURES)["precision"], "specific")
+
+    def test_large_part_covering_several_features_is_specific(self):
+        from session import source_precision
+        result = source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES, part_area_mm2=3000.0)
+        self.assertEqual(result["precision"], "specific")
+
+    def test_small_part_in_a_large_region_over_two_features_stays_coarse(self):
+        from session import source_precision
+        self.assertEqual(source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES, part_area_mm2=20.0)["precision"], "coarse")
+
+    def test_region_without_features_is_reported(self):
+        from session import source_precision
+        self.assertEqual(source_precision([10, 10, 5, 5], self.FEATURES)["precision"], "no_feature")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -107,6 +107,57 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(run(observer, frames), [])
 
 
+PAPER = ObserverParams(**{**PARAMS.__dict__, "cell_occupancy": "paper_model", "print_stroke_px": 3, "min_part_area_px": 20})
+
+
+def cell_frame(t, *, part_at=None, hand=False, moving=False, printed_line=True):
+    signals = frame(t, hand=hand, moving=moving)
+    if printed_line:
+        signals.gray[30, 20:40] = 20.0  # a 1 px printed stroke inside the cell
+    if part_at is not None:
+        r, c = part_at
+        signals.gray[r:r + 8, c:c + 8] = 20.0
+    return signals
+
+
+def cell_timeline(spec):
+    frames, t = [], 0.0
+    for seconds, kwargs in spec:
+        for _ in range(int(round(seconds * 5))):
+            frames.append(cell_frame(round(t, 3), **kwargs))
+            t += 0.2
+    return frames
+
+
+class PaperModelTests(unittest.TestCase):
+    """v1.3: cell occupancy judged against paper plus thin print, not against the start image."""
+
+    def test_part_put_back_slightly_shifted_is_not_a_departure(self):
+        observer = ZoneObserver("cell-6", "tray_cell", CELL, PAPER)
+        events = run(observer, cell_timeline([(2, {"part_at": (24, 24)}), (1, {"hand": True, "moving": True}),
+                                              (3, {"part_at": (26, 27)})]))
+        self.assertNotIn("vacated", [e["kind"] for e in events])
+        self.assertEqual(observer.summary()["initially_measured"], "occupied")
+
+    def test_removal_from_an_undeclared_full_cell_is_vacated(self):
+        observer = ZoneObserver("cell-4", "tray_cell", CELL, PAPER)
+        events = run(observer, cell_timeline([(2, {"part_at": (24, 24)}), (1, {"hand": True, "moving": True}), (3, {})]))
+        self.assertEqual([e["kind"] for e in events], ["vacated"])
+
+    def test_printed_stroke_alone_is_an_empty_cell(self):
+        observer = ZoneObserver("cell-2", "tray_cell", CELL, PAPER, initially_occupied=True)
+        run(observer, cell_timeline([(3, {})]))
+        summary = observer.summary()
+        self.assertEqual(summary["initially_measured"], "empty")
+        self.assertTrue(summary["declared_contradicts_measurement"])
+
+    def test_default_rule_keeps_start_relative_behaviour(self):
+        observer = ZoneObserver("cell-6", "tray_cell", CELL, PARAMS, initially_occupied=True)
+        events = run(observer, cell_timeline([(2, {"part_at": (24, 24)}), (1, {"hand": True, "moving": True}),
+                                              (3, {"part_at": (26, 27)})]))
+        self.assertEqual([e["kind"] for e in events], ["vacated"], "v1.2 behaviour: shifted part reads as a departure")
+
+
 class _StillDevice:
     """Device whose re-registration always succeeds without moving (the device rests)."""
 

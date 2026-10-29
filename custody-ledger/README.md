@@ -114,6 +114,16 @@ never run by this module.
   and keeps observing (`anchor_ring_changed`) instead of ending its pose
   epoch: meant for dense anonymous site grids, where a neighbouring part
   lies inside the ring. `custody-config.grid.json` sets it.
+  Observer v1.3 adds `content.cell_occupancy` (default `start_relative`,
+  identical to v1.2). With `paper_model`, a tray cell is occupied when its
+  non-paper area, after an opening of `cell_print_stroke_mm` that removes
+  printed lines and digits, reaches `min_part_area_mm2`; event names then
+  follow that measured occupancy (`appeared`, `vacated`,
+  `changed_while_occupied`, `changed_while_empty`), and the zone summary
+  reports `initially_measured` and any contradiction with a declaration.
+  `custody-config.paper.json` sets it (3 mm, 25 mm², values taken from
+  E2/E2R development footage). Limit: parts with little grey contrast
+  against white paper (yellow, white) are near the threshold.
   A change between two states that both differ from the start is
   `changed_while_occupied` (empty-start cell) or
   `changed_while_away_from_start` (occupied-start cell).

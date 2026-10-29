@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.2.0"
+OBSERVER_VERSION = "1.3.0"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -62,6 +62,13 @@ class ObserverParams:
     # accepted: "pose_break" (v1.0/v1.1) or "content" (v1.2 option for dense site
     # grids, where a neighbouring part lies inside the ring).
     ring_change_with_verified_pose: str = "pose_break"
+    # Tray-cell occupancy: "start_relative" (v1.0-v1.2: difference from the cell's first
+    # clean image) or "paper_model" (v1.3 option: non-paper area after removing printed
+    # strokes thinner than print_stroke_px, so a part put back slightly differently is
+    # still "occupied" and an empty printed cell is "empty").
+    cell_occupancy: str = "start_relative"
+    print_stroke_px: int = 0
+    min_part_area_px: float = 0.0
 
 
 @dataclass
@@ -152,6 +159,11 @@ class ZoneObserver:
         }
         if self.initially_occupied is not None:
             summary["initially"] = "occupied" if self.initially_occupied else "empty"
+        if self._uses_paper_model() and self._baseline is not None:
+            measured = self._paper_occupied(self._baseline)
+            summary["initially_measured"] = "occupied" if measured else "empty"
+            if self.initially_occupied is not None and self.initially_occupied != measured:
+                summary["declared_contradicts_measurement"] = True
         return summary
 
     # -- frames and cleanliness -----------------------------------------------
@@ -249,6 +261,8 @@ class ZoneObserver:
             return
         occupancy_before = self._changed_area(self._reference, self._baseline)
         occupancy_after = self._changed_area(self._candidate, self._baseline)
+        if self._uses_paper_model():
+            occupancy_before, occupancy_after = self._paper_area(self._reference), self._paper_area(self._candidate)
         details = {
             "changed_area_px": changed,
             "occupancy_before_px": occupancy_before,
@@ -259,7 +273,10 @@ class ZoneObserver:
         }
         if self.device is not None:
             details["device_warp"] = [[round(float(value), 5) for value in row] for row in self.device.warp]
-        self.events.append(self._event(self._change_kind(occupancy_before, occupancy_after), self._last_clean, self._candidate_at, details))
+        kind = self._paper_kind(occupancy_before, occupancy_after) if self._uses_paper_model() else self._change_kind(occupancy_before, occupancy_after)
+        if self._uses_paper_model():
+            details["occupancy_rule"] = "paper_model"
+        self.events.append(self._event(kind, self._last_clean, self._candidate_at, details))
         self._reference = self._candidate
         self._run_broken = True
         self._settle(now)
@@ -282,6 +299,27 @@ class ZoneObserver:
         if differs_before and not differs_after:
             return "vacated"
         return "changed_while_occupied"
+
+    def _uses_paper_model(self) -> bool:
+        return self.zone_kind == "tray_cell" and self.params.cell_occupancy == "paper_model"
+
+    def _paper_area(self, content: np.ndarray) -> int:
+        """Non-paper pixels after removing printed lines and digits (normalized paper is ~128)."""
+        nonpaper = (np.abs(content - 128.0) > self.params.change_threshold).astype(np.uint8)
+        k = max(1, int(self.params.print_stroke_px))
+        return int(cv2.morphologyEx(nonpaper, cv2.MORPH_OPEN, np.ones((k, k), np.uint8)).sum())
+
+    def _paper_occupied(self, content: np.ndarray) -> bool:
+        return self._paper_area(content) >= self.params.min_part_area_px
+
+    def _paper_kind(self, area_before: int, area_after: int) -> str:
+        before = area_before >= self.params.min_part_area_px
+        after = area_after >= self.params.min_part_area_px
+        if not before and after:
+            return "appeared"
+        if before and not after:
+            return "vacated"
+        return "changed_while_occupied" if before else "changed_while_empty"
 
     def _event(self, kind: str, before: _Snapshot, after: _Snapshot, details: dict) -> dict:
         return {

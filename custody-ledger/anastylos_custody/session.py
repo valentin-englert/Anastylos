@@ -89,6 +89,9 @@ def _observer_params(custody: dict, ppm: float) -> ObserverParams:
         confirm_hold_s=float(content["confirm_hold_s"]),
         max_anchor_changed_fraction=float(content["max_anchor_changed_fraction"]),
         ring_change_with_verified_pose=_ring_rule(content.get("ring_change_with_verified_pose", "pose_break")),
+        cell_occupancy=_occupancy_rule(content.get("cell_occupancy", "start_relative")),
+        print_stroke_px=int(round(float(content.get("cell_print_stroke_mm", 0.0)) * ppm)),
+        min_part_area_px=float(content.get("min_part_area_mm2", 0.0)) * ppm ** 2,
     )
 
 
@@ -148,4 +151,10 @@ def _sampling_report(times: list[float], step: int, max_gap_s: float) -> dict:
 def _ring_rule(value: str) -> str:
     if value not in ("pose_break", "content"):
         raise SystemExit(f"content.ring_change_with_verified_pose must be 'pose_break' or 'content', not {value!r}")
+    return value
+
+
+def _occupancy_rule(value: str) -> str:
+    if value not in ("start_relative", "paper_model"):
+        raise SystemExit(f"content.cell_occupancy must be 'start_relative' or 'paper_model', not {value!r}")
     return value

@@ -46,7 +46,20 @@ Tests: `python -m unittest discover -s tests` (fixtures under `tests/fixtures/fu
 
 ## Results so far (P0 and PR only; no model run)
 
-Recorded under `C:\ANASTYLOS\data\live-dev\D\`; see the section added with the run commit below.
+Run 2026-10-29 at b5558952 (clean tree, PREREG v2), `C:\ANASTYLOS\data\live-dev\D\2026-10-29-{P0,PR}-primary`
+(39 paired episode-runs, seeds 0–2) and `…-supp-s0-9` (130 runs, supplementary, not for acceptance):
+
+| arm | resolved | interruptions | resolved / interruption | per question interruption | operator s | integrity |
+|---|---|---|---|---|---|---|
+| P0 primary | 163 | 203 | **0.803** (FULL-01 0.825, synthetic 0.798) | 0.803 | 2233 | 0 |
+| PR primary | 123 | 340 | **0.362** (FULL-01 0.405, synthetic 0.350) | 0.523 | 3929 | 0 |
+| P0 seeds 0–9 | 551 | 665 | 0.829 | 0.829 | 7315 | 0 |
+| PR seeds 0–9 | 403 | 1124 | 0.359 | 0.505 | 13262 | 0 |
+
+P0 beats PR in all 39 paired runs. PR: 41 prompts + 64 dependency questions (effect unknown), 90 asks while
+busy, 4 unnecessary questions, 24 questions open at the turn limit. Invalid-action rate 0 for both (P0 by
+construction, PR draws from the valid list). The bar an L2 run must clear is therefore P0's **0.803**; the
+ceiling is 1.0 and 12 of the 186 question-runs are unanswerable by construction.
 
 ## Limits (what this cannot show)
 

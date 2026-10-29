@@ -152,7 +152,7 @@ class MetaProposer:
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         target = self._cache_dir / f"{fixture['request_sha256']}.json"
         partial = target.with_suffix(".partial")
-        partial.write_text(json.dumps(fixture, ensure_ascii=False, indent=1), encoding="utf-8")
+        partial.write_text(json.dumps(fixture, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
         os.replace(partial, target)
 
     def _append_trace(self, trace: dict) -> None:

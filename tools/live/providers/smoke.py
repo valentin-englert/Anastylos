@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
 import sys
 import time
 from pathlib import Path
@@ -62,14 +61,15 @@ def _record_fixtures(run_dir: Path) -> list[dict]:
     entries = []
     for source in sorted((run_dir / "cache").glob("*.json")):
         target = RECORDED_DIR / source.name
-        shutil.copyfile(source, target)
+        # LF bytes, as .gitattributes checks *.json out, so the manifest hashes hold on every checkout
+        target.write_bytes(source.read_bytes().replace(b"\r\n", b"\n"))
         entries.append({"file": source.name, "source": str(source), "sha256": _sha256_file(target)})
     manifest_path = RECORDED_DIR / "MANIFEST.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {"files": []}
     kept = [entry for entry in manifest["files"] if entry["file"] not in {e["file"] for e in entries}]
     manifest = {"schema": "anastylos-fixture-manifest@1", "inputs": "synthetic (providers/smoke.py)",
                 "files": sorted(kept + entries, key=lambda entry: entry["file"])}
-    manifest_path.write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=1) + "\n", encoding="utf-8", newline="\n")
     return entries
 
 

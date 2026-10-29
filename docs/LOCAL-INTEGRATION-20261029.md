@@ -26,9 +26,17 @@ It contains `inventory.json`, staged/unstaged binary patches, `all-refs-before.b
 `bundle-sha256.json`, `safety-refs.json`, `file-manifest.json`, frozen-file checks,
 manifest checks and process-ownership snapshots. The bundle was verified; 32
 original branch tips have refs under `refs/safety/consolidation-20261029/`.
-The file manifest records 1,431 verified regular-file copies and metadata for
-10 reparse points. No junction was traversed. Volatile spatial-owner work was
-inventoried and retained, rather than copied into the candidate.
+The file manifest records 1,431 verified file copies and metadata for 10
+reparse points. A final audit found that eight of those copies came from
+fixture aliases exposed by Git's untracked-file list: their parent paths
+crossed junctions before the link-aware tree walk recorded them. This was a
+preservation-procedure error. All targets are synthetic QA fixture directories
+inside the retained main worktree; originals were not modified or deleted.
+`junction-intake-audit.json` identifies those eight copies separately, and the
+backup script now rejects reparse-point ancestors before opening a listed
+file (8/8 alias paths blocked by the guard check). The original pre-audit
+manifest remains preserved. Volatile spatial-owner work was inventoried and
+retained, rather than copied into the candidate.
 
 The final report beside that directory records exact candidate/main SHAs,
 every original worktree's disposition, removal outcomes, retained artifacts

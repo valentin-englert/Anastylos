@@ -1,0 +1,21 @@
+{
+  "_note": "SYNTHETIC fixture generated from ControlJournal; not a live capture. Contract G0 ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "request": {
+    "operation_id": "00000000-0000-4000-8000-000000000046",
+    "session_id": "00000000-0000-4000-8000-000000000041",
+    "request_id": "00000000-0000-4000-8000-000000000043",
+    "request_revision": 1,
+    "attempt_id": "00000000-0000-4000-8000-000000000047",
+    "consent_revision": 1,
+    "board_registration_epoch_id": "00000000-0000-4000-8000-000000000007",
+    "object_pose_epoch_id": "00000000-0000-4000-8000-000000000008"
+  },
+  "response": {
+    "attempt_id": "00000000-0000-4000-8000-000000000047",
+    "attempt_number": 1,
+    "remaining_exposures": 19,
+    "grant_id": "00000000-0000-4000-8000-000000000045",
+    "session_revision": 4,
+    "status": "reserved"
+  }
+}

@@ -60,6 +60,7 @@ sys.path.insert(0, str(VALIDATOR_DIR))
 
 import anastylos_capture_validate as validator  # noqa: E402  (sibling import by design)
 import anastylos_qr as qr_encode  # noqa: E402  (same directory by design)
+import anastylos_guided_routes as guided  # noqa: E402  (same directory by design)
 
 SERVICE_NAME = "anastylos-capture-receiver"
 API_VERSION = 1
@@ -721,6 +722,9 @@ class ReceiverHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(HTTPStatus.OK, {"duplicate": True, "report": report})
             return
+        if parsed.path.startswith("/v1/guided/"):
+            if guided.GuidedRoutes(self).dispatch_get(parsed):
+                return
         self._error(HTTPStatus.NOT_FOUND, "not_found", "Unknown endpoint.")
 
     def do_POST(self) -> None:  # noqa: D102 (stdlib override)
@@ -732,8 +736,14 @@ class ReceiverHandler(BaseHTTPRequestHandler):
             self._handle_pair_qr()
             return
         if parsed.path == "/v1/packages":
+            if guided.is_guided_upload(self.headers):
+                guided.GuidedRoutes(self).handle_guided_upload()
+                return
             self._handle_upload()
             return
+        if parsed.path.startswith("/v1/guided/"):
+            if guided.GuidedRoutes(self).dispatch_post(parsed):
+                return
         self._error(HTTPStatus.NOT_FOUND, "not_found", "Unknown endpoint.")
 
     # -- pairing ------------------------------------------------------------------
@@ -1029,6 +1039,27 @@ def build_parser() -> argparse.ArgumentParser:
     revoke = sub.add_parser("revoke-tokens", help="Revoke every issued device token.")
     revoke.add_argument("--yes", action="store_true", help="Confirm revocation.")
 
+    enroll = sub.add_parser("guided-enroll", help="Enroll an approved phone for guided capture.")
+    enroll.add_argument("request", help="Approved QR pairing request id or unique prefix.")
+    enroll.add_argument("--label", default=None, help="Source label (default: device label).")
+
+    bootstrap = sub.add_parser("guided-bootstrap", help="Mint an adapter bootstrap token (show once).")
+    bootstrap.add_argument("--principal", required=True, help="Adapter principal name.")
+    bootstrap.add_argument("--ttl-hours", type=int, default=24, help="Token lifetime in hours (default 24).")
+
+    reader = sub.add_parser("guided-reader", help="Mint a session reader token (show once).")
+    reader.add_argument("session", help="Session id.")
+    reader.add_argument("role", help="spatial or reader.")
+
+    revokeg = sub.add_parser("guided-revoke-grant", help="Revoke one operator grant immediately.")
+    revokeg.add_argument("grant", help="Grant id.")
+
+    revoket = sub.add_parser("guided-revoke-tokens", help="Revoke guided tokens for one session.")
+    revoket.add_argument("--session", required=True, help="Session id.")
+
+    gstatus = sub.add_parser("guided-status", help="List guided sources and tokens (redacted).")
+    gstatus.add_argument("--json", action="store_true", help="Print as JSON.")
+
     return parser
 
 
@@ -1289,6 +1320,18 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_status(args)
     if args.command == "revoke-tokens":
         return cmd_revoke_tokens(args)
+    if args.command == "guided-enroll":
+        return guided.cmd_guided_enroll(args)
+    if args.command == "guided-bootstrap":
+        return guided.cmd_guided_bootstrap(args)
+    if args.command == "guided-reader":
+        return guided.cmd_guided_reader(args)
+    if args.command == "guided-revoke-grant":
+        return guided.cmd_guided_revoke_grant(args)
+    if args.command == "guided-revoke-tokens":
+        return guided.cmd_guided_revoke_tokens(args)
+    if args.command == "guided-status":
+        return guided.cmd_guided_status(args)
     parser.print_help()
     return 2
 

@@ -32,8 +32,16 @@ phone required. Physical gates stay `PENDING_EVIDENCE`.
 
 - `README.md` — this file (scope + MCP choice).
 - `EVIDENCE.md` — lane evidence report (baseline, gates, hashes).
-- Adapter/worker implementation follows in Wave 1b+ after journal
-  green; Wave 1a lands the journal in `capture-companion/receiver/`.
+- `requirements-mcp.txt` — pin record (`mcp==2.3.0`, MIT); install
+  needs CONTRACT-OWNER manifest/SPDX approval, never ad-hoc pip.
+- `control_client.py` — stdlib HTTPS client (CA or SPKI pin;
+  loopback plaintext for tests only), re-hashes fetched assets.
+- `handlers.py` — nine narrow `capture.*` tool functions; image
+  bytes need `include_images=True` plus operator env opt-in.
+- `adapter.py` — official-SDK stdio binding (nine tools only, no
+  filesystem/shell/provider tool); env-configured, never CLI args.
+- `tests/` — handler units (fake client), live loopback client
+  tests, SDK binding check (skips until the SDK is installed).
 
 Contract: `capture-companion/control/contracts/` read-only, G0
 `ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663`.

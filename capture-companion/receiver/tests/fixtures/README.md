@@ -11,7 +11,12 @@ Files: `guided-wire-open-session.json` (OpenInput → Session),
 `guided-wire-request-view.json` (RequestInput → `{request,
 session_revision}`), `guided-wire-source-event.json` (Event →
 EventAck), `guided-wire-changes.json` (cursor `0` → Changes page),
-`guided-wire-finalize.json` (MutationInput → sealed CaptureSet).
+`guided-wire-finalize.json` (MutationInput → sealed CaptureSet),
+`guided-wire-consent.json` (ConsentInput → ACTIVE Session),
+`guided-wire-attempt.json` (AttemptRegisterInput → AttemptAck),
+`guided-wire-binding.json` (AttemptAssetBinding → ack),
+`guided-wire-sidecar-pending.json` (SidecarUpload →
+`SPATIAL_PENDING` delivery).
 
 Canonical bytes (idempotency + `manifest_sha256`): UTF-8 JSON, sorted
 keys, compact separators, `ensure_ascii=False`, no NaN/Infinity.

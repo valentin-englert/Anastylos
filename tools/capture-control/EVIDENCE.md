@@ -107,3 +107,65 @@ sidecar/receipts/leases NOT_TESTED; H0–H18 physical PENDING_EVIDENCE
 
 Rollback: delete `control.db*` + revert owned files; legacy JSON
 staging never touched, old upload unaffected. No migration.
+
+## Wave-1b implementation (2026-10-29)
+
+Journal: consent/grants (`min()` effective limit, re-consent
+increments, disarm cancels session + queued), claim (creating
+principal only), unconditional operator revoke, attempt reservation
+with exposure cap, immutable asset binding, guided package join with
+deterministic late classification (revoke > cancel > expire >
+supersede), sidecar intake (envelope + linkage only, revision CAS,
+same-attempt supersedes, evidence immutability), validator-report
+qualification through an injectable seam (default unavailable:
+`package_only` forever), lease renewal (grant/request bounded),
+ephemeral status (guidance mirrors request), resume (always
+DISARMED), multi-revision sealing with qualified receipts, plus a
+Wave-1a → Wave-1b store migration (additive columns/tables, tested).
+
+HTTP (`anastylos_guided_routes.py` + `anastylos_guided_auth.py` +
+`anastylos_validator_seam.py`, thin hooks in the receiver): 24
+guided endpoints incl. enroll exchange, capabilities, pending
+sessions, consent, attempts, binding, guided ZIP join (validator +
+manifest join: granted-session-only, bound observation/image),
+sidecar, lease, claim, finalize, resume, re-hashed asset reads,
+capture-set; six operator CLI commands. Legacy tokens 401 on guided
+routes except enroll; guided tokens 401 on legacy routes; scoped
+failures share one generic 404. Error mapping: 400/409/410/429/404/
+401 documented in the receiver README.
+
+MCP (`tools/capture-control/`): stdlib `control_client.py` (CA or
+SPKI pin, loopback-plaintext guard, asset re-hash), `handlers.py`
+(nine narrow `capture.*` tools; image bytes need `include_images`
+plus `ANASTYLOS_PROVIDER_IMAGES=authorized`), `adapter.py` (official
+`mcp` SDK stdio binding, nine tools, no filesystem/shell/provider
+tool), `requirements-mcp.txt` pin record. SDK install + smoke stay
+BLOCKED on CONTRACT-OWNER manifest/SPDX approval (no ad-hoc pip).
+
+Verification:
+
+- `capture-companion/receiver`: `python -B -m unittest discover -s tests`
+  → 158 tests OK (3 pre-existing skips), exit 0
+  (baseline 90 + journal 25 + pipeline 34 + routes 9).
+  Log: `C:\tmp\receiver-wave1b.log`.
+- `tools/capture-control`: `python -B -m unittest discover -s tests`
+  → 13 tests OK (1 skip: SDK binding, reason recorded), exit 0.
+  Log: `C:\tmp\cc-test1.log`.
+- Root: `python -B tools/compliance/check.py` → 0 errors, 1 warning,
+  10 open reviews (unchanged), exit 0.
+  Log: `C:\tmp\compliance-wave1b.log`.
+- Frozen vectors via journal + routes: `control-request-valid` 1/1,
+  `control-negative` 8/8, `control-transitions` 17/17 server-green
+  (cancel/expire shutter-latch halves are phone-side mechanics
+  proven by the journal race ordering; `qualified` promotion proven
+  with synthetic validator reports, live reports await SPATIAL).
+
+Per-gate: journal/pipeline PASS; guided HTTP PASS (loopback); MCP
+handlers/client PASS, SDK live smoke BLOCKED (CONTRACT-OWNER
+approval); fixtures PASS (9 files); H0–H18 physical
+PENDING_EVIDENCE (no hardware); security/provenance: no regression
+(additive, legacy untouched, no new dependency installed).
+
+Rollback: stop server, delete `control.db*` + `guided-*.json`, revert
+owned files; legacy JSON staging and uploads unaffected. The journal
+migration is forward-additive; old code ignores new columns/tables.

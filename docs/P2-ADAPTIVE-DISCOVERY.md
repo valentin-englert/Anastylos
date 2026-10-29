@@ -86,3 +86,43 @@ show.
 
 No parameter of the method may be tuned on E2 any further; E2 stays a
 regression check only.
+
+## 6. Minimum implementation built (2026-10-29)
+
+Branch `feat/custody-v1.2` (worktree `Anastylos-custody-v12`): module
+`anastylos_custody/proposals.py` (proposals 0.1.0) and command
+`custody.py discover --video … --out …`, writing `registry.json`
+(`custody-source-registry@1`: `SRC-<n>` with outline, bbox, centroid,
+area, first change window, confidence, status `proposal (unconfirmed)`)
+and `inventory.json` (basis `adaptive proposal`) for pass 2 with the
+unchanged observer. Hands are recognised without colour: a change or
+motion component that reaches outside the device mask is an occluder.
+33/33 tests (5 new: arm never becomes a source, motionless arm stays an
+occluder, judging by change not colour, split by time / merge by contact,
+whole-device change ends the pose epoch).
+
+E2 regression check — **not a scored experiment** (E2 is development
+footage; no parameter was changed after this run). Outputs in
+`C:\ANASTYLOS\data\proto-01\E2-adaptive\` (`registry.json`
+`cbf7f1ce8b30456a96feec2e0588166e33e28cd173b88c02b7b59a7b152bfc37`,
+`pass2\custody.json` `b88ff0eea3666c2dbeba82021a6b5c6fffa6fdb09ce98228d31db3c2b797284f`):
+
+- Pass 1 found changes at all four wells, including W-RED, which the
+  colour-based hand test had hidden in E2-D; W-YELLOW split into two
+  sources (SRC-1, SRC-2) with the same time window, ~5 mm apart, not
+  touching within the 1 mm merge gap. 5 sources for 4 parts, no source
+  outside the wells.
+- Pass 2: the duplicate makes the first deposit `ambiguous` (two removals
+  pending); because the linker keeps unlinked removals pending, every
+  later deposit is `ambiguous` too. 0 correct, 0 incorrect links.
+
+Two findings for the next version, to be fixed generically and judged
+only on E3-A, not on E2:
+
+1. A part can fall apart into several change components (a well floor
+   with ribs). Merge rule candidates: same pass-2 removal window plus
+   spatial proximity, or one source per removal window with sub-masks.
+2. The linker's pending set never clears an `ambiguous` removal, so one
+   duplicate poisons every later link. Candidate: removals listed in an
+   ambiguous proposal stay candidates only for that deposit's window
+   unless re-observed (needs an owner decision under V3).

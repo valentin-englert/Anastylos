@@ -171,3 +171,26 @@ E2 development runs, retrospective and not independent:
 
 Implementation and thresholds are now frozen for E3-A
 ([`PROTO-01-E3A.md`](PROTO-01-E3A.md)).
+
+## 8. Stress diagnostic on SNES-01 freestyle footage (2026-10-29)
+
+`20261027_172426.mp4` (SHA-256 `2e103bfc…`) is SNES-01: the owner's first,
+unoptimised full disassembly (hands nearly always in view, device held and
+turned, shells and PCB laid freely on the work area, no nails, no
+tweezers). It is development data already analysed with v1.0 (0/5 site
+removals, 17/17 deposits unattributed) and must not be tuned on.
+
+Frozen v1.3 `discover` with `custody-config.paper.json`
+(`C:\ANASTYLOS\data\snes-01\stress-v1.3\registry.json`): device mask from
+t = 1.15 s (10 965 mm², includes the cable), one proposal, then the device
+pose epoch ends at 6.35 s when the controller is lifted; nothing after
+that is proposed. As expected: the pipeline assumes one resting device in
+one pose.
+
+SNES-01 is kept as the standing Northstar stress benchmark. What it needs,
+in order: (1) re-acquire the device after it is put down again (new pose
+epoch with fresh discovery, never continuing old sources); (2) several
+objects on the sheet at once (shell halves, PCB) as separate devices;
+(3) deposits outside tray cells as free deposit regions; (4) H1 hand
+handling while hands stay in view. Each is a separate versioned step,
+judged on new footage, with SNES-01 only as a regression check.

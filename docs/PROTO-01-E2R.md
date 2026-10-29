@@ -181,3 +181,14 @@ a new inventory that only moves `inventory_t_s` to 5.0 s (inside the 10 s
 static start); its hash is committed before the take. Take 1 stays
 reported as above and is not re-run with the new inventory. The sealed
 files of take 1 stay sealed until take 2 is processed.
+
+## 13. Take 2 preregistration (owner approved 2026-10-29, before recording)
+
+Same frozen software (§2), same sealed script (`4d74a37f…`), same
+criteria (§7). Only change: inventory
+`C:\ANASTYLOS\data\proto-01\E2R\E2R.take2.inventory.json`
+`edb3deb4e8709fea2a10d782f0d41bac3067e44f7945076aa76d5fa8799f028d`,
+identical to the take-1 inventory except `inventory_t_s` = 5.0 s and the
+basis note. Checker `tools/reassembly/returns.py`
+`4e9f61d2db7520dc32bd6763c5522433f0805adc180b1ddf4e2591afdfe4f5a6` (as
+fixed in §11). Video name `E2R-take2.mp4`. Take 1 is not re-run.

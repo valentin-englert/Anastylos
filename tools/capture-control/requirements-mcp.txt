@@ -1,0 +1,8 @@
+# MCP SDK pin record (NOT the project manifest — CONTRACT-OWNER decision pending)
+#
+# Official Python SDK for the local stdio adapter. Do NOT pip-install from
+# this file without CONTRACT-OWNER approval: the single project manifest is
+# calibration/requirements.txt and every new dependency needs an SPDX +
+# THIRD_PARTY_NOTICES.md update plus a green tools/compliance/check.py.
+# Requested exception: isolated adapter environment (adapter-only process).
+mcp==2.3.0  # MIT, modelcontextprotocol/python-sdk, requires_python>=3.10

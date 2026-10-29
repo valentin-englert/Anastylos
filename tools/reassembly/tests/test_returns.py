@@ -76,11 +76,15 @@ class ReassemblyReturnsTest(unittest.TestCase):
         self.assertEqual(result["returns"][0]["status"], "ambiguous")
 
     def test_events_without_v1_1_declared_occupancy_are_refused(self):
+        v11 = {"observer_version": "1.1.0"}
         with self.assertRaises(SystemExit):
-            check_events_doc({"provenance": {}, "zones": []})
+            check_events_doc({"provenance": {}, "zones": []}, {"cell-4"})
         with self.assertRaises(SystemExit):
-            check_events_doc({"provenance": {"observer_version": "1.1.0"}, "zones": [{"zone": "cell-4"}]})
-        check_events_doc({"provenance": {"observer_version": "1.1.0"}, "zones": [{"zone": "cell-4", "initially": "occupied"}]})
+            check_events_doc({"provenance": v11, "zones": [{"zone": "cell-4", "kind": "tray_cell"}]}, {"cell-4"})
+        with self.assertRaises(SystemExit):
+            check_events_doc({"provenance": v11, "zones": [{"zone": "W-RED", "kind": "site"}]}, {"cell-4"})
+        check_events_doc({"provenance": v11, "zones": [{"zone": "cell-4", "kind": "tray_cell", "initially": "occupied"},
+                                                       {"zone": "cell-2", "kind": "tray_cell"}]}, {"cell-4"})
 
     def test_arrival_without_departure_is_unattributed(self):
         result = verify(_doc([_event("E-1", "W-RED", "site_filled", 11, 14)]), self.steps)

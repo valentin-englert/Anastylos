@@ -64,12 +64,18 @@ def plan(memory: list[dict], sites: list[dict]) -> list[dict]:
     return steps
 
 
-def check_events_doc(events_doc: dict) -> None:
-    """Refuse event logs whose names do not carry v1.1 declared-occupancy meaning."""
+def check_events_doc(events_doc: dict, plan_cells: set[str]) -> None:
+    """Refuse event logs whose names do not carry v1.1 declared-occupancy meaning.
+
+    Sites and every cell in the plan must declare their start occupancy;
+    other tray cells may stay undeclared, which means empty (the v1.0
+    convention, correct for a cell that starts empty).
+    """
     version = events_doc.get("provenance", {}).get("observer_version")
     if version != REQUIRED_OBSERVER:
         raise SystemExit(f"events come from observer {version!r}; reassembly needs {REQUIRED_OBSERVER}")
-    undeclared = [zone["zone"] for zone in events_doc["zones"] if "initially" not in zone]
+    undeclared = [zone["zone"] for zone in events_doc["zones"]
+                  if "initially" not in zone and (zone["kind"] == "site" or zone["zone"] in plan_cells)]
     if undeclared:
         raise SystemExit(f"zones without declared start occupancy: {undeclared}")
 
@@ -162,7 +168,7 @@ def main() -> None:
                     "steps": steps, "inputs": inputs}
     else:
         events_doc = json.loads(args.events.read_text(encoding="utf-8"))
-        check_events_doc(events_doc)
+        check_events_doc(events_doc, {step['cell'] for step in steps if step['cell']})
         document = {**verify(events_doc, steps), "plan": steps,
                     "inputs": {**inputs, "events": {"path": str(args.events), "sha256": _sha256(args.events)}}}
     data = (json.dumps(document, indent=2, ensure_ascii=False) + "\n").encode("utf-8")

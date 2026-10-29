@@ -130,3 +130,18 @@ stays valid; no new baseline needed.
 | `nouv-E2R.script.json` (rolled with `roll_e2r_script.py` `0c4cc9cc…`, plan `62b8087b…`) | `4d74a37f8dbe88863bc5d9e6a2addcda140104ec9706ced8b7f189c78cc515df` | E2R take |
 | E2R outputs (`events.json`, `returns.json`) | pending | ground-truth reveal |
 | `nouv-E2R.actual.json` | pending | scoring |
+
+## 11. Deviation before scoring (2026-10-29)
+
+Observer output of the take frozen first: `E2R.mp4`
+`5a489b646ece66d780ed73314ee36a72fc86e374bc6ca4fbc3f2c8064cc5a301` (96.9 s),
+`run1\events.json` `dd6d2157eaffa75402aa8ec499c6bf99d2fee44b7c3e04a7af322424d33c601d`
+(observer v1.1 `86122666`, hashes of §2 verified; 81/81 drift fits).
+
+The preregistered `returns.py` (`67aac938…`) refused the log because it
+required a start-occupancy declaration for every zone, including the
+eight tray cells that the inventory leaves undeclared on purpose (they
+start empty, and undeclared means empty). This is a defect of the
+checker, found before any return result was seen. Fix: sites and every
+plan cell must be declared; other cells may stay undeclared. New
+`returns.py` `6d4fd7db08e2f802b749220d5e1c716ae0528a67700b57ae3b25a0d299532259`, test updated (7/7). Scoring criteria unchanged.

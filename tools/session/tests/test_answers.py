@@ -65,7 +65,7 @@ class ApplyTest(unittest.TestCase):
             questions = {k: {**v, "memory_phase": phase} for k, v in QUESTIONS.items()}
             questions["Q-P2-02"] = {**questions["Q-P2-01"], "id": "Q-P2-02", "part": "P2-C02b"}
             results = apply([{"question": "Q-P3-01", "choice": "E-66", "label": "D-pad membrane"},
-                             {"question": "Q-P2-01", "source": "R side", "label": "nub"},
+                             {"question": "Q-P2-01", "source": "aus den Löchern der Außenseite", "label": "weiße Noppe"},
                              {"question": "Q-P2-02", "source": "L side", "label": "nub", "identical_to": ["P2-C02"]},
                              {"question": "Q-P3-06", "choice": "E-66"}], questions, session, "owner")
             events = [json.loads(line) for line in (session / "memory.jsonl").read_text(encoding="utf-8").splitlines()]

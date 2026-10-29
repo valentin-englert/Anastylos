@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -24,11 +25,13 @@ from parts import LINKED, number_parts
 
 REPO = Path(__file__).resolve().parents[2]
 PYTHON = sys.executable
+# Child Pythons print in the console code page unless told otherwise.
+CHILD_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 HARNESS_SHA = "a2308f66af38385a425e8839abd15c1e5253ffb9728c2d7ff57bb1fb15885812"
 
 
 def _run(args: list, cwd: Path | None = None) -> str:
-    done = subprocess.run([str(a) for a in args], cwd=cwd, capture_output=True, text=True, encoding="utf-8")
+    done = subprocess.run([str(a) for a in args], cwd=cwd, capture_output=True, text=True, encoding="utf-8", env=CHILD_ENV)
     if done.returncode != 0:
         raise SystemExit(f"step failed: {' '.join(map(str, args[:3]))} …\n{done.stdout}\n{done.stderr}")
     return done.stdout

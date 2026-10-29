@@ -514,4 +514,51 @@ placed before the nub instead of last — shown as an unknown, and the
 real answers should give their times.
 
 Real question folder for the owner:
-`C:\ANASTYLOS\data\session-runs-v18\FULL-01\questions` (12 questions).
+`C:\ANASTYLOS\data\session-runs-v18\FULL-01\questions` (11 questions plus the closing prompt for extra parts).
+
+## 21. Owner's answer round and question feedback (2026-10-29) — development data
+
+The owner answered the 11 questions of `session-runs-v18` in Muse Code
+(`muse-spark-1.3-contributor`), started in
+`C:\ANASTYLOS\data\session-runs-v18\FULL-01\questions`
+(`operator_answers.jsonl` `f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359`).
+Applied with `--declared-by "valentin-englert (owner)"`: 10 applied,
+3 dismissed as "kein Teil", 1 rejected, none open.
+
+- **False alarms:** 3 of 11 questions (Q-P1-01 cell 6 at 38–49 s,
+  Q-P1-04 a 0.2 s change at 92 s, Q-P3-03). P1 only shows unscrewing.
+- **Rejected:** the extra part "Platine mitsamt Kabel" (P2, 68 s) has no
+  source; nothing is guessed. It is missing from memory until the owner
+  states where it came from.
+- **Screws:** the guide noted "identische Schrauben" for Q-P1-03 but did
+  not fill `identical_to`. The TL recorded `grp-0001` (obs-0001, dec-0001,
+  dec-0002) from the owner's chat statement "Die schrauben sind
+  identisch." (basis `operator_statement`, not measured). Memory holds three
+  screw removals, not five.
+- **Encoding bug:** the first apply aborted after `dec-0001`: the memory CLI
+  child printed umlauts in the Windows code page. The log was restored from
+  the copy taken immediately before the run; the aborted log is kept as
+  `memory.aborted-apply.jsonl`. Fix: children get `PYTHONIOENCODING=utf-8`
+  (`answers.py`, `session.py`), with an umlaut regression test.
+
+Install order from the guide package (`session.json` `23db752b2176168b35db80c2f66b3907bdd08f29483fe092fcecca4ab6d2dbe0`,
+memory `d5d8cedc4c5b053fe24d369a0460ca4536f5440c8106568ef7785b3049f98e9d`), reverse of removal time per phase:
+
+| Phase | Install order (removal time) |
+|---|---|
+| P3 | Start/Select (78 s), red A (72 s), yellow B (66 s), cell 6 blue (59 s), cell 3 green (51 s), D-pad (40 s), D-pad membrane (31 s), RGBY membrane (17 s) |
+| P2 | white membranes (55 s), cell 11 R (40 s), cell 8 L (25 s), back shell (16 s); PCB missing |
+| P1 | screws, one interchangeable group |
+
+P2 matches the owner's corrected removal order (back shell, L, R,
+membranes, PCB). P3's RGBY membrane at 17 s is the owner's stated time;
+it puts that membrane last on install, after the buttons.
+
+**Owner feedback on the questions (recorded as requirement H3 in
+`ARCHITECTURE.md`):** the questions read as machine output and forced
+switching back and forth in the video. Natural questions anchor on known
+neighbours ("Was hast du in P3 nach dem Steuerkreuz entfernt und in Zelle 3
+gelegt?"). The offline format worked for pre-recorded videos, but the
+northstar is a live session that intervenes as soon as a removal cannot be
+assigned; the operator should never have to scrub a recording to name a
+part.

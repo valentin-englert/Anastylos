@@ -22,11 +22,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+# Child Pythons print in the console code page unless told otherwise; operator words carry umlauts.
+CHILD_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
 
 def _json(path: Path) -> dict:
@@ -95,7 +98,7 @@ def plan(answer: dict, questions: dict) -> dict:
 
 def _memory(session: Path, *argv) -> dict:
     done = subprocess.run([sys.executable, str(REPO / "assembly-memory" / "memory.py"), "--session-dir", str(session), *map(str, argv)],
-                          capture_output=True, text=True, encoding="utf-8")
+                          capture_output=True, text=True, encoding="utf-8", env=CHILD_ENV)
     if done.returncode != 0:
         raise SystemExit(done.stderr or done.stdout)
     return json.loads(done.stdout)

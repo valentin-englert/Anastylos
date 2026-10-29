@@ -1,4 +1,4 @@
-# tools/live — lane contract `anastylos-live-contract@0.1`
+# tools/live — lane contract `anastylos-live-contract@0.2`
 
 Owner: Technical Lead (integration branch `integration/live-v1`). Lanes branch from the commit that adds this
 file and change only the paths they own. A change to this file or to `schemas/` is made by the TL on
@@ -12,7 +12,7 @@ persistence. A model proposes; deterministic code accepts, falls back or rejects
 
 | Lane | Branch | Owns (create/edit only these) |
 |---|---|---|
-| TL | `integration/live-v1` | `tools/live/CONTRACT.md`, `tools/live/schemas/`, `tools/live/seed/`, `ARCHITECTURE.md`, merges |
+| TL | `integration/live-v1` | `tools/live/CONTRACT.md`, `tools/live/schemas/`, `tools/live/seed/`, `tools/live/integration/` (vertical slices, adversarial set), `ARCHITECTURE.md`, merges |
 | A LIVE-CORE | `feat/live-core` | `tools/live/*.py`, `tools/live/tests/`, `tools/live/README.md` (not the subfolders below) |
 | B GUIDE-CLAIMS | `feat/guide-claims` | `tools/guide/claims.py`, `tools/guide/tests/test_claims.py`, `tools/guide/guide02/` |
 | C META-PROVIDERS | `feat/meta-providers` | `tools/live/providers/` |
@@ -68,12 +68,31 @@ after interpretation. Voice therefore needs no second protocol: STT produces thi
 - States: `OPEN → ASKED → ANSWERED → READ_BACK → CONFIRMED → COMMITTED`, side states `DEFERRED`,
   `LEFT_UNRESOLVED`, `SUPERSEDED` (revision changed), `FAILED`. Only `CONFIRMED` (operator said yes to the
   read-back) can lead to a memory write.
+- `slot` (CR-E4): the 1-based ordinal of a question-triggering event in detection order within one round
+  (`docs/LIVE-01.md` §4.2). In a LIVE-01 round the coordinator reads the sealed die `live01-die@1` and takes
+  arm (live/offline) and wording (L1/L0) per slot from it; it never derives them itself.
 
 ### 3.4 Journal (`anastylos-live-journal@1`, JSON lines, append-only, fsync per line)
 
 Kinds: `session_start`, `question_state`, `provider_call` (provider-result without output text beyond the
-validated object), `intent` (op_key, planned memory events), `memory_result`, `done`, `recovery`, `fallback`.
-The journal is the coordinator's own file, beside the run, never inside `memory.jsonl`.
+validated object), `intent` (op_key, planned memory events), `memory_result`, `done`, `recovery`, `fallback`,
+`ui_event` (CR-E2). The journal is the coordinator's own file, beside the run, never inside `memory.jsonl`.
+
+Required fields since 0.2 (CR-E1; the evaluation reads them, `docs/LIVE-01.md` §8.1):
+
+| kind | fields |
+|---|---|
+| every record | `schema`, `seq`, `kind`, `t_wall` (ISO-8601 with UTC offset, millisecond precision) |
+| `session_start` | `live_session_id`; in a LIVE-01 round also `round` ∈ `live`/`offline`, `die_sha256`, `delivery_delay_s` |
+| `question_state` | `op_key`, `question_id`, `revision`, `state`; static (last non-null wins): `slot`, `question_kind` (never `kind`, which is the record kind), `cell`, `deposit_window_s`, `removal_window_s`, `source_box_mm` `[x, y, w, h]`, `deposit_t_wall`; on `ASKED`: `wording` (`L0`/`L1`), `text`, `anchor_possible`, `anchor_ref`, `die_ordinal`; on `ANSWERED`: `input` (operator-input@1); on `CONFIRMED`: `resolved` = `{outcome: source/destination/no_part, source_box_mm, destination, place_text}` |
+| `intent` | `op_key`, `planned` |
+| `memory_result` | `op_key`, `status` (`ok` or a failure word), `written_ids` |
+| `provider_call` | the provider-result@1 fields except `output` text beyond the validated object, plus `op_key` |
+| `fallback` | `op_key`, `task`, `reason` (prefix `grounding` for grounding rejections) |
+| `ui_event` | `action` ∈ `scrub`, `replay_open` |
+
+Unknown extra fields are allowed and ignored by readers. Window times (`*_window_s`) are seconds on the
+take's overhead-video clock, as in `parts.json`; durations use `t_wall`.
 
 ### 3.5 Memory writes
 
@@ -105,7 +124,11 @@ output valid against a strict schema.
 - Inputs: synthetic or minimized structured state (ids, counts, phase words, operator labels already typed by
   the owner). No images, video, audio, raw files or secrets. Labels in `next_action` are opaque tokens.
 - Trace per call (`anastylos-live-provider-trace@1`): request_id, task, model, effort requested and returned,
-  latency, usage, status, sanitized error (HTTP status, error type, ≤ 300 chars, no headers), request hash.
+  `latency_s` (wall seconds of the HTTP call, float; CR-E3, same name as in provider-result@1), usage, status,
+  sanitized error (HTTP status, error type, ≤ 300 chars, no headers), request hash.
+- The request body does not set `store`; the provider default (`store: true`) applies. Together with the
+  contributor tier this means inputs and outputs may be retained and used for training (owner decision D1
+  scope); therefore inputs stay synthetic or minimized as above.
 
 ## 5. Verification
 
@@ -120,3 +143,20 @@ From the TL scratchpad on 2026-10-29, copied verbatim: `h3r0.py` (L0 templates a
 `cases.dev.json`, `baseline.json`, `GUIDE-02-spec.md`, `L2-AGENT-02.md`, `LIVE-01-design.md`, `probe.py`
 (exactly-once probes X1–X6), `lat0_harness.py`, `meta-smoke-trace.json`. Lanes port what they need into their
 own files; the seeds stay unchanged as provenance.
+
+## 7. Change log
+
+- 0.2 (2026-10-29, TL, on `integration/live-v1` after merging lanes A–E):
+  - CR-E1 accepted: journal field table in §3.4; `t_wall` replaces lane A's `at` as the record time field.
+  - CR-E2 accepted: journal kind `ui_event`.
+  - CR-E3 accepted: `latency_s` is the latency field in traces and provider-result@1 (already used by C).
+  - CR-E4 accepted: `slot` definition and die reading in §3.3.
+  - Lane A request `not_a_part` intent: deferred to 0.3. Any change to a task schema changes the request
+    SHA-256 and invalidates C's recorded fixtures, so it lands together with a re-recording. Until then L0
+    carries `not_a_part` beside the schema output (as A implemented).
+  - Lane A requests structured `op_key` in memory events, `fsync` in `store.append_event`, and a lock that
+    `memory.py` honours: blocked until E3-B is released (§3.5 freeze).
+  - Task schemas and `provider-result.json` are unchanged in 0.2.
+  - New TL-owned folder `tools/live/integration/` (vertical slices and the cross-lane adversarial set).
+  - Lane A owes the 0.2 journal adaptation (`t_wall`, `question_kind`, `ui_event`, `written_ids`,
+    `fallback.reason`); until then `docs/LIVE-01.md` scoring of A's journals stays provisional.

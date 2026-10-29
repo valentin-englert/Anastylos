@@ -126,3 +126,48 @@ only on E3-A, not on E2:
    duplicate poisons every later link. Candidate: removals listed in an
    ambiguous proposal stay candidates only for that deposit's window
    unless re-observed (needs an owner decision under V3).
+
+## 7. Rules revised (2026-10-29): linker 1.1 and proposals 0.2.0
+
+Branch `feat/custody-v1.2`, commits `995243ef`, `e057cf4f`; 42/42 tests.
+
+**When the linker treats a deposit as independent.** All deposits are
+judged together. A *valid assignment* gives each deposit, in time order,
+one removal that started before it and that no earlier deposit took; if
+none is left, the part came from outside the watched sites. Each removal
+serves at most one deposit. A deposit is linked
+`candidate_temporal_exclusive` when only one removal is pending (as
+before), or `candidate_by_elimination` when it is ambiguous locally but
+every valid assignment gives it the same removal, because the other
+pending removals are used up by other deposits in all of them. The
+narrowed window is then judged again with every hidden-movement check
+(overlapping deposits or removals, unobservable sources, sampling gaps,
+occupied cell); any of these keeps it `ambiguous`. If valid assignments
+disagree it stays `ambiguous`. V3 is unchanged. Tests: an initial
+ambiguity does not poison an independent later link; two genuinely
+competing sources stay ambiguous; a sampling gap or an unobservable
+source blocks elimination; elimination never links a deposit that has no
+removal.
+
+**Clustering.** Proposals join one source when they changed in the same
+observed interval (last matching sample within 0.25 s, windows
+overlapping) and their mask gap is at most max(1 mm, 0.5 × √area of the
+larger). Same time alone never merges distant parts, and touching parts
+from different intervals stay separate. Each source keeps its submasks
+and the joins (gap, limit) as provenance. Known limit: two neighbouring
+parts removed in the same interval and closer than half a part size merge
+into one source (the overhead view cannot separate them).
+
+E2 development runs, retrospective and not independent:
+
+- Named-inventory regression: linker 1.1 on the frozen v1.0 E2 events
+  gives a byte-identical `custody.json` (`72c9d640…`). No regression.
+- Adaptive (`C:\ANASTYLOS\data\proto-01\E2-adaptive-r2\`, registry
+  `e6924ad5…`, `pass2\custody.json` `ec61919b…`): 4 sources for 4 parts
+  (W-YELLOW from 3 submasks, gaps 0–1.33 mm against limits 2.65–2.98 mm),
+  4 correct links (all `candidate_temporal_exclusive`), 0 incorrect, the
+  C4 move `unattributed`. Improvement over proposals 0.1.0: from 0 to 4
+  links. Regressions: none observed.
+
+Implementation and thresholds are now frozen for E3-A
+([`PROTO-01-E3A.md`](PROTO-01-E3A.md)).

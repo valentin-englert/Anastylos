@@ -191,3 +191,38 @@ parts, not from missing declarations. Next (separate from OUT-x): group
 site changes that occur in the same observed interval and touch each
 other into one removal event, and model a site that changes twice as two
 layered removals.
+
+## 10. Removal grouping, linker 1.3 (2026-10-29) — development data
+
+Branch `feat/custody-v1.3` commit `341cf77e`, 63/63 tests (7 new: fragments
+of one large removal become one event and link; no grouping without
+geometry; same time alone never groups distant sites; close sites in
+different intervals stay separate; a site that changes twice gives two
+removals; declared removals are never grouped; an outside declaration
+naming one fragment closes the whole event). Rule, fixed before the runs
+below: same observed interval (start and end within 0.25 s) and site gap
+≤ max(2 mm, 0.5 × √area of the larger site), chained; enabled by
+`custody.py link --inventory <inventory used by observe>`.
+
+| Run | Before (linker 1.2) | Linker 1.3 |
+|---|---|---|
+| E2 named inventory | 4 links | 4 links, unchanged |
+| E2 adaptive (`E2-adaptive-r2`) | 4 links | 4 links, unchanged |
+| FULL-01 P1 | 3 ambiguous | 3 ambiguous (3 groups; 4–5 pending) |
+| FULL-01 P3 | 6 ambiguous, 27–35 pending | 6 ambiguous, 5–10 pending (6 groups) |
+| FULL-01 P3 + draft OUT-x | 6 ambiguous, 27–34 pending | 6 ambiguous, 4–9 pending |
+
+What still keeps P3 ambiguous (pending removals at the first deposit,
+cell-7 at 44–47 s): (1) the D-pad membrane removal (24–28 s) — its deposit
+into cell-10 was white rubber on white paper and only gave
+`changed_while_empty`, so the removal never closes (finding 4 of §8);
+(2) a transient 8 mm² change at 22 s; (3) one late fragment of the
+face-button membrane whose window ends 3 s after the rest and so is not
+grouped; (4) the D-pad overhanging from cell-7 into cell-8 gives a second,
+overlapping `changed_while_occupied` deposit. Each later deposit inherits
+these open removals and overlaps the earlier deposits' windows.
+
+Next, each a separate step: colour or saturation in the paper model
+(white and yellow parts), a minimum persistence or size for a removal
+event, and treating a change in a cell next to a fresh deposit with the
+same window as overhang rather than a second deposit.

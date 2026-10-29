@@ -73,5 +73,48 @@ class LinkerTests(unittest.TestCase):
         self.assertEqual(doc["proposals"][0]["removal"]["basis"], "operator_declared")
 
 
+class AmbiguityLocalityTests(unittest.TestCase):
+    """Linker 1.1: ambiguity stays local, competing sources stay ambiguous, gaps never resolve."""
+
+    def test_initial_ambiguity_does_not_poison_an_independent_later_link(self):
+        doc = link(events_doc([
+            removal("E-1", "S-a", 10, 12), removal("E-2", "S-b", 10, 12),
+            deposit("E-3", "cell-1", 13, 15), deposit("E-4", "cell-2", 16, 18),
+            removal("E-5", "S-c", 20, 22), deposit("E-6", "cell-3", 23, 25)]))
+        statuses = [p["status"] for p in doc["proposals"]]
+        self.assertEqual(statuses[:2], ["ambiguous", "ambiguous"], "which of S-a/S-b went where stays open")
+        self.assertEqual(statuses[2], "candidate_by_elimination")
+        self.assertEqual(doc["proposals"][2]["removal"]["site"], "S-c")
+        self.assertEqual(sorted(doc["proposals"][2]["eliminated"]), ["E-1", "E-2"])
+
+    def test_two_genuinely_competing_sources_stay_ambiguous(self):
+        doc = link(events_doc([
+            removal("E-1", "S-a", 10, 12), removal("E-2", "S-b", 10, 12), deposit("E-3", "cell-1", 13, 15),
+            removal("E-4", "S-c", 20, 22), deposit("E-5", "cell-2", 23, 25)]))
+        self.assertEqual([p["status"] for p in doc["proposals"]], ["ambiguous", "ambiguous"],
+                         "the leftover of S-a/S-b may be the part in cell-2 as well as S-c")
+
+    def test_occluded_gap_is_never_resolved_by_elimination(self):
+        doc = link(events_doc([
+            removal("E-1", "S-a", 10, 12), removal("E-2", "S-b", 10, 12),
+            deposit("E-3", "cell-1", 13, 15), deposit("E-4", "cell-2", 16, 18),
+            removal("E-5", "S-c", 20, 22), deposit("E-6", "cell-3", 23, 25)], gaps=[[21.0, 23.5]]))
+        self.assertEqual(doc["proposals"][2]["status"], "ambiguous")
+        self.assertTrue(any("sampling gaps" in r for r in doc["proposals"][2]["reasons"]))
+
+    def test_unobservable_source_blocks_elimination(self):
+        doc = link(events_doc(
+            [removal("E-1", "S-a", 10, 12), removal("E-2", "S-b", 10, 12),
+             deposit("E-3", "cell-1", 13, 15), deposit("E-4", "cell-2", 16, 18),
+             removal("E-5", "S-c", 20, 22), deposit("E-6", "cell-3", 23, 25)],
+            zones=[{"zone": "S-d", "kind": "site", "status": "inventory_not_observable"}]))
+        self.assertEqual(doc["proposals"][2]["status"], "ambiguous")
+
+    def test_elimination_never_invents_a_link_without_a_removal(self):
+        doc = link(events_doc([removal("E-1", "S-a", 10, 12), deposit("E-2", "cell-1", 13, 15),
+                               deposit("E-3", "cell-2", 16, 18)]))
+        self.assertEqual([p["status"] for p in doc["proposals"]], ["candidate_temporal_exclusive", "unattributed"])
+
+
 if __name__ == "__main__":
     unittest.main()

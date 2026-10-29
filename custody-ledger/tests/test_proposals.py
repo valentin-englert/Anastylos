@@ -78,15 +78,41 @@ class ProposalTests(unittest.TestCase):
         track = run(tracker(), [(1, base(), False), (3, bright, False)])
         self.assertEqual(len(track.proposals), 1)
 
-    def test_separate_windows_split_and_touching_overlap_merges(self):
+    def test_removals_in_separate_intervals_stay_separate_sources(self):
         a, b = (slice(30, 36), slice(30, 36)), (slice(30, 36), slice(60, 66))
         track = run(tracker(), [(1, base(), False), (3, removed(a), False), (3, removed(a, b), False)])
-        self.assertEqual(len(merge_into_sources(track.proposals, PPM, 1.0)), 2)
-        touching = [{"mask": np.zeros(SHAPE, bool), "t_before_s": 1.0, "t_confirmed_s": 3.0} for _ in range(2)]
-        touching[0]["mask"][30:36, 30:36] = True
-        touching[1]["mask"][30:36, 36:40] = True
-        self.assertEqual(len(merge_into_sources(touching, PPM, 1.0)), 1)
+        self.assertEqual(len(merge_into_sources(track.proposals, PPM, DEFAULTS)), 2)
 
+
+def piece(cols, t_before=1.0, t_confirmed=3.0, rows=slice(30, 36)):
+    mask = np.zeros(SHAPE, bool)
+    mask[rows, cols] = True
+    return {"mask": mask, "t_before_s": t_before, "t_confirmed_s": t_confirmed, "contrast": 50.0}
+
+
+class ClusteringTests(unittest.TestCase):
+    """One fragmented component versus genuinely distinct components."""
+
+    def test_fragments_of_one_change_merge_and_keep_their_submasks(self):
+        groups = merge_into_sources([piece(slice(30, 36)), piece(slice(38, 44))], PPM, DEFAULTS)  # 2 mm apart
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(len(groups[0]["members"]), 2)
+        self.assertEqual(groups[0]["joins"][0]["gap_mm"], 2.0)
+
+    def test_same_time_alone_never_merges_distant_components(self):
+        groups = merge_into_sources([piece(slice(22, 28)), piece(slice(60, 66))], PPM, DEFAULTS)  # 32 mm apart
+        self.assertEqual(len(groups), 2)
+
+    def test_neighbours_beyond_their_size_scale_stay_separate(self):
+        groups = merge_into_sources([piece(slice(30, 36)), piece(slice(41, 47))], PPM, DEFAULTS)  # gap 5 > 0.5 * 6
+        self.assertEqual(len(groups), 2)
+
+    def test_touching_components_from_different_intervals_stay_separate(self):
+        groups = merge_into_sources([piece(slice(30, 36)), piece(slice(36, 42), t_before=5.0, t_confirmed=7.0)], PPM, DEFAULTS)
+        self.assertEqual(len(groups), 2)
+
+
+class PoseTests(unittest.TestCase):
     def test_whole_device_change_ends_pose_epoch_without_proposals(self):
         shifted = base()
         shifted[DEVICE] = 160.0  # the whole device looks different at once (flipped or moved away)

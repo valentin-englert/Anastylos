@@ -8,6 +8,20 @@ explicit reasons: overlapping deposits or removals, a source site that
 was not observable during the window, sampling gaps, or a deposit into an
 already occupied cell. Every proposal requires operator confirmation; this
 module never writes Assembly Memory.
+
+Linker 1.1 (custody v1.2): ambiguity stays local. All deposits are judged
+together by enumerating every *valid assignment*: deposits in time order,
+each takes one observed or declared removal that started before it and is
+not taken by an earlier deposit; when no such removal is left it comes from
+outside the watched sites. A removal never serves two deposits. A deposit
+whose only open question is "which of several pending removals" is linked
+when every valid assignment gives it the same removal: an earlier ambiguous
+deposit then no longer poisons it, because the alternatives were used up
+by other deposits (status ``candidate_by_elimination``). If valid
+assignments differ, it stays ``ambiguous``. Hidden-movement reasons
+(overlaps, unobservable sources, sampling gaps, occupied cells) still make
+a deposit ``ambiguous`` whatever the assignments say; they are never
+resolved by elimination.
 """
 
 from __future__ import annotations
@@ -28,11 +42,14 @@ def link(events_doc: dict, declared: dict | None = None) -> dict:
     blind_sites = _source_blind_spots(events_doc)
     gaps = events_doc["sampling"]["gaps_over_max"]
 
+    options = _assignment_options(deposits, removals)
     proposals, linked = [], set()
     for deposit in deposits:
         pending = [removal for removal in removals if removal["t_before_s"] < deposit["t_after_s"] and removal["event"] not in linked]
         proposal = _judge(deposit, pending, deposits, removals, blind_sites, gaps)
-        if proposal["status"] == "candidate_temporal_exclusive":
+        if proposal["status"] == "ambiguous":
+            proposal = _by_elimination(proposal, options.get(deposit["id"]), deposit, deposits, removals, blind_sites, gaps)
+        if proposal["status"] in ("candidate_temporal_exclusive", "candidate_by_elimination"):
             linked.add(proposal["removal"]["event"])
         proposals.append(proposal)
     orphans = [removal for removal in removals if removal["event"] not in linked]
@@ -76,6 +93,49 @@ def _judge(deposit: dict, pending: list[dict], deposits: list[dict], removals: l
         return {**base, "status": "ambiguous", "reasons": reasons, "candidates": pending, "custody_window_s": list(window)}
     return {**base, "status": "candidate_temporal_exclusive", "hypothesis": "temporal_exclusive", "removal": pending[0],
             "custody_window_s": list(window), "reasons": [SCOPE_NOTE]}
+
+
+MAX_ASSIGNMENTS = 100_000
+
+
+def _assignment_options(deposits: list[dict], removals: list[dict]) -> dict[str, set | None]:
+    """deposit id -> removal events it takes across all valid assignments (None: too many to enumerate)."""
+    options: dict[str, set] = {deposit["id"]: set() for deposit in deposits}
+    count = 0
+
+    def walk(index: int, used: frozenset) -> bool:
+        nonlocal count
+        if index == len(deposits):
+            count += 1
+            return count <= MAX_ASSIGNMENTS
+        deposit = deposits[index]
+        open_removals = [r["event"] for r in removals if r["t_before_s"] < deposit["t_after_s"] and r["event"] not in used]
+        for event in open_removals or [None]:
+            options[deposit["id"]].add(event)
+            if not walk(index + 1, used | {event} if event else used):
+                return False
+        return True
+
+    if not walk(0, frozenset()):
+        return {deposit["id"]: None for deposit in deposits}
+    return options
+
+
+def _by_elimination(proposal: dict, choices: set | None, deposit: dict, deposits: list[dict], removals: list[dict],
+                    blind_sites: list[dict], gaps: list) -> dict:
+    """Link an ambiguous deposit only if all valid assignments agree AND the narrowed window passes every hidden-movement check."""
+    if not choices or len(choices) != 1 or None in choices:
+        return proposal
+    event = next(iter(choices))
+    removal = next(r for r in removals if r["event"] == event)
+    narrowed = _judge(deposit, [removal], deposits, removals, blind_sites, gaps)
+    if narrowed["status"] != "candidate_temporal_exclusive":
+        return proposal
+    eliminated = [c["event"] for c in proposal.get("candidates", []) if c["event"] != event]
+    return {**narrowed, "status": "candidate_by_elimination", "hypothesis": "temporal_exclusive_by_elimination",
+            "eliminated": eliminated, "ambiguous_before_elimination": proposal["reasons"],
+            "reasons": [SCOPE_NOTE, "every valid assignment gives this deposit the same removal; the other pending removals "
+                                    "are taken by other deposits in all of them: " + ", ".join(eliminated)]}
 
 
 def _source_blind_spots(events_doc: dict) -> list[dict]:

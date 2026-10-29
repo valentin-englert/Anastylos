@@ -11,7 +11,7 @@ becomes confirmed; confirmed pixels of one sample form proposals
 (connected components above the minimum area). The reference then adopts
 those pixels, so a later return to the same place is a new change.
 
-Proposals that touch and overlap in time merge into one source
+Proposals observed in the same interval and close relative to their size merge into one source
 ``SRC-<n>`` with mask geometry in sheet-frame mm, confidence and
 provenance. If a large share of the device changes at once, the device
 pose epoch ends and discovery stops: later changes are unknown, never
@@ -32,6 +32,7 @@ DEFAULTS = {
     "paper_min_value": 150, "paper_max_saturation": 40, "mask_closing_mm": 3.0,
     "quiet_hold_s": 0.6, "confirm_hold_s": 1.0, "min_area_mm2": 8.0,
     "occluder_min_outside_mm2": 4.0, "pose_break_fraction": 0.3, "merge_gap_mm": 1.0,
+    "same_interval_s": 0.25, "proximity_ratio": 0.5,
 }
 
 
@@ -117,11 +118,27 @@ class ProposalTracker:
             self._candidate_since[pixels] = np.nan
 
 
-def merge_into_sources(proposals: list[dict], ppm: float, gap_mm: float) -> list[list[dict]]:
-    """Proposals whose masks touch (within gap) and whose time windows overlap form one source."""
-    kernel = np.ones((max(1, int(2 * gap_mm * ppm)) | 1,) * 2, np.uint8)
-    grown = [cv2.dilate(p["mask"].astype(np.uint8), kernel) > 0 for p in proposals]
+def mask_gap_mm(a: np.ndarray, b: np.ndarray, ppm: float) -> float:
+    """Smallest distance between two masks in mm (0 when they touch or overlap)."""
+    if (a & b).any():
+        return 0.0
+    distance = cv2.distanceTransform((~a).astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_PRECISE)
+    return max(0.0, float(distance[b].min()) - 1.0) / ppm  # centre distance minus one pixel = empty pixels between
+
+
+def merge_into_sources(proposals: list[dict], ppm: float, params: dict) -> list[dict]:
+    """Spatiotemporal clustering of proposals into source candidates.
+
+    Two proposals join when (1) their change was observed in the same interval
+    (last matching sample within ``same_interval_s`` and windows overlapping)
+    and (2) the gap between their masks is at most the larger of
+    ``merge_gap_mm`` and ``proximity_ratio`` times the larger part's size
+    (square root of its area). Same time alone never merges: distant
+    components stay separate sources, and so do neighbours that changed in
+    different intervals. Returns groups with the clustering evidence.
+    """
     parent = list(range(len(proposals)))
+    joins: list[dict] = []
 
     def find(i):
         while parent[i] != i:
@@ -132,15 +149,28 @@ def merge_into_sources(proposals: list[dict], ppm: float, gap_mm: float) -> list
     for i, a in enumerate(proposals):
         for j in range(i + 1, len(proposals)):
             b = proposals[j]
-            if a["t_before_s"] < b["t_confirmed_s"] and b["t_before_s"] < a["t_confirmed_s"] and (grown[i] & proposals[j]["mask"]).any():
+            same_interval = (abs(a["t_before_s"] - b["t_before_s"]) <= params["same_interval_s"]
+                             and a["t_before_s"] < b["t_confirmed_s"] and b["t_before_s"] < a["t_confirmed_s"])
+            if not same_interval:
+                continue
+            size_mm = max(float(a["mask"].sum()), float(b["mask"].sum())) ** 0.5 / ppm
+            limit = max(params["merge_gap_mm"], params["proximity_ratio"] * size_mm)
+            gap = mask_gap_mm(a["mask"], b["mask"], ppm)
+            if gap <= limit:
                 parent[find(i)] = find(j)
-    groups: dict[int, list[dict]] = {}
-    for i, proposal in enumerate(proposals):
-        groups.setdefault(find(i), []).append(proposal)
-    return sorted(groups.values(), key=lambda g: min(p["t_before_s"] for p in g))
+                joins.append({"a": i, "b": j, "gap_mm": round(gap, 2), "limit_mm": round(limit, 2)})
+    groups: dict[int, list[int]] = {}
+    for i in range(len(proposals)):
+        groups.setdefault(find(i), []).append(i)
+    result = []
+    for members in sorted(groups.values(), key=lambda g: min(proposals[i]["t_before_s"] for i in g)):
+        result.append({"members": [proposals[i] for i in members],
+                       "joins": [j for j in joins if j["a"] in members]})
+    return result
 
 
-def source_record(index: int, members: list[dict], to_mm, ppm: float) -> dict:
+def source_record(index: int, group: dict, to_mm, ppm: float) -> dict:
+    members = group["members"]
     mask = np.zeros_like(members[0]["mask"])
     for member in members:
         mask |= member["mask"]
@@ -159,6 +189,9 @@ def source_record(index: int, members: list[dict], to_mm, ppm: float) -> dict:
                      "centroid_mm": [round(cx, 2), round(cy, 2)], "outline_mm": outline, "area_mm2": round(area, 1)},
         "first_change": {"t_before_s": min(m["t_before_s"] for m in members), "t_after_s": max(m["t_confirmed_s"] for m in members)},
         "proposals": len(members),
+        "submasks": [_submask(member, to_mm, ppm) for member in members],
+        "clustering": {"rule": "same observed interval and mask gap <= max(merge_gap_mm, proximity_ratio * sqrt(larger area))",
+                       "joins": group["joins"]},
         "confidence": {"area_mm2": round(area, 1), "mean_contrast": round(float(np.mean([m["contrast"] for m in members])), 2)},
         "status": "proposal (unconfirmed)",
     }
@@ -200,8 +233,8 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
     def to_mm(x, y):
         return float(x) / rectifier.ppm + rectifier.x0, float(y) / rectifier.ppm + rectifier.y0
 
-    groups = merge_into_sources(tracker.proposals, rectifier.ppm, params["merge_gap_mm"])
-    sources = [source_record(i, members, to_mm, rectifier.ppm) for i, members in enumerate(groups, start=1)]
+    groups = merge_into_sources(tracker.proposals, rectifier.ppm, params)
+    sources = [source_record(i, group, to_mm, rectifier.ppm) for i, group in enumerate(groups, start=1)]
     registry = {
         "schema": REGISTRY_SCHEMA,
         "proposals_version": PROPOSALS_VERSION,
@@ -225,3 +258,13 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
                    "initially": "occupied"} for s in sources],
     }
     return registry, inventory
+
+
+def _submask(member: dict, to_mm, ppm: float) -> dict:
+    ys, xs = np.nonzero(member["mask"])
+    x0, y0 = to_mm(xs.min(), ys.min())
+    x1, y1 = to_mm(xs.max() + 1, ys.max() + 1)
+    cx, cy = to_mm(xs.mean(), ys.mean())
+    return {"bbox_mm": [round(x0, 2), round(y0, 2), round(x1 - x0, 2), round(y1 - y0, 2)],
+            "centroid_mm": [round(cx, 2), round(cy, 2)], "area_mm2": round(float(member["mask"].sum()) / ppm ** 2, 1),
+            "t_before_s": member["t_before_s"], "t_confirmed_s": member["t_confirmed_s"], "contrast": member["contrast"]}

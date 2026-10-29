@@ -31,7 +31,7 @@ REGISTRY_SCHEMA = "custody-source-registry@1"
 # that margin so their first reference is taken in the quiet moment the epoch was re-acquired, not during
 # the change that ended the previous epoch.
 EPOCH_START_MARGIN_S = 2.0
-PROPOSALS_VERSION = "0.3.0"
+PROPOSALS_VERSION = "0.3.1"
 DEFAULTS = {
     "paper_min_value": 150, "paper_max_saturation": 40, "mask_closing_mm": 3.0,
     "quiet_hold_s": 0.6, "confirm_hold_s": 1.0, "min_area_mm2": 8.0,
@@ -272,6 +272,7 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
             record["geometry"]["frame"] = f"sheet mm (device at rest, pose epoch {epoch['epoch']})"
             sources.append(record)
     starts = {epoch["epoch"]: epoch["start_s"] for epoch in epochs}
+    ends = {epoch["epoch"]: epoch["tracker"].pose_epoch_end_s for epoch in epochs}
     tracker = epochs[-1]["tracker"]
     registry = {
         "schema": REGISTRY_SCHEMA,
@@ -298,6 +299,7 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
         "sites": [{"id": s["id"], "rect_mm": [round(s["geometry"]["bbox_mm"][0] - 1, 2), round(s["geometry"]["bbox_mm"][1] - 1, 2),
                                               round(s["geometry"]["bbox_mm"][2] + 2, 2), round(s["geometry"]["bbox_mm"][3] + 2, 2)],
                    "initially": "occupied", "epoch": s["epoch"],
+                   **({} if ends[s["epoch"]] is None else {"valid_until_s": ends[s["epoch"]]}),
                    **({} if s["epoch"] == 1 else {"valid_from_s": round(starts[s["epoch"]] + EPOCH_START_MARGIN_S, 3)})}
                   for s in sources],
     }

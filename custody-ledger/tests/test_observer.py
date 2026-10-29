@@ -99,6 +99,13 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual([event["kind"] for event in events], ["site_changed"])
         self.assertNotIn("initially", site.summary())
 
+    def test_site_ends_with_its_device_pose_epoch(self):
+        observer = ZoneObserver("SRC-1", "site", CELL, PARAMS, valid_until_s=2.0)
+        events = run(observer, timeline([(2, {"part": True}), (1, {"hand": True, "moving": True}), (3, {})]))
+        self.assertEqual([e["kind"] for e in events], ["pose_epoch_break"])
+        self.assertEqual(events[0]["t_before_s"], 2.0)
+        self.assertEqual(observer.status, "epoch_broken")
+
     def test_unstable_candidate_is_not_confirmed(self):
         frames = timeline([(2, {})])
         for index in range(10):

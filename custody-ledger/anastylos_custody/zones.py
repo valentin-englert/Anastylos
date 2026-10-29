@@ -26,6 +26,8 @@ class Zone:
     # Declared occupancy at the zone's first reference; None keeps the v1.0
     # convention (tray cells start empty, inventoried sites start occupied).
     initially_occupied: bool | None = None
+    # End of the device pose epoch the site belongs to (from discovery); None = open-ended.
+    valid_until_s: float | None = None
 
 
 def grow(rect_mm, by_mm: float) -> list[float]:
@@ -53,6 +55,7 @@ def load_inventory(path: Path, view: str) -> tuple[list[Zone], dict]:
     for site in sites:
         others = tuple(tuple(other["rect_mm"]) for other in sites if other["id"] != site["id"])
         zones.append(Zone(site["id"], "site", tuple(site["rect_mm"]), valid_from_s=float(site.get("valid_from_s", start)),
+                          valid_until_s=None if site.get("valid_until_s") is None else float(site["valid_until_s"]),
                           excluded_from_anchor=others,
                           initially_occupied=_declared_occupancy(path, site["id"], site.get("initially"))))
     return zones, inventory

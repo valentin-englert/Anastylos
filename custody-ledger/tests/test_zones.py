@@ -46,9 +46,11 @@ class InventoryOccupancyTests(unittest.TestCase):
             path = Path(tmp) / "inventory.json"
             path.write_text(json.dumps({"schema": "custody-site-inventory@1", "view": "surface_a3", "inventory_t_s": 0.0,
                                         "sites": [{"id": "S1", "rect_mm": [1, 1, 5, 5]},
-                                                  {"id": "S2", "rect_mm": [9, 1, 5, 5], "valid_from_s": 20.5}]}), encoding="utf-8")
+                                                  {"id": "S2", "rect_mm": [9, 1, 5, 5], "valid_from_s": 20.5, "valid_until_s": 40.0}]}),
+                            encoding="utf-8")
             sites, _ = load_inventory(path, "surface_a3")
         self.assertEqual({s.id: s.valid_from_s for s in sites}, {"S1": 0.0, "S2": 20.5})
+        self.assertEqual({s.id: s.valid_until_s for s in sites}, {"S1": None, "S2": 40.0})
 
     def test_unknown_cell_or_value_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:

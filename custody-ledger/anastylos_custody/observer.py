@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.5.0"
+OBSERVER_VERSION = "1.5.1"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -109,6 +109,7 @@ class ZoneObserver:
     not_clean_s: float = 0.0
     trace: list[dict] | None = None  # per-sample diagnostics when not None
     initially_occupied: bool | None = None  # None: v1.0 convention (see module docstring)
+    valid_until_s: float | None = None  # end of the site's device pose epoch (1.5.1); the site ends there
     _baseline: np.ndarray | None = None
     _reference: np.ndarray | None = None
     _anchor_reference: np.ndarray | None = None
@@ -131,6 +132,13 @@ class ZoneObserver:
         dt = 0.0 if self._last_t is None else t - self._last_t
         self._last_t = t
         if t < self._starts_at() or self.status in ("epoch_broken", "inventory_not_observable"):
+            return
+        if self.valid_until_s is not None and t > self.valid_until_s:
+            # Discovery saw this device pose end here: the site is unknown from now on, like a pose break.
+            self.status = "epoch_broken"
+            self.events.append({"zone": self.zone_id, "zone_kind": self.zone_kind, "kind": "pose_epoch_break",
+                                "t_before_s": round(self.valid_until_s, 3), "t_after_s": round(t, 3),
+                                "frame_before": frame_index, "frame_after": frame_index, "reason": "device pose epoch ended (discovery)"})
             return
         if self._reference is None and t - self.valid_from_s > self.params.init_tolerance_s and self.zone_kind == "site":
             self.status = "inventory_not_observable"

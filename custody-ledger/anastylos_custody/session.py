@@ -37,7 +37,8 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
                for start in sorted({z.valid_from_s for z in site_zones})}
     device = devices[min(devices)] if devices else None
     observers = [ZoneObserver(zone.id, zone.kind, _geometry(zone, rectifier, custody["zones"]), params, zone.valid_from_s,
-                              devices[zone.valid_from_s] if zone.kind == "site" else None, initially_occupied=zone.initially_occupied)
+                              devices[zone.valid_from_s] if zone.kind == "site" else None, initially_occupied=zone.initially_occupied,
+                              valid_until_s=zone.valid_until_s)
                  for zone in zones]
     for observer in observers:
         if observer.zone_id in trace_zones:

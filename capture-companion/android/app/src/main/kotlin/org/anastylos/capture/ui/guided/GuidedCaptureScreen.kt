@@ -228,6 +228,7 @@ private fun StateGrid(state: GuidanceUiState) {
             "\nTracking ${state.registration}" +
             (state.wireReason?.let { " ($it)" } ?: "") +
             " · Dwell ${dwellText(state)}" +
+            "\nMarkers ${if (state.markersSeen.isEmpty()) "—" else state.markersSeen.joinToString()}" +
             "\nPose age ${state.poseAgeMs?.let { "${it}ms" } ?: "—"}" +
             " · RMS ${state.rmsPx?.let { "%.2f".format(it) } ?: "—"}px" +
             " · Quality ${state.qualityVerdict}" +

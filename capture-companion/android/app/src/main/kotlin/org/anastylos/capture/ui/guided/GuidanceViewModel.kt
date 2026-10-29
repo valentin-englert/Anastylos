@@ -147,6 +147,8 @@ data class GuidanceUiState(
     val poseAgeMs: Long? = null,
     val rmsPx: Double? = null,
     val cornersPx: List<PoseEstimator.MarkerCorners> = emptyList(),
+    /** Raw detected marker IDs (empty when the detector saw nothing). */
+    val markersSeen: List<Int> = emptyList(),
     val overlayGeometry: GuidedCamera.StreamGeometry? = null,
     val qualityVerdict: ImageQualityVerdict = ImageQualityVerdict.Unknown,
     val measuredSharpness: Double? = null,
@@ -1028,7 +1030,8 @@ class GuidanceViewModel(
             it.copy(
                 registration = registration, wireReason = wireReason,
                 poseAgeMs = ageMs, rmsPx = estimate.rmsPx,
-                cornersPx = estimate.cornersPx, dwell = dwellState,
+                cornersPx = estimate.cornersPx, markersSeen = estimate.markerIdsSeen,
+                dwell = dwellState,
                 cues = cues, orientationOk = orientationOk, distanceOk = distanceOk,
                 qualityVerdict = quality,
                 measuredSharpness = estimate.frameQuality?.sharpness,

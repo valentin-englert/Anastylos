@@ -217,6 +217,16 @@ class OpenCvPoseEstimator(
 }
 
 /**
+ * Reshapes one row-major corner quad (4 xy pairs from a bulk
+ * Mat.get, valid for both 1x4 and 4x1 CV_32FC2 layouts) into
+ * four image points. Returns null unless exactly 8 floats arrive.
+ */
+internal fun quadPointsRowMajor(flat: FloatArray): List<List<Double>>? {
+    if (flat.size != 8) return null
+    return (0..3).map { i -> listOf(flat[i * 2].toDouble(), flat[i * 2 + 1].toDouble()) }
+}
+
+/**
  * Production OpenCV backend. Loads the native library lazily on
  * first use (`OpenCVLoader.initLocal()` reads `libopencv_java4.so`
  * from the APK; no OpenCV Manager). Every Mat is released in
@@ -277,13 +287,18 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
             if (ids.empty()) return emptyList()
             val out = mutableListOf<PoseMath.MarkerDetection>()
             for (marker in 0 until ids.rows()) {
-                val id = ids.get(marker, 0)[0].toInt()
-                val quad = corners[marker]
-                val points = (0..3).map { corner ->
-                    val point = quad.get(corner, 0)
-                    listOf(point[0], point[1])
-                }
-                out += PoseMath.MarkerDetection(id, points)
+                if (marker >= corners.size) continue
+                val idRow = ids.get(marker, 0) ?: continue
+                // Corner quads arrive row-major as 1x4 CV_32FC2 on the
+                // 4.14 Android binding (4x1 elsewhere); one bulk read
+                // covers both layouts, per-pixel get() NPE'd (HW-03).
+                val quad = FloatArray(8)
+                // Bulk Mat.get returns BYTES copied (8 floats -> 32),
+                // not element count (observed on-device, HW-03).
+                val bytesCopied = corners[marker].get(0, 0, quad)
+                if (bytesCopied != quad.size * Float.SIZE_BYTES) continue
+                val points = quadPointsRowMajor(quad) ?: continue
+                out += PoseMath.MarkerDetection(idRow[0].toInt(), points)
             }
             return out
         } finally {

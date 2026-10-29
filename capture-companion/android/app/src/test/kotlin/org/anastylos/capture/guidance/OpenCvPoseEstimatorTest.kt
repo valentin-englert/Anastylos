@@ -233,6 +233,25 @@ class OpenCvPoseEstimatorTest {
     }
 
     @Test
+    fun quadReshapePreservesCornerOrder() {
+        // Row-major bulk read shared by the 1x4 (Android 4.14) and
+        // 4x1 corner layouts: pairs must keep native corner order.
+        val points = quadPointsRowMajor(floatArrayOf(1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f))
+        assertThat(points).isEqualTo(
+            listOf(listOf(1.0, 2.0), listOf(3.0, 4.0), listOf(5.0, 6.0), listOf(7.0, 8.0)),
+        )
+    }
+
+    @Test
+    fun quadReshapeRejectsShortBuffer() {
+        // A partial bulk read (empty or truncated quad Mat) must
+        // drop the marker instead of indexing past the buffer.
+        assertThat(quadPointsRowMajor(floatArrayOf(1f, 2f, 3f, 4f))).isNull()
+        assertThat(quadPointsRowMajor(floatArrayOf())).isNull()
+    }
+
+
+    @Test
     fun closeReleasesBackend() {
         val backend = FakeBackend()
         OpenCvPoseEstimator(backend).close()

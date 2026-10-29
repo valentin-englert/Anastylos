@@ -322,6 +322,27 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun markersSeenMirrorsDetectorOutput() = runTest(dispatcher) {
+        // HARDWARE-03: the UI must distinguish "detector saw
+        // nothing" from "saw markers but registration failed".
+        armWithTarget()
+        nowNs = feedBaseNs + 140_000_000L
+        camera.estimateFlow.emit(validEstimate(feedBaseNs + 100_000_000L))
+        advanceUntilIdle()
+        assertThat(viewModel.state.value.markersSeen).containsExactly(10, 11, 12, 13, 14)
+        nowNs += 100_000_000L
+        camera.estimateFlow.emit(
+            validEstimate(nowNs - 40_000_000L).copy(
+                tBC = null, status = WireRegistration.LOST,
+                markerIdsSeen = emptyList(), cornerCount = 0,
+                rmsPx = null, cornersPx = emptyList(),
+            ),
+        )
+        advanceUntilIdle()
+        assertThat(viewModel.state.value.markersSeen).isEmpty()
+    }
+
+    @Test
     fun fullFlowFiresOnceAndPersists() = runTest(dispatcher) {
         armWithTarget()
         feedStableDwell()

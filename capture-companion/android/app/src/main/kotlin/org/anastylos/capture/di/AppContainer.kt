@@ -3,6 +3,7 @@ package org.anastylos.capture.di
 import android.app.Application
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import java.io.File
@@ -104,7 +105,12 @@ class AppContainer(context: Context) {
                         ).also { it.attachPreview(preview) }
                     },
                     prefs = guidedPrefs,
-                    nanoClock = { System.nanoTime() },
+                    // Camera sensor timestamps live in the elapsedRealtimeNanos
+                    // domain (CLOCK_BOOTTIME); System.nanoTime() excludes
+                    // suspend time, which produced negative pose ages on
+                    // real phones (HARDWARE-03). SENSOR_INFO_TIMESTAMP_SOURCE
+                    // reads REALTIME on the SM-A536B, confirming the domain.
+                    nanoClock = { SystemClock.elapsedRealtimeNanos() },
                     utcClock = { java.time.Instant.now() },
                     pairingStore = pairingStore,
                     remoteFactory = GuidedRemoteFactory { transport ->

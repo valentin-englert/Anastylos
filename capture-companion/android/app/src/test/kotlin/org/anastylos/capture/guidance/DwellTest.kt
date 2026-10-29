@@ -58,6 +58,17 @@ class DwellTest {
     }
 
     @Test
+    fun negativePoseAgeResetsToIdle() {
+        // HARDWARE-03: mixed clock domains once produced negative
+        // ages; they must fail closed, never count as fresh.
+        val dwell = DwellAccumulator()
+        for (i in 0..7) {
+            dwell.observe(sample(i * 80L))
+        }
+        assertThat(dwell.observe(sample(8 * 80L, age = -541578L))).isEqualTo(DwellState.Idle)
+    }
+
+    @Test
     fun speedViolationResetsToIdle() {
         val dwell = DwellAccumulator()
         for (i in 0..7) {

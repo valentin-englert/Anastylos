@@ -57,10 +57,13 @@ class DwellAccumulator(
         }
 
     fun observe(sample: StabilitySample): DwellState {
+        // A negative age means the estimate postdates the clock
+        // (mixed time domains); it fails closed like any stale
+        // sample, matching ShutterGate's age < 0 rejection.
         val eligible = sample.gatesPass &&
             sample.speedMmS < maxSpeedMmS &&
             sample.angularSpeedDegS < maxAngularSpeedDegS &&
-            sample.poseAgeMs <= maxPoseAgeMs
+            sample.poseAgeMs in 0..maxPoseAgeMs
         val last = lastMs
         val timeWentBackwards = last != null && sample.tMs < last
         if (!eligible || timeWentBackwards || (last != null && sample.tMs - last > maxGapMs)) {

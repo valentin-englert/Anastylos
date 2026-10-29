@@ -48,50 +48,105 @@ def _custody_history(custody: dict | None, cell: str | None) -> list[dict]:
     return history
 
 
+def _storage_by_target(events: list[dict]) -> dict[str, dict]:
+    storage = {}
+    for event in events:
+        if event["type"] == "tray_link":
+            storage[event["observation_id"]] = {"location": f"cell-{event['tray']['number']}", "record": event["id"],
+                                                "basis": event["basis"]["kind"], "confirmed_by": event["basis"].get("confirmed_by"),
+                                                "note": event["basis"].get("note")}
+        elif event["type"] == "storage_link":
+            storage[event["target_id"]] = {"location": event["location"], "record": event["id"], "basis": "human",
+                                           "confirmed_by": event["basis"]["confirmed_by"], "note": event["basis"].get("note")}
+    return storage
+
+
+def _part(event: dict, index: int, phase: str | None, stored: dict | None, sites: list[dict], custody: dict | None) -> dict:
+    if event["type"] == "observation":
+        source = {**_source_site(event["centroid_mm"], sites), "centroid_mm": event["centroid_mm"], "bbox_mm": event["bbox_mm"],
+                  "evidence_pair": event["evidence"]["pair_id"], "evidence_result_sha256": event["evidence"].get("result_sha256")}
+        basis, label = "automatic", None
+    else:
+        source = {"described_as": event["source"], "evidence_note": event.get("evidence_note")}
+        basis, label = "operator_declared", event["operator_label"]
+    cell = (stored or {}).get("location") if str((stored or {}).get("location", "")).startswith("cell-") else None
+    return {
+        "id": event["id"],
+        "basis": basis,
+        "operator_label": label,
+        "removal_index": index,
+        "phase": phase,
+        "identity": "unknown: evidence of a removal, not a verified part" if basis == "automatic"
+                    else "operator's label, not verified by the system",
+        "source": source,
+        "stored_in": stored,
+        "custody_history": _custody_history(custody, cell),
+    }
+
+
+def _install_steps(parts: list[dict]) -> list[dict]:
+    """Reverse removal order; consecutive members of one interchangeable group become one step."""
+    steps = []
+    for part in reversed(parts):
+        target = part["source"].get("site") or part["source"].get("described_as") or part["source"].get("centroid_mm")
+        group = part.get("group")
+        if group and steps and steps[-1].get("group") == group["id"]:
+            steps[-1]["parts"].append(part["id"])
+            steps[-1]["to"].append(target)
+            continue
+        steps.append({"parts": [part["id"]], "label": part["operator_label"], "basis": part["basis"],
+                      "from": (part["stored_in"] or {}).get("location"), "to": [target], "phase": part["phase"],
+                      **({"group": group["id"], "rule": "any member into any listed source"} if group else {})})
+    for number, step in enumerate(steps, start=1):
+        step["step"] = number
+    return steps
+
+
 def build(memory_path: Path, inventory_path: Path | None, custody_path: Path | None,
           returns_path: Path | None) -> dict:
     events = _read_jsonl(memory_path)
     superseded = {event["supersedes"] for event in events if event.get("supersedes")}
-    observations = [e for e in events if e["type"] == "observation" and e["id"] not in superseded]
-    links = {e["observation_id"]: e for e in events if e["type"] == "tray_link" and e["id"] not in superseded}
+    live = [e for e in events if e["id"] not in superseded]
     sites = json.loads(inventory_path.read_text(encoding="utf-8"))["sites"] if inventory_path else []
     custody = json.loads(custody_path.read_text(encoding="utf-8")) if custody_path else None
+    storage = _storage_by_target(live)
+    groups = {member: group for group in live if group["type"] == "compatible_group" for member in group["members"]}
+    phases = {e["id"]: e["label"] for e in live if e["type"] == "phase"}
 
-    parts = []
-    for index, obs in enumerate(observations, start=1):
-        link = links.get(obs["id"])
-        cell = f"cell-{link['tray']['number']}" if link else None
-        parts.append({
-            "observation": obs["id"],
-            "removal_index": index,
-            "identity": "unknown: evidence of a removal, not a verified part",
-            "source": {**_source_site(obs["centroid_mm"], sites), "centroid_mm": obs["centroid_mm"],
-                       "bbox_mm": obs["bbox_mm"], "evidence_pair": obs["evidence"]["pair_id"],
-                       "evidence_result_sha256": obs["evidence"].get("result_sha256")},
-            "stored_in": None if not link else {
-                "cell": cell, "tray_link": link["id"], "basis": link["basis"]["kind"],
-                "confirmed_by": link["basis"].get("confirmed_by"), "note": link["basis"].get("note")},
-            "custody_history": _custody_history(custody, cell),
-        })
+    parts, phase = [], None
+    for event in live:
+        if event["type"] == "phase":
+            phase = event["id"]
+        elif event["type"] in ("observation", "declared_removal"):
+            part = _part(event, len(parts) + 1, event.get("phase", phase), storage.get(event["id"]), sites, custody)
+            if event["id"] in groups:
+                group = groups[event["id"]]
+                part["group"] = {"id": group["id"], "label": group.get("label"), "members": group["members"],
+                                 "basis": group["basis"]["kind"], "note": group["basis"].get("note")}
+            part["phase_label"] = phases.get(part["phase"])
+            parts.append(part)
 
-    install = [{"step": n, "observation": part["observation"], "from": (part["stored_in"] or {}).get("cell"),
-                "to": part["source"]["site"] or part["source"]["centroid_mm"]}
-               for n, part in enumerate(reversed(parts), start=1)]
+    install = _install_steps(parts)
     unknowns = [
         "No mechanical dependency between parts was observed or confirmed; install order is only the reverse "
-        "of the observed removal order.",
-        "Part identity was never verified; a part is followed by temporal custody and operator confirmation.",
-        "Anything removed outside the watched sites and cells is not in this session.",
+        "of the recorded removal order, phase by phase.",
+        "Part identity was never verified; automatic parts are followed by temporal custody, declared parts are the "
+        "operator's statement.",
+        "Anything removed outside the watched sites and cells and not declared is not in this session.",
         "Reassembly progress is known only from return checks below or from what the operator says in the chat.",
     ]
-    unknowns += [f"{p['observation']} has no confirmed storage cell." for p in parts if not p["stored_in"]]
-    unknowns += [f"{p['observation']} source lies in no inventory site (anonymous location)."
-                 for p in parts if not p["source"]["site"]]
+    unknowns += [f"{p['id']} has no recorded storage place." for p in parts if not p["stored_in"]]
+    unknowns += [f"{p['id']} (automatic) source lies in no inventory site (anonymous location)."
+                 for p in parts if p["basis"] == "automatic" and not p["source"].get("site")]
+    unknowns += [f"group {g['id']} ({g.get('label')}): interchangeability is the operator's statement, not measured."
+                 for g in {id(v): v for v in groups.values()}.values() if g["basis"]["kind"] == "operator_statement"]
 
     package = {
         "schema": SCHEMA,
+        "phases": [{"id": e["id"], "label": e["label"], "starts_after": e.get("starts_after")} for e in live if e["type"] == "phase"],
         "parts": parts,
-        "install_order": {"basis": "reverse observed removal order (no confirmed dependencies)", "steps": install},
+        "install_order": {"basis": "reverse recorded removal order, phase by phase (no confirmed dependencies); "
+                                   "interchangeable group members form one step", "steps": install},
         "dependencies": {"confirmed": [], "note": "none recorded in this session"},
         "unknowns": unknowns,
         "inputs": {name: None if path is None else {"path": str(path), "sha256": _sha256(path)}

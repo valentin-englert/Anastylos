@@ -36,15 +36,39 @@ class PackageTest(unittest.TestCase):
             package = _session(tmp)
         first, second = package["parts"]
         self.assertEqual(first["source"]["site"], "W-YELLOW")
-        self.assertEqual(first["stored_in"]["cell"], "cell-6")
+        self.assertEqual(first["stored_in"]["location"], "cell-6")
         self.assertIsNone(second["source"]["site"])
-        self.assertEqual([s["observation"] for s in package["install_order"]["steps"]], ["obs-0002", "obs-0001"])
-        self.assertTrue(any("obs-0002 has no confirmed storage cell" in u for u in package["unknowns"]))
+        self.assertEqual([s["parts"] for s in package["install_order"]["steps"]], [["obs-0002"], ["obs-0001"]])
+        self.assertTrue(any("obs-0002 has no recorded storage place" in u for u in package["unknowns"]))
 
     def test_without_inventory_every_source_is_anonymous(self):
         with tempfile.TemporaryDirectory() as tmp:
             package = _session(tmp, with_inventory=False)
         self.assertTrue(all(p["source"]["site"] is None for p in package["parts"]))
+
+
+class DeclaredPackageTest(unittest.TestCase):
+    def test_declared_parts_phases_groups_and_install_order(self):
+        lines = [
+            {"type": "phase", "id": "phase-0001", "label": "P1", "starts_after": None},
+            {"type": "declared_removal", "id": "dec-0001", "operator_label": "screw", "source": "hole H2", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "declared_removal", "id": "dec-0002", "operator_label": "screw", "source": "hole H1", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "storage_link", "id": "store-0001", "target_id": "dec-0001", "location": "cell-1", "basis": {"kind": "human", "confirmed_by": "owner"}},
+            {"type": "storage_link", "id": "store-0002", "target_id": "dec-0002", "location": "cell-1", "basis": {"kind": "human", "confirmed_by": "owner"}},
+            {"type": "compatible_group", "id": "grp-0001", "members": ["dec-0001", "dec-0002"], "label": "screws",
+             "basis": {"kind": "operator_statement", "declared_by": "owner"}},
+            {"type": "phase", "id": "phase-0002", "label": "P2", "starts_after": "phase-0001"},
+            {"type": "declared_removal", "id": "dec-0003", "operator_label": "back shell", "source": "device", "phase": "phase-0002", "declared_by": "owner"},
+            {"type": "storage_link", "id": "store-0003", "target_id": "dec-0003", "location": "OUT-B", "basis": {"kind": "human", "confirmed_by": "owner"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            package = build(_write(tmp, "memory.jsonl", "".join(json.dumps(line) + chr(10) for line in lines)), None, None, None)
+        steps = package["install_order"]["steps"]
+        self.assertEqual([s["parts"] for s in steps], [["dec-0003"], ["dec-0002", "dec-0001"]])
+        self.assertEqual(steps[0]["from"], "OUT-B")
+        self.assertEqual(steps[1]["group"], "grp-0001")
+        self.assertTrue(all(p["basis"] == "operator_declared" for p in package["parts"]))
+        self.assertTrue(any("not measured" in u for u in package["unknowns"]))
 
 
 class GroundingCheckTest(unittest.TestCase):

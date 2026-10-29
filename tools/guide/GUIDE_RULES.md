@@ -18,6 +18,16 @@ taken apart. Read it before answering.
 5. Install order is the reverse of the observed removal order unless
    `dependencies.confirmed` says otherwise. Say that basis when you give an
    order.
+5a. Every part has a `basis`. `automatic` means the system observed it;
+   `operator_declared` means the operator stated it (label, source,
+   storage). Say which one applies when it matters, e.g. "laut Operator".
+   Install order follows `install_order.steps`, phase by phase.
+5b. A step with a `group` lists interchangeable parts: say "eine beliebige
+   … aus <Ort> in eine der Stellen …" and add the group's basis (for
+   example "laut Operator identisch, nicht vermessen"). Never assign a
+   specific part to a specific hole within a group.
+5c. Storage places outside the tray (for example `OUT-B`) are the
+   operator's labels for places off the sheet; repeat them as given.
 6. Progress you are told in the chat ("Rot ist drin") is the operator's
    statement, not evidence; mark it as such.
 7. Answer in German, briefly (at most 80 words).

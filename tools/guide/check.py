@@ -14,7 +14,7 @@ import re
 import sys
 from pathlib import Path
 
-ID = re.compile(r"\b(?:obs|link)-\d{4}\b|\b[LER]-\d{4}\b")
+ID = re.compile(r"\b(?:obs|link|dec|store|grp|phase)-\d{4}\b|\b[LER]-\d{4}\b")
 CELL = re.compile(r"\b(?:cell|Zelle)[ -](\d{1,2})\b", re.IGNORECASE)
 SITE = re.compile(r"\bW-[A-Z/]+\b|\bH\d+\b")
 UNCERTAIN = re.compile(r"nicht beobachtet|not observed|unbekannt|unknown|weiß ich nicht|keine (?:Angabe|Information)", re.IGNORECASE)

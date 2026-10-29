@@ -384,3 +384,37 @@ Development-data runs (`C:\ANASTYLOS\data\session-runs\`):
 FULL-01 now needs 13 operator answers instead of a hand-written 14-row
 parts list plus manual memory commands. Next: turn answers into declared
 events automatically, and have the guide ask the questions.
+
+## 17. Device pose epochs with re-acquisition (2026-10-29) — development data
+
+`feat/custody-v1.3` commits `3b6d5f3a`, `eb8b20df` (observer 1.5.1,
+proposals 0.3.1, linker 1.5), 82/82 tests. When a device pose epoch ends,
+discovery waits for a quiet scene, finds the device again and starts a new
+epoch; sources are never continued across epochs. Each inventory site
+carries its epoch's `valid_from_s` (shifted by the observer's 2 s
+initialisation margin, so its first reference is taken in the quiet
+moment) and `valid_until_s` (the epoch's end); the observer uses one
+device pose per epoch and ends a site at `valid_until_s` with a
+`pose_epoch_break`. The linker ends such blind spots where a later epoch
+re-acquired the device; a custody window that overlaps the transition
+stays blocked. Residual risk (scope note): a part removed unseen during a
+pose change and carried across the later quiet scene is not detected.
+
+Session runs (`C:\ANASTYLOS\data\session-runs-v151\`), against the run
+before re-acquisition:
+
+| Run | Before | With re-acquisition |
+|---|---|---|
+| E2 | 4 written, 1 question | unchanged |
+| FULL-01 P1, P3 | 0 / 2 written | unchanged |
+| FULL-01 P2 | epoch ends at 18.2 s, no sources, 3 deposits `unattributed` | epoch 2 from 20.2 s (27 proposals); L, R and nubs now have 3–5 candidate sources each, still `ambiguous` |
+| SNES-01 freestyle | one epoch until 6.35 s | epoch 2 from 112.2 s (133 proposals); deposits during the hand-held minutes (6–112 s) correctly `unattributed`; later ones `ambiguous` |
+
+An intermediate version without `valid_until_s` let an epoch-1 site keep
+reporting "removals" while the controller was hand-held and produced two
+spurious links on SNES-01; `valid_until_s` removed them.
+
+Remaining weakness for P2 and freestyle footage: without hands-off pauses
+the removal and deposit windows are long and overlap, so several
+candidates stay open per deposit. Narrower windows need hand tracking
+(requirement H1), not more linker rules.

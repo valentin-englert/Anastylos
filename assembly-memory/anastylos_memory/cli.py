@@ -239,7 +239,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     dec = record_sub.add_parser("declared-removal", help="operator-declared removal without image evidence")
     dec.add_argument("--label", required=True, help="the operator's own words for the part")
-    dec.add_argument("--source", required=True, help="where it came from, in the operator's words or a site id")
+    dec.add_argument("--source", default=None,
+                     help="where it came from, in the operator's words or a site id; omit when the operator did not say")
     dec.add_argument("--phase", required=True, help="phase id")
     dec.add_argument("--declared-by", required=True)
     dec.add_argument("--t-s", type=float, default=None, help="video time, if known")

@@ -155,7 +155,8 @@ def validate_phase(event: dict, events_by_id: dict[str, dict]) -> None:
 def validate_declared_removal(event: dict, events_by_id: dict[str, dict]) -> None:
     _require_text(event, "session", "declared_removal")
     _require_text(event, "operator_label", "declared_removal")
-    _require_text(event, "source", "declared_removal")
+    if event.get("source") is not None:  # null: the operator did not state where it came from
+        _require_text(event, "source", "declared_removal")
     _require_text(event, "declared_by", "declared_removal")
     _require_known(_require_text(event, "phase", "declared_removal"), events_by_id, ("phase",), "declared_removal")
     if event.get("t_s") is not None and not _is_number(event["t_s"]):

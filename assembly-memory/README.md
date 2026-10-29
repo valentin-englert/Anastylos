@@ -30,7 +30,8 @@ evidence):
 - `phase` — a pose phase (`label`, optional `pose_note`, `starts_after`
   the previous phase); orders removals across pose changes.
 - `declared_removal` — a removal without image evidence: `operator_label`
-  (the operator's own words), `source`, `phase`, `declared_by`, optional
+  (the operator's own words), `source` (null when the operator did not
+  state it: the part is known, its origin is not), `phase`, `declared_by`, optional
   `t_s`, `observation_id` (an automatic observation it refers to) and
   `evidence_note`. No mm geometry is required or invented.
 - `storage_link` — where an `observation` or `declared_removal` is stored:

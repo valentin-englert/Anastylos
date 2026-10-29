@@ -144,6 +144,8 @@ def build(memory_path: Path, inventory_path: Path | None, custody_path: Path | N
         "Reassembly progress is known only from return checks below or from what the operator says in the chat.",
     ]
     unknowns += [f"{p['id']} has no recorded storage place." for p in parts if not p["stored_in"]]
+    unknowns += [f"{p['id']} ({p['operator_label']}): the operator did not state where it came from; its source is unknown."
+                 for p in parts if p["basis"] == "operator_declared" and p["source"]["described_as"] is None]
     unknowns += [f"{p['id']} has no removal time; its order within its phase is only the log order." for p in parts if p["t_s"] is None]
     unknowns += [f"{p['id']} (automatic) source lies in no inventory site (anonymous location)."
                  for p in parts if p["basis"] == "automatic" and not p["source"].get("site")]

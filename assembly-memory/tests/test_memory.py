@@ -384,6 +384,14 @@ class DeclaredEventsTest(unittest.TestCase):
                             "--measurement", json.dumps({"length_mm": [8.0, 8.0, 8.1]}), "--supersedes", group["id"])
         self.assertEqual(measured["basis"]["kind"], "measured")
 
+    def test_declared_part_with_unknown_source_is_kept_and_blank_source_is_not(self):
+        phase = self.rec("phase", "--label", "P2")
+        pcb = self.rec("declared-removal", "--label", "PCB with cable", "--phase", phase["id"], "--declared-by", "owner", "--t-s", "68")
+        self.assertIsNone(pcb["source"])
+        self.assertEqual(load_events(self.session / "memory.jsonl")[-1]["operator_label"], "PCB with cable")
+        with self.assertRaises(ValidationError):
+            self.rec("declared-removal", "--label", "x", "--source", " ", "--phase", phase["id"], "--declared-by", "owner")
+
     def test_rejects_declared_removal_without_known_phase_or_declarer(self):
         with self.assertRaises(ValidationError):
             self.rec("declared-removal", "--label", "x", "--source", "y", "--phase", "phase-9", "--declared-by", "owner")

@@ -70,6 +70,19 @@ class DeclaredPackageTest(unittest.TestCase):
         self.assertTrue(all(p["basis"] == "operator_declared" for p in package["parts"]))
         self.assertTrue(any("not measured" in u for u in package["unknowns"]))
 
+    def test_declared_part_with_unknown_source_stays_and_is_named_unknown(self):
+        lines = [
+            {"type": "phase", "id": "phase-0001", "label": "P2", "starts_after": None},
+            {"type": "declared_removal", "id": "dec-0001", "operator_label": "PCB", "source": None, "phase": "phase-0001",
+             "declared_by": "owner", "t_s": 68},
+            {"type": "storage_link", "id": "store-0001", "target_id": "dec-0001", "location": "OUT", "basis": {"kind": "human", "confirmed_by": "owner"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            package = build(_write(tmp, "memory.jsonl", "".join(json.dumps(line) + chr(10) for line in lines)), None, None, None)
+        self.assertEqual([p["id"] for p in package["parts"]], ["dec-0001"])
+        self.assertIsNone(package["parts"][0]["source"]["described_as"])
+        self.assertTrue(any("dec-0001" in u and "source is unknown" in u for u in package["unknowns"]))
+
 
 class GroundingCheckTest(unittest.TestCase):
     def setUp(self):

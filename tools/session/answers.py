@@ -16,6 +16,13 @@ its question, and writes only valid ones as operator-declared events:
 
 An answer with ``skip: true``, an unknown question, a candidate that was not
 offered, or a missing field is rejected and reported; nothing is guessed.
+
+``remap`` carries answers from an earlier run of the same videos onto a
+rebuilt run. Question ids and event ids may differ, so a question maps only
+when exactly one rebuilt question has the same phase, kind and cell (or
+removal sites) and an overlapping time window; a chosen candidate maps only
+to the one rebuilt candidate with the same sites and an overlapping window.
+Anything else is reported as unresolved and never forced.
 """
 
 from __future__ import annotations
@@ -46,13 +53,66 @@ def load_runs(run_dirs: list[Path]) -> tuple[dict, dict]:
         for part in report["parts"]:
             parts[part["part"]] = {**part, "memory_phase": phase_id}
         for question in _json(run / "questions.json")["questions"]:
-            questions[question["id"]] = {**question, "memory_phase": phase_id}
+            questions[question["id"]] = {**question, "memory_phase": phase_id, "phase_tag": report["phase"]}
     return questions, parts
 
 
 def _sites_text(sources: list[dict]) -> str:
     return ", ".join(f"{s['site']}" + (f" at {s['centroid_mm'][0]:.0f}/{s['centroid_mm'][1]:.0f} mm" if s.get("centroid_mm") else "")
                      for s in sources)
+
+
+def _overlap(a: list[float], b: list[float]) -> float:
+    """Intersection over union of two time windows (0 when they do not overlap)."""
+    inter = min(a[1], b[1]) - max(a[0], b[0])
+    union = max(a[1], b[1]) - min(a[0], b[0])
+    return max(0.0, inter) / union if union > 0 else float(a == b)
+
+
+def _sites(sources: list[dict]) -> frozenset:
+    return frozenset(s["site"] for s in sources)
+
+
+def _same_context(old: dict, new: dict, min_overlap: float) -> bool:
+    if (old["kind"], old.get("phase_tag")) != (new["kind"], new.get("phase_tag")):
+        return False
+    if old["kind"] == "source_of_part":
+        return old["cell"] == new["cell"] and _overlap(old["deposit_window_s"], new["deposit_window_s"]) >= min_overlap
+    return bool(_sites(old["sources"]) & _sites(new["sources"])) and _overlap(old["window_s"], new["window_s"]) >= min_overlap
+
+
+def remap(answers: list[dict], old_questions: dict, new_questions: dict, min_overlap: float = 0.5) -> tuple[list[dict], list[dict]]:
+    """(answers rewritten for the rebuilt questions, one report entry per input answer)."""
+    replayed, report = [], []
+    for answer in answers:
+        old = old_questions.get(answer.get("question"))
+        if answer.get("question") == "EXTRA" or old is None or old["kind"] == "extra":
+            if answer.get("question") == "EXTRA":
+                replayed.append({**answer, "replayed_from": {"question": "EXTRA"}})
+            report.append({"question": answer.get("question"), "outcome": "carried" if answer.get("question") == "EXTRA" else "unknown_question"})
+            continue
+        matches = [q for q in new_questions.values() if q["kind"] != "extra" and _same_context(old, q, min_overlap)]
+        if len(matches) != 1:
+            outcome = ("false_positive_eliminated" if answer.get("not_a_part") else "unresolved_no_counterpart") if not matches \
+                else "unresolved_ambiguous"
+            report.append({"question": old["id"], "outcome": outcome, "matches": [q["id"] for q in matches], "answer": answer})
+            continue
+        new = matches[0]
+        entry = {**answer, "question": new["id"], "replayed_from": {"question": old["id"]}}
+        result = {"question": old["id"], "outcome": "mapped", "to": new["id"]}
+        if answer.get("choice"):
+            chosen = next(c for c in old["candidates"] if c["removal_event"] == answer["choice"])
+            same = [c for c in new.get("candidates", []) if _sites(c["sources"]) == _sites(chosen["sources"])
+                    and _overlap(c["window_s"], chosen["window_s"]) >= min_overlap]
+            if len(same) != 1:
+                report.append({**result, "outcome": "unresolved_candidate", "old_choice": answer["choice"],
+                               "matches": [c["removal_event"] for c in same], "answer": answer})
+                continue
+            entry["choice"] = same[0]["removal_event"]
+            result["choice"] = [answer["choice"], same[0]["removal_event"]]
+        replayed.append(entry)
+        report.append(result)
+    return replayed, report
 
 
 def plan(answer: dict, questions: dict) -> dict:
@@ -67,11 +127,14 @@ def plan(answer: dict, questions: dict) -> dict:
     label = answer.get("label") or "part (no name given)"
     if question["kind"] == "extra":
         phase = question["phases"].get(answer.get("phase"))
-        missing = [k for k in ("label", "source", "destination") if not str(answer.get(k) or "").strip()]
+        missing = [k for k in ("label", "destination") if not str(answer.get(k) or "").strip()]
         if phase is None or missing:
             return {"rejected": f"extra part needs a known 'phase' {sorted(question['phases'])} and {missing or 'nothing else'}"}
-        return {"label": answer["label"], "source": answer["source"], "location": answer["destination"], "phase": phase,
-                "part": None, "note": "operator-added part that raised no question", "t_s": answer.get("t_s")}
+        # A part the operator named stays in memory even without its origin; the source is then explicitly unknown.
+        source = str(answer.get("source") or "").strip() or None
+        return {"label": answer["label"], "source": source, "location": answer["destination"], "phase": phase,
+                "part": None, "note": "operator-added part that raised no question" + ("" if source else "; source not stated"),
+                "t_s": answer.get("t_s")}
     if question["kind"] == "source_of_part":
         if answer.get("choice"):
             chosen = next((c for c in question["candidates"] if c["removal_event"] == answer["choice"]), None)
@@ -85,15 +148,21 @@ def plan(answer: dict, questions: dict) -> dict:
         else:
             return {"rejected": "needs 'choice' (an offered candidate) or 'source' (the operator's words)"}
         return {"label": label, "source": source, "location": question["cell"], "phase": question["memory_phase"],
-                "part": question["part"], "note": f"answer to {question['id']}", "t_s": t_s}
+                "part": question["part"], "note": _note(question["id"], answer), "t_s": t_s}
     if question["kind"] == "destination_of_removal":
         destination = str(answer.get("destination", "")).strip()
         if not destination:
             return {"rejected": "needs 'destination' (cell-N or a place name)"}
         return {"label": label, "source": f"removal {question['removal_event']} ({_sites_text(question['sources'])})",
                 "location": destination, "phase": question["memory_phase"], "part": None,
-                "note": f"answer to {question['id']}", "t_s": question["window_s"][0]}
+                "note": _note(question["id"], answer), "t_s": question["window_s"][0]}
     return {"rejected": f"unsupported question kind {question['kind']!r}"}
+
+
+def _note(question_id: str, answer: dict) -> str:
+    replayed = (answer.get("replayed_from") or {}).get("question")
+    note = f"answer to {question_id}" + (f" (replayed from earlier run's {replayed})" if replayed and replayed != question_id else "")
+    return note + (f"; {answer['provenance']}" if answer.get("provenance") else "")
 
 
 def _memory(session: Path, *argv) -> dict:
@@ -111,8 +180,8 @@ def apply(answers: list[dict], questions: dict, session: Path, declared_by: str)
         if "rejected" in action or "dismissed" in action:
             results.append({"question": answer.get("question"), **action})
             continue
-        removal = _memory(session, "record", "declared-removal", "--label", action["label"], "--source", action["source"],
-                          "--phase", action["phase"], "--declared-by", declared_by, "--note", action["note"],
+        removal = _memory(session, "record", "declared-removal", "--label", action["label"],
+                          *([] if action["source"] is None else ["--source", action["source"]]), "--phase", action["phase"], "--declared-by", declared_by, "--note", action["note"],
                           *([] if action.get("t_s") is None else ["--t-s", action["t_s"]]))
         stored = _memory(session, "record", "storage-link", "--target", removal["id"], "--location", action["location"],
                          "--confirmed-by", declared_by, "--note", action["note"])
@@ -164,8 +233,22 @@ def main() -> None:
     app.add_argument("--answers", required=True, type=Path, help="JSON lines, one answer per line")
     app.add_argument("--memory", required=True, type=Path, help="assembly-memory session folder of these runs")
     app.add_argument("--declared-by", required=True)
+    rem = sub.add_parser("remap", help="carry answers from an earlier run onto rebuilt runs of the same videos")
+    rem.add_argument("--old-runs", required=True, nargs="+", type=Path)
+    rem.add_argument("--runs", required=True, nargs="+", type=Path, help="rebuilt session run folders")
+    rem.add_argument("--answers", required=True, type=Path)
+    rem.add_argument("--out", required=True, type=Path, help="replayed answers (JSON lines)")
+    rem.add_argument("--report", required=True, type=Path)
     args = parser.parse_args()
     questions, _ = load_runs(args.runs)
+    if args.command == "remap":
+        answers = [json.loads(line) for line in args.answers.read_text(encoding="utf-8").splitlines() if line.strip()]
+        replayed, report = remap(answers, load_runs(args.old_runs)[0], questions)
+        args.out.write_bytes("".join(json.dumps(a, ensure_ascii=False) + chr(10) for a in replayed).encode("utf-8"))
+        args.report.write_bytes((json.dumps(report, indent=2, ensure_ascii=False) + chr(10)).encode("utf-8"))
+        print(f"{len(replayed)} replayed; " + ", ".join(f"{k} {sum(r['outcome'] == k for r in report)}"
+                                                       for k in sorted({r['outcome'] for r in report})))
+        return
     if args.command == "package":
         print(f"{len(questions)} questions -> {package(questions, args.out)}")
         return

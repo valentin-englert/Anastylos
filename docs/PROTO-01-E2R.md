@@ -240,3 +240,27 @@ Findings for the next version (not applied to this result): judge cell
 occupancy against the known empty-cell appearance instead of the start
 image, so a part put back slightly differently is still "occupied"; give
 the return checker the elimination logic of linker 1.1.
+
+## 15. Development re-run with observer v1.3 (2026-10-29) — retrospective, ground truth known
+
+Not a scored result: the E2R ground truth was already revealed (§14), so
+this only shows whether the two §14 findings are fixed. The §14 PASS
+stays the recorded result.
+
+Changes, branch `feat/custody-v1.3` (worktree `Anastylos-custody-v13`,
+commit `104772a9`), 46/46 tests: optional paper-model cell occupancy
+(`custody-config.paper.json`, print stroke 3 mm, minimum part area
+25 mm², values derived from E2/E2R frames: empty cells 0–15 mm², buttons
+170–180 mm², the yellow button 38–44 mm²). Return checker
+`tools/reassembly/returns.py` `7cddd99a…` (commit `3d1e9143`, 11/11 tests)
+with the elimination logic of linker 1.1.
+
+| Run | Result |
+|---|---|
+| E2, default config, v1.3 vs v1.2 | events and links identical |
+| E2, paper model | links identical to v1.0 (4 exclusive, cell-9 unattributed) |
+| E2R re-analysis, paper model | 5/5 returns `candidate_temporal_exclusive`, all matching the actual file: cell-4 → W-GREEN (`MISMATCH`, C6), W-GREEN → W-RED, cell-9 → W-GREEN, cell-1 → W-BLUE, cell-6 → W-YELLOW; all four wells end `consistent_with_memory`; C5 now reads `changed_while_occupied` instead of a departure |
+
+Elimination was not needed here (the paper model removed the phantom
+departure). Whether the 25 mm² threshold and the paper model hold on
+other parts and lighting is open until an independent test.

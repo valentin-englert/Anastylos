@@ -132,6 +132,12 @@ class Rectifier:
         warp = self._to_rectified @ np.linalg.inv(reference_to_current) @ self._half_res
         return cv2.warpPerspective(cv2.pyrDown(image), warp, self.size, flags=cv2.INTER_LINEAR)
 
+    def visible(self, image_shape: tuple[int, ...], reference_to_current: np.ndarray) -> np.ndarray:
+        """Bool mask of rectified pixels that the camera image actually covers."""
+        warp = self._to_rectified @ np.linalg.inv(reference_to_current) @ self._half_res
+        half = np.full(((image_shape[0] + 1) // 2, (image_shape[1] + 1) // 2), 255, np.uint8)
+        return cv2.warpPerspective(half, warp, self.size, flags=cv2.INTER_NEAREST) > 0
+
     def rect_to_px(self, rect_mm: list[float]) -> tuple[int, int, int, int]:
         """Half-open pixel box (x0, y0, x1, y1) of a frame-mm rectangle, clipped to the image."""
         x, y, w, h = rect_mm

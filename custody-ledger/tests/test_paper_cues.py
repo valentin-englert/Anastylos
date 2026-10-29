@@ -29,7 +29,7 @@ def cell_signals(t, *, part=None, hand=False):
     saturation = np.zeros(SIZE, np.float32)
     edges = np.zeros(SIZE, bool)
     edges[30, 22:38] = True                      # printed digit stroke: 16 px of edges
-    skin = np.zeros(SIZE, bool)
+    hand_mask = np.zeros(SIZE, bool)
     motion = np.zeros(SIZE, bool)
     if part == "white":
         edges[24:36, 24] = edges[24:36, 35] = True    # outline and internal ridges of a white rubber part
@@ -40,9 +40,9 @@ def cell_signals(t, *, part=None, hand=False):
         saturation[24:36, 24:36] = 180.0
     if hand:
         gray[22:30, 0:35] = 200.0
-        skin[22:30, 0:35] = True
+        hand_mask[22:30, 0:35] = True
         motion[10:50, 10:50] = True
-    return FrameSignals(t, gray, motion, skin, saturation, edges)
+    return FrameSignals(t, gray, motion, hand_mask, saturation, edges)
 
 
 def run(observer, spec):

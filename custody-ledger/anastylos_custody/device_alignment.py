@@ -42,30 +42,30 @@ class DevicePose:
         self._attempted_at: float | None = None
         self._attempt_accepted = False
 
-    def initialize(self, t_s: float, gray: np.ndarray, motion: np.ndarray, fresh_skin: np.ndarray) -> None:
+    def initialize(self, t_s: float, gray: np.ndarray, motion: np.ndarray, hand: np.ndarray) -> None:
         """Take the reference; pixels covered by hands or motion at this moment are never used for alignment."""
-        busy = cv2.dilate((self._crop(motion) | self._crop(fresh_skin)).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+        busy = cv2.dilate((self._crop(motion) | self._crop(hand)).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
         self.reference = self._crop(gray).copy()
         self.reference_valid = ~busy
         self.reference_t_s = t_s
 
-    def aligned_layers(self, t_s: float, gray: np.ndarray, motion: np.ndarray, fresh_skin: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Device region of gray, motion and fresh skin in reference coordinates (cached per sample)."""
+    def aligned_layers(self, t_s: float, gray: np.ndarray, motion: np.ndarray, hand: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Device region of gray, motion and the hand mask in reference coordinates (cached per sample)."""
         if self._aligned_at != t_s:
             self._aligned = (
                 warp_into_reference(self._crop(gray), self.warp),
                 _warp_mask(self._crop(motion), self.warp),
-                _warp_mask(self._crop(fresh_skin), self.warp),
+                _warp_mask(self._crop(hand), self.warp),
             )
             self._aligned_at = t_s
         return self._aligned
 
-    def realign(self, t_s: float, gray: np.ndarray, fresh_skin: np.ndarray) -> bool:
+    def realign(self, t_s: float, gray: np.ndarray, hand: np.ndarray) -> bool:
         """Re-register once per sample; True when the warp was updated."""
         if self._attempted_at == t_s:
             return self._attempt_accepted
         self._attempted_at = t_s
-        hands = cv2.dilate(self._crop(fresh_skin).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
+        hands = cv2.dilate(self._crop(hand).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
         mask = self.static_mask & self.reference_valid & ~hands
         warp, report = align(self.reference, self._crop(gray), mask, self.warp, self.limits, feature_mask=mask)
         self._attempt_accepted = warp is not None

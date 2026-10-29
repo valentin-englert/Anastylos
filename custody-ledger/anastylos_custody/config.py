@@ -27,3 +27,11 @@ def load_custody_config(path: Path) -> tuple[dict, dict, dict, dict]:
         **harness_meta,
     }
     return custody, harness, kit, provenance
+
+
+def hand_config(custody: dict) -> dict:
+    """The colour-free hand section; configs with a skin-colour range predate observer 1.7 (H1)."""
+    if "hand" not in custody:
+        raise SystemExit("custody config has no 'hand' section: skin-colour configs (v1.0-v1.6) are retired by "
+                         "requirement H1; use custody-config.v15.json or later")
+    return custody["hand"]

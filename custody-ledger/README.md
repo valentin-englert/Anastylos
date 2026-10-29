@@ -32,14 +32,25 @@ confirmation. Architecture source of truth stays in
 2. **Signals per sample** (5 fps, 3 px/mm rectified):
    - illumination-normalised gray;
    - motion;
-   - "fresh skin": YCrCb skin that moved or appeared in the last 4 s.
-     A still red button or a brown PCB stops counting as skin.
+   - hand mask (`hands.py`, observer 1.7.0 / hands 0.2.0; requirement
+     H1, no colour model): pixels that moved in the last 0.6 s or differ
+     from a hand-free reference of the sheet in any colour channel (raw
+     channels, `hand.normalize_sigma_mm` 0: a forearm can fill any local
+     normalization window and would be flattened to paper grey; the capture
+     standard fixes exposure and white balance), kept only where the
+     component reaches the sheet border or the edge of the camera's view
+     (arms enter from outside). Parts lying on the sheet never reach either
+     edge. FULL-01 P1: hands found in every sampled second 15–88 s, none
+     after the owner's stated end of unscrewing (89 s). Observers
+     up to 1.6.0 used a YCrCb skin-colour range here; configs with a `skin`
+     section are refused from 1.7.0 on (`custody-config.v15.json` has a
+     `hand` section instead).
 3. **Zone observers** (`observer.py`).
    - **Clean** means two things:
      - the zone's context window (zone + 20 mm) has been quiet for 0.6 s;
-     - no hand covers the zone. A hand is a fresh-skin component that
-       overlaps the zone's 3 mm guard box and also extends beyond it.
-       A skin-coloured part lying inside the zone is not a hand.
+     - no hand covers the zone: a hand-mask component overlaps the
+       zone's 3 mm guard box and also extends beyond it. Device alignment
+       ignores hand-mask pixels the same way.
    - **Events.** A content change of at least 8 mm², stable for 1 s while
      clean, becomes an event with `t_before` (last clean sample) and
      `t_after` (first clean sample showing the new state).
@@ -222,8 +233,15 @@ and was reverted.
   (RMS 0.54–0.56 mm > 0.5 mm, the known marker-10 corner bias). Frames pass
   mostly when a hand hides a marker. This is a calibration/change-detection
   issue, outside this module. The gate was not changed.
-- Skin colour is a heuristic. Red and yellow parts are skin-coloured, which
-  the shape rule handles. Gloves would defeat it.
+- The hand mask needs a visible difference from the hand-free sheet. A
+  resting hand over a background that looks the same in every channel (a
+  dark hand over a dark device, a white glove on white paper) is only
+  partly found; moving hands are found by motion. A part that touches the
+  sheet border counts as a hand until the reference refreshes (10 s). Raw
+  channels assume fixed exposure; a lighting change counts as a hand until
+  the scene is still and the reference refreshes.
+  Tested on synthetic arms (light, dark, blue glove), not on varied real
+  hands.
 - Clean-state checks for sites use the device-aligned frame. Tray cells use
   the sheet frame.
 

@@ -3,8 +3,11 @@
 A hand is not found by skin colour. The tracker keeps a hand-free reference
 of the whole sheet, refreshed whenever the scene has been still for the
 quiet hold. A pixel is *busy* when it moved recently or differs from that
-reference. A busy component that reaches the border of the watched area is
-an arm with its hand (arms enter from outside the sheet); busy components
+reference in any colour channel (no colour model: only "looks different
+from the hand-free sheet", so a pale hand on white paper counts as well as a
+dark one). A busy component that reaches the border of the watched area is
+an arm with its hand (arms enter from outside the sheet, or from outside the
+camera's view where the sheet edge is not in the picture); busy components
 that stay inside are parts or other changes, never hands. A resting hand
 stays a hand as long as its arm reaches the border; a static skin-coloured
 part is never one. Zones collect *visits*: intervals in which the hand mask
@@ -16,7 +19,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-HANDS_VERSION = "0.1.0"
+HANDS_VERSION = "0.2.0"
 DEFAULTS = {"quiet_hold_s": 0.6, "stale_after_s": 10.0, "scene_quiet_motion_fraction": 0.0005, "change_threshold": 30.0,
             "motion_memory_s": 0.6, "border_px": 3, "min_component_px": 50, "min_zone_overlap_px": 20}
 
@@ -29,35 +32,44 @@ class HandTracker:
         self._last_motion = np.full(shape, -np.inf, np.float32)
         self._quiet_since: float | None = None
 
-    def update(self, t_s: float, gray: np.ndarray, motion: np.ndarray) -> np.ndarray:
-        """Hand mask of this sample (bool, sheet shaped)."""
+    def update(self, t_s: float, appearance: np.ndarray, motion: np.ndarray, visible: np.ndarray | None = None) -> np.ndarray:
+        """Hand mask of this sample (bool, sheet shaped); ``appearance`` is grey (H, W) or channels (H, W, C).
+
+        ``visible`` marks the pixels the camera sees; its edge counts as a border arms can enter across.
+        """
         p = self.params
         self._last_motion[motion] = t_s
         still = motion.mean() <= p["scene_quiet_motion_fraction"]
         self._quiet_since = None if not still else (self._quiet_since if self._quiet_since is not None else t_s)
         if self.reference is None:
-            self.reference = gray.copy()
-            return np.zeros(gray.shape, bool)
-        hand = self._hand_mask(t_s, gray)
+            self.reference = appearance.copy()
+            return np.zeros(appearance.shape[:2], bool)
+        hand = self._hand_mask(t_s, appearance, visible)
         quiet_for = 0.0 if self._quiet_since is None else t_s - self._quiet_since
         # Refresh the hand-free reference only in a still scene without a hand; a resting hand keeps
         # its arm at the border and is not absorbed, unless the scene stays still for stale_after_s.
         if (quiet_for >= p["quiet_hold_s"] and not hand.any()) or quiet_for >= p["stale_after_s"]:
-            self.reference = gray.copy()
+            self.reference = appearance.copy()
         return hand
 
-    def _hand_mask(self, t_s: float, gray: np.ndarray) -> np.ndarray:
+    def _hand_mask(self, t_s: float, appearance: np.ndarray, visible: np.ndarray | None) -> np.ndarray:
         p = self.params
-        busy = ((t_s - self._last_motion) < p["motion_memory_s"]) | (np.abs(gray - self.reference) > p["change_threshold"])
+        difference = np.abs(appearance - self.reference)
+        if difference.ndim == 3:
+            difference = difference.max(axis=2)
+        busy = ((t_s - self._last_motion) < p["motion_memory_s"]) | (difference > p["change_threshold"])
         x0, y0, x1, y1 = self.watched
-        inside = np.zeros(gray.shape, bool)
+        inside = np.zeros(busy.shape, bool)
         inside[y0:y1, x0:x1] = True
         busy &= inside
         count, labels, stats, _ = cv2.connectedComponentsWithStats(busy.astype(np.uint8))
         b = p["border_px"]
-        frame = np.zeros(gray.shape, bool)
+        frame = np.zeros(busy.shape, bool)
         frame[y0:y1, x0:x1] = True
         frame[y0 + b:y1 - b, x0 + b:x1 - b] = False
+        if visible is not None:
+            unseen = cv2.dilate((~visible).astype(np.uint8), np.ones((2 * b + 1, 2 * b + 1), np.uint8)) > 0
+            frame |= unseen & visible & inside
         touching = np.unique(labels[frame & busy])
         hands = [k for k in touching if k > 0 and stats[k, cv2.CC_STAT_AREA] >= p["min_component_px"]]
         return np.isin(labels, hands)

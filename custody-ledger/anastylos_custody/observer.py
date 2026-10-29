@@ -1,9 +1,9 @@
 """Per-zone clean-state observation: when is a zone visible, and did its content change?
 
 A zone is *clean* when its context window has been quiet for a hold time and
-no hand covers it: a fresh-skin component that overlaps the zone's narrow
-guard box and also reaches outside it (fingers attach to a hand). A
-skin-coloured part lying inside the zone is not a hand. Only clean samples
+no hand covers it: a component of the colour-free hand mask (``hands.py``)
+that overlaps the zone's narrow guard box and also reaches outside it. A
+part lying inside the zone is never a hand, whatever its colour. Only clean samples
 are compared with the zone's reference. A content change becomes an event
 only after it stays stable while clean for the confirm time. Occluded or
 moving time is never read as "unchanged".
@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.6.0"
+OBSERVER_VERSION = "1.7.0"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -88,7 +88,7 @@ class _Layers:
 
     gray: np.ndarray
     motion: np.ndarray
-    fresh_skin: np.ndarray
+    hand: np.ndarray
     offset: tuple[int, int]
 
     def crop(self, plane: np.ndarray, box: Box) -> np.ndarray:
@@ -193,16 +193,16 @@ class ZoneObserver:
 
     def _layers(self, signals: FrameSignals) -> _Layers:
         if self.device is None:
-            return _Layers(signals.gray, signals.motion, signals.fresh_skin, (0, 0))
+            return _Layers(signals.gray, signals.motion, signals.hand, (0, 0))
         device = self.device
         if device.reference is None:
-            device.initialize(signals.t_s, signals.gray, signals.motion, signals.fresh_skin)
-        gray, motion, skin = device.aligned_layers(signals.t_s, signals.gray, signals.motion, signals.fresh_skin)
-        return _Layers(gray, motion, skin, device.region[:2])
+            device.initialize(signals.t_s, signals.gray, signals.motion, signals.hand)
+        gray, motion, hand = device.aligned_layers(signals.t_s, signals.gray, signals.motion, signals.hand)
+        return _Layers(gray, motion, hand, device.region[:2])
 
     def _is_clean(self, layers: _Layers, t: float) -> bool:
         motion = float(layers.crop(layers.motion, self.geometry.context).mean())
-        intrusion = _hand_over_zone(layers.crop(layers.fresh_skin, self.geometry.context),
+        intrusion = _hand_over_zone(layers.crop(layers.hand, self.geometry.context),
                                     _relative(self.geometry.guard, self.geometry.context), self.params.intrusion_min_area_px)
         if motion > self.params.max_motion_fraction:
             self._quiet_since = None
@@ -245,8 +245,8 @@ class ZoneObserver:
             self._anchor_moved_since = None
             return context
         report = {"anchor_changed_fraction": round(fraction, 4)}
-        if self.device.realign(now.t_s, signals.gray, signals.fresh_skin):
-            gray, _motion, _skin = self.device.aligned_layers(now.t_s, signals.gray, signals.motion, signals.fresh_skin)
+        if self.device.realign(now.t_s, signals.gray, signals.hand):
+            gray, _motion, _hand = self.device.aligned_layers(now.t_s, signals.gray, signals.motion, signals.hand)
             context = _crop_at(gray, self.geometry.context, self.device.region[:2])
             report["anchor_changed_fraction_after"] = round(self._anchor_changed_fraction(context), 4)
             report["device_realignment"] = self.device.realignments[-1]
@@ -411,12 +411,12 @@ def _relative(box: Box, window: Box) -> Box:
     return box[0] - window[0], box[1] - window[1], box[2] - window[0], box[3] - window[1]
 
 
-def _hand_over_zone(fresh_skin: np.ndarray, guard: Box, min_area_px: float) -> bool:
-    """True when a fresh-skin component overlaps the guard box and also extends beyond it."""
+def _hand_over_zone(hand: np.ndarray, guard: Box, min_area_px: float) -> bool:
+    """True when a hand-mask component overlaps the guard box and also extends beyond it."""
     gx0, gy0, gx1, gy1 = guard
-    if int(fresh_skin[gy0:gy1, gx0:gx1].sum()) < min_area_px:
+    if int(hand[gy0:gy1, gx0:gx1].sum()) < min_area_px:
         return False
-    _count, labels, stats, _ = cv2.connectedComponentsWithStats(fresh_skin.astype(np.uint8), connectivity=8)
+    _count, labels, stats, _ = cv2.connectedComponentsWithStats(hand.astype(np.uint8), connectivity=8)
     for index in np.unique(labels[gy0:gy1, gx0:gx1]):
         if index == 0:
             continue

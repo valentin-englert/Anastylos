@@ -44,7 +44,7 @@ class DevicePoseTests(unittest.TestCase):
     def test_recovers_a_small_slide_and_rotation(self):
         current = moved(self.reference, 6, -4, 3.0)
         self.assertTrue(self.pose.realign(1.0, current, self.empty))
-        gray, _motion, _skin = self.pose.aligned_layers(1.0, current, self.empty, self.empty)
+        gray, _motion, _hand = self.pose.aligned_layers(1.0, current, self.empty, self.empty)
         inner = (slice(30, -30), slice(30, -30))
         self.assertLess(float(np.abs(gray[inner] - self.reference[inner]).mean()), 6.0)
 

@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np  # noqa: E402
 
 from anastylos_custody.hands import HandTracker, VisitLog  # noqa: E402
+from anastylos_custody.signals import SignalTracker  # noqa: E402
 
 SHAPE = (80, 120)
 WATCHED = (10, 10, 110, 70)
@@ -57,6 +58,19 @@ class HandTrackerTests(unittest.TestCase):
         masks = run(HandTracker(SHAPE, WATCHED), [scene()] * 5 + [part] * 10)
         self.assertFalse(masks[-1].any())
 
+    def test_arm_entering_from_outside_the_camera_view_is_a_hand(self):
+        visible = np.ones(SHAPE, bool)
+        visible[:, :30] = False                            # the sheet's left part is outside the picture
+        arm = scene()
+        arm[:, :30] = 0.0                                  # unseen pixels never change
+        moved = arm.copy()
+        moved[34:42, 30:62] = 230.0                        # an arm reaching in from the unseen side
+        tracker = HandTracker(SHAPE, WATCHED)
+        masks = [tracker.update(round(0.2 * (i + 1), 3), g, np.zeros(SHAPE, bool) if i == 0 else np.abs(g - prev) > 14, visible)
+                 for i, (g, prev) in enumerate(zip([arm] * 5 + [moved] * 8, [arm] * 6 + [moved] * 7))]
+        self.assertTrue(masks[-1][38, 50])
+        self.assertFalse(HandTracker(SHAPE, WATCHED).update(0.2, arm, np.zeros(SHAPE, bool), visible).any())
+
     def test_hand_covers_only_where_it_is(self):  # A7
         masks = run(HandTracker(SHAPE, WATCHED), [scene()] * 5 + [with_arm(scene(), tip_col=45)] * 3)
         self.assertTrue(masks[-1][35, 45])
@@ -70,6 +84,40 @@ class VisitLogTests(unittest.TestCase):
         for t, covered in [(1.0, False), (1.2, True), (1.4, True), (1.6, False), (2.0, True)]:
             log.update(t, hand | (np.pad(np.ones((10, 8), bool), ((30, 40), (56, 56))) if covered else hand))
         self.assertEqual(log.close(), {"SITE": [[1.2, 1.4], [2.0, 2.0]]})
+
+
+class SignalHandMaskTests(unittest.TestCase):
+    """The hand plane the observers use comes from geometry and time, never from colour (H1)."""
+
+    SIGNAL = {"normalize_sigma_mm": 15.0, "blur_sigma_mm": 0.0, "motion_threshold": 14.0, "change_threshold": 30.0}
+    ARMS_BGR = {"light skin": (150, 180, 230), "dark skin": (45, 60, 90), "blue glove": (200, 90, 30)}
+
+    def frames(self, arm_bgr=None, part_bgr=None):
+        empty = np.full(SHAPE + (3,), 235, np.uint8)
+        empty[30:50, 40:80] = (70, 70, 70)                 # a dark device
+        later = empty.copy()
+        if arm_bgr is not None:
+            later[0:40, 56:64] = arm_bgr                   # enters across the sheet border
+        if part_bgr is not None:
+            later[35:45, 90:100] = part_bgr                # lies inside the sheet
+        return [empty] * 5 + [later] * 6
+
+    def hand_planes(self, frames):
+        tracker = SignalTracker(self.SIGNAL, {"intrusion_min_area_mm2": 10.0}, 1.0)
+        return [tracker.update(round(0.2 * (i + 1), 3), f).hand for i, f in enumerate(frames)]
+
+    def test_resting_arm_of_any_colour_is_found_over_paper(self):
+        arm = np.zeros(SHAPE, bool)
+        arm[0:40, 56:64] = True
+        over_paper = arm.copy()
+        over_paper[30:, :] = False
+        for name, bgr in self.ARMS_BGR.items():
+            plane = self.hand_planes(self.frames(arm_bgr=bgr))[-1]   # 1.2 s after the arm stopped moving
+            self.assertTrue(plane[over_paper].all(), name)
+            self.assertFalse((plane & ~arm).any(), name)
+
+    def test_skin_coloured_part_inside_is_not_a_hand(self):
+        self.assertFalse(self.hand_planes(self.frames(part_bgr=self.ARMS_BGR["light skin"]))[-1].any())
 
 
 if __name__ == "__main__":

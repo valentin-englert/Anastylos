@@ -256,6 +256,7 @@ def source_record(index: int, group: dict, to_mm, ppm: float) -> dict:
 def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: dict, params: dict) -> tuple[dict, dict]:
     """Run pass 1 over one fixed-camera video; return (registry, inventory for pass 2)."""
     from anastylos_custody import footage
+    from anastylos_custody.config import hand_config
     from anastylos_custody.sheet import DriftTracker, Rectifier, SheetReader, find_registration
     from anastylos_custody.signals import SignalTracker
 
@@ -266,7 +267,7 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
     work = next(zone["rect_frame_mm"] for zone in reader.zones() if zone["type"] == "work_area")
     spec = custody["session_registration"]
     drift = DriftTracker(reader, registration.marker_corners_px, int(spec["drift_min_markers"]), float(spec["drift_max_residual_px"]))
-    signals = SignalTracker(custody["signal"], custody["skin"], rectifier.ppm)
+    signals = SignalTracker(custody["signal"], hand_config(custody), rectifier.ppm)
     next_drift = 0.0
     sequence = EpochSequence(rectifier.ppm, float(custody["signal"]["change_threshold"]), params)
     for sample in footage.sample_frames(video, step):

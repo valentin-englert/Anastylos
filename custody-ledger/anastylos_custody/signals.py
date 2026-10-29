@@ -1,4 +1,4 @@
-"""Per-frame image signals on the rectified sheet: normalized gray, motion, fresh skin."""
+"""Per-frame image signals on the rectified sheet: normalized gray, motion, colour-free hand mask."""
 
 from __future__ import annotations
 
@@ -7,13 +7,15 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
+from anastylos_custody.hands import HandTracker
+
 
 @dataclass
 class FrameSignals:
     t_s: float
     gray: np.ndarray          # illumination-normalized, float32
     motion: np.ndarray        # bool: changed since the previous sample
-    fresh_skin: np.ndarray    # bool: skin-coloured and not static for long
+    hand: np.ndarray          # bool: arms and hands reaching in across the sheet border (hands.py, never colour)
     saturation: np.ndarray | None = None  # float32 HSV saturation 0-255 (v1.4, colour cue for tray cells)
     edges: np.ndarray | None = None       # bool Canny edges of the raw grey image (v1.4, structure cue)
 
@@ -21,40 +23,51 @@ class FrameSignals:
 class SignalTracker:
     """Turns consecutive rectified colour frames into ``FrameSignals``.
 
-    Skin-coloured pixels that stay still for ``static_after_s`` (a brown PCB,
-    a red button) stop counting as skin, so only hands that move or just
-    arrived register as intrusions.
+    Hands are found without colour (requirement H1): the hand mask comes from
+    ``HandTracker`` over the whole rectified sheet, so skin tone, gloves and
+    skin-coloured parts make no difference.
     """
 
-    def __init__(self, signal: dict, skin: dict, px_per_mm: float):
+    def __init__(self, signal: dict, hand: dict, px_per_mm: float):
         self.normalize_sigma = float(signal["normalize_sigma_mm"]) * px_per_mm
         self.blur_sigma = float(signal["blur_sigma_mm"]) * px_per_mm
         self.motion_threshold = float(signal["motion_threshold"])
-        self.skin_low = np.array(skin["ycrcb_min"], np.uint8)
-        self.skin_high = np.array(skin["ycrcb_max"], np.uint8)
-        self.static_after_s = float(skin["static_after_s"])
+        self.hand_params = {"change_threshold": float(signal["change_threshold"]), **hand.get("tracker", {})}
+        # A forearm can fill any normalization window and is flattened to paper grey, cutting the hand off the border;
+        # 0 compares raw channels instead.
+        self.hand_normalize_sigma = float(hand.get("normalize_sigma_mm", signal["normalize_sigma_mm"])) * px_per_mm
+        self.hands: HandTracker | None = None
         self._previous: np.ndarray | None = None
-        self._previous_t: float | None = None
-        self._still_skin_s: np.ndarray | None = None
 
-    def update(self, t_s: float, rectified_bgr: np.ndarray) -> FrameSignals:
+    def update(self, t_s: float, rectified_bgr: np.ndarray, visible: np.ndarray | None = None) -> FrameSignals:
         gray = normalized_gray(rectified_bgr, self.normalize_sigma, self.blur_sigma)
         if self._previous is None:
             motion = np.zeros(gray.shape, bool)
-            dt = 0.0
+            height, width = gray.shape
+            self.hands = HandTracker(gray.shape, (0, 0, width, height), self.hand_params)
         else:
             motion = np.abs(gray - self._previous) > self.motion_threshold
-            dt = t_s - self._previous_t
-        skin = cv2.inRange(cv2.cvtColor(rectified_bgr, cv2.COLOR_BGR2YCrCb), self.skin_low, self.skin_high) > 0
-        moving_near = cv2.dilate(motion.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
-        if self._still_skin_s is None:
-            self._still_skin_s = np.zeros(gray.shape, np.float32)
-        still = skin & ~moving_near
-        self._still_skin_s = np.where(still, self._still_skin_s + dt, 0.0).astype(np.float32)
-        self._previous, self._previous_t = gray, t_s
+        self._previous = gray
+        hand = self.hands.update(t_s, normalized_channels(rectified_bgr, self.hand_normalize_sigma, self.blur_sigma), motion, visible)
         saturation = cv2.cvtColor(rectified_bgr, cv2.COLOR_BGR2HSV)[..., 1].astype(np.float32)
         edges = cv2.Canny(cv2.cvtColor(rectified_bgr, cv2.COLOR_BGR2GRAY), 40, 100) > 0
-        return FrameSignals(t_s, gray, motion, skin & (self._still_skin_s < self.static_after_s), saturation, edges)
+        return FrameSignals(t_s, gray, motion, hand, saturation, edges)
+
+
+def normalized_channels(bgr: np.ndarray, normalize_sigma_px: float, blur_sigma_px: float) -> np.ndarray:
+    """``normalized_gray`` per colour channel, for appearance changes that grey alone misses.
+
+    The local mean is taken on a shrunken image so that wide windows (whole forearms) stay fast.
+    """
+    pixels = bgr.astype(np.float32)
+    if normalize_sigma_px <= 0:   # raw channels: the capture standard fixes exposure and white balance
+        return cv2.GaussianBlur(pixels, (0, 0), blur_sigma_px) if blur_sigma_px > 0 else pixels
+    height, width = pixels.shape[:2]
+    shrink = max(1, int(normalize_sigma_px // 4))
+    small = cv2.resize(pixels, (max(1, width // shrink), max(1, height // shrink)), interpolation=cv2.INTER_AREA)
+    local = cv2.resize(cv2.GaussianBlur(small, (0, 0), normalize_sigma_px / shrink), (width, height), interpolation=cv2.INTER_LINEAR)
+    out = np.clip(pixels / (local + 1.0) * 128.0, 0, 255).astype(np.float32)
+    return cv2.GaussianBlur(out, (0, 0), blur_sigma_px) if blur_sigma_px > 0 else out
 
 
 def normalized_gray(bgr: np.ndarray, normalize_sigma_px: float, blur_sigma_px: float) -> np.ndarray:

@@ -24,20 +24,20 @@ PARAMS = ObserverParams(change_threshold=30, quiet_hold_s=0.4, max_motion_fracti
 CELL = ZoneGeometry(content=(20, 20, 40, 40), guard=(18, 18, 42, 42), context=(10, 10, 50, 50))
 
 
-def frame(t, *, part=False, hand=False, moving=False, skin_part=False):
+def frame(t, *, part=False, hand=False, moving=False, part_in_hand_plane=False):
     gray = np.full(SIZE, 128.0, np.float32)
-    skin = np.zeros(SIZE, bool)
+    hand_mask = np.zeros(SIZE, bool)
     if part:
         gray[25:33, 25:33] = 20.0
-        if skin_part:
-            skin[25:33, 25:33] = True
+        if part_in_hand_plane:
+            hand_mask[25:33, 25:33] = True
     if hand:
         gray[22:30, 0:35] = 200.0
-        skin[22:30, 0:35] = True
+        hand_mask[22:30, 0:35] = True
     motion = np.zeros(SIZE, bool)
     if moving:
         motion[10:50, 10:50] = True
-    return FrameSignals(t, gray, motion, skin)
+    return FrameSignals(t, gray, motion, hand_mask)
 
 
 def run(observer, frames):
@@ -70,9 +70,9 @@ class ObserverTests(unittest.TestCase):
         self.assertEqual(events, [])
         self.assertGreater(observer.not_clean_s, 5.0)
 
-    def test_skin_coloured_part_inside_zone_is_not_a_hand(self):
+    def test_hand_mask_blob_confined_to_zone_is_not_an_intrusion(self):
         observer = ZoneObserver("cell-8", "tray_cell", CELL, PARAMS)
-        events = run(observer, timeline([(2, {}), (1, {"hand": True, "moving": True}), (3, {"part": True, "skin_part": True})]))
+        events = run(observer, timeline([(2, {}), (1, {"hand": True, "moving": True}), (3, {"part": True, "part_in_hand_plane": True})]))
         self.assertEqual([event["kind"] for event in events], ["appeared"])
 
     def test_motion_without_content_change_produces_no_event(self):
@@ -174,15 +174,15 @@ class _StillDevice:
         self.realignments = []
         self.reference = None
 
-    def initialize(self, t_s, gray, motion, skin):
+    def initialize(self, t_s, gray, motion, hand):
         self.reference = gray
 
-    def realign(self, t_s, gray, skin):
+    def realign(self, t_s, gray, hand):
         self.realignments.append({"t_s": t_s, "accepted": True, "shift_px": 0.0, "rotation_deg": 0.0})
         return True
 
-    def aligned_layers(self, t_s, gray, motion, skin):
-        return gray, motion, skin
+    def aligned_layers(self, t_s, gray, motion, hand):
+        return gray, motion, hand
 
 
 def ring_part_frame(t, *, ring_part):

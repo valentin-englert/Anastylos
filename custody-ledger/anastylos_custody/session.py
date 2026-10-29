@@ -10,7 +10,9 @@ import numpy as np
 from anastylos_diff.config import sha256_file
 from anastylos_custody import footage
 from anastylos_custody.device_alignment import AlignmentLimits, DevicePose
-from anastylos_custody.hands import HANDS_VERSION, HandTracker, VisitLog
+from anastylos_custody.config import hand_config
+from anastylos_custody.hands import DEFAULTS as HAND_DEFAULTS
+from anastylos_custody.hands import HANDS_VERSION, VisitLog
 from anastylos_custody.observer import OBSERVER_VERSION, ObserverParams, ZoneGeometry, ZoneObserver
 from anastylos_custody.sheet import DriftTracker, Rectifier, SheetReader, find_registration
 from anastylos_custody.signals import SignalTracker
@@ -44,10 +46,8 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
     for observer in observers:
         if observer.zone_id in trace_zones:
             observer.trace = []
-    tracker = SignalTracker(custody["signal"], custody["skin"], rectifier.ppm)
-    width, height = rectifier.size
-    hands = HandTracker((height, width), (0, 0, width, height), {"change_threshold": float(custody["signal"]["change_threshold"])})
-    visits = VisitLog({o.zone_id: o.geometry.content for o in observers}, hands.params["min_zone_overlap_px"])
+    tracker = SignalTracker(custody["signal"], hand_config(custody), rectifier.ppm)
+    visits = VisitLog({o.zone_id: o.geometry.content for o in observers}, int(HAND_DEFAULTS["min_zone_overlap_px"]))
 
     drift_spec = custody["session_registration"]
     drift = DriftTracker(reader, registration.marker_corners_px, int(drift_spec["drift_min_markers"]), float(drift_spec["drift_max_residual_px"]))
@@ -59,10 +59,11 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
             drift.update(sample.t_s, sample.image)
             next_update = sample.t_s + update_every
         times.append(sample.t_s)
-        signals = tracker.update(sample.t_s, rectifier.rectify(sample.image, drift.reference_to_current))
+        signals = tracker.update(sample.t_s, rectifier.rectify(sample.image, drift.reference_to_current),
+                                 rectifier.visible(sample.image.shape, drift.reference_to_current))
         for observer in observers:
             observer.observe(signals, sample.frame_index)
-        visits.update(sample.t_s, hands.update(sample.t_s, signals.gray, signals.motion))
+        visits.update(sample.t_s, signals.hand)
 
     events = _number(observer.events for observer in observers)
     return {
@@ -85,19 +86,20 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
                          "realignments": len(d.realignments)} for start, d in devices.items()]} if len(devices) > 1 else {}),
         "traces": {observer.zone_id: observer.trace for observer in observers if observer.trace is not None},
         "events": events,
-        "hands": {"version": HANDS_VERSION, "params": hands.params, "basis": "colour-free: busy components reaching the sheet image border"},
+        "hands": {"version": HANDS_VERSION, "params": tracker.hands.params if tracker.hands else None,
+                  "basis": "colour-free: busy components reaching the sheet image border; also gates clean samples and device alignment"},
         "hand_visits": visits.close(),
         "processing_s": round(time.perf_counter() - started, 1),
     }
 
 
 def _observer_params(custody: dict, ppm: float) -> ObserverParams:
-    clean, content, skin = custody["clean"], custody["content"], custody["skin"]
+    clean, content, hand = custody["clean"], custody["content"], hand_config(custody)
     return ObserverParams(
         change_threshold=float(custody["signal"]["change_threshold"]),
         quiet_hold_s=float(clean["quiet_hold_s"]),
         max_motion_fraction=float(clean["max_motion_fraction"]),
-        intrusion_min_area_px=float(skin["intrusion_min_area_mm2"]) * ppm ** 2,
+        intrusion_min_area_px=float(hand["intrusion_min_area_mm2"]) * ppm ** 2,
         min_changed_area_px=float(content["min_changed_area_mm2"]) * ppm ** 2,
         confirm_hold_s=float(content["confirm_hold_s"]),
         max_anchor_changed_fraction=float(content["max_anchor_changed_fraction"]),

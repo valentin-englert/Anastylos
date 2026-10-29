@@ -201,3 +201,8 @@ after take 1's wells were seen to be unobservable, but before any return
 result or ground truth was seen. Software, checker, script and criteria
 unchanged. The flicker itself is not fixed; the later `inventory_t_s`
 only avoids it.
+
+Re-analysis outputs, committed before ground-truth reveal
+(`C:\ANASTYLOS\data\proto-01\E2R\reanalysis\`): `events.json`
+`17c4b234e8a0cd441f980f32c1a15638c5e8d55255878646cc14a6a33db4aa76`,
+`returns.json` `1fa092906326237c1f0882a86cd8e210188e09feca1085eae6b1074b105d5c9d`.

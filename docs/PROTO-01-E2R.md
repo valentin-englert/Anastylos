@@ -206,3 +206,37 @@ Re-analysis outputs, committed before ground-truth reveal
 (`C:\ANASTYLOS\data\proto-01\E2R\reanalysis\`): `events.json`
 `17c4b234e8a0cd441f980f32c1a15638c5e8d55255878646cc14a6a33db4aa76`,
 `returns.json` `1fa092906326237c1f0882a86cd8e210188e09feca1085eae6b1074b105d5c9d`.
+
+## 14. Result (2026-10-29): PASS — take 1 re-analysis, not an independent take
+
+Sealed files matched their committed hashes (script `4d74a37f…`, actual
+`342edebe…`; every step performed as scripted, no other events). Score
+file `C:\ANASTYLOS\data\proto-01\E2R\E2R.score.json`
+(`e2098a6c443310f33e845a76663743f8a30829e6b57823cfa6bed5d99aa8fe4a`).
+
+| Return | Predicted | Actual | Verdict | Memory check |
+|---|---|---|---|---|
+| R-0001 | cell-4 → W-GREEN | step 1, C6 wrong placement | correct | `MISMATCH_with_memory` |
+| R-0002 | W-GREEN → W-RED | step 1, C6 correction | correct | `consistent_with_memory` |
+| R-0003 | cell-9 → W-GREEN | step 2 | correct | `consistent_with_memory` |
+| R-0004 | ? → W-BLUE | step 4 (cell-1) | ambiguous (2 departures pending) | — |
+| R-0005 | ? → W-YELLOW | step 5 (cell-6) | ambiguous | — |
+
+3 correct, 0 incorrect, 2 ambiguous. C6: the deliberate wrong well was
+flagged `MISMATCH_with_memory` and its correction confirmed. C5: no well
+placement (clean by criterion), but the part put back into cell-6 did not
+match the start image, so the cell stayed "vacated" and that departure
+stayed pending; the real departure of the cell-6 part later appeared as
+`changed_while_away_from_start`, which the checker does not count as a
+departure. Together these made the last two returns ambiguous.
+
+Outcome by §7: **PASS**, not STRONG (W-BLUE and W-YELLOW did not end
+`consistent_with_memory`). Claim boundary: the return path is observed and
+checked against memory for two of four parts, and a wrong-well placement
+is detected, given an operator-defined well inventory; one recording,
+re-analysed after a setup failure; no part identity.
+
+Findings for the next version (not applied to this result): judge cell
+occupancy against the known empty-cell appearance instead of the start
+image, so a part put back slightly differently is still "occupied"; give
+the return checker the elimination logic of linker 1.1.

@@ -142,3 +142,54 @@ implementation; no skips, no threshold edits.
 Revert the lane commit(s) on `feat/agentcam-cad`; delete `cad/.venv`
 (recreatable from `evidence/gate-freeze.txt`). No shared file, schema,
 memory log, or environment was modified, so nothing else rolls back.
+
+## 8. Follow-up: editable parametric CAD (2026-10-29, uncommitted)
+
+New lane-local modules (frozen G0 schema untouched; extension proposed in
+`PARAMETRIC-PROPOSAL.md`): `params.py` (stable IDs, edits, provenance,
+merge), `fcstd.py` (native Part-tree export + macro), worker
+`apply-edits` / `export-fcstd` / `merge-estimates`, `tests/test_parametric.py`
+(9 tests; suite now 55/55 OK, existing 46 untouched and green).
+
+Demo (synthetic, scratch `parademo/`, venv python 3.12.10 / CQ 2.8.0):
+
+- rev1 `run` on `plate_hole.json`: bbox [80,50,6], V=23830.354, STEP
+  round-trip rel err ~1.5e-16.
+- `apply-edits` (x 80->90, hole r 3->4, base-hash pinned): rev2,
+  provenance marks both revised params operator-specified with the
+  machine estimates preserved as history[0].
+- rev2 `run`: bbox [90,50,6], V=26698.407, round-trip rel err ~1.4e-16.
+  Changed: x-size, hole radius, volume. Unchanged: y=50, z=6, hole
+  center, placement.
+- Volume reconciliation (pre-commit audit): rev2 spec pins
+  `size_mm=[90,50,6]`, `radius_mm=4.0` — the hole radius DID change
+  (3->4 per the edits doc; provenance history[0]=3 preserved).
+  Analytic 90*50*6 - pi*16*6 = 26698.40710525538 matches the kernel
+  26698.407105255385 to ~1e-12; rev1 analytic matches likewise.
+  No test expectation was altered in this reconciliation.
+- `export-fcstd` on rev2: 811-byte zip (Document.xml + GuiDocument.xml,
+  no shape blobs), Part::Box/Cylinder/Cut, tree/kernel equivalence
+  proven by independent OCP rebuild; `.FCMacro` sidecar emitted.
+  Pre-commit re-verification: fresh re-export is `tree_matches_kernel`
+  with byte-identical Document.xml (sha
+  `74485547c16e74ee2bf66a61572d4fa0f8ca3f4c5808b90d8cb6870c39815541`);
+  the zip-level hash varies run to run (embedded timestamps, same known
+  caveat as STEP) — content hash is the stable identity.
+- FCStd reopen/edit/recompute proof: parsed Length 90.0 + Radius 4.0
+  from the zip, edited Length to 95 in the XML (property-editor
+  equivalent), recomputed with raw OCP to bbox [95,50,6],
+  V=28198.407, exported STEP and reimported with rel err ≤1e-5: PASS.
+- `merge-estimates` of rev2 against a fresh 80-wide machine estimate:
+  kept_operator=2 (x=90, r=4; estimates 80/3 recorded superseded),
+  took_estimate=5, derived_follows=1. No silent overwrite.
+- Hole-move chain rev2->rev3 (center_x 40->45, base pinned by rev2
+  file hash): rev3 bbox still [90,50,6], volume still 26698.407,
+  STEP round-trip rel err ~4.1e-16. Pure translation proven; tool-written
+  canonical files hash by content, so file hashes pin the next edit
+  (regression test `EditChainCliTest`).
+- Suite: 56/56 OK (46 Wave-1 + 10 parametric); parent
+  `assembly-reconstruction` suite 54/54 OK; compliance 0 errors.
+
+Not proven here: opening/editing/recomputing inside real FreeCAD UI
+(still not installed) — PENDING_EVIDENCE for the human session, with
+the .FCStd + .FCMacro as its runnable inputs.

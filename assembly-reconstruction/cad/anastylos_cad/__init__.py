@@ -3,6 +3,8 @@
 Submodules:
   validate -- stdlib-only cad-feature-model-v1 schema-shape + semantic checks.
   compile  -- stdlib-only deterministic construction-script generation.
+  params   -- stdlib-only stable parameters, edits, provenance, merge.
+  fcstd    -- native parametric FreeCAD tree export + rebuild macro.
   builder  -- allowlisted CadQuery kernel calls (worker venv only).
   preview  -- stdlib-only SVG projection from tessellation data.
   evidence -- stdlib-only evidence/validation/manifest writers.

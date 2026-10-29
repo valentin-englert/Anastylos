@@ -5,6 +5,13 @@ Subcommands:
   build    --spec <model.json> --out <dir>  one revision, native checks only.
   reopen   --step <model.step>               fresh-process STEP import report.
   run      --spec <model.json> --out <dir>   build + fresh reopen + evidence.
+  apply-edits --spec <model> --edits <edits> --out <dir>
+                                            new revision + provenance (stdlib).
+  export-fcstd --spec <model> --out <file.FCStd>
+                                            native parametric tree + macro.
+  merge-estimates --current <model> --provenance <prov>
+                  --estimate <model> --out <dir>
+                                            fresh estimate, operator wins.
 
 Exit codes: 0 ok, 2 pre-kernel validation reject, 3 kernel/round-trip
 failure, 4 usage or I/O error. The worker never overwrites: --out must
@@ -113,7 +120,7 @@ def _build_revision(model, outdir):
               encoding="utf-8") as handle:
         handle.write(svg)
     with open(os.path.join(outdir, "feature-model.json"), "w",
-              encoding="utf-8") as handle:
+              encoding="utf-8", newline="\n") as handle:
         handle.write(ev.canonical_json(compiler.canonical_params(model)))
     with open(os.path.join(outdir, "model.py"), "w",
               encoding="utf-8") as handle:
@@ -257,6 +264,157 @@ def cmd_run(spec_path, outdir):
     return 0
 
 
+def cmd_apply_edits(spec_path, edits_path, outdir):
+    from anastylos_cad import params as par
+    model, err = _read_spec(spec_path)
+    if err:
+        print(json.dumps({"ok": False, "error": err}))
+        return 4
+    checked = val.validate_model(model)
+    if not checked["ok"]:
+        print(json.dumps(checked, indent=2))
+        return 2
+    edits, err = _read_spec(edits_path)
+    if err:
+        print(json.dumps({"ok": False, "error": err}))
+        return 4
+    problem = _prepare_outdir(outdir)
+    if problem:
+        print(json.dumps({"ok": False, "error": problem}))
+        return 4
+    try:
+        new_model, provenance = par.apply_edits(model, edits)
+    except par.ParamError as exc:
+        print(json.dumps({"ok": False, "error": "edits rejected: %s" % exc}))
+        return 2
+    checked = val.validate_model(new_model)
+    if not checked["ok"]:
+        print(json.dumps({"ok": False, "error":
+                          "edited model invalid", "detail": checked}))
+        return 2
+    spec_out = os.path.join(outdir, "feature-model.json")
+    with open(spec_out, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(ev.canonical_json(new_model))
+    prov_out = os.path.join(outdir, "param-provenance.json")
+    with open(prov_out, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(ev.canonical_json(provenance))
+    print(json.dumps({"ok": True, "revision": new_model["revision"],
+                      "model_sha256": ev.sha256_file(spec_out),
+                      "provenance_sha256": ev.sha256_file(prov_out)},
+                     indent=2))
+    return 0
+
+
+def cmd_export_fcstd(spec_path, out_path):
+    from anastylos_cad import builder, fcstd
+    model, err = _read_spec(spec_path)
+    if err:
+        print(json.dumps({"ok": False, "error": err}))
+        return 4
+    checked = val.validate_model(model)
+    if not checked["ok"]:
+        print(json.dumps(checked, indent=2))
+        return 2
+    if os.path.exists(out_path):
+        print(json.dumps({"ok": False, "error":
+                          "refusing to overwrite existing file"}))
+        return 4
+    try:
+        solids = builder.build_solids(model["features"])
+    except (ValueError, RuntimeError) as exc:
+        print(json.dumps({"ok": False, "error": "kernel build: %s" % exc}))
+        return 3
+    if len(solids) != 1:
+        print(json.dumps({"ok": False, "error": "v1 exports one solid"}))
+        return 3
+    native = builder.solid_report(next(iter(solids.values())))
+    try:
+        tree = fcstd.rebuild_tree_report(model)
+    except (ValueError, RuntimeError) as exc:
+        print(json.dumps({"ok": False, "error": "tree rebuild: %s" % exc}))
+        return 3
+    dims_ok = all(abs(a - b) <= STEP_TOL_MM for a, b in
+                  zip(native["bbox_size"], tree["bbox_size"]))
+    vol_ok = (abs(native["volume"] - tree["volume"])
+              / native["volume"] <= VOL_REL_TOL)
+    if not (dims_ok and vol_ok):
+        print(json.dumps({"ok": False, "error":
+                          "tree/native geometry mismatch",
+                          "native": native, "tree": tree}))
+        return 3
+    blob = fcstd.write_fcstd_bytes(model)
+    try:
+        with open(out_path, "wb") as handle:
+            handle.write(blob)
+        macro_path = out_path + ".FCMacro"
+        if os.path.exists(macro_path):
+            raise OSError("macro sidecar exists; refusing to overwrite")
+        with open(macro_path, "w", encoding="utf-8") as handle:
+            handle.write(fcstd.generate_macro(model))
+    except OSError as exc:
+        print(json.dumps({"ok": False, "error": "write failed: %s" % exc}))
+        return 4
+    print(json.dumps({"ok": True, "fcstd_sha256": ev.sha256_file(out_path),
+                      "fcstd_bytes": os.path.getsize(out_path),
+                      "macro": os.path.basename(macro_path),
+                      "tree_matches_kernel": True,
+                      "native": native}, indent=2))
+    return 0
+
+
+def cmd_merge_estimates(current_path, prov_path, estimate_path, outdir):
+    from anastylos_cad import params as par
+    current, err = _read_spec(current_path)
+    if err:
+        print(json.dumps({"ok": False, "error": err}))
+        return 4
+    for label, path in (("provenance", prov_path), ("estimate", estimate_path)):
+        if label == "provenance":
+            prov, err = _read_spec(path)
+        else:
+            estimate, err = _read_spec(path)
+        if err:
+            print(json.dumps({"ok": False, "error": err}))
+            return 4
+    for label, model in (("current", current), ("estimate", estimate)):
+        checked = val.validate_model(model)
+        if not checked["ok"]:
+            print(json.dumps({"ok": False, "error": "%s invalid" % label,
+                              "detail": checked}))
+            return 2
+    problem = _prepare_outdir(outdir)
+    if problem:
+        print(json.dumps({"ok": False, "error": problem}))
+        return 4
+    try:
+        merged, report, provenance = par.merge_estimates(
+            current, prov, estimate)
+    except par.ParamError as exc:
+        print(json.dumps({"ok": False, "error": "merge rejected: %s" % exc}))
+        return 2
+    checked = val.validate_model(merged)
+    if not checked["ok"]:
+        print(json.dumps({"ok": False, "error": "merged model invalid",
+                          "detail": checked}))
+        return 2
+    with open(os.path.join(outdir, "feature-model.json"), "w",
+              encoding="utf-8", newline="\n") as handle:
+        handle.write(ev.canonical_json(merged))
+    with open(os.path.join(outdir, "param-provenance.json"), "w",
+              encoding="utf-8", newline="\n") as handle:
+        handle.write(ev.canonical_json(provenance))
+    with open(os.path.join(outdir, "merge-report.json"), "w",
+              encoding="utf-8", newline="\n") as handle:
+        handle.write(ev.canonical_json(report))
+    print(json.dumps({"ok": True, "revision": merged["revision"],
+                      "kept_operator": sum(1 for r in report
+                                           if r["action"] == "kept_operator_value"),
+                      "took_estimate": sum(1 for r in report
+                                           if r["action"] == "took_estimate")},
+                     indent=2))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="cadwork",
                                      description=__doc__)
@@ -271,6 +429,18 @@ def main(argv=None):
     g = sub.add_parser("run")
     g.add_argument("--spec", required=True)
     g.add_argument("--out", required=True)
+    e = sub.add_parser("apply-edits")
+    e.add_argument("--spec", required=True)
+    e.add_argument("--edits", required=True)
+    e.add_argument("--out", required=True)
+    f = sub.add_parser("export-fcstd")
+    f.add_argument("--spec", required=True)
+    f.add_argument("--out", required=True)
+    m = sub.add_parser("merge-estimates")
+    m.add_argument("--current", required=True)
+    m.add_argument("--provenance", required=True)
+    m.add_argument("--estimate", required=True)
+    m.add_argument("--out", required=True)
     args = parser.parse_args(argv)
     if args.cmd == "validate":
         return cmd_validate(args.spec)
@@ -278,6 +448,13 @@ def main(argv=None):
         return cmd_build(args.spec, args.out)
     if args.cmd == "reopen":
         return cmd_reopen(args.step)
+    if args.cmd == "apply-edits":
+        return cmd_apply_edits(args.spec, args.edits, args.out)
+    if args.cmd == "export-fcstd":
+        return cmd_export_fcstd(args.spec, args.out)
+    if args.cmd == "merge-estimates":
+        return cmd_merge_estimates(args.current, args.provenance,
+                                   args.estimate, args.out)
     return cmd_run(args.spec, args.out)
 
 

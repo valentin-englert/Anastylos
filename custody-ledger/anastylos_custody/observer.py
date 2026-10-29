@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.5.1"
+OBSERVER_VERSION = "1.6.0"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 

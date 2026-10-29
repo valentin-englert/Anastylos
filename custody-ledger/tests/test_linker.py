@@ -140,5 +140,38 @@ class ReacquisitionBlindSpotTests(unittest.TestCase):
         self.assertEqual(result["proposals"][0]["status"], "ambiguous")
 
 
+
+class HandOrderTests(unittest.TestCase):
+    """Linker 1.6: a part cannot be put down before the hand picked it up."""
+
+    EVENTS = [removal("E-1", "S-a", 10, 30), removal("E-2", "S-b", 12, 40), deposit("E-3", "cell-8", 20, 25)]
+
+    def doc(self, visits, gaps=()):
+        return {**events_doc(self.EVENTS, gaps=gaps), "hand_visits": visits}
+
+    def test_only_the_source_visited_before_the_cell_is_linked(self):
+        visits = {"S-a": [[14, 16]], "S-b": [[27, 29]], "cell-8": [[18, 22]]}
+        proposal = link(self.doc(visits))["proposals"][0]
+        self.assertEqual(proposal["status"], "candidate_by_hand_order")
+        self.assertEqual(proposal["removal"]["event"], "E-1")
+        self.assertEqual(proposal["eliminated"], ["E-2"])
+        self.assertEqual(proposal["autonomy"], "automatic")
+
+    def test_two_sources_visited_before_the_cell_stay_ambiguous(self):
+        visits = {"S-a": [[14, 16]], "S-b": [[15, 17]], "cell-8": [[18, 22]]}
+        self.assertEqual(link(self.doc(visits))["proposals"][0]["status"], "ambiguous")
+
+    def test_without_a_visit_to_the_cell_nothing_is_resolved(self):
+        visits = {"S-a": [[14, 16]], "S-b": [[27, 29]]}
+        self.assertEqual(link(self.doc(visits))["proposals"][0]["status"], "ambiguous")
+
+    def test_a_sampling_gap_still_blocks(self):
+        visits = {"S-a": [[14, 16]], "S-b": [[27, 29]], "cell-8": [[18, 22]]}
+        self.assertEqual(link(self.doc(visits, gaps=[[16.5, 17.5]]))["proposals"][0]["status"], "ambiguous")
+
+    def test_without_hand_visits_behaviour_is_unchanged(self):
+        self.assertEqual(link(events_doc(self.EVENTS))["proposals"][0]["status"], "ambiguous")
+
+
 if __name__ == "__main__":
     unittest.main()

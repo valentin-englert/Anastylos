@@ -10,6 +10,7 @@ import numpy as np
 from anastylos_diff.config import sha256_file
 from anastylos_custody import footage
 from anastylos_custody.device_alignment import AlignmentLimits, DevicePose
+from anastylos_custody.hands import HANDS_VERSION, HandTracker, VisitLog
 from anastylos_custody.observer import OBSERVER_VERSION, ObserverParams, ZoneGeometry, ZoneObserver
 from anastylos_custody.sheet import DriftTracker, Rectifier, SheetReader, find_registration
 from anastylos_custody.signals import SignalTracker
@@ -44,6 +45,9 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
         if observer.zone_id in trace_zones:
             observer.trace = []
     tracker = SignalTracker(custody["signal"], custody["skin"], rectifier.ppm)
+    width, height = rectifier.size
+    hands = HandTracker((height, width), (0, 0, width, height), {"change_threshold": float(custody["signal"]["change_threshold"])})
+    visits = VisitLog({o.zone_id: o.geometry.content for o in observers}, hands.params["min_zone_overlap_px"])
 
     drift_spec = custody["session_registration"]
     drift = DriftTracker(reader, registration.marker_corners_px, int(drift_spec["drift_min_markers"]), float(drift_spec["drift_max_residual_px"]))
@@ -58,6 +62,7 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
         signals = tracker.update(sample.t_s, rectifier.rectify(sample.image, drift.reference_to_current))
         for observer in observers:
             observer.observe(signals, sample.frame_index)
+        visits.update(sample.t_s, hands.update(sample.t_s, signals.gray, signals.motion))
 
     events = _number(observer.events for observer in observers)
     return {
@@ -80,6 +85,8 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
                          "realignments": len(d.realignments)} for start, d in devices.items()]} if len(devices) > 1 else {}),
         "traces": {observer.zone_id: observer.trace for observer in observers if observer.trace is not None},
         "events": events,
+        "hands": {"version": HANDS_VERSION, "params": hands.params, "basis": "colour-free: busy components reaching the sheet image border"},
+        "hand_visits": visits.close(),
         "processing_s": round(time.perf_counter() - started, 1),
     }
 

@@ -52,6 +52,15 @@ whose total changed area is below ``min_removal_area_mm2`` (the same
 minimum a tray cell needs to count a part) is reported under
 ``minor_site_changes`` and not used as a removal: a part that small could
 never be seen deposited. Both rules apply only with site geometry.
+
+Linker 1.6 (hand order): when the events carry colour-free ``hand_visits``,
+a pending removal can only be the source of a deposit if the hand visited
+one of its sites inside the removal's window *before* the visit to the
+deposit's cell began (a part cannot be put down before it was picked up).
+If exactly one pending removal passes, the deposit is linked
+``candidate_by_hand_order``; overlapping deposits or removals are then
+resolved by that order, but sampling gaps, unobservable sources and an
+occupied cell still block. Assumption: one part is carried at a time.
 """
 
 from __future__ import annotations
@@ -60,6 +69,7 @@ LINKS_SCHEMA = "custody-links@1"
 DECLARED_SCHEMA = "custody-declared-removals@1"
 DECLARED_DEPOSITS_SCHEMA = "custody-declared-deposits@1"
 DEPOSIT_KINDS = ("appeared", "changed_while_occupied")
+LINK_STATUSES = ("candidate_temporal_exclusive", "candidate_by_elimination", "candidate_by_hand_order")
 GROUPING = {"same_interval_s": 0.25, "min_gap_mm": 2.0, "size_ratio": 0.5, "min_removal_area_mm2": 25.0}
 SCOPE_NOTE = "exclusive only among inventoried sites and watched tray cells; parts taken from anywhere else are invisible to this check"
 
@@ -91,12 +101,14 @@ def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict
         proposal = _judge(deposit, pending, deposits, removals, blind_sites, gaps)
         if proposal["status"] == "ambiguous":
             proposal = _by_elimination(proposal, options.get(deposit["id"]), deposit, deposits, removals, blind_sites, gaps)
-        if proposal["status"] in ("candidate_temporal_exclusive", "candidate_by_elimination"):
+        if proposal["status"] == "ambiguous" and events_doc.get("hand_visits"):
+            proposal = _by_hand_order(proposal, deposit, pending, events_doc["hand_visits"], blind_sites, gaps)
+        if proposal["status"] in LINK_STATUSES:
             linked.add(proposal["removal"]["event"])
         proposal["autonomy"] = _autonomy(proposal, deposit, externals)
         proposals.append(proposal)
     _flag_conflicts(proposals, externals)
-    linked = {p["removal"]["event"] for p in proposals if p["status"] in ("candidate_temporal_exclusive", "candidate_by_elimination")}
+    linked = {p["removal"]["event"] for p in proposals if p["status"] in LINK_STATUSES}
     closed_events = {item["removal"]["event"] for item in externals if item["status"] == "closes_removal"}
     orphans = [removal for removal in removals if removal["event"] not in linked and removal["event"] not in closed_events]
     doc = {
@@ -166,6 +178,46 @@ def group_removals(removals: list[dict], site_rects: dict) -> list[dict]:
                         "grouping": [{"a": observed[i]["event"], "b": observed[j]["event"], "gap_mm": g, "limit_mm": lim}
                                      for i, j, g, lim in joins if i in members]})
     return sorted(grouped + others, key=lambda r: r["t_after_s"])
+
+
+def _cell_visit_start(deposit: dict, visits: dict) -> float | None:
+    """Start of the last hand visit to the deposit's cell that overlaps the deposit window."""
+    spans = [s for s in visits.get(deposit["zone"], []) if s[0] <= deposit["t_after_s"] and s[1] >= deposit["t_before_s"]]
+    return max(s[0] for s in spans) if spans else None
+
+
+def _source_visited_before(removal: dict, visits: dict, t_s: float) -> list[list[float]]:
+    sites = removal.get("sites") or [removal["site"]]
+    return [s for site in sites for s in visits.get(site, [])
+            if s[0] < t_s and s[1] >= removal["t_before_s"] and s[0] <= removal["t_after_s"]]
+
+
+def _by_hand_order(proposal: dict, deposit: dict, pending: list[dict], visits: dict, blind_sites: list[dict], gaps: list) -> dict:
+    start = _cell_visit_start(deposit, visits)
+    if start is None or not pending:
+        return proposal
+    possible = [r for r in pending if _source_visited_before(r, visits, start)]
+    if len(possible) != 1:
+        return proposal
+    removal = possible[0]
+    window = (removal["t_before_s"], deposit["t_after_s"])
+    blockers = []
+    if any(gap[0] < window[1] and gap[1] > window[0] for gap in gaps):
+        blockers.append("sampling gap")
+    if any(b["from_s"] <= window[1] and (b.get("until_s") is None or b["until_s"] > window[0]) for b in blind_sites):
+        blockers.append("unobservable source")
+    if deposit["kind"] != "appeared":
+        blockers.append("occupied cell")
+    if blockers:
+        return proposal
+    excluded = [r["event"] for r in pending if r is not removal]
+    return {**{k: v for k, v in proposal.items() if k != "candidates"}, "status": "candidate_by_hand_order",
+            "hypothesis": "hand_order", "removal": removal, "custody_window_s": list(window), "eliminated": excluded,
+            "ambiguous_before_hand_order": proposal["reasons"],
+            "hand_evidence": {"cell_visit_start_s": start,
+                              "source_visits_before": _source_visited_before(removal, visits, start)},
+            "reasons": [SCOPE_NOTE, f"the hand visited only this removal's sites before reaching {deposit['zone']} "
+                                    f"at {start} s; the other pending removals were first touched later: " + ", ".join(excluded)]}
 
 
 def _closed_before(removal: dict, closed: dict, t_s: float) -> bool:

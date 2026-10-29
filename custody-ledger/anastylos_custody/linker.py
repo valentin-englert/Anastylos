@@ -34,6 +34,16 @@ observed after the declaration. Every proposal states its ``autonomy``:
 ``automatic``, or ``operator_assisted`` when a declared removal or any
 applied declaration could have shaped its candidate set; counts keep the
 two apart.
+
+Linker 1.3: with site geometry (the inventory used by the observer), observed
+removals are grouped into one removal *event* when they changed in the same
+observed interval (start and end within ``same_interval_s``) and their site
+rectangles are close: gap at most max(``min_gap_mm``, ``size_ratio`` x
+sqrt(area of the larger site)), chained transitively. A large part that
+uncovers many sites at once is then one removal, not many. Same time alone
+never groups distant sites, a site that changes twice gives two removals
+(stacked parts), and operator-declared removals are never grouped. Without
+geometry nothing is grouped.
 """
 
 from __future__ import annotations
@@ -42,12 +52,16 @@ LINKS_SCHEMA = "custody-links@1"
 DECLARED_SCHEMA = "custody-declared-removals@1"
 DECLARED_DEPOSITS_SCHEMA = "custody-declared-deposits@1"
 DEPOSIT_KINDS = ("appeared", "changed_while_occupied")
+GROUPING = {"same_interval_s": 0.25, "min_gap_mm": 2.0, "size_ratio": 0.5}
 SCOPE_NOTE = "exclusive only among inventoried sites and watched tray cells; parts taken from anywhere else are invisible to this check"
 
 
-def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict | None = None) -> dict:
+def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict | None = None,
+         site_rects: dict | None = None) -> dict:
     events = events_doc["events"]
     removals = [_observed_removal(event) for event in events if event["kind"] == "site_changed"]
+    if site_rects is not None:
+        removals = group_removals(removals, site_rects)
     if declared is not None:
         removals += _declared_removals(declared)
     removals.sort(key=lambda item: item["t_after_s"])
@@ -84,7 +98,57 @@ def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict
     }
     if declared_deposits is not None:
         doc["declared_external_deposits"] = externals
+    if site_rects is not None:
+        doc["removal_grouping"] = {**GROUPING, "groups": sum(1 for r in removals if len(r.get("events", [])) > 1)}
     return doc
+
+
+def _rect_gap(a: list[float], b: list[float]) -> float:
+    dx = max(0.0, max(a[0], b[0]) - min(a[0] + a[2], b[0] + b[2]))
+    dy = max(0.0, max(a[1], b[1]) - min(a[1] + a[3], b[1] + b[3]))
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def group_removals(removals: list[dict], site_rects: dict) -> list[dict]:
+    """One removal event for observed site changes in the same interval whose sites are close (see module docstring)."""
+    observed = [r for r in removals if r["basis"] == "observed" and r["site"] in site_rects]
+    others = [r for r in removals if r not in observed]
+    parent = list(range(len(observed)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    joins = []
+    for i, a in enumerate(observed):
+        for j in range(i + 1, len(observed)):
+            b = observed[j]
+            if abs(a["t_before_s"] - b["t_before_s"]) > GROUPING["same_interval_s"] or abs(a["t_after_s"] - b["t_after_s"]) > GROUPING["same_interval_s"]:
+                continue
+            ra, rb = site_rects[a["site"]], site_rects[b["site"]]
+            larger = max(ra[2] * ra[3], rb[2] * rb[3])
+            limit = max(GROUPING["min_gap_mm"], GROUPING["size_ratio"] * larger ** 0.5)
+            gap = _rect_gap(ra, rb)
+            if gap <= limit:
+                parent[find(i)] = find(j)
+                joins.append((i, j, round(gap, 2), round(limit, 2)))
+    groups: dict[int, list[int]] = {}
+    for i in range(len(observed)):
+        groups.setdefault(find(i), []).append(i)
+    grouped = []
+    for members in groups.values():
+        items = [observed[i] for i in members]
+        if len(items) == 1:
+            grouped.append(items[0])
+            continue
+        first = min(items, key=lambda r: (r["t_before_s"], r["event"]))
+        grouped.append({**first, "events": sorted(r["event"] for r in items), "sites": sorted(r["site"] for r in items),
+                        "t_before_s": min(r["t_before_s"] for r in items), "t_after_s": max(r["t_after_s"] for r in items),
+                        "grouping": [{"a": observed[i]["event"], "b": observed[j]["event"], "gap_mm": g, "limit_mm": lim}
+                                     for i, j, g, lim in joins if i in members]})
+    return sorted(grouped + others, key=lambda r: r["t_after_s"])
 
 
 def _closed_before(removal: dict, closed: dict, t_s: float) -> bool:
@@ -111,9 +175,9 @@ def _resolve_declared_deposits(declared: dict, removals: list[dict]) -> list[dic
             continue
         before = [r for r in removals if r["t_before_s"] < record["t_s"]]
         if "removal_event" in source:
-            match = [r for r in before if r["event"] == source["removal_event"]]
+            match = [r for r in before if source["removal_event"] in r.get("events", [r["event"]])]
         else:
-            match = sorted((r for r in before if r["site"] == source.get("site")), key=lambda r: r["t_after_s"])[-1:]
+            match = sorted((r for r in before if source.get("site") in r.get("sites", [r["site"]])), key=lambda r: r["t_after_s"])[-1:]
         if not match:
             results.append({**record, "status": "rejected", "note": f"no removal matching {source} before {record['t_s']} s"})
             continue

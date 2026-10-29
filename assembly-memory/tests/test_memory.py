@@ -186,6 +186,22 @@ class MemoryTest(unittest.TestCase):
             self.assertEqual((session / "memory.jsonl").read_bytes(), before)
             self.assertEqual(len(load_events(session / "memory.jsonl")), 1)
 
+    def test_concluded_link_states_rule_and_assumptions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            session = Path(directory)
+            record_observation(session)
+            inference = {"relation": "source_to_cell", "inferred_by": "candidate_temporal_exclusive",
+                         "producer": "custody linker 1.7", "assumptions": ["one part per cell"]}
+            link = record_link(session, "obs-0001", inference_json=json.dumps(inference))
+            self.assertEqual(link["inference"], inference)
+            plain = record_link(session, "obs-0001")
+            self.assertNotIn("inference", plain)
+            for bad in ({"relation": "source_to_cell", "inferred_by": "x", "producer": "y"},
+                        {"relation": "source_to_cell", "inferred_by": " ", "producer": "y", "assumptions": []},
+                        {"relation": "source_to_cell", "inferred_by": "x", "producer": "y", "assumptions": [""]}):
+                with self.assertRaises(ValidationError):
+                    record_link(session, "obs-0001", inference_json=json.dumps(bad))
+
     def test_rejects_link_to_missing_observation_and_bad_tray(self):
         with tempfile.TemporaryDirectory() as directory:
             session = Path(directory)

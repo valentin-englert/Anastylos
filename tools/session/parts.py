@@ -11,7 +11,21 @@ question for the operator, never a fact.
 
 from __future__ import annotations
 
-LINKED = ("candidate_temporal_exclusive", "candidate_by_elimination", "candidate_by_hand_order")
+# Hand order (linker 1.6) is no longer a link: since linker 1.7 it only narrows candidates (PROV-01).
+LINKED = ("candidate_temporal_exclusive", "candidate_by_elimination")
+# What each linking rule takes for granted; written to memory with every automatic link.
+ASSUMPTIONS = {
+    "candidate_temporal_exclusive": [
+        "exactly one observed removal was open when the part appeared in the cell",
+        "the part came from a discovered site; removals from undiscovered places are invisible",
+        "one part per cell",
+    ],
+    "candidate_by_elimination": [
+        "every other open removal went into another observed deposit",
+        "the part came from a discovered site; removals from undiscovered places are invisible",
+        "one part per cell",
+    ],
+}
 
 
 def _sources(removal: dict, registry: dict[str, dict]) -> list[dict]:
@@ -37,7 +51,8 @@ def number_parts(custody: dict, phase: str, registry: dict[str, dict] | None = N
                 "autonomy": proposal.get("autonomy", "automatic")}
         if proposal["status"] in LINKED:
             removal = proposal["removal"]
-            part.update({"removal_event": removal["event"], "removal_events": removal.get("events", [removal["event"]]),
+            part.update({"hypothesis": proposal.get("hypothesis"), "linker_version": custody.get("linker_version"),
+                         "assumptions": ASSUMPTIONS[proposal["status"]],"removal_event": removal["event"], "removal_events": removal.get("events", [removal["event"]]),
                          "removal_window_s": [removal["t_before_s"], removal["t_after_s"]],
                          "sources": _sources(removal, registry)})
         else:

@@ -92,6 +92,7 @@ def cmd_record_tray_link(args) -> int:
         "observation_id": args.observation,
         "tray": tray,
         "basis": basis,
+        **({} if args.inference_json is None else {"inference": json.loads(args.inference_json)}),
         "kit_sha256": kit_sha,
         "supersedes": args.supersedes,
     }
@@ -226,6 +227,8 @@ def build_parser() -> argparse.ArgumentParser:
     link.add_argument("--evidence-pair-id", default=None)
     link.add_argument("--evidence-region", default=None)
     link.add_argument("--confirmed-by", default=None, help="human confirmer")
+    link.add_argument("--inference-json", default=None,
+                      help="JSON object when the link was concluded rather than observed: relation, inferred_by, producer, assumptions")
     link.add_argument("--note", default=None)
     link.add_argument("--supersedes", default=None, help="earlier link id this corrects")
     link.set_defaults(func=cmd_record_tray_link)

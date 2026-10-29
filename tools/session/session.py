@@ -66,21 +66,27 @@ def source_precision(region_bbox: list[float], features: list[dict], part_area_m
                      margin_mm: float = 1.0) -> dict:
     """Precision of the written source region.
 
-    coarse: the region covers two or more candidate features *and* is more than twice the deposited part's
-    area (the part could have come from several of them, like a screw in a region over two holes), or the
-    part's area is unknown; a part about as large as the region simply covers several features itself.
+    Labels say what was measured, not how well the source is localised (PROV-01):
+    region_spans_candidates: the region covers two or more candidate features *and* is more than twice the
+    deposited part's area (or that area is unknown); the part could have come from any of them.
+    region_about_part_size: the region covers candidate features but is no more than twice the part's area;
+    it may still cover several features, which the part itself spans. It does not name one source location.
+    no_candidate_feature: no candidate feature inside the region.
     """
     x, y, w, h = region_bbox
     inside = [f for f in features if x - margin_mm <= f["centre_mm"][0] <= x + w + margin_mm
               and y - margin_mm <= f["centre_mm"][1] <= y + h + margin_mm]
     region_area = w * h
     part_smaller = part_area_mm2 is None or region_area > 2 * part_area_mm2
-    level = "coarse" if len(inside) >= 2 and part_smaller else "specific" if inside else "no_feature"
-    note = (f"source precision {level}: covers candidate features "
+    level = ("region_spans_candidates" if len(inside) >= 2 and part_smaller
+             else "region_about_part_size" if inside else "no_candidate_feature")
+    note = (f"source region {level}: covers {len(inside)} candidate feature(s) "
             + ", ".join(f"{f['id']} at {f['centre_mm'][0]:.0f}/{f['centre_mm'][1]:.0f} mm" for f in inside)
-            if inside else "source precision no_feature: no candidate feature inside the region")
-    if level == "coarse":
+            if inside else "source region no_candidate_feature: no candidate feature inside the region")
+    if level == "region_spans_candidates":
         note += "; never state one of them as the source"
+    elif len(inside) >= 2:
+        note += "; the region is about the part's size, not one source location"
     note += f" (region {region_area:.0f} mm², deposited part {'unknown' if part_area_mm2 is None else f'{part_area_mm2:.0f} mm²'})"
     return {"precision": level, "candidate_features": [f["id"] for f in inside], "note": note}
 
@@ -134,9 +140,13 @@ def write_memory(session: Path, phase_label: str, parts: list[dict], bindings: d
         if obs is None:
             part["memory"] = {"status": "not written", "why": "evidence already imported"}
             continue
+        inference = {"relation": "source_to_cell", "inferred_by": part["status"], "hypothesis": part.get("hypothesis"),
+                     "producer": f"custody linker {part.get('linker_version') or 'unknown'} via tools/session",
+                     "assumptions": part.get("assumptions") or ["not recorded"]}
         link = _memory(session, "record", "tray-link", "--observation", obs, "--sheet", "surface_a3",
                        "--tray", part["cell"].split("-")[1], "--kit", kit, "--evidence-result-json", deposit["result_json"],
-                       "--evidence-pair-id", deposit["pair_id"], "--evidence-region", cell_region)
+                       "--evidence-pair-id", deposit["pair_id"], "--evidence-region", cell_region,
+                       "--inference-json", json.dumps(inference))
         part["memory"] = {"status": "written", "observation": obs, "tray_link": link["id"], "source_region": source_region,
                           "source_regions_overlapping": len(removal.get("regions") or [])}
         written.append(part["part"])

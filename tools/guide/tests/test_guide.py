@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from check import known, problems, split_answers  # noqa: E402
+from check import known, problems, relation_problems, relations, split_answers  # noqa: E402
 from package import build  # noqa: E402
 
 
@@ -107,6 +107,40 @@ class GroundingCheckTest(unittest.TestCase):
     def test_answers_file_is_split_by_question(self):
         pairs = split_answers("## Q1: Wohin?\nNach W-YELLOW [obs-0001].\n\n## Q2: Reihenfolge?\nNicht beobachtet.\n")
         self.assertEqual([q for q, _ in pairs], ["Wohin?", "Reihenfolge?"])
+
+
+class RelationCheckTest(unittest.TestCase):
+    """PROV-01: stated relations and basis words must match the package, not just existing ids."""
+
+    PACKAGE = {"parts": [
+        {"id": "obs-0001", "basis": "automatic", "source": {"centroid_mm": [175.9, 171.2], "note": "covers F2-16"},
+         "stored_in": {"location": "cell-8", "record": "link-0001", "basis": "evidence",
+                       "inference": {"relation": "source_to_cell", "inferred_by": "candidate_temporal_exclusive",
+                                     "producer": "custody linker 1.7", "assumptions": ["one part per cell"]}}},
+        {"id": "dec-0001", "basis": "operator_declared", "source": {"described_as": "top-left screw hole H2"},
+         "stored_in": {"location": "cell-1", "record": "store-0001", "basis": "human"}, "group": {"id": "grp-0001"}},
+        {"id": "dec-0002", "basis": "operator_declared", "source": {"described_as": "deep holes"},
+         "stored_in": {"location": "cell-1", "record": "store-0002", "basis": "human"}, "group": {"id": "grp-0001"}},
+        {"id": "dec-0003", "basis": "operator_declared", "source": {"described_as": None},
+         "stored_in": {"location": "OUT-A", "record": "store-0003", "basis": "human"}},
+    ]}
+
+    def check(self, answer):
+        return relation_problems(answer, relations(self.PACKAGE))
+
+    def test_true_relations_pass(self):
+        self.assertEqual(self.check("Das Teil aus Zelle 8 (obs-0001) wurde vom System zugeordnet."), [])
+        self.assertEqual(self.check("Eine beliebige Schraube aus Zelle 1 (grp-0001) gehört in ein Loch; die erste kam laut Operator aus H2 (dec-0001)."), [])
+        self.assertEqual(self.check("Woher dec-0003 kam, ist nicht beobachtet."), [])
+
+    def test_wrong_cell_and_wrong_site_fail_although_both_exist(self):
+        self.assertTrue(any("cell 1" in p for p in self.check("dec-0003 liegt in Zelle 1.")))
+        self.assertTrue(any("site H2" in p for p in self.check("Das Teil obs-0001 kam aus H2.")))
+
+    def test_basis_words_must_match(self):
+        self.assertTrue(any("described as observed" in p for p in self.check("dec-0001 wurde beobachtet.")))
+        self.assertTrue(any("attributed to the operator" in p for p in self.check("obs-0001 liegt laut Operator in Zelle 8.")))
+        self.assertTrue(any("concluded by a rule" in p for p in self.check("Es wurde beobachtet, wie obs-0001 in Zelle 8 kam.")))
 
 
 if __name__ == "__main__":

@@ -21,7 +21,13 @@ Event kinds:
   (`sheet_id`, `number`, `rect_frame_mm`) is resolved from
   `calibration/calibration-config.json` at record time. Every link carries
   either an evidence basis or a human confirmation; anything else is rejected
-  and nothing is written.
+  and nothing is written. An evidence basis cites what was *observed* (for
+  example the change in the cell). When the link itself was *concluded* — the
+  source-to-cell correspondence of an automatic custody link — the optional
+  `inference` object says so: `relation` (e.g. `source_to_cell`),
+  `inferred_by` (the rule, e.g. `candidate_temporal_exclusive`), `producer`
+  (tool and version) and `assumptions` (list). Links without `inference` from
+  before 2026-10-29 do not state how they were concluded.
 
 Operator-declared events for complete disassemblies (owner decision
 2026-10-29; each names who declared it and never counts as automatic

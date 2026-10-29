@@ -54,7 +54,7 @@ def _storage_by_target(events: list[dict]) -> dict[str, dict]:
         if event["type"] == "tray_link":
             storage[event["observation_id"]] = {"location": f"cell-{event['tray']['number']}", "record": event["id"],
                                                 "basis": event["basis"]["kind"], "confirmed_by": event["basis"].get("confirmed_by"),
-                                                "note": event["basis"].get("note")}
+                                                "note": event["basis"].get("note"), "inference": event.get("inference")}
         elif event["type"] == "storage_link":
             storage[event["target_id"]] = {"location": event["location"], "record": event["id"], "basis": "human",
                                            "confirmed_by": event["basis"]["confirmed_by"], "note": event["basis"].get("note")}
@@ -144,6 +144,14 @@ def build(memory_path: Path, inventory_path: Path | None, custody_path: Path | N
         "Reassembly progress is known only from return checks below or from what the operator says in the chat.",
     ]
     unknowns += [f"{p['id']} has no recorded storage place." for p in parts if not p["stored_in"]]
+    unknowns += [f"{p['id']} (automatic): the link from its source to {p['stored_in']['location']} was concluded by "
+                 f"{p['stored_in']['inference']['inferred_by']}, not observed; assumptions: "
+                 + "; ".join(p["stored_in"]["inference"]["assumptions"])
+                 for p in parts if p["basis"] == "automatic" and (p["stored_in"] or {}).get("inference")]
+    unknowns += [f"{p['id']} (automatic): how its link to {p['stored_in']['location']} was concluded is not recorded "
+                 "(memory written before 2026-10-29)."
+                 for p in parts if p["basis"] == "automatic" and p["stored_in"] and p["stored_in"]["basis"] == "evidence"
+                 and not p["stored_in"].get("inference")]
     unknowns += [f"{p['id']} ({p['operator_label']}): the operator did not state where it came from; its source is unknown."
                  for p in parts if p["basis"] == "operator_declared" and p["source"]["described_as"] is None]
     unknowns += [f"{p['id']} has no removal time; its order within its phase is only the log order." for p in parts if p["t_s"] is None]

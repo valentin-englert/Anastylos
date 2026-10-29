@@ -39,6 +39,19 @@ class NumberPartsTest(unittest.TestCase):
         self.assertEqual(linked["sources"][0]["centroid_mm"], [100, 100])
         self.assertNotIn("removal_event", self.parts[2])
 
+    def test_linked_part_states_its_rule_and_assumptions(self):
+        linked = self.parts[0]
+        self.assertEqual(linked["status"], "candidate_temporal_exclusive")
+        self.assertIn("one part per cell", linked["assumptions"])
+        self.assertTrue(any("undiscovered" in a for a in linked["assumptions"]))
+
+    def test_hand_order_from_an_older_linker_is_a_question_not_a_link(self):
+        older = {"proposals": [proposal("L-0001", "cell-8", "E-10", 13, 15, "candidate_by_hand_order",
+                                        removal=removal("E-1", "SRC-1", 10, 12), autonomy="automatic")]}
+        parts, questions = number_parts(older, "P2")
+        self.assertNotIn("removal_event", parts[0])
+        self.assertEqual(questions[0]["part"], "P2-C08")
+
     def test_open_parts_and_unplaced_removals_become_questions_not_facts(self):
         kinds = [(q["kind"], q.get("part") or q.get("removal_event")) for q in self.questions]
         self.assertEqual(kinds, [("source_of_part", "P1-C01b"), ("source_of_part", "P1-C08"),
@@ -51,29 +64,30 @@ class SourcePrecisionTest(unittest.TestCase):
     FEATURES = [{"id": "F1-1", "centre_mm": [151.6, 134.9]}, {"id": "F1-2", "centre_mm": [183.8, 161.2]},
                 {"id": "F1-3", "centre_mm": [242.3, 141.8]}]
 
-    def test_region_over_two_holes_is_coarse_and_says_so(self):
+    def test_region_over_two_holes_spans_candidates_and_says_so(self):
         from session import source_precision
         result = source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES)
-        self.assertEqual(result["precision"], "coarse")
+        self.assertEqual(result["precision"], "region_spans_candidates")
         self.assertEqual(result["candidate_features"], ["F1-1", "F1-2"])
         self.assertIn("never state one of them", result["note"])
 
-    def test_region_over_one_well_is_specific(self):
+    def test_region_over_one_well_is_about_part_size(self):
         from session import source_precision
-        self.assertEqual(source_precision([236.5, 137.5, 12.5, 12.3], self.FEATURES)["precision"], "specific")
+        self.assertEqual(source_precision([236.5, 137.5, 12.5, 12.3], self.FEATURES)["precision"], "region_about_part_size")
 
-    def test_large_part_covering_several_features_is_specific(self):
+    def test_large_part_covering_several_features_is_about_part_size_not_one_location(self):
         from session import source_precision
         result = source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES, part_area_mm2=3000.0)
-        self.assertEqual(result["precision"], "specific")
+        self.assertEqual(result["precision"], "region_about_part_size")
+        self.assertIn("not one source location", result["note"])
 
-    def test_small_part_in_a_large_region_over_two_features_stays_coarse(self):
+    def test_small_part_in_a_large_region_over_two_features_spans_candidates(self):
         from session import source_precision
-        self.assertEqual(source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES, part_area_mm2=20.0)["precision"], "coarse")
+        self.assertEqual(source_precision([134.7, 113.7, 60.7, 62.7], self.FEATURES, part_area_mm2=20.0)["precision"], "region_spans_candidates")
 
     def test_region_without_features_is_reported(self):
         from session import source_precision
-        self.assertEqual(source_precision([10, 10, 5, 5], self.FEATURES)["precision"], "no_feature")
+        self.assertEqual(source_precision([10, 10, 5, 5], self.FEATURES)["precision"], "no_candidate_feature")
 
 
 if __name__ == "__main__":

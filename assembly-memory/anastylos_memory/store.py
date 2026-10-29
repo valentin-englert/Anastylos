@@ -125,9 +125,22 @@ def validate_tray_link(event: dict, known_ids: set[str], successors: dict[str, s
             raise ValidationError("tray_link human basis needs 'confirmed_by'")
     else:
         raise ValidationError("tray_link basis kind must be 'evidence' or 'human'")
+    if event.get("inference") is not None:
+        validate_inference(event["inference"], "tray_link")
     supersedes = event.get("supersedes")
     if supersedes is not None and supersedes not in known_ids:
         raise ValidationError(f"tray_link supersedes unknown id {supersedes!r}")
+
+
+def validate_inference(inference: dict, what: str) -> None:
+    """A link that was concluded, not observed: which rule concluded it and on which assumptions."""
+    if not isinstance(inference, dict):
+        raise ValidationError(f"{what} inference must be an object")
+    for key in ("relation", "inferred_by", "producer"):
+        _require_text(inference, key, f"{what} inference")
+    assumptions = inference.get("assumptions")
+    if not isinstance(assumptions, list) or not all(isinstance(a, str) and a.strip() for a in assumptions):
+        raise ValidationError(f"{what} inference needs 'assumptions' as a list of non-empty strings")
 
 
 def _require_known(target: str, events_by_id: dict[str, dict], types: tuple, what: str) -> dict:

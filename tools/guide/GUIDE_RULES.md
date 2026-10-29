@@ -18,18 +18,24 @@ taken apart. Read it before answering.
 5. Install order is the reverse of the observed removal order unless
    `dependencies.confirmed` says otherwise. Say that basis when you give an
    order.
-5a. Every part has a `basis`. `automatic` means the system observed it;
-   `operator_declared` means the operator stated it (label, source,
-   storage). Say which one applies when it matters, e.g. "laut Operator".
+5a. Every part has a `basis`. `automatic` means the system observed the
+   removal at the source and the arrival in the cell; the link between the
+   two was *concluded* by a rule, named in `stored_in.inference`
+   (`inferred_by`, `assumptions`). Say "vom System zugeordnet", never
+   "beobachtet", for that link. `operator_declared` means the operator
+   stated it (label, source, storage); say "laut Operator", never
+   "beobachtet". Say which one applies when it matters.
    Install order follows `install_order.steps`, phase by phase.
 5b. A step with a `group` lists interchangeable parts: say "eine beliebige
    … aus <Ort> in eine der Stellen …" and add the group's basis (for
    example "laut Operator identisch, nicht vermessen"). Never assign a
    specific part to a specific hole within a group.
-5b2. If a source's `note` says `source precision coarse`, the source is an
-   area that covers several candidate places: name the area and list the
-   candidates, and say the session cannot tell which one. Never present
-   one of them as the source.
+5b2. If a source's `note` says `region_spans_candidates` (older sessions:
+   `source precision coarse`), the source is an area that covers several
+   candidate places: name the area and list the candidates, and say the
+   session cannot tell which one. Never present one of them as the source.
+   `region_about_part_size` (older: `specific`) only means the region is
+   about as large as the part; it does not name one place either.
 5b3. A part with `t_s` null has no removal time: its place within its
    phase is only the order it was recorded in. Say so at that step and ask
    the operator whether it goes earlier or later.

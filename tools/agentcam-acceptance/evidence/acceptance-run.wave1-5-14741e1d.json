@@ -1,0 +1,564 @@
+{
+  "scorecard": "anastylos-agentcam-acceptance-run@1",
+  "candidate_commit": "14741e1df7889fcdb35ec3d6cb3e175d0609feaa",
+  "git_head": "14741e1df7889fcdb35ec3d6cb3e175d0609feaa",
+  "contract_sha256": "ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "contract_manifest_value": "ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "contract_expected": "ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "contract_expected_source": "dispatch-flag",
+  "contract_match": true,
+  "profile_id": "guidance-hypothesis-1",
+  "evaluator": {
+    "harness": "tools/agentcam-acceptance",
+    "files": {
+      "accept.py": "a1b5a061b4d8b75e3a49e2eb087d19cf8c3fc962a9ac8744ef7b92203cd7df46",
+      "checks.py": "85149dd26b60153dab015e9317235768df15ac49ba59ce55f889444808297b01",
+      "README.md": "1f047e765ddeb0179a78ba0c0386353625cebd0b1a57cd3d3dd7b04fc166fdca",
+      "EVIDENCE.md": "d318beee15023facce56298b74abcc49998b75883c2857b0573376e475f7c436",
+      "tests/test_acceptance.py": "04ecca951eefe7ce7abca885b5a11f3efbb5ad46231ef4c8f61a682d9ec81920"
+    }
+  },
+  "hardware": {
+    "status": "none-attached",
+    "detail": "no phone, print metrology, caliper or LAN timing rig; all physical gates PENDING_EVIDENCE"
+  },
+  "tool_versions": {
+    "python": "Python 3.12.10",
+    "python_executable": "C:\\Users\\HP\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "commands": [
+    {
+      "cmd": [
+        "C:\\Users\\HP\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "--version"
+      ],
+      "cwd": "C:\\Users\\HP\\Documents\\Anastylos-integration-spatial",
+      "exit_code": 0,
+      "stdout_tail": "Python 3.12.10\n",
+      "stderr_tail": ""
+    },
+    {
+      "cmd": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "C:\\Users\\HP\\Documents\\Anastylos-integration-spatial",
+      "exit_code": 0,
+      "stdout_tail": "14741e1df7889fcdb35ec3d6cb3e175d0609feaa\n",
+      "stderr_tail": ""
+    },
+    {
+      "cmd": [
+        "C:\\Users\\HP\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-B",
+        "tools/compliance/check.py"
+      ],
+      "cwd": "C:\\Users\\HP\\Documents\\Anastylos-integration-spatial",
+      "exit_code": 0,
+      "stdout_tail": ". No per-component license files ship with the install, so individual licenses are unverified. Installed tool dependency, not bundled. Review only if this toolset is ever redistributed.\nREVIEW: Cairo native library (libcairo-2.dll) (SPDXRef-Package-cairo-native): REVIEW: NOT INSTALLED: absent from .venv and System32 (calibration PDF/PNG tests fail without it); upstream documents dual LGPL-2.1-only OR MPL-1.1 (secondary sources only, primary COPYING unavailable offline). The Tesseract install ships a private libcairo-2.dll that is not on PATH and not usable by cairocffi. Re-verify license and version if Cairo is ever installed or redistributed.\nREVIEW: npm transitive closure (capture devDependencies) (SPDXRef-Package-npm-transitive): REVIEW: transitive npm packages of the five direct capture devDependencies (lockfile v3 closure recorded in capture-companion/app/package-lock.json) are not inventoried individually and their licenses are unverified. None ships in the PWA bundle. Confirm per-package licenses before redistributing node_modules.\nREVIEW: ML Kit barcode scanning (com.google.mlkit:barcode-scanning) (SPDXRef-Package-maven-mlkit-barcode-scanning): REVIEW: ML Kit Terms of Service (https://developers.google.com/ml-kit/terms) is a custom Google terms document, not an SPDX-listed license. A human must read the current terms and confirm redistribution, attribution, and data-processing obligations before the APK is shared beyond the developer workstation.\nREVIEW: Android Maven pins (AndroidX, CameraX, Kotlinx; direct + transitive) (SPDXRef-Package-maven-android-closure): REVIEW: direct + transitive Maven closure of capture-companion/android (libs.versions.toml: AndroidX Compose/CameraX/Room/DataStore/WorkManager/Navigation/Security, Kotlinx coroutines/serialization, test and build tooling). Per-artifact POM license fields are unverified; inventory each runtime-shipped artifact individually before M5 APK distribution.\n\n0 error(s), 1 warning(s), 10 open review item(s)\n",
+      "stderr_tail": ""
+    },
+    {
+      "cmd": [
+        "C:\\Users\\HP\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+        "-B",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tests"
+      ],
+      "cwd": "C:\\Users\\HP\\Documents\\Anastylos-integration-spatial\\tools\\agentcam-acceptance",
+      "exit_code": 0,
+      "stdout_tail": "",
+      "stderr_tail": "....................\n----------------------------------------------------------------------\nRan 20 tests in 1.462s\n\nOK\n"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "capture-companion/control/contracts/README.md",
+      "bytes": 3330,
+      "sha256": "ae8e56b3e45f35ce68101b26904353d8da0fa1783c25458ad8e457d4f519d4e2"
+    },
+    {
+      "path": "capture-companion/control/contracts/schemas/cad-feature-model.schema.json",
+      "bytes": 11608,
+      "sha256": "385857fa9a5485fd17f9292d7dd5f4bfedc9e83308376e807453c37436023197"
+    },
+    {
+      "path": "capture-companion/control/contracts/schemas/control.schema.json",
+      "bytes": 51912,
+      "sha256": "d5b05731a2443f261c02e84ea90b95302b38fda8e70bff63220a62e827cad566"
+    },
+    {
+      "path": "capture-companion/control/contracts/schemas/mcp-tools.expanded.json",
+      "bytes": 2259071,
+      "sha256": "38cb02b4898d993a451b704dd378b328933f43d0dad63470f16d869cc291f80e"
+    },
+    {
+      "path": "capture-companion/control/contracts/schemas/mcp-tools.json",
+      "bytes": 6569,
+      "sha256": "5132d52be6e58e5406dd7a36d3fb70656076f8fa656576c44e8063d36ded3566"
+    },
+    {
+      "path": "capture-companion/control/contracts/schemas/spatial-evidence.schema.json",
+      "bytes": 43711,
+      "sha256": "b1c254371968d5ac2599375dfd5324f38f0993751907c67dc33dde458d2cd40b"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/cad-feature-invalid.json",
+      "bytes": 1205,
+      "sha256": "f6f9efee05667597bbcc6a82e6eb677a3f34296e7fa24fdf20107c3731cee688"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/cad-feature-valid.json",
+      "bytes": 1991,
+      "sha256": "508d25d04187bd9c2e47fe32a20b5f5a71e93a544fcd3c0bc2f6498b493330ac"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/control-negative.json",
+      "bytes": 1328,
+      "sha256": "77883ce2f13f1871d88fa64baed4791a8eae28d1929752c0e967cae773b0c267"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/control-request-valid.json",
+      "bytes": 1458,
+      "sha256": "ebc4ff7c7efe4e1b4b7b51761334039d044947154c1f025641e8652879d2d81c"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/control-transitions.json",
+      "bytes": 3620,
+      "sha256": "2eb4b962b6c9a19e166fc44a1e0d50a20aaebfdcfb419f744cb20f9c85623f31"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/guidance-signs.json",
+      "bytes": 975,
+      "sha256": "124a3b04c566957ef08e3183d1bd111e4dc5285a8c9efb4a812ac67a8d68fb06"
+    },
+    {
+      "path": "capture-companion/control/contracts/vectors/spatial-valid.json",
+      "bytes": 6938,
+      "sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742"
+    }
+  ],
+  "memory_before": {
+    "assembly-reconstruction\\fixtures\\synthetic\\memory.jsonl": "acdfcadc677d85694e5abcea758a709342983591f52c56b5a96bbb4e80fd75b3"
+  },
+  "memory_after": {
+    "assembly-reconstruction\\fixtures\\synthetic\\memory.jsonl": "acdfcadc677d85694e5abcea758a709342983591f52c56b5a96bbb4e80fd75b3"
+  },
+  "gates": [
+    {
+      "id": "run-integrity",
+      "capability": "candidate SHA binding",
+      "verdict": "PASS",
+      "evidence_class": "provenance",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "candidate=14741e1df7889fcdb35ec3d6cb3e175d0609feaa head=14741e1df7889fcdb35ec3d6cb3e175d0609feaa"
+    },
+    {
+      "id": "contract-manifest",
+      "capability": "contract file manifest",
+      "verdict": "PASS",
+      "evidence_class": "provenance",
+      "numerator": 13,
+      "denominator": 13,
+      "detail": "13/13 files match bytes+sha256"
+    },
+    {
+      "id": "contract-sha",
+      "capability": "contract SHA-256 recompute",
+      "verdict": "PASS",
+      "evidence_class": "provenance",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "recomputed=ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663 manifest=ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663 expected=ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663"
+    },
+    {
+      "id": "vector-control-valid",
+      "capability": "ViewRequest valid vector",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "0 violations"
+    },
+    {
+      "id": "vector-control-negative",
+      "capability": "control negative vectors",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 8,
+      "denominator": 8,
+      "detail": "unknown-key=schema-reject; bad-revision=schema-reject; wrong-source=structurally-valid, source differs; live authorization NOT_TESTED (no Core store); wrong-board-side=semantic-reject: board_side: t_z >= 0 violates z-into-plane; reflection=semantic-reject: reflection: det(R) < 0; expired=semantic-reject: expired: expires_at <= created_at; nan=parse-reject; same-operation-new-body=409 idempotency_conflict"
+    },
+    {
+      "id": "vector-control-transitions",
+      "capability": "control transition vectors",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 17,
+      "denominator": 17,
+      "detail": "cases=17 unique_ids=True unmapped=none; NOT_TESTED (no Core reducer in candidate)"
+    },
+    {
+      "id": "vector-spatial-valid",
+      "capability": "spatial evidence valid vector",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "0 violations; quality.overall=accepted is candidacy only (Core validator + qualified Receipt required)"
+    },
+    {
+      "id": "vector-guidance-signs",
+      "capability": "guidance analytic recompute",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 2,
+      "denominator": 2,
+      "detail": "notes=none; 7 required extensions: NOT_TESTED (analytic extensions unimplemented in G0 vectors)"
+    },
+    {
+      "id": "vector-cad-valid",
+      "capability": "CAD feature valid vector",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "0 violations; det=+1, parents resolve, no cycle"
+    },
+    {
+      "id": "vector-cad-invalid",
+      "capability": "CAD feature invalid vectors",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 6,
+      "denominator": 6,
+      "detail": "unknown-op-planar-profile=schema-reject; negative-size=schema-reject; bad-basis-suggested=schema-reject; reflection-transform=semantic-reject: reflection: det(T_CAD_B) < 0; dangling-parent=semantic-reject: dangling-parent: hole_1 -> nope; parent-cycle=semantic-reject: parent-cycle at hole_b"
+    },
+    {
+      "id": "mcp-bundle",
+      "capability": "MCP tool bundle",
+      "verdict": "PASS",
+      "evidence_class": "synthetic",
+      "numerator": 5,
+      "denominator": 5,
+      "detail": "tools=9 schemas=18/18 refs=513 dangling=none external=none control_src_match=True spatial_src=75cbbd318cb752698ff45db982b4bdf0bd3863c1955c6bc03281eb8ceb642396 (embedded sidecar, informational)"
+    },
+    {
+      "id": "regression-compliance",
+      "capability": "compliance checker",
+      "verdict": "PASS",
+      "evidence_class": "provenance",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "exit=0 errors=0"
+    },
+    {
+      "id": "regression-selftests",
+      "capability": "harness self-test suite",
+      "verdict": "PASS",
+      "evidence_class": "provenance",
+      "numerator": 20,
+      "denominator": 20,
+      "detail": "exit=0 result=OK"
+    },
+    {
+      "id": "regression-memory",
+      "capability": "assembly memory untouched",
+      "verdict": "PASS",
+      "evidence_class": "provenance",
+      "numerator": 1,
+      "denominator": 1,
+      "detail": "1 memory.jsonl file(s) rehashed; changed=none"
+    },
+    {
+      "id": "E1",
+      "capability": "Marker registration",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E2",
+      "capability": "Pose accuracy",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E3",
+      "capability": "Guidance correctness",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate; synthetic sub-evidence: vector-guidance-signs"
+    },
+    {
+      "id": "E4",
+      "capability": "Tracking performance",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E5",
+      "capability": "Stability/quality capture",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E6",
+      "capability": "Request->capture linkage",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate; synthetic sub-evidence: vector-control-valid, vector-control-negative, vector-control-transitions"
+    },
+    {
+      "id": "E7",
+      "capability": "Receiver delivery",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E8",
+      "capability": "Spatial provenance",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate; synthetic sub-evidence: vector-spatial-valid"
+    },
+    {
+      "id": "E9",
+      "capability": "CAD validity",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate; synthetic sub-evidence: vector-cad-valid, vector-cad-invalid"
+    },
+    {
+      "id": "E10",
+      "capability": "CAD dimensional error",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E11",
+      "capability": "Active viewpoint loop",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "E12",
+      "capability": "Unfamiliar-device E2E",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H0",
+      "capability": "Android runtime",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H1",
+      "capability": "fiducials",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H2",
+      "capability": "physical pose",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H3",
+      "capability": "guidance signs",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H4",
+      "capability": "tracking latency",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H5",
+      "capability": "stable capture",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H6",
+      "capability": "blur/exposure/visibility",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H7",
+      "capability": "milestone A",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H8",
+      "capability": "milestone B",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H9",
+      "capability": "upload/restart",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H10",
+      "capability": "registration recovery",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H11",
+      "capability": "consent/isolation",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H12",
+      "capability": "CAD-0",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H13",
+      "capability": "CAD-1",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H14",
+      "capability": "milestone C artifact",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H15",
+      "capability": "independent dimensions",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H16",
+      "capability": "milestone D",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H17",
+      "capability": "Observer/Memory provenance",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    },
+    {
+      "id": "H18",
+      "capability": "crash/finalization",
+      "verdict": "PENDING_EVIDENCE",
+      "evidence_class": "physical",
+      "numerator": 0,
+      "denominator": 0,
+      "detail": "no hardware attached and candidate has no lane implementation; synthetic replay cannot pass this gate"
+    }
+  ],
+  "verdict_summary": {
+    "PASS": 14,
+    "PENDING_EVIDENCE": 31
+  },
+  "created_at": "2026-10-29T13:24:45.696905+00:00"
+}

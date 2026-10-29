@@ -52,8 +52,11 @@ def _last_phase(session: Path) -> str | None:
 
 
 def _best_region(binding: dict) -> str | None:
+    """Region with the largest overlap; a grouped removal may overlap several change regions (``several_regions``)."""
     regions = binding.get("regions") or []
-    return max(regions, key=lambda r: r.get("overlap_mm2", 0))["region"] if binding.get("status") == "bound" and regions else None
+    if binding.get("status") not in ("bound", "several_regions") or not regions:
+        return None
+    return max(regions, key=lambda r: r.get("overlap_mm2", 0))["region"]
 
 
 def run_pipeline(video: Path, custody_dir: Path, config: str, out: Path) -> dict:
@@ -103,7 +106,8 @@ def write_memory(session: Path, phase_label: str, parts: list[dict], bindings: d
         link = _memory(session, "record", "tray-link", "--observation", obs, "--sheet", "surface_a3",
                        "--tray", part["cell"].split("-")[1], "--kit", kit, "--evidence-result-json", deposit["result_json"],
                        "--evidence-pair-id", deposit["pair_id"], "--evidence-region", cell_region)
-        part["memory"] = {"status": "written", "observation": obs, "tray_link": link["id"]}
+        part["memory"] = {"status": "written", "observation": obs, "tray_link": link["id"], "source_region": source_region,
+                          "source_regions_overlapping": len(removal.get("regions") or [])}
         written.append(part["part"])
     return {"phase": phase["id"], "written": written}
 

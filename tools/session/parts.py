@@ -11,7 +11,7 @@ question for the operator, never a fact.
 
 from __future__ import annotations
 
-LINKED = ("candidate_temporal_exclusive", "candidate_by_elimination")
+LINKED = ("candidate_temporal_exclusive", "candidate_by_elimination", "candidate_by_hand_order")
 
 
 def _sources(removal: dict, registry: dict[str, dict]) -> list[dict]:

@@ -418,3 +418,36 @@ Remaining weakness for P2 and freestyle footage: without hands-off pauses
 the removal and deposit windows are long and overlap, so several
 candidates stay open per deposit. Narrower windows need hand tracking
 (requirement H1), not more linker rules.
+
+## 18. Colour-free hand presence (H1) and hand order (2026-10-29) — development data
+
+`feat/custody-v1.3` commit `efe2191d` (hands 0.1.0, observer 1.6.0,
+linker 1.6), 92/92 tests. Hand presence without colour: a hand-free
+reference of the whole sheet image (refreshed only when the scene is
+still and no hand is present, or after 10 s of stillness), busy pixels
+(recent motion or difference from that reference), and busy components
+that reach the image border are arms with hands. Tests cover H1 cases A1
+(static skin-coloured part is never a hand), A2 (resting hand stays a
+hand) and A7 (hand covers only where it is). The observer records, per
+zone, the intervals the hand covered it (`hand_visits`). Linker rule: a
+pending removal can only be a deposit's source if the hand touched one of
+its sites inside its window before the visit to the deposit's cell began;
+exactly one survivor gives `candidate_by_hand_order` (gaps, unobservable
+sources and occupied cells still block; one part carried at a time is
+assumed). Session writer: a grouped removal may overlap several
+change-detection regions; the largest overlap is used and the count kept.
+
+Session runs (`C:\ANASTYLOS\data\session-runs-v16\`, `…-v16b\FULL-01`):
+
+| Run | Before | With hand order |
+|---|---|---|
+| E2 | 4 written | unchanged |
+| FULL-01 P2 | 0 links | **2 links by hand order**: cell-8 ← sources ≈ 163–183 / 172–174 mm, cell-11 ← sources ≈ 239–260 / 168–179 mm, both ends of the same long edge of the front shell (L and R positions); written to memory with evidence. Nubs (cell-2) still ambiguous |
+| FULL-01 P3 | 2 written | unchanged |
+| FULL-01 P1 | 1 link not written | now written — but it is the coarse link whose source covers H1 and H2; memory stores only its region, no hole. Marking such sources `coarse` (candidate features in the static frame) is still open |
+| SNES-01 freestyle | 0 links | 0 links (hand-held minutes `unattributed`; later deposits ambiguous) |
+
+FULL-01 memory written automatically: 3 phases, 5 observations with
+change-detection evidence, 5 evidence-based tray links; 11 open questions.
+The two P2 links are plausible from geometry but not yet confirmed by the
+owner's video review.

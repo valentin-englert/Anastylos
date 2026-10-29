@@ -1,0 +1,14 @@
+# mesh experiment pins -- resolved on CPython 3.12.10 / win_amd64
+# direct: numpy, pillow, scipy, scikit-image, trimesh, opencv-python-headless
+# generated from pip install --report; sorted; excludes pip itself
+ImageIO==2.38.1
+lazy-loader==0.6
+networkx==3.7
+numpy==2.5.4
+opencv-python-headless==5.0.0.93
+packaging==26.3
+pillow==13.0.0
+scikit-image==0.26.0
+scipy==1.18.1
+tifffile==2026.10.15
+trimesh==5.2.0

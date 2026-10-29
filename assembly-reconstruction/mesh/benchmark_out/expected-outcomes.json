@@ -1,0 +1,73 @@
+{
+  "algorithm_version": "mesh-vh-0.1.0",
+  "bounds": {
+    "heldout-rotated-stepped-r96": [
+      {
+        "bound": 4.0,
+        "metric": "chamfer_symmetric_mm",
+        "op": "lt"
+      },
+      {
+        "bound": 0.15,
+        "metric": "completeness_at_1mm",
+        "op": "gt"
+      },
+      {
+        "bound": 12.0,
+        "metric": "bbox_max_abs_err_mm",
+        "op": "lt"
+      },
+      {
+        "bound": 0.6,
+        "metric": "volume_rel_err",
+        "op": "lt"
+      },
+      {
+        "bound": true,
+        "metric": "watertight",
+        "op": "eq"
+      },
+      {
+        "bound": 1,
+        "metric": "components",
+        "op": "eq"
+      }
+    ],
+    "heldout-tall-cylinder-r96": [
+      {
+        "bound": 3.0,
+        "metric": "chamfer_symmetric_mm",
+        "op": "lt"
+      },
+      {
+        "bound": 0.25,
+        "metric": "completeness_at_1mm",
+        "op": "gt"
+      },
+      {
+        "bound": 10.0,
+        "metric": "bbox_max_abs_err_mm",
+        "op": "lt"
+      },
+      {
+        "bound": 0.35,
+        "metric": "volume_rel_err",
+        "op": "lt"
+      },
+      {
+        "bound": true,
+        "metric": "watertight",
+        "op": "eq"
+      },
+      {
+        "bound": 1,
+        "metric": "components",
+        "op": "eq"
+      }
+    ]
+  },
+  "created_before_execution": true,
+  "eval_tau_mm": 1.0,
+  "rationale": "Bounds pre-registered before any held-out execution, derived from res-32 unit-test observations at 320x240/8 views (cylinder: chamfer 1.36mm, vol rel-err 0.095, height err 4mm; stepped: chamfer 3.25mm, bbox rel-err 0.186) with margin for the finer res-96 grid, unseen ring angles, and the taller cylinder (silhouette-weak height). Completeness@1mm has no prior observation, so its bounds are loose regression trips, not fit claims.",
+  "verdict_rule": "lt/gt bounds compare the across-rep mean; eq bounds require every rep to equal the bound"
+}

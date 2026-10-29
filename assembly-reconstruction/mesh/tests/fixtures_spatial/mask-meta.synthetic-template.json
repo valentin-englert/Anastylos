@@ -1,0 +1,8 @@
+{
+  "fixture_provenance": "synthetic",
+  "fixture_note": "SYNTHETIC_TEST_FIXTURE_ONLY: template; mask_sha256 is per-image and filled at runtime. provenance stays 'manual' because the production adapter rejects 'synthetic' (real-evidence-only gate); editor marks the synthetic operator.",
+  "mask_sha256": "REPLACE_WITH_MASK_SHA256_HEX64",
+  "provenance": "manual",
+  "editor": "synthetic-test-operator",
+  "edited_bool": true
+}

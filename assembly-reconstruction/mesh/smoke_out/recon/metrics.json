@@ -1,0 +1,39 @@
+{
+  "accuracy_within_tau": 0.3625,
+  "bbox_dims_abs_err_mm": [
+    4.625,
+    4.6875,
+    6.4375
+  ],
+  "bbox_dims_gt_mm": [
+    60.0,
+    40.0,
+    30.0
+  ],
+  "bbox_dims_max_abs_err_mm": 6.4375,
+  "bbox_dims_rec_mm": [
+    64.625,
+    44.6875,
+    36.4375
+  ],
+  "chamfer_gt_to_rec_mm": 1.588648977215981,
+  "chamfer_rec_to_gt_mm": 1.6286143567656322,
+  "chamfer_symmetric_mm": 1.6086316669908065,
+  "completeness_within_tau": 0.3802,
+  "faces": 56132,
+  "n_samples": 20000,
+  "scene": "box",
+  "scene_params": {
+    "l": 40.0,
+    "t": 30.0,
+    "w": 60.0
+  },
+  "seed": 0,
+  "tau_mm": 1.0,
+  "vertices": 28068,
+  "volume_abs_err_mm3": 16711.15541585286,
+  "volume_gt_mm3": 72000.0,
+  "volume_rec_mm3": 88711.15541585286,
+  "volume_rel_err": 0.23209938077573417,
+  "volume_watertight": true
+}

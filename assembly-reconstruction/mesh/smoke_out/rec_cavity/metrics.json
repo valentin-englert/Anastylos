@@ -1,0 +1,41 @@
+{
+  "accuracy_within_tau": 0.33055,
+  "bbox_dims_abs_err_mm": [
+    3.9375,
+    4.34375,
+    6.09375
+  ],
+  "bbox_dims_gt_mm": [
+    60.0,
+    40.0,
+    30.0
+  ],
+  "bbox_dims_max_abs_err_mm": 6.09375,
+  "bbox_dims_rec_mm": [
+    63.9375,
+    44.34375,
+    36.09375
+  ],
+  "chamfer_gt_to_rec_mm": 3.1313741541693476,
+  "chamfer_rec_to_gt_mm": 2.14375051373557,
+  "chamfer_symmetric_mm": 2.6375623339524585,
+  "completeness_within_tau": 0.28005,
+  "faces": 24680,
+  "n_samples": 20000,
+  "scene": "cavity",
+  "scene_params": {
+    "floor": 5.0,
+    "l": 40.0,
+    "t": 30.0,
+    "w": 60.0,
+    "wall": 5.0
+  },
+  "seed": 0,
+  "tau_mm": 1.0,
+  "vertices": 12342,
+  "volume_abs_err_mm3": 53568.022888183594,
+  "volume_gt_mm3": 34500.0,
+  "volume_rec_mm3": 88068.0228881836,
+  "volume_rel_err": 1.5526963155995244,
+  "volume_watertight": true
+}

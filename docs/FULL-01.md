@@ -226,3 +226,42 @@ Next, each a separate step: colour or saturation in the paper model
 (white and yellow parts), a minimum persistence or size for a removal
 event, and treating a change in a cell next to a fresh deposit with the
 same window as overhang rather than a second deposit.
+
+## 11. Colour and edge cues, observer v1.4 (2026-10-29) — development data
+
+Measured first on development frames (FULL-01, E2R): empty printed cells
+0–8 mm² grey, 0 saturated, 22–59 mm edges; yellow button 40 mm² grey but
+176 mm² saturated; white rubber nubs 8 mm² grey, 0 saturated, 189 mm
+edges; white D-pad membrane 0 / 0 / 261–292 mm. Saturation fixes pale
+colours; white on white is only visible as structure (edges).
+
+Branch `feat/custody-v1.3` commit `fed75867` (observer 1.4.0), 68/68 tests
+(5 new: white part found by edges, yellow by saturation, printed digit
+edges alone stay empty, white part removed is `vacated`, cues off keeps
+v1.3). A cell is occupied when any cue fires: grey area ≥ 25 mm²,
+saturated area (S > 60) ≥ 25 mm², or edge length ≥ 120 mm; a change of
+cue occupancy also starts a candidate, so a part that barely changes the
+grey image is still seen. `custody-config.v14.json` is the one combined
+configuration (paper model + ring rule + cues). Thresholds come from
+these development frames.
+
+| Run | Result |
+|---|---|
+| E2 named / adaptive, linker 1.3 | 4 links each, unchanged |
+| E2R re-analysis (returns checker accepts 1.4.0) | 5/5 returns, all consistent, unchanged |
+| FULL-01 P2 | white nubs → cell-2 now `appeared` (was `changed_while_empty`); 0 pose breaks; L, R, nubs `unattributed` (P2 has no sources after the back shell lifts) |
+| FULL-01 P3 | start state measured correctly (cells 1, 2, 8, 11 occupied); white D-pad membrane → cell-10 now `appeared`; 0 pose breaks; 7 deposits, all `ambiguous` |
+| FULL-01 P1 | new: cell-6 `appeared` 38–49 s and `vacated` 52–89 s — something with edges lay in cell-6 (tool or screw?), to be checked by the owner; 4 deposits `ambiguous` |
+| FULL-01 P3 + draft OUT-x | 3–9 pending; still 0 links |
+
+What now blocks the first P3 link (cell-10 at 30–35 s, pending: the
+transient 8 mm² change at 22 s and the late fragment of the face-button
+membrane, besides the true D-pad membrane removal): two noise removals.
+Every later deposit inherits them. Next, separately: a minimum
+persistence or size for a removal event, and a looser end-of-interval
+rule for late fragments of a grouped removal.
+
+Also found: a site whose anchor ring is fully covered by other sites has
+an empty ring; the anchor fraction is then NaN (`RuntimeWarning: Mean of
+empty slice`), and the comparison silently takes the re-alignment path.
+To be fixed as its own change.

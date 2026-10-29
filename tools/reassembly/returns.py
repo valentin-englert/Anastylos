@@ -20,7 +20,7 @@ import json
 from pathlib import Path
 
 SCHEMA = "anastylos-reassembly-returns@1"
-ACCEPTED_OBSERVERS = ("1.1.0", "1.2.0", "1.3.0")
+ACCEPTED_OBSERVERS = ("1.1.0", "1.2.0", "1.3.0", "1.4.0")
 DEPARTURES = {("tray_cell", "vacated"): "part left the cell", ("site", "site_emptied"): "part left the well"}
 ARRIVALS = {("site", "site_filled"): "part placed in the well", ("tray_cell", "appeared"): "part placed in a cell"}
 

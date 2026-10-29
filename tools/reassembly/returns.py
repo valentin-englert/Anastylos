@@ -20,7 +20,7 @@ import json
 from pathlib import Path
 
 SCHEMA = "anastylos-reassembly-returns@1"
-REQUIRED_OBSERVER = "1.1.0"
+ACCEPTED_OBSERVERS = ("1.1.0", "1.2.0", "1.3.0")
 DEPARTURES = {("tray_cell", "vacated"): "part left the cell", ("site", "site_emptied"): "part left the well"}
 ARRIVALS = {("site", "site_filled"): "part placed in the well", ("tray_cell", "appeared"): "part placed in a cell"}
 
@@ -72,10 +72,11 @@ def check_events_doc(events_doc: dict, plan_cells: set[str]) -> None:
     convention, correct for a cell that starts empty).
     """
     version = events_doc.get("provenance", {}).get("observer_version")
-    if version != REQUIRED_OBSERVER:
-        raise SystemExit(f"events come from observer {version!r}; reassembly needs {REQUIRED_OBSERVER}")
+    if version not in ACCEPTED_OBSERVERS:
+        raise SystemExit(f"events come from observer {version!r}; reassembly needs one of {ACCEPTED_OBSERVERS}")
     undeclared = [zone["zone"] for zone in events_doc["zones"]
-                  if "initially" not in zone and (zone["kind"] == "site" or zone["zone"] in plan_cells)]
+                  if "initially" not in zone and "initially_measured" not in zone
+                  and (zone["kind"] == "site" or zone["zone"] in plan_cells)]
     if undeclared:
         raise SystemExit(f"zones without declared start occupancy: {undeclared}")
 
@@ -99,9 +100,59 @@ def _overlaps(event: dict, window: tuple[float, float]) -> bool:
     return event["t_before_s"] < window[1] and event["t_after_s"] > window[0]
 
 
+MAX_ASSIGNMENTS = 100_000
+
+
+def _judge(arrival: dict, pending: list[dict], arrivals: list[dict], departures: list[dict], gaps: list) -> tuple[list[str], tuple]:
+    """Reasons that keep an arrival from a unique source (empty list: exclusive), and its custody window."""
+    window = (min(d["t_before_s"] for d in pending), arrival["t_after_s"])
+    reasons = []
+    if len(pending) > 1:
+        reasons.append(f"{len(pending)} departures pending")
+    others = [a["id"] for a in arrivals if a is not arrival and _overlaps(a, window)]
+    if others:
+        reasons.append("other arrivals overlap the window: " + ", ".join(others))
+    late = [d["id"] for d in departures if d not in pending and _overlaps(d, window)]
+    if late:
+        reasons.append("other departures overlap the window: " + ", ".join(late))
+    if any(gap[0] < window[1] and gap[1] > window[0] for gap in gaps):
+        reasons.append("sampling gap inside the window")
+    return reasons, window
+
+
+def _assignment_options(arrivals: list[dict], departures: list[dict]) -> dict[str, set] | None:
+    """arrival id -> departures it takes across all valid assignments (as in custody linker 1.1)."""
+    options = {arrival["id"]: set() for arrival in arrivals}
+    count = 0
+
+    def walk(index: int, used: frozenset) -> bool:
+        nonlocal count
+        if index == len(arrivals):
+            count += 1
+            return count <= MAX_ASSIGNMENTS
+        arrival = arrivals[index]
+        open_departures = [d["id"] for d in departures if d["t_before_s"] < arrival["t_after_s"] and d["id"] not in used]
+        for departure in open_departures or [None]:
+            options[arrival["id"]].add(departure)
+            if not walk(index + 1, used | {departure} if departure else used):
+                return False
+        return True
+
+    return options if walk(0, frozenset()) else None
+
+
 def verify(events_doc: dict, steps: list[dict]) -> dict:
+    """Return links by temporal exclusivity, or by elimination when every valid assignment agrees.
+
+    A valid assignment gives each arrival, in time order, one departure that
+    started before it and that no earlier arrival took (or none, when none is
+    left). An arrival ambiguous only because several departures are pending is
+    linked ``candidate_by_elimination`` when all valid assignments give it the
+    same departure and the narrowed window passes every other check.
+    """
     departures, arrivals = _movements(events_doc["events"])
     gaps = events_doc["sampling"]["gaps_over_max"]
+    options = _assignment_options(arrivals, departures)
     carried = {step["cell"]: step["home_well"] for step in steps if step["cell"]}  # zone -> home well of the part in it
     used, returns = set(), []
     for arrival in arrivals:
@@ -110,21 +161,19 @@ def verify(events_doc: dict, steps: list[dict]) -> dict:
         if not pending:
             returns.append({**result, "status": "unattributed", "reasons": ["no departure precedes this arrival"]})
             continue
-        window = (min(d["t_before_s"] for d in pending), arrival["t_after_s"])
-        reasons = []
-        if len(pending) > 1:
-            reasons.append(f"{len(pending)} departures pending")
-        others = [a["id"] for a in arrivals if a is not arrival and _overlaps(a, window)]
-        if others:
-            reasons.append("other arrivals overlap the window: " + ", ".join(others))
-        late = [d["id"] for d in departures if d not in pending and _overlaps(d, window)]
-        if late:
-            reasons.append("other departures overlap the window: " + ", ".join(late))
-        if any(gap[0] < window[1] and gap[1] > window[0] for gap in gaps):
-            reasons.append("sampling gap inside the window")
+        reasons, window = _judge(arrival, pending, arrivals, departures, gaps)
+        status, extra = "candidate_temporal_exclusive", {}
         if reasons:
-            returns.append({**result, "status": "ambiguous", "reasons": reasons, "candidates": pending})
-            continue
+            choices = (options or {}).get(arrival["id"], set())
+            unique = len(choices) == 1 and None not in choices
+            source = next((d for d in pending if unique and d["id"] in choices), None)
+            narrowed = _judge(arrival, [source], arrivals, departures, gaps)[0] if source else ["not unique"]
+            if narrowed:
+                returns.append({**result, "status": "ambiguous", "reasons": reasons, "candidates": pending})
+                continue
+            status = "candidate_by_elimination"
+            extra = {"eliminated": [d["id"] for d in pending if d is not source], "ambiguous_before_elimination": reasons}
+            pending, window = [source], _judge(arrival, [source], arrivals, departures, gaps)[1]
         source = pending[0]
         used.add(source["id"])
         home = carried.pop(source["zone"], None)
@@ -133,7 +182,7 @@ def verify(events_doc: dict, steps: list[dict]) -> dict:
                  else "back_in_a_cell" if arrival["zone"].startswith("cell-")
                  else "consistent_with_memory" if home == arrival["zone"]
                  else "MISMATCH_with_memory")
-        returns.append({**result, "status": "candidate_temporal_exclusive", "departure": source,
+        returns.append({**result, "status": status, "departure": source, **extra,
                         "window_s": list(window), "memory_home_well": home, "memory_check": check})
     final = {zone: home for zone, home in carried.items() if not zone.startswith("cell-")}
     return {

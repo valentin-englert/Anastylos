@@ -92,6 +92,29 @@ class ReassemblyReturnsTest(unittest.TestCase):
                               _event("E-2", "W-RED", "site_filled", 11, 14)]), self.steps)
         self.assertEqual(result["returns"][0]["memory_check"], "consistent_with_memory")
 
+    def test_earlier_ambiguity_does_not_poison_a_later_return(self):
+        result = verify(_doc([
+            _event("E-1", "cell-4", "vacated", 10, 12), _event("E-2", "cell-9", "vacated", 10, 12),
+            _event("E-3", "W-RED", "site_filled", 13, 15), _event("E-4", "W-GREEN", "site_filled", 16, 18),
+            _event("E-5", "cell-6", "vacated", 20, 22), _event("E-6", "W-YELLOW", "site_filled", 23, 25)]), self.steps)
+        statuses = [r["status"] for r in result["returns"]]
+        self.assertEqual(statuses, ["ambiguous", "ambiguous", "candidate_by_elimination"])
+        self.assertEqual(result["returns"][2]["memory_check"], "consistent_with_memory")
+
+    def test_competing_departures_stay_ambiguous(self):
+        result = verify(_doc([
+            _event("E-1", "cell-4", "vacated", 10, 12), _event("E-2", "cell-9", "vacated", 10, 12),
+            _event("E-3", "W-RED", "site_filled", 13, 15),
+            _event("E-5", "cell-6", "vacated", 20, 22), _event("E-6", "W-YELLOW", "site_filled", 23, 25)]), self.steps)
+        self.assertEqual([r["status"] for r in result["returns"]], ["ambiguous", "ambiguous"])
+
+    def test_gap_blocks_elimination(self):
+        doc = _doc([
+            _event("E-1", "cell-4", "vacated", 10, 12), _event("E-2", "cell-9", "vacated", 10, 12),
+            _event("E-3", "W-RED", "site_filled", 13, 15), _event("E-4", "W-GREEN", "site_filled", 16, 18),
+            _event("E-5", "cell-6", "vacated", 20, 22), _event("E-6", "W-YELLOW", "site_filled", 23, 25)], gaps=[[21.0, 24.0]])
+        self.assertEqual(verify(doc, self.steps)["returns"][2]["status"], "ambiguous")
+
     def test_arrival_without_departure_is_unattributed(self):
         result = verify(_doc([_event("E-1", "W-RED", "site_filled", 11, 14)]), self.steps)
         self.assertEqual(result["returns"][0]["status"], "unattributed")

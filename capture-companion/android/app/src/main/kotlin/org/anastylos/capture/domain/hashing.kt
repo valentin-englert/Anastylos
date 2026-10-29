@@ -37,3 +37,20 @@ fun ByteArray.toHex(): String {
 private val SHA256_RE = Regex("^[0-9a-f]{64}$")
 
 fun isSha256Hex(value: String): Boolean = SHA256_RE.matches(value)
+
+/**
+ * Deterministic UUIDv5 (SHA-1, RFC 4122 §4.3) for stable nominal
+ * identifiers: profile and board-instance ids the phone derives
+ * from descriptor bytes it actually holds. Nominal ids are always
+ * declared as such in sidecar reasons — they identify a nominal
+ * description, never a measured physical instance.
+ */
+fun uuidV5(namespace: String, name: String): String {
+    val hash = MessageDigest.getInstance("SHA-1")
+        .digest("$namespace:$name".toByteArray(Charsets.UTF_8))
+    hash[6] = ((hash[6].toInt() and 0x0f) or 0x50).toByte()
+    hash[8] = ((hash[8].toInt() and 0x3f) or 0x80).toByte()
+    val hex = hash.take(16).toByteArray().toHex()
+    return "${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-" +
+        "${hex.substring(16, 20)}-${hex.substring(20, 32)}"
+}

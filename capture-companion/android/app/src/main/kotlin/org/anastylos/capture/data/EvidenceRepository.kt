@@ -12,6 +12,7 @@ import org.anastylos.capture.data.local.CaptureDatabase
 import org.anastylos.capture.data.local.CropDto
 import org.anastylos.capture.data.local.EvidenceJson
 import org.anastylos.capture.data.local.ExportRecordDto
+import org.anastylos.capture.data.local.GuidedAssociationEntity
 import org.anastylos.capture.data.local.ImageEntity
 import org.anastylos.capture.data.local.MarkingDto
 import org.anastylos.capture.data.local.MeasurementDto
@@ -38,6 +39,8 @@ import org.anastylos.capture.domain.ReviewState
 import org.anastylos.capture.domain.Transport
 import org.anastylos.capture.domain.newId
 import org.anastylos.capture.domain.nowUtc
+import org.anastylos.capture.guidance.DeliveryState
+import org.anastylos.capture.guidance.ReceiptKind
 import org.anastylos.capture.domain.validateImage
 import org.anastylos.capture.domain.validateObservationDraft
 import org.anastylos.capture.domain.validateSessionDraft
@@ -72,7 +75,7 @@ class RoomEvidenceRepository(
     private val files: EvidenceFileStorePort,
     private val clock: () -> Instant = ::nowUtc,
     private val appVersion: String,
-) : EvidenceRepository {
+) : EvidenceRepository, GuidedAssociationRepository {
 
     override fun observeSessions(): Flow<List<CaptureSession>> =
         db.sessions().observeAll().map { rows -> rows.map { it.toDomain() } }
@@ -192,6 +195,23 @@ class RoomEvidenceRepository(
         }
     }
 
+    override suspend fun recordGuidedAssociation(association: GuidedAssociation) {
+        require(association.sidecarRevision >= 0) { "sidecarRevision must be >= 0" }
+        if (association.requestRevision != null) {
+            require(association.requestRevision >= 1) { "requestRevision must be >= 1" }
+        }
+        if (association.attemptNumber != null) {
+            require(association.attemptNumber >= 1) { "attemptNumber must be >= 1" }
+        }
+        db.guidedAssociations().upsert(association.toEntity())
+    }
+
+    override suspend fun getGuidedAssociation(imageId: String): GuidedAssociation? =
+        db.guidedAssociations().getByImageId(imageId)?.toDomain()
+
+    override fun observeGuidedAssociation(imageId: String): Flow<GuidedAssociation?> =
+        db.guidedAssociations().observeByImageId(imageId).map { it?.toDomain() }
+
     private suspend fun touchSession(sessionId: String) {
         val current = db.sessions().getById(sessionId) ?: return
         db.sessions().upsert(current.copy(updatedAt = clock()))
@@ -204,6 +224,47 @@ interface EvidenceFileStorePort {
 }
 
 // -- mapping (entities hold wire strings; vocabulary lives in Serialized.kt) --
+
+private fun GuidedAssociation.toEntity() = GuidedAssociationEntity(
+    imageId = imageId,
+    observationId = observationId,
+    packageId = packageId,
+    guidedSessionId = guidedSessionId,
+    requestId = requestId,
+    requestRevision = requestRevision,
+    attemptId = attemptId,
+    attemptNumber = attemptNumber,
+    sidecarRevision = sidecarRevision,
+    deliveryState = deliveryState.name,
+    receiptStatus = receiptStatus?.wire,
+    updatedAt = updatedAt,
+)
+
+private fun GuidedAssociationEntity.toDomain(): GuidedAssociation {
+    val delivery = try {
+        DeliveryState.valueOf(deliveryState)
+    } catch (_: IllegalArgumentException) {
+        throw IllegalStateException("unknown delivery_state in store: $deliveryState")
+    }
+    val receipt = receiptStatus?.let { wire ->
+        ReceiptKind.entries.firstOrNull { it.wire == wire }
+            ?: throw IllegalStateException("unknown receipt_status in store: $wire")
+    }
+    return GuidedAssociation(
+        imageId = imageId,
+        observationId = observationId,
+        packageId = packageId,
+        guidedSessionId = guidedSessionId,
+        requestId = requestId,
+        requestRevision = requestRevision,
+        attemptId = attemptId,
+        attemptNumber = attemptNumber,
+        sidecarRevision = sidecarRevision,
+        deliveryState = delivery,
+        receiptStatus = receipt,
+        updatedAt = updatedAt,
+    )
+}
 
 private fun SessionEntity.toDomain() = CaptureSession(
     sessionId, name, createdAt, updatedAt, assemblyMemorySession, trayDefault,

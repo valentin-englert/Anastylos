@@ -171,6 +171,7 @@ class GuidedCameraSource(
                 analysisRotationDeg = lastAnalysisRotation,
                 previewWidth = resolvedPreview?.width ?: requestedWidth,
                 previewHeight = resolvedPreview?.height ?: requestedHeight,
+                lensFacing = lensFacing,
             )
         } catch (_: Exception) {
             null

@@ -22,6 +22,8 @@ interface GuidedCamera {
         val analysisRotationDeg: Int,
         val previewWidth: Int,
         val previewHeight: Int,
+        /** CameraSelector lens facing (-1 when unknown). */
+        val lensFacing: Int = -1,
     )
 
     /** Latest-only estimate stream. */

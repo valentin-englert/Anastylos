@@ -14,7 +14,14 @@ import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.RoomEvidenceRepository
 import org.anastylos.capture.camera.DefaultCameraProviderSource
 import org.anastylos.capture.camera.GuidedCameraSource
+import org.anastylos.capture.sync.GuidedControlClient
+import org.anastylos.capture.sync.GuidedDelivery
+import org.anastylos.capture.sync.GuidedRemote
+import org.anastylos.capture.sync.GuidedRemoteFactory
+import org.anastylos.capture.sync.GuidedSessionController
+import org.anastylos.capture.sync.ReceiverClient
 import org.anastylos.capture.data.DataStoreGuidedPrefs
+import org.anastylos.capture.data.GuidedAssociationRepository
 import org.anastylos.capture.data.GuidedPrefs
 import org.anastylos.capture.data.SamplingPrefs
 import org.anastylos.capture.guidance.OpenCvPoseEstimator
@@ -99,6 +106,26 @@ class AppContainer(context: Context) {
                     prefs = guidedPrefs,
                     nanoClock = { System.nanoTime() },
                     utcClock = { java.time.Instant.now() },
+                    pairingStore = pairingStore,
+                    remoteFactory = GuidedRemoteFactory { transport ->
+                        val links = repository as GuidedAssociationRepository
+                        GuidedRemote(
+                            GuidedSessionController(pairingStore, transport, links, guidedPrefs),
+                            GuidedDelivery(
+                                GuidedControlClient(transport),
+                                ReceiverClient(transport),
+                                repository,
+                                links,
+                                readOriginal = { observationId, imageId, ext ->
+                                    fileStore.originalFile(observationId, imageId, ext)
+                                        .takeIf { it.isFile }?.readBytes()
+                                },
+                                BuildConfig.VERSION_NAME,
+                            ),
+                        )
+                    },
+                    associations = repository as GuidedAssociationRepository,
+                    appVersion = BuildConfig.VERSION_NAME,
                 ) as T
         }
 

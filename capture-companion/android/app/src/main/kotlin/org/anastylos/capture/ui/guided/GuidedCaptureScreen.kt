@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -136,6 +138,7 @@ fun GuidedCaptureScreen(
         TargetPicker(state, viewModel)
         ControlRow(state, viewModel)
         QualityRow(state, viewModel)
+        RemoteSection(state, viewModel)
         ResultCard(state, viewModel)
         state.cameraError?.let { Text("Camera: $it", color = MaterialTheme.colorScheme.error) }
         state.captureError?.let { Text("Capture: $it", color = MaterialTheme.colorScheme.error) }
@@ -300,6 +303,79 @@ private fun QualityRow(state: GuidanceUiState, viewModel: GuidanceViewModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { viewModel.setSharpnessReference() }) { Text("Calibrate sharpness") }
         OutlinedButton(onClick = { viewModel.clearSharpnessReference() }) { Text("Clear") }
+    }
+}
+
+@Composable
+private fun RemoteSection(state: GuidanceUiState, viewModel: GuidanceViewModel) {
+    var sessionField by rememberSaveable { mutableStateOf(state.remoteSessionId ?: "") }
+    Text("Core remote control", style = MaterialTheme.typography.titleSmall)
+    if (!state.remoteAttached) {
+        Text(
+            "Attach a guided session from the workstation to receive requests, reserve attempts, and deliver evidence.",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        OutlinedTextField(
+            value = sessionField,
+            onValueChange = { sessionField = it.trim() },
+            label = { Text("Session id (uuid)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { viewModel.attachRemote(sessionField) },
+                enabled = sessionField.isNotBlank(),
+            ) { Text("Attach") }
+        }
+    } else {
+        Text(
+            "Session ${state.remoteSessionId?.take(8)}… · ${state.remoteSession ?: "…"}",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        val request = state.remoteRequest
+        if (request == null) {
+            Text("Waiting for a Core request…", style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text(
+                "Request ${request.targetLabel} · ${request.status} r${request.revision}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                "Board ${request.boardId.take(8)}… → ${state.boardId} · " +
+                    "calibration ${request.calibrationId.take(8)}…",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            if (state.boardId.isBlank()) {
+                Text("Map this board before navigating.", color = MaterialTheme.colorScheme.error)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { viewModel.detachRemote() }) { Text("Detach") }
+            OutlinedButton(
+                onClick = { viewModel.selectRemoteBoard(state.boardId) },
+                enabled = state.boardId.isNotBlank(),
+            ) { Text("Map board to current") }
+        }
+        if (state.reservingAttempt) Text("Reserving attempt…")
+        if (state.attemptReady) Text("Attempt reserved.")
+        if (!state.attemptReady && !state.reservingAttempt && state.remoteRequest != null) {
+            OutlinedButton(onClick = { viewModel.retryAttempt() }) { Text("Retry attempt") }
+        }
+        state.delivery?.let { link ->
+            Text(
+                "Delivery ${link.deliveryState}" +
+                    (link.receiptStatus?.let { " · receipt ${it.wire}" } ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        state.deliveryNote?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+    }
+    state.remoteError?.let { error ->
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(error, color = MaterialTheme.colorScheme.error)
+            OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
+        }
     }
 }
 

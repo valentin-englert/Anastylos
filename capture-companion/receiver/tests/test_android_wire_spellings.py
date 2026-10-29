@@ -6,10 +6,10 @@ check the ``Reducers.kt`` header asks for. It parses the Kotlin enum
 spellings and ties them to the frozen G0 ``control.schema.json`` enums
 plus the Core guided-wire fixtures and the journal's delivery mapping.
 
-It guards spelling compatibility only: Android has no guided transport
-(no HTTP client, no identity/cursor plumbing), so every item below is
-contract-compatible-but-not-connected. The transport tripwire pins
-that Wave-2 boundary and must be retired when transport lands.
+It guards spelling compatibility only. Wave-2 landed the guided
+transport (``GuidedControlClient``); the old no-transport tripwire
+was retired into a presence + scatter check below: the endpoint
+literals must exist in the client module and nowhere else.
 
 Run from the receiver directory::
 
@@ -112,27 +112,46 @@ class AndroidWireSpellingTests(unittest.TestCase):
                 encoding="utf-8"))
         self.assertIn(view["response"]["request"]["status"], request_states)
 
-    def test_no_guided_transport_on_android(self):
-        """Tripwire: Android has no guided HTTP client yet (Wave-2).
+    def test_guided_transport_present_on_android(self):
+        """Wave-2: the guided client owns every endpoint literal.
 
-        Retire this test when the guided transport lands; until then
-        any guided endpoint literal in Android mainsrc is either a bug
-        or an unannounced Wave-2 start.
+        The guided transport landed in exactly one module,
+        ``GuidedControlClient``. This pins that shape: all
+        source-role endpoint paths must be present there, and no
+        other mainsrc module may carry a guided endpoint literal
+        (copies are drift).
         """
-        literals = ("v1/guided", "/consent", "/attempts", "/finalize",
-                    "/lease", "/claim", "operation_id",
-                    "expected_session_revision", "change_seq",
-                    "next_cursor")
-        hits = []
+        client = ANDROID_MAIN / "anastylos/capture/sync/GuidedControlClient.kt"
+        self.assertTrue(client.is_file(), "guided client module missing")
+        text = client.read_text(encoding="utf-8")
+        endpoints = (
+            "/v1/guided/enroll",
+            "/v1/guided/sources/",
+            "/capabilities",
+            "pending-sessions",
+            "/v1/guided/sessions/",
+            "/changes?after=",
+            "/events",
+            "/status",
+            "/consent",
+            "/attempts",
+            "/asset-binding",
+            "/spatial",
+            "/capture-set",
+        )
+        for literal in endpoints:
+            self.assertIn(literal, text)
+        stray = []
         for path in sorted(ANDROID_MAIN.rglob("*.kt")):
+            if path.name == "GuidedControlClient.kt":
+                continue
             try:
-                text = path.read_text(encoding="utf-8")
+                other = path.read_text(encoding="utf-8")
             except OSError:
                 continue
-            for literal in literals:
-                if literal in text:
-                    hits.append(f"{path.name}: {literal}")
-        self.assertEqual(hits, [])
+            if "/v1/guided/" in other:
+                stray.append(path.name)
+        self.assertEqual(stray, [])
 
 
 if __name__ == "__main__":

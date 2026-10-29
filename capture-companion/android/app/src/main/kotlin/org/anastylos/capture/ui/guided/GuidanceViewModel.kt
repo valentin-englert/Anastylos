@@ -1,5 +1,8 @@
 package org.anastylos.capture.ui.guided
 
+import android.graphics.BitmapFactory
+import android.media.ExifInterface
+import androidx.camera.core.CameraSelector
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
@@ -12,16 +15,41 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.json.Json
+import org.anastylos.capture.domain.sha256Hex
+import org.anastylos.capture.domain.toIsoUtc
+import org.anastylos.capture.sync.framePackageId
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.anastylos.capture.camera.CapturedStill
 import org.anastylos.capture.camera.FrameSampler
+import org.anastylos.capture.camera.SamplerEvent
 import org.anastylos.capture.camera.GuidedCamera
 import org.anastylos.capture.data.EvidenceRepository
+import org.anastylos.capture.data.GuidedAssociation
+import org.anastylos.capture.data.GuidedAssociationRepository
 import org.anastylos.capture.data.GuidedPrefs
+import org.anastylos.capture.sync.DeliveryInput
+import org.anastylos.capture.sync.DeliveryOutcome
+import org.anastylos.capture.sync.GuidedAttemptInput
+import org.anastylos.capture.sync.GuidedRemote
+import org.anastylos.capture.sync.GuidedRemoteFactory
+import org.anastylos.capture.sync.GuidedRemoteSession
+import org.anastylos.capture.sync.GuidedTarget
+import org.anastylos.capture.sync.GuidedTokenOutcome
+import org.anastylos.capture.sync.GuidedViewRequest
+import org.anastylos.capture.sync.HttpsTransport
+import org.anastylos.capture.sync.PairingStore
+import org.anastylos.capture.sync.RemoteAttemptOutcome
+import org.anastylos.capture.sync.RemoteConsentOutcome
+import org.anastylos.capture.sync.RemoteEventOutcome
+import org.anastylos.capture.sync.RemoteSessionState
+import org.anastylos.capture.sync.SpatialSidecar
+import org.anastylos.capture.sync.tlsForPairing
 import org.anastylos.capture.guidance.BoardGeometry
 import org.anastylos.capture.guidance.CameraPoseB
 import org.anastylos.capture.guidance.CueAxis
@@ -33,7 +61,10 @@ import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.LateMark
 import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.PhoneRotation
+import org.anastylos.capture.guidance.DeliveryState
 import org.anastylos.capture.guidance.PoseEstimator
+import org.anastylos.capture.guidance.Vec3
+import org.anastylos.capture.guidance.remoteTargetView
 import org.anastylos.capture.guidance.RegistrationState
 import org.anastylos.capture.guidance.RequestEvent
 import org.anastylos.capture.guidance.RequestState
@@ -42,7 +73,6 @@ import org.anastylos.capture.guidance.SessionState
 import org.anastylos.capture.guidance.ShutterGate
 import org.anastylos.capture.guidance.SpeedTracker
 import org.anastylos.capture.guidance.StabilitySample
-import org.anastylos.capture.guidance.Vec3
 import org.anastylos.capture.guidance.WireRegistration
 import org.anastylos.capture.guidance.autoCaptureEligible
 import org.anastylos.capture.guidance.computeCues
@@ -56,12 +86,18 @@ import org.anastylos.capture.guidance.evaluateImageQuality
 import org.anastylos.capture.guidance.rotationOfRowMajor
 import org.anastylos.capture.guidance.translationOfRowMajor
 
-/** One local target viewpoint preset (Core-provided targets arrive in Phase E). */
+/**
+ * One target viewpoint: local presets carry no tolerances (the
+ * frozen profile applies); Core-adopted targets carry the wire
+ * tolerances verbatim.
+ */
 data class TargetViewpoint(
     val id: String,
     val label: String,
     val boardId: String,
     val pose: CameraPoseB,
+    val posTolMm: Vec3? = null,
+    val angTolDeg: Double? = null,
 )
 
 val LOCAL_TARGETS = listOf(
@@ -126,6 +162,15 @@ data class GuidanceUiState(
     val intrinsicsLabel: String? = null,
     val uncalibrated: Boolean = true,
     val foreground: Boolean = false,
+    val remoteAttached: Boolean = false,
+    val remoteSessionId: String? = null,
+    val remoteSession: SessionState? = null,
+    val remoteError: String? = null,
+    val remoteRequest: GuidedViewRequest? = null,
+    val attemptReady: Boolean = false,
+    val reservingAttempt: Boolean = false,
+    val delivery: GuidedAssociation? = null,
+    val deliveryNote: String? = null,
 )
 
 /**
@@ -147,6 +192,11 @@ class GuidanceViewModel(
     private val nanoClock: () -> Long,
     private val utcClock: () -> Instant,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val pairingStore: PairingStore? = null,
+    private val remoteFactory: GuidedRemoteFactory? = null,
+    private val associations: GuidedAssociationRepository? = null,
+    private val appVersion: String = "0.1.0",
+    private val uuid: () -> String = { UUID.randomUUID().toString() },
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
@@ -162,6 +212,20 @@ class GuidanceViewModel(
     private var sessionId: String? = null
     private var lastCorners: Map<String, List<Double>> = emptyMap()
     private var lastCornersNs: Long? = null
+    private var lastEstimate: PoseEstimator.Estimate? = null
+    private var lastMotion: Pair<Double, Double>? = null
+    private var lastStillCallbackNs: Long? = null
+    private var remote: GuidedRemote? = null
+    private var remoteCollectJob: Job? = null
+    private var bindEpoch: String? = null
+    private var pendingAttempt: GuidedAttemptInput? = null
+    private var reservedAttemptId: String? = null
+    private var reservedAttemptNumber: Int? = null
+    private var lastMirroredRemoteSession: SessionState? = null
+    private var lastMirroredRemoteStatus: String? = null
+    private var adoptingRequestId: String? = null
+    private val adoptedRequestIds = mutableSetOf<String>()
+    private val bootAnchorId: String by lazy { uuid() }
 
     init {
         viewModelScope.launch {
@@ -260,6 +324,10 @@ class GuidanceViewModel(
     }
 
     fun arm() {
+        if (_state.value.remoteAttached) {
+            remoteArmFlow()
+            return
+        }
         // Fresh session arming from DISARMED.
         if (_state.value.session == SessionState.DISARMED) {
             val transition = onSessionEvent(
@@ -280,6 +348,64 @@ class GuidanceViewModel(
         // previous request reached a terminal state, with a new token.
         if (_state.value.session == SessionState.ACTIVE && _state.value.request in TERMINAL_REQUESTS) {
             startRequest()
+        }
+    }
+
+    private fun remoteArmFlow() {
+        val session = remote?.session ?: return
+        if (_state.value.session == SessionState.DISARMED) {
+            _state.update { it.copy(remoteError = null) }
+            viewModelScope.launch {
+                val expiry = try {
+                    utcClock().plusSeconds(1800).toIsoUtc()
+                } catch (_: Exception) {
+                    _state.update { it.copy(remoteError = "clock unavailable") }
+                    return@launch
+                }
+                when (
+                    val outcome = session.arm(
+                        cameraId = cameraIdForConsent(),
+                        maxImages = 20,
+                        expiresAt = expiry,
+                        allowAutoUpload = true,
+                    )
+                ) {
+                    is RemoteConsentOutcome.Applied -> {
+                        if (outcome.session != SessionState.ACTIVE) {
+                            _state.update {
+                                it.copy(remoteError = "consent applied but session is ${outcome.session}")
+                            }
+                            return@launch
+                        }
+                        val transition = onSessionEvent(
+                            SessionEvent.Arm(
+                                grantLive = true,
+                                permissionGranted = _state.value.permissionGranted,
+                                foreground = _state.value.foreground,
+                            ),
+                        )
+                        if (!transition.accepted) return@launch
+                        viewModelScope.launch { ensureSession() }
+                        postRemoteEvent("armed")
+                        tryAdopt(session.state.value)
+                    }
+                    is RemoteConsentOutcome.Conflict -> _state.update {
+                        it.copy(
+                            remoteError = "revision conflict (Core at ${outcome.currentRevision}); retry arm",
+                        )
+                    }
+                    is RemoteConsentOutcome.NeedsEnrollment -> _state.update {
+                        it.copy(remoteError = "device not enrolled: ${outcome.message}")
+                    }
+                    is RemoteConsentOutcome.Failed -> _state.update {
+                        it.copy(remoteError = outcome.message)
+                    }
+                }
+            }
+            return
+        }
+        if (_state.value.session == SessionState.ACTIVE && _state.value.request in TERMINAL_REQUESTS) {
+            tryAdopt(session.state.value)
         }
     }
 
@@ -328,10 +454,45 @@ class GuidanceViewModel(
         onSessionEvent(SessionEvent.OperatorDisarm)
         armingToken = null
         firedForArming = false
+        pendingAttempt = null
+        reservedAttemptId = null
+        reservedAttemptNumber = null
+        if (_state.value.remoteAttached) {
+            postRemoteEvent("disarmed")
+            val session = remote?.session
+            if (session != null) {
+                viewModelScope.launch {
+                    val expiry = try {
+                        utcClock().plusSeconds(1800).toIsoUtc()
+                    } catch (_: Exception) {
+                        return@launch
+                    }
+                    when (
+                        val outcome = session.disarm(
+                            cameraId = cameraIdForConsent(),
+                            maxImages = 20,
+                            expiresAt = expiry,
+                        )
+                    ) {
+                        is RemoteConsentOutcome.Applied -> Unit
+                        is RemoteConsentOutcome.Conflict -> _state.update {
+                            it.copy(remoteError = "disarm conflict (Core at ${outcome.currentRevision})")
+                        }
+                        is RemoteConsentOutcome.NeedsEnrollment -> _state.update {
+                            it.copy(remoteError = "device not enrolled: ${outcome.message}")
+                        }
+                        is RemoteConsentOutcome.Failed -> _state.update {
+                            it.copy(remoteError = outcome.message)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fun pause() {
         onSessionEvent(SessionEvent.OperatorPause)
+        postRemoteEvent("paused")
     }
 
     fun resume() {
@@ -342,10 +503,12 @@ class GuidanceViewModel(
                 foreground = _state.value.foreground,
             ),
         )
+        postRemoteEvent("resumed")
     }
 
     fun cancelRequest() {
         onRequestEvent(RequestEvent.Cancel)
+        postRemoteEvent("cancelled")
     }
 
     fun skipTarget() {
@@ -354,6 +517,7 @@ class GuidanceViewModel(
 
     fun cantReach() {
         onRequestEvent(RequestEvent.CantReach)
+        postRemoteEvent("unreachable")
     }
 
     fun setSharpnessReference() {
@@ -384,6 +548,7 @@ class GuidanceViewModel(
         viewModelScope.launch {
             try {
                 val still = source.takeGuidedStill()
+                lastStillCallbackNs = nanoClock()
                 val stored = persistStill(still, automatic = false)
                 _state.update { it.copy(shutterBusy = false, captureResult = stored) }
             } catch (e: Exception) {
@@ -395,6 +560,354 @@ class GuidanceViewModel(
     fun dismissResult() {
         _state.update { it.copy(captureResult = null, captureError = null) }
     }
+
+    // ---------- remote Core control ----------
+
+    fun attachRemote(sessionId: String) {
+        if (_state.value.session != SessionState.DISARMED) {
+            _state.update { it.copy(remoteError = "disarm before attaching a remote session") }
+            return
+        }
+        if (!isUuid(sessionId)) {
+            _state.update { it.copy(remoteError = "session id is not a uuid") }
+            return
+        }
+        val factory = remoteFactory
+        val store = pairingStore
+        if (factory == null || store == null) {
+            _state.update { it.copy(remoteError = "remote control unavailable in this build") }
+            return
+        }
+        val pairing = store.load()
+        if (pairing == null) {
+            _state.update { it.copy(remoteError = "pair with a workstation first") }
+            return
+        }
+        val transport = try {
+            HttpsTransport(pairing.baseUrl, tlsForPairing(pairing))
+        } catch (e: Exception) {
+            _state.update { it.copy(remoteError = "transport unavailable: ${e.message}") }
+            return
+        }
+        detachRemote()
+        val bundle = factory.create(transport)
+        remote = bundle
+        bindEpoch = uuid()
+        adoptedRequestIds.clear()
+        pendingAttempt = null
+        reservedAttemptId = null
+        reservedAttemptNumber = null
+        lastMirroredRemoteSession = null
+        lastMirroredRemoteStatus = null
+        _state.update {
+            it.copy(
+                remoteAttached = true, remoteSessionId = sessionId, remoteError = null,
+                remoteRequest = null, attemptReady = false, reservingAttempt = false,
+                delivery = null, deliveryNote = null,
+            )
+        }
+        bundle.session.attach(sessionId)
+        bundle.session.startPolling()
+        remoteCollectJob?.cancel()
+        remoteCollectJob = viewModelScope.launch {
+            bundle.session.state.collect { rs ->
+                _state.update {
+                    it.copy(
+                        remoteSession = rs.session,
+                        remoteError = rs.lastError ?: it.remoteError,
+                    )
+                }
+                mirrorRemoteSession(rs)
+                mirrorRemoteRequests(rs)
+            }
+        }
+    }
+
+    fun detachRemote() {
+        remoteCollectJob?.cancel()
+        remoteCollectJob = null
+        try {
+            remote?.session?.detach()
+        } catch (_: Exception) {
+        }
+        remote = null
+        pendingAttempt = null
+        reservedAttemptId = null
+        reservedAttemptNumber = null
+        _state.update {
+            it.copy(
+                remoteAttached = false, remoteSessionId = null, remoteSession = null,
+                remoteError = null, remoteRequest = null, attemptReady = false,
+                reservingAttempt = false,
+            )
+        }
+    }
+
+    fun clearRemoteError() {
+        _state.update { it.copy(remoteError = null) }
+    }
+
+    /**
+     * Operator declares which physical frame a Core board uuid is.
+     * Required before a remote request is adopted — the phone never
+     * guesses board identity.
+     */
+    fun selectRemoteBoard(frameId: String) {
+        val boardUuid = _state.value.remoteRequest?.boardId ?: pendingCandidateBoardUuid()
+        if (boardUuid == null) {
+            _state.update { it.copy(remoteError = "no remote request to map") }
+            return
+        }
+        if (BoardGeometry.forBoardId(frameId) == null) {
+            _state.update { it.copy(remoteError = "unknown frame $frameId") }
+            return
+        }
+        viewModelScope.launch {
+            try {
+                prefs.setBoardFrame(boardUuid, frameId)
+            } catch (e: Exception) {
+                _state.update { it.copy(remoteError = "mapping not saved: ${e.message}") }
+                return@launch
+            }
+            selectBoard(frameId)
+            _state.update { it.copy(remoteError = null) }
+            remote?.session?.let { tryAdopt(it.state.value) }
+        }
+    }
+
+    fun retryAttempt() {
+        if (!_state.value.remoteAttached || _state.value.remoteRequest == null) return
+        if (_state.value.attemptReady || _state.value.reservingAttempt) return
+        if (pendingAttempt == null) return
+        reserveAttempt()
+    }
+
+    private fun pendingCandidateBoardUuid(): String? {
+        val rs = remote?.session?.state?.value ?: return null
+        val active = rs.activeRequestId?.let { rs.requests[it] }
+        if (active != null && active.status == "QUEUED") return active.boardId
+        return rs.requests.values.firstOrNull { it.status == "QUEUED" }?.boardId
+    }
+
+    private fun mirrorRemoteSession(rs: RemoteSessionState) {
+        val mapped = rs.session ?: return
+        if (mapped == lastMirroredRemoteSession) return
+        lastMirroredRemoteSession = mapped
+        val local = _state.value.session
+        when (mapped) {
+            SessionState.ACTIVE -> if (local == SessionState.PAUSED) {
+                onSessionEvent(
+                    SessionEvent.Resume(
+                        grantLive = true,
+                        registrationFresh = _state.value.registration == RegistrationState.ACQUIRED,
+                        foreground = _state.value.foreground,
+                    ),
+                )
+            }
+            // Local arming stays operator-driven: remote ACTIVE never
+            // arms a DISARMED phone by itself.
+            SessionState.PAUSED -> onSessionEvent(SessionEvent.OperatorPause)
+            SessionState.CANCELLED -> onSessionEvent(SessionEvent.OperatorDisarm)
+            SessionState.EXPIRED -> onSessionEvent(SessionEvent.GrantExpired)
+            // Consent changed under us: back to DISARMED, rearm required.
+            SessionState.DISARMED -> onSessionEvent(SessionEvent.ProcessRestarted)
+            SessionState.ACQUISITION_COMPLETE -> onSessionEvent(SessionEvent.AcquisitionComplete)
+            SessionState.COMPLETE -> onSessionEvent(SessionEvent.AllQualified)
+            SessionState.COMPLETE_WITH_SKIPS -> onSessionEvent(SessionEvent.CompleteWithSkips)
+        }
+    }
+
+    private fun mirrorRemoteRequests(rs: RemoteSessionState) {
+        val adopted = _state.value.remoteRequest
+        if (adopted == null) {
+            if (_state.value.session == SessionState.ACTIVE) tryAdopt(rs)
+            return
+        }
+        val current = rs.requests[adopted.requestId] ?: return
+        if (current != adopted) _state.update { it.copy(remoteRequest = current) }
+        if (current.status != lastMirroredRemoteStatus) {
+            lastMirroredRemoteStatus = current.status
+            when (current.status) {
+                "CANCELLED" -> onRequestEvent(RequestEvent.Cancel)
+                "EXPIRED" -> onRequestEvent(RequestEvent.Expire)
+                "SUPERSEDED" -> onRequestEvent(RequestEvent.Supersede)
+                else -> Unit
+            }
+        }
+        if (_state.value.request in TERMINAL_REQUESTS) tryAdopt(rs, exclude = adopted.requestId)
+    }
+
+    private fun tryAdopt(rs: RemoteSessionState, exclude: String? = null) {
+        if (_state.value.remoteRequest != null && exclude == null) return
+        val candidate = selectCandidate(rs, exclude) ?: return
+        if (candidate.requestId == adoptingRequestId) return
+        if (_state.value.session != SessionState.ACTIVE) return
+        adoptingRequestId = candidate.requestId
+        viewModelScope.launch {
+            try {
+                adoptRemoteRequest(candidate)
+            } finally {
+                if (adoptingRequestId == candidate.requestId) adoptingRequestId = null
+            }
+        }
+    }
+
+    private fun selectCandidate(rs: RemoteSessionState, exclude: String?): GuidedViewRequest? {
+        val active = rs.activeRequestId?.let { rs.requests[it] }
+        if (active != null && active.status == "QUEUED" && active.requestId != exclude &&
+            active.requestId !in adoptedRequestIds
+        ) {
+            return active
+        }
+        return rs.requests.values
+            .filter { it.status == "QUEUED" && it.requestId != exclude && it.requestId !in adoptedRequestIds }
+            .minByOrNull { it.revision }
+    }
+
+    private fun adoptRemoteRequest(candidate: GuidedViewRequest) {
+        viewModelScope.launch {
+            val frame = try {
+                prefs.boardFrameFor(candidate.boardId).first()
+            } catch (_: Exception) {
+                null
+            }
+            if (frame.isNullOrBlank()) {
+                _state.update {
+                    it.copy(
+                        remoteError = "request targets board ${candidate.boardId.take(8)}…; " +
+                            "map it to a physical frame",
+                    )
+                }
+                return@launch
+            }
+            if (BoardGeometry.forBoardId(frame) == null) {
+                _state.update { it.copy(remoteError = "mapped frame $frame is unknown") }
+                return@launch
+            }
+            val view = remoteTargetView(
+                requestId = candidate.requestId,
+                targetLabel = candidate.targetLabel,
+                boardFrameId = frame,
+                tbcUnits = candidate.target.tbc.units,
+                tbcMatrix = candidate.target.tbc.matrix,
+                translationToleranceMm = candidate.target.translationToleranceMm,
+                rotationToleranceDeg = candidate.target.rotationToleranceDeg,
+            )
+            if (view == null) {
+                _state.update { it.copy(remoteError = "request target failed validation; not adopted") }
+                return@launch
+            }
+            selectBoard(frame)
+            armingToken = uuid()
+            firedForArming = false
+            pendingAttempt = null
+            reservedAttemptId = null
+            reservedAttemptNumber = null
+            adoptedRequestIds += candidate.requestId
+            lastMirroredRemoteStatus = candidate.status
+            _state.update {
+                it.copy(
+                    request = RequestState.QUEUED, lateMark = null,
+                    requestId = candidate.requestId, requestRevision = candidate.revision,
+                    remoteRequest = candidate,
+                    target = TargetViewpoint(
+                        id = view.id,
+                        label = view.label,
+                        boardId = view.boardFrameId,
+                        pose = view.pose,
+                        posTolMm = view.posTolMm,
+                        angTolDeg = view.angTolDeg,
+                    ),
+                    captureResult = null, attemptReady = false, reservingAttempt = false,
+                    delivery = null, deliveryNote = null, remoteError = null,
+                )
+            }
+            onRequestEvent(RequestEvent.Accept)
+            postRemoteEvent("accepted")
+        }
+    }
+
+    private fun postRemoteEvent(kind: String, reason: String? = null, attemptId: String? = null) {
+        val session = remote?.session ?: return
+        if (!_state.value.remoteAttached) return
+        viewModelScope.launch {
+            val event = session.buildEvent(
+                kind = kind,
+                requestId = _state.value.remoteRequest?.requestId,
+                requestRevision = _state.value.remoteRequest?.revision,
+                attemptId = attemptId,
+                reason = reason,
+            ) ?: return@launch
+            when (val outcome = session.postEvent(event)) {
+                is RemoteEventOutcome.Sent -> Unit
+                is RemoteEventOutcome.Failed ->
+                    _state.update { it.copy(remoteError = outcome.message) }
+            }
+        }
+    }
+
+    private fun maybeReserveAttempt() {
+        if (!_state.value.remoteAttached || _state.value.remoteRequest == null) return
+        if (_state.value.request != RequestState.HOLD_STILL) return
+        if (_state.value.attemptReady || _state.value.reservingAttempt) return
+        if (pendingAttempt != null) return
+        reserveAttempt()
+    }
+
+    private fun reserveAttempt() {
+        val session = remote?.session ?: return
+        val request = _state.value.remoteRequest ?: return
+        val consentRevision = maxOf(1, session.state.value.consentRevision)
+        val input = pendingAttempt ?: GuidedAttemptInput(
+            operationId = uuid(),
+            sessionId = request.sessionId,
+            requestId = request.requestId,
+            requestRevision = request.revision,
+            attemptId = uuid(),
+            consentRevision = consentRevision,
+            boardRegistrationEpochId = request.boardRegistrationEpochId,
+            objectPoseEpochId = request.objectPoseEpochId,
+        ).also { pendingAttempt = it }
+        _state.update { it.copy(reservingAttempt = true, remoteError = null) }
+        viewModelScope.launch {
+            when (val outcome = session.reserveAttempt(input)) {
+                is RemoteAttemptOutcome.Reserved -> {
+                    if (outcome.status == "reserved") {
+                        reservedAttemptId = outcome.attemptId
+                        reservedAttemptNumber = outcome.attemptNumber
+                        _state.update { it.copy(reservingAttempt = false, attemptReady = true) }
+                    } else {
+                        _state.update {
+                            it.copy(reservingAttempt = false, remoteError = "attempt ${outcome.status}")
+                        }
+                    }
+                }
+                is RemoteAttemptOutcome.Conflict -> _state.update {
+                    it.copy(reservingAttempt = false, remoteError = "attempt conflict (${outcome.code})")
+                }
+                is RemoteAttemptOutcome.Expired -> _state.update {
+                    it.copy(reservingAttempt = false, remoteError = "attempt expired: ${outcome.message}")
+                }
+                is RemoteAttemptOutcome.Failed -> _state.update {
+                    it.copy(reservingAttempt = false, remoteError = outcome.message)
+                }
+            }
+        }
+    }
+
+    private fun cameraIdForConsent(): String =
+        when (_state.value.overlayGeometry?.lensFacing) {
+            CameraSelector.LENS_FACING_FRONT -> "camera:1"
+            else -> "camera:0"
+        }
+
+    private fun isUuid(value: String): Boolean =
+        try {
+            UUID.fromString(value)
+            true
+        } catch (_: IllegalArgumentException) {
+            false
+        }
 
     private fun onSessionEvent(event: SessionEvent): org.anastylos.capture.guidance.SessionTransition {
         val transition = reduceSession(_state.value.session, event)
@@ -462,12 +975,12 @@ class GuidanceViewModel(
         val cues = if (pose != null && target != null && registration == RegistrationState.ACQUIRED) {
             computeCues(
                 pose, target.pose, _state.value.phoneRotation,
-                Vec3(
+                target.posTolMm ?: Vec3(
                     GuidanceHypothesis1.POS_TOL_X_MM,
                     GuidanceHypothesis1.POS_TOL_Y_MM,
                     GuidanceHypothesis1.POS_TOL_Z_MM,
                 ),
-                GuidanceHypothesis1.ANG_TOL_DEG,
+                target.angTolDeg ?: GuidanceHypothesis1.ANG_TOL_DEG,
             )
         } else {
             emptyList()
@@ -509,6 +1022,8 @@ class GuidanceViewModel(
             ),
         )
         navigate(registration, cues, orientationOk && distanceOk && qualityOk)
+        lastEstimate = estimate
+        lastMotion = motion
         _state.update {
             it.copy(
                 registration = registration, wireReason = wireReason,
@@ -519,6 +1034,7 @@ class GuidanceViewModel(
                 measuredSharpness = estimate.frameQuality?.sharpness,
             )
         }
+        maybeReserveAttempt()
         maybeFireShutter()
     }
 
@@ -578,6 +1094,11 @@ class GuidanceViewModel(
             if (snapshot.holdReason != null) _state.update { it.copy(holdReason = null) }
             return
         }
+        // Remote requests additionally need a reserved attempt; the
+        // dwell keeps accumulating while the reservation lands.
+        if (snapshot.remoteAttached && snapshot.remoteRequest != null && !snapshot.attemptReady) {
+            return
+        }
         val decision = ShutterGate.decide(
             ShutterGate.Input(
                 session = snapshot.session, request = snapshot.request,
@@ -623,6 +1144,7 @@ class GuidanceViewModel(
                 try {
                     val source = camera ?: throw IllegalStateException("camera detached")
                     val still = source.takeGuidedStill()
+                    lastStillCallbackNs = nanoClock()
                     val stored = persistStill(still, automatic = true)
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
@@ -648,12 +1170,296 @@ class GuidanceViewModel(
             captureSequence,
         )
         val sha = sha256Hex(still.bytes)
+        if (_state.value.remoteAttached) {
+            recordRemoteCapture(stored, still, sha)
+        }
         CaptureResult(
             observationId = stored.observationId,
             imageId = stored.imageId,
             sha256 = sha,
             automatic = automatic,
             associationNote = still.associationNote,
+        )
+    }
+
+    private suspend fun recordRemoteCapture(
+        stored: SamplerEvent.FrameStored,
+        still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill,
+        sha: String,
+    ) {
+        val assocRepo = associations ?: return
+        val sessionUuid = _state.value.remoteSessionId ?: return
+        val request = _state.value.remoteRequest
+        val assoc = GuidedAssociation(
+            imageId = stored.imageId,
+            observationId = stored.observationId,
+            packageId = null,
+            guidedSessionId = sessionUuid,
+            requestId = request?.requestId,
+            requestRevision = request?.revision,
+            attemptId = reservedAttemptId,
+            attemptNumber = reservedAttemptNumber,
+            sidecarRevision = 0,
+            deliveryState = DeliveryState.PENDING_PACKAGE,
+            receiptStatus = null,
+            updatedAt = utcClock(),
+        )
+        try {
+            assocRepo.recordGuidedAssociation(assoc)
+        } catch (e: Exception) {
+            _state.update { it.copy(deliveryNote = "association not recorded: ${e.message}") }
+            return
+        }
+        _state.update { it.copy(delivery = assoc, deliveryNote = null) }
+        if (reservedAttemptId != null) postRemoteEvent("captured_local", attemptId = reservedAttemptId)
+        val delivery = remote?.delivery ?: return
+        viewModelScope.launch {
+            runDelivery(delivery, stored.imageId, stored.observationId, still, sha)
+        }
+    }
+
+    private suspend fun runDelivery(
+        delivery: org.anastylos.capture.sync.GuidedDelivery,
+        imageId: String,
+        observationId: String,
+        still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill,
+        imageSha: String,
+    ) {
+        val sessionUuid = _state.value.remoteSessionId ?: return
+        val legacy = pairingStore?.load()?.token
+        if (legacy.isNullOrBlank()) {
+            _state.update { it.copy(deliveryNote = "not paired; delivery deferred (evidence is local)") }
+            return
+        }
+        val guided = when (val resolved = remote?.session?.resolveToken()) {
+            is GuidedTokenOutcome.Ready -> resolved.token
+            is GuidedTokenOutcome.NeedsEnrollment ->
+                return noteDelivery("device not enrolled: ${resolved.message}")
+            is GuidedTokenOutcome.ExchangeSpent ->
+                return noteDelivery("enrollment spent: ${resolved.message}")
+            is GuidedTokenOutcome.Unauthorized ->
+                return noteDelivery("guided token rejected")
+            is GuidedTokenOutcome.Failed, null ->
+                return noteDelivery(
+                    (resolved as? GuidedTokenOutcome.Failed)?.message ?: "guided token unavailable",
+                )
+        }
+        val sidecarInput = assembleSidecarInput(imageId, observationId, still, imageSha)
+        val outcome = try {
+            delivery.deliver(DeliveryInput(imageId, legacy, guided, sessionUuid, sidecarInput))
+        } catch (e: Exception) {
+            return noteDelivery("delivery failed: ${e.message}")
+        }
+        val refreshed = try {
+            associations?.getGuidedAssociation(imageId)
+        } catch (_: Exception) {
+            null
+        }
+        when (outcome) {
+            is DeliveryOutcome.Delivered -> _state.update {
+                it.copy(
+                    delivery = refreshed ?: it.delivery,
+                    deliveryNote = describeDelivery(outcome),
+                )
+            }
+            is DeliveryOutcome.PackageRejected -> _state.update {
+                it.copy(delivery = refreshed ?: it.delivery, deliveryNote = "package rejected: ${outcome.reason}")
+            }
+            is DeliveryOutcome.UploadFailed -> _state.update {
+                it.copy(delivery = refreshed ?: it.delivery, deliveryNote = "upload failed: ${outcome.reason}")
+            }
+            is DeliveryOutcome.BindingFailed -> _state.update {
+                it.copy(delivery = refreshed ?: it.delivery, deliveryNote = "binding failed: ${outcome.reason}")
+            }
+            is DeliveryOutcome.SidecarFailed -> _state.update {
+                it.copy(delivery = refreshed ?: it.delivery, deliveryNote = "sidecar failed: ${outcome.reason}")
+            }
+            is DeliveryOutcome.AuthLost -> _state.update {
+                it.copy(deliveryNote = "auth lost: ${outcome.reason}")
+            }
+            is DeliveryOutcome.Blocked -> _state.update {
+                it.copy(deliveryNote = "delivery blocked: ${outcome.reason}")
+            }
+        }
+    }
+
+    private fun noteDelivery(note: String) {
+        _state.update { it.copy(deliveryNote = note) }
+    }
+
+    private fun describeDelivery(outcome: DeliveryOutcome.Delivered): String {
+        val parts = mutableListOf("delivery: ${outcome.deliveryState}")
+        outcome.receiptStatus?.let { parts += "receipt ${it.wire}" }
+        if (outcome.sidecarUncertain) parts += "sidecar uncertain (revision conflict; awaiting receipt)"
+        outcome.sidecarSkippedReason?.let { parts += "sidecar skipped: $it" }
+        return parts.joinToString("; ")
+    }
+
+    /**
+     * Assembles the sidecar input from real capture measurements, or
+     * null when the sidecar must be skipped (no estimate, unknown
+     * board, unreadable still). Every field traces to a measured
+     * value; nominal derivations are marked by the builder.
+     */
+    private suspend fun assembleSidecarInput(
+        imageId: String,
+        observationId: String,
+        still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill,
+        imageSha: String,
+    ): SpatialSidecar.Input? {
+        val estimate = lastEstimate ?: return null
+        val snapshot = _state.value
+        val sessionUuid = snapshot.remoteSessionId ?: return null
+        val request = snapshot.remoteRequest ?: return null
+        val geometry = snapshot.overlayGeometry ?: return null
+        val epoch = bindEpoch ?: return null
+        val board = BoardGeometry.forBoardId(snapshot.boardId) ?: return null
+        val observation = try {
+            repo.getObservation(observationId)
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        val bounds = try {
+            BitmapFactory.Options().apply { inJustDecodeBounds = true }.also {
+                BitmapFactory.decodeByteArray(still.bytes, 0, still.bytes.size, it)
+            }
+        } catch (_: Exception) {
+            return null
+        }
+        if (bounds.outWidth < 1 || bounds.outHeight < 1) return null
+        val exifOrientation = try {
+            val raw = ExifInterface(java.io.ByteArrayInputStream(still.bytes))
+                .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            if (raw in 1..8) raw else ExifInterface.ORIENTATION_NORMAL
+        } catch (_: Exception) {
+            ExifInterface.ORIENTATION_NORMAL
+        }
+        val callbackNs = lastStillCallbackNs ?: return null
+        val sampleAgeMs = (callbackNs - estimate.monotonicNs) / 1_000_000.0
+        val quality = estimate.frameQuality
+        val motion = lastMotion
+        val intrinsics = try {
+            camera?.currentIntrinsics()
+        } catch (_: Exception) {
+            null
+        }
+        val nominalDescriptor = intrinsics?.let {
+            "factory-fx${it.fx}-fy${it.fy}-cx${it.cx}-cy${it.cy}-w${it.width}-h${it.height}-dist${it.distortion.joinToString(",")}"
+        } ?: "unresolved-factory-analysis-${geometry.analysisWidth}x${geometry.analysisHeight}"
+        val layoutDescriptor = canonicalBoardLayout(board)
+        val goalBytes = try {
+            Json.encodeToString(GuidedTarget.serializer(), request.target).toByteArray(Charsets.UTF_8)
+        } catch (_: Exception) {
+            return null
+        }
+        return SpatialSidecar.Input(
+            evidenceId = uuid(),
+            sessionId = sessionUuid,
+            sourceId = request.sourceId,
+            requestId = request.requestId,
+            requestRevision = request.revision,
+            attemptId = reservedAttemptId ?: return null,
+            createdAt = utcClock().toIsoUtc(),
+            image = SpatialSidecar.Image(
+                packageId = framePackageId(observation),
+                observationId = observationId,
+                imageId = imageId,
+                assetId = imageId,
+                sha256 = imageSha,
+                byteLength = still.bytes.size.toLong(),
+                mime = "image/jpeg",
+                widthPx = bounds.outWidth,
+                heightPx = bounds.outHeight,
+                exifOrientation = exifOrientation,
+            ),
+            camera = SpatialSidecar.Camera(
+                cameraId = cameraIdForConsent(),
+                lensFacing = when (geometry.lensFacing) {
+                    CameraSelector.LENS_FACING_FRONT -> "front"
+                    LENS_FACING_EXTERNAL -> "external"
+                    else -> "back"
+                },
+                sensorMode = "default",
+            ),
+            calibration = SpatialSidecar.Calibration(
+                nominalDescriptor = nominalDescriptor,
+                layoutSha256 = layoutDescriptor.toByteArray(Charsets.UTF_8).sha256Hex(),
+                boardFrameId = board.boardId,
+                metricValidity = "nominal_only",
+            ),
+            analysisWidthPx = geometry.analysisWidth,
+            analysisHeightPx = geometry.analysisHeight,
+            analysisRotationDeg = geometry.analysisRotationDeg,
+            transformEpoch = epoch,
+            captureTime = SpatialSidecar.CaptureTime(
+                callbackUtc = still.capturedAt.toIsoUtc(),
+                callbackMonotonicNs = callbackNs.toString(),
+                bootId = bootAnchorId,
+            ),
+            pose = SpatialSidecar.Pose(
+                tBC = estimate.tBC,
+                estimatorStatus = estimate.status,
+                rmsPx = estimate.rmsPx,
+                detectedMarkerIds = estimate.markerIdsSeen,
+                residualReferenceWidthPx = geometry.analysisWidth,
+                sampleAgeMs = sampleAgeMs,
+                imageSha256 = imageSha,
+            ),
+            calibrated = false,
+            target = SpatialSidecar.Target(
+                goalBytes = goalBytes,
+                roiVerticesMm = boardRoiCorners(board),
+                objectPoseEpochRef = request.objectPoseEpochId,
+            ),
+            quality = SpatialSidecar.Quality(
+                rmsPx = estimate.rmsPx,
+                rmsGatePx = GuidanceHypothesis1.LIVE_RMS_PX,
+                motionMedianPx = motion?.first,
+                motionP90Px = motion?.second,
+                motionMedianGatePx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX,
+                motionP90GatePx = GuidanceHypothesis1.MAX_MOTION_P90_PX,
+                sharpness = quality?.sharpness,
+                sharpnessReference = snapshot.sharpnessReference,
+                sharpnessRatioGate = GuidanceHypothesis1.MIN_SHARPNESS_RATIO,
+                darkFraction = quality?.darkFraction,
+                saturatedFraction = quality?.saturatedFraction,
+                badExposureGate = GuidanceHypothesis1.MAX_BAD_EXPOSURE_FRAC,
+                visibility = if (estimate.markerIdsSeen.isNotEmpty()) "visible" else "unknown",
+                inFrame = estimate.cornersPx.isNotEmpty(),
+                thresholdConfigJson = THRESHOLD_CONFIG_JSON,
+            ),
+            appVersion = appVersion,
+            buildSha = appVersion,
+            algorithmConfigJson = ALGORITHM_CONFIG_JSON
+                .replace("{dict}", board.dictionary)
+                .replace("{w}", geometry.analysisWidth.toString())
+                .replace("{h}", geometry.analysisHeight.toString()),
+        )
+    }
+
+    private fun canonicalBoardLayout(board: BoardGeometry.Board): String =
+        buildString {
+            append("anastylos-board-layout:1:${board.boardId}:${board.dictionary}:")
+            board.markers.toSortedMap().forEach { (id, marker) ->
+                append("$id:${marker.sizeMm}:")
+                marker.corners.forEach { corner -> append("${corner[0]},${corner[1]};") }
+                append("|")
+            }
+        }.toString()
+
+    private fun boardRoiCorners(board: BoardGeometry.Board): List<List<Double>> {
+        val xs = board.markers.values.flatMap { marker -> marker.corners.map { it[0] } }
+        val ys = board.markers.values.flatMap { marker -> marker.corners.map { it[1] } }
+        if (xs.isEmpty() || ys.isEmpty()) return listOf(listOf(0.0, 0.0, 0.0))
+        val minX = xs.min()
+        val maxX = xs.max()
+        val minY = ys.min()
+        val maxY = ys.max()
+        return listOf(
+            listOf(minX, minY, 0.0),
+            listOf(maxX, minY, 0.0),
+            listOf(maxX, maxY, 0.0),
+            listOf(minX, maxY, 0.0),
         )
     }
 
@@ -667,6 +1473,12 @@ class GuidanceViewModel(
 
     override fun onCleared() {
         detachCamera()
+        remoteCollectJob?.cancel()
+        try {
+            remote?.session?.close()
+        } catch (_: Exception) {
+        }
+        remote = null
     }
 }
 
@@ -676,6 +1488,21 @@ private val TERMINAL_REQUESTS = setOf(
     RequestState.EXPIRED,
     RequestState.SUPERSEDED,
 )
+
+/** Canonical bytes hashed into sidecar `threshold_config_sha256`. */
+private const val THRESHOLD_CONFIG_JSON =
+    """{"profile":"guidance-hypothesis-1","rms_px":1.2,"motion_median_px":0.7,"motion_p90_px":1.5,"sharpness_ratio":0.7,"bad_exposure_frac":0.05,"min_markers":3}"""
+
+/** Canonical solver config; `{dict}`, `{w}`, `{h}` are substituted per capture. */
+private const val ALGORITHM_CONFIG_JSON =
+    """{"solver":"aruco-solvepnp-iterative","opencv":"4.14.0","dictionary":"{dict}","analysis":"{w}x{h}"}"""
+
+/**
+ * Mirrors `CameraSelector.LENS_FACING_EXTERNAL` without referencing
+ * the experimental constant (lint cannot see the opt-in through the
+ * inlined Java constant). The 0/1/2 facing values are stable CameraX API.
+ */
+private const val LENS_FACING_EXTERNAL = 2
 
 private fun sha256Hex(bytes: ByteArray): String {
     val digest = java.security.MessageDigest.getInstance("SHA-256")

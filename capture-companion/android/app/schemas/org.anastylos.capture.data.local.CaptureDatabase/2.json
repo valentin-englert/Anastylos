@@ -1,0 +1,388 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "ac14f33a0049e68edf39197ad49cd938",
+    "entities": [
+      {
+        "tableName": "sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`session_id` TEXT NOT NULL, `name` TEXT NOT NULL, `created_at` TEXT NOT NULL, `updated_at` TEXT NOT NULL, `assembly_memory_session` TEXT, `tray_default` TEXT, PRIMARY KEY(`session_id`))",
+        "fields": [
+          {
+            "fieldPath": "sessionId",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assemblyMemorySession",
+            "columnName": "assembly_memory_session",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "trayDefault",
+            "columnName": "tray_default",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "session_id"
+          ]
+        }
+      },
+      {
+        "tableName": "observations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`observation_id` TEXT NOT NULL, `session_id` TEXT NOT NULL, `component_reference` TEXT, `tray_reference` TEXT, `captured_at` TEXT NOT NULL, `capture_source` TEXT NOT NULL, `review_state` TEXT NOT NULL, `operator_notes` TEXT, `markings_json` TEXT NOT NULL, `category_value` TEXT, `category_state` TEXT NOT NULL, `measurements_json` TEXT NOT NULL, `quantity_value` INTEGER, `quantity_state` TEXT NOT NULL, `candidates_json` TEXT NOT NULL, `app_version` TEXT NOT NULL, `user_agent` TEXT, `export_history_json` TEXT NOT NULL, PRIMARY KEY(`observation_id`), FOREIGN KEY(`session_id`) REFERENCES `sessions`(`session_id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "observationId",
+            "columnName": "observation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionId",
+            "columnName": "session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "componentReference",
+            "columnName": "component_reference",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "trayReference",
+            "columnName": "tray_reference",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "captured_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "captureSource",
+            "columnName": "capture_source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reviewState",
+            "columnName": "review_state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "operatorNotes",
+            "columnName": "operator_notes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "markingsJson",
+            "columnName": "markings_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoryValue",
+            "columnName": "category_value",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoryState",
+            "columnName": "category_state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "measurementsJson",
+            "columnName": "measurements_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quantityValue",
+            "columnName": "quantity_value",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "quantityState",
+            "columnName": "quantity_state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "candidatesJson",
+            "columnName": "candidates_json",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appVersion",
+            "columnName": "app_version",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userAgent",
+            "columnName": "user_agent",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "exportHistoryJson",
+            "columnName": "export_history_json",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "observation_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_observations_session_id",
+            "unique": false,
+            "columnNames": [
+              "session_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_observations_session_id` ON `${TABLE_NAME}` (`session_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "sessions",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "session_id"
+            ],
+            "referencedColumns": [
+              "session_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "images",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`image_id` TEXT NOT NULL, `observation_id` TEXT NOT NULL, `role` TEXT NOT NULL, `filename` TEXT NOT NULL, `mime` TEXT NOT NULL, `byte_length` INTEGER NOT NULL, `sha256` TEXT NOT NULL, `captured_at` TEXT NOT NULL, `crop_json` TEXT, PRIMARY KEY(`image_id`), FOREIGN KEY(`observation_id`) REFERENCES `observations`(`observation_id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "imageId",
+            "columnName": "image_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observationId",
+            "columnName": "observation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "role",
+            "columnName": "role",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "filename",
+            "columnName": "filename",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mime",
+            "columnName": "mime",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "byteLength",
+            "columnName": "byte_length",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sha256",
+            "columnName": "sha256",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturedAt",
+            "columnName": "captured_at",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cropJson",
+            "columnName": "crop_json",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "image_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_images_observation_id",
+            "unique": false,
+            "columnNames": [
+              "observation_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_images_observation_id` ON `${TABLE_NAME}` (`observation_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "observations",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "observation_id"
+            ],
+            "referencedColumns": [
+              "observation_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "guided_associations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`image_id` TEXT NOT NULL, `observation_id` TEXT NOT NULL, `package_id` TEXT, `guided_session_id` TEXT NOT NULL, `request_id` TEXT, `request_revision` INTEGER, `attempt_id` TEXT, `attempt_number` INTEGER, `sidecar_revision` INTEGER NOT NULL, `delivery_state` TEXT NOT NULL, `receipt_status` TEXT, `updated_at` TEXT NOT NULL, PRIMARY KEY(`image_id`), FOREIGN KEY(`image_id`) REFERENCES `images`(`image_id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "imageId",
+            "columnName": "image_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observationId",
+            "columnName": "observation_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageId",
+            "columnName": "package_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "guidedSessionId",
+            "columnName": "guided_session_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "requestId",
+            "columnName": "request_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "requestRevision",
+            "columnName": "request_revision",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "attemptId",
+            "columnName": "attempt_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "attemptNumber",
+            "columnName": "attempt_number",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "sidecarRevision",
+            "columnName": "sidecar_revision",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deliveryState",
+            "columnName": "delivery_state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "receiptStatus",
+            "columnName": "receipt_status",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "image_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_guided_associations_attempt_id",
+            "unique": false,
+            "columnNames": [
+              "attempt_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_guided_associations_attempt_id` ON `${TABLE_NAME}` (`attempt_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "images",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "image_id"
+            ],
+            "referencedColumns": [
+              "image_id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ac14f33a0049e68edf39197ad49cd938')"
+    ]
+  }
+}

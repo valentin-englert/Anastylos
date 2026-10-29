@@ -126,7 +126,7 @@ def write_memory(session: Path, phase_label: str, parts: list[dict], bindings: d
         precision = source_precision(region["bbox_mm"], features_of(part), part_area_of(part))
         part["precision"] = precision
         imported = _memory(session, "import", "--result-json", removal["result_json"], "--region", source_region, "--kit", kit,
-                           "--note", precision["note"])
+                           "--note", precision["note"], "--t-s", part["removal_window_s"][0])
         obs = (imported["imported"] or [{}])[0].get("id")
         if obs is None:
             part["memory"] = {"status": "not written", "why": "evidence already imported"}

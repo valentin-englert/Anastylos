@@ -481,3 +481,37 @@ The earlier "coarse P1 link" (§13) came from the group's 60 × 63 mm
 source box; at the level of the written change-detection region the
 evidence points to H2 alone. Thresholds (2 × part area, 7 mm background,
 6–400 mm² features) come from development data.
+
+## 20. Operator answers into memory, install order by removal time (2026-10-29) — development data
+
+`tools/session/answers.py package` writes a question folder
+(`questions.json` with lettered candidates and time windows, plus
+`QUESTION_RULES.md`) that the guide is started in; the operator answers
+there, one JSON line per answer. `answers.py apply` checks every answer
+against its question and writes only valid ones as operator-declared
+events (`declared_removal` + `storage_link`, `compatible_group` for
+"identical to"). A candidate that was not offered, a skip or a missing
+field is rejected; "kein Teil" is dismissed; nothing is guessed. Extra
+parts that raised no question (back shell, PCB) are recorded with the
+operator's phase, words and optional video time.
+
+A probe with TL test answers (labelled `TL test (not operator)`, not the
+owner's answers) exposed a wrong install order: declared answers sit at
+the end of the log, and the guide package ordered by log position. Fix:
+observations carry `t_s` (start of the removal window, `import --t-s`),
+answers carry the chosen candidate's or the deposit's window start, and
+the guide package orders by phase, then `t_s`; a part without `t_s`
+keeps log order, is listed in `unknowns`, and the guide must say so
+(rule 5b3).
+
+Probe rerun (`C:\ANASTYLOS\data\answers-probe-v18\`, sessions from
+`session-runs-v18`, same counts as v17b): 8 applied, 2 dismissed,
+1 rejected (invented candidate), 3 open. Install order within each phase
+now follows removal time (P3 Start/Select rubber 78 s first … D-pad
+membrane 24 s last; P2 nub 49 s, R 40 s, L 25 s; P1 screw 38 s, screw
+14 s). The probe's two extra parts have no time, so the back shell is
+placed before the nub instead of last — shown as an unknown, and the
+real answers should give their times.
+
+Real question folder for the owner:
+`C:\ANASTYLOS\data\session-runs-v18\FULL-01\questions` (12 questions).

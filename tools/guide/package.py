@@ -86,7 +86,7 @@ def _part(event: dict, index: int, phase: str | None, stored: dict | None, sites
 
 
 def _install_steps(parts: list[dict]) -> list[dict]:
-    """Reverse removal order; consecutive members of one interchangeable group become one step."""
+    """Reverse of the given removal order; consecutive members of one interchangeable group become one step."""
     steps = []
     for part in reversed(parts):
         target = part["source"].get("site") or part["source"].get("described_as") or part["source"].get("centroid_mm")
@@ -127,6 +127,13 @@ def build(memory_path: Path, inventory_path: Path | None, custody_path: Path | N
             part["phase_label"] = phases.get(part["phase"])
             parts.append(part)
 
+    # Removal order: phase by phase (phase events in log order), then by removal time where known, then log order.
+    phase_rank = {e["id"]: n for n, e in enumerate(e for e in live if e["type"] == "phase")}
+    times = {e["id"]: e.get("t_s") for e in live}
+    parts.sort(key=lambda p: (phase_rank.get(p["phase"], -1), times.get(p["id"]) is None,
+                              times.get(p["id"]) or 0.0, p["removal_index"]))
+    for n, part in enumerate(parts, start=1):
+        part["removal_index"], part["t_s"] = n, times.get(part["id"])
     install = _install_steps(parts)
     unknowns = [
         "No mechanical dependency between parts was observed or confirmed; install order is only the reverse "
@@ -137,6 +144,7 @@ def build(memory_path: Path, inventory_path: Path | None, custody_path: Path | N
         "Reassembly progress is known only from return checks below or from what the operator says in the chat.",
     ]
     unknowns += [f"{p['id']} has no recorded storage place." for p in parts if not p["stored_in"]]
+    unknowns += [f"{p['id']} has no removal time; its order within its phase is only the log order." for p in parts if p["t_s"] is None]
     unknowns += [f"{p['id']} (automatic) source lies in no inventory site (anonymous location)."
                  for p in parts if p["basis"] == "automatic" and not p["source"].get("site")]
     unknowns += [f"group {g['id']} ({g.get('label')}): interchangeability is the operator's statement, not measured."
@@ -146,7 +154,8 @@ def build(memory_path: Path, inventory_path: Path | None, custody_path: Path | N
         "schema": SCHEMA,
         "phases": [{"id": e["id"], "label": e["label"], "starts_after": e.get("starts_after")} for e in live if e["type"] == "phase"],
         "parts": parts,
-        "install_order": {"basis": "reverse recorded removal order, phase by phase (no confirmed dependencies); "
+        "install_order": {"basis": "reverse removal order, phase by phase, within a phase by removal time t_s "
+                                   "(log order where t_s is missing; no confirmed dependencies); "
                                    "interchangeable group members form one step", "steps": install},
         "dependencies": {"confirmed": [], "note": "none recorded in this session"},
         "unknowns": unknowns,

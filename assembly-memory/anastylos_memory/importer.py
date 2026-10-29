@@ -38,6 +38,7 @@ def observations_from_result(
     region: str | None = None,
     kit_sha256: str | None = None,
     note: str | None = None,
+    t_s: float | None = None,
 ) -> list[dict]:
     """Build observation events (without id/timestamp) from a result dict."""
     status = result.get("status")
@@ -62,6 +63,7 @@ def observations_from_result(
             "evidence": evidence_ref(str(result_path), pair_id, item.get("label", "")),
             "kit_sha256": kit_sha256,
             "note": note,
+            **({} if t_s is None else {"t_s": t_s}),
             "supersedes": None,
         }
         for item in regions

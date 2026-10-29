@@ -217,6 +217,20 @@ class MemoryTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_observation(event, set())
 
+    def test_removal_time_must_be_a_number_when_present(self):
+        event = {
+            "type": "observation",
+            "session": "s",
+            "source_view": "fixture_back",
+            "bbox_mm": [1, 2, 3, 4],
+            "centroid_mm": [1, 2],
+            "evidence": {"result_json": "r.json", "pair_id": "p", "region": "R1", "result_sha256": None},
+        }
+        validate_observation({**event, "t_s": 14.4}, set())
+        validate_observation({**event, "t_s": None}, set())
+        with self.assertRaises(ValidationError):
+            validate_observation({**event, "t_s": "early"}, set())
+
     def test_corrections_append_and_queries_follow_successor(self):
         with tempfile.TemporaryDirectory() as directory:
             session = Path(directory)

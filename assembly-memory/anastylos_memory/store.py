@@ -92,6 +92,8 @@ def validate_observation(event: dict, known_ids: set[str]) -> None:
     _require_numbers(event, "bbox_mm", 4, "observation")
     _require_numbers(event, "centroid_mm", 2, "observation")
     _require_evidence(event.get("evidence"), "observation")
+    if event.get("t_s") is not None and not _is_number(event["t_s"]):
+        raise ValidationError("observation needs 't_s' as a finite number or null")
     supersedes = event.get("supersedes")
     if supersedes is not None and supersedes not in known_ids:
         raise ValidationError(f"observation supersedes unknown id {supersedes!r}")

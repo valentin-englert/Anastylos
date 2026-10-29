@@ -151,6 +151,7 @@ def cmd_import(args) -> int:
         region=args.region,
         kit_sha256=sha256_file(args.kit) if args.kit else None,
         note=args.note,
+        t_s=args.t_s,
     )
     imported = []
     skipped = []
@@ -269,6 +270,7 @@ def build_parser() -> argparse.ArgumentParser:
     imp.add_argument("--region", default=None, help="import one region label only, e.g. R1")
     imp.add_argument("--kit", default=None, help="kit config (records its sha256 when given)")
     imp.add_argument("--note", default=None)
+    imp.add_argument("--t-s", type=float, default=None, help="video time of the removal, if known (orders install steps)")
     imp.set_defaults(func=cmd_import)
 
     where = sub.add_parser("where", help='"where does this go?" (original source location)')

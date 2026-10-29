@@ -14,7 +14,9 @@ Event kinds:
   `centroid_mm`, and an evidence reference (`result_json`, `pair_id`,
   `region`, plus `result_sha256`: SHA-256 over the result file's bytes,
   computed by the importer at import time — null when the file is not
-  readable — never read from inside the result file itself).
+  readable — never read from inside the result file itself). Optional `note`
+  (free text) and `t_s` (removal time in seconds of the source video; it
+  orders install steps within a phase).
 - `tray_link` — an observation placed in a tray cell. The tray snapshot
   (`sheet_id`, `number`, `rect_frame_mm`) is resolved from
   `calibration/calibration-config.json` at record time. Every link carries
@@ -58,7 +60,7 @@ py -3.12 assembly-memory\memory.py --session-dir sessions\day1 where --tray 3 --
 
 `import` reads one change-detection `result.json` verbatim (view, regions,
 provenance) and appends one observation per region (`--region R1` imports a
-single region). Results without trustworthy coordinates
+single region; `--note` and `--t-s` set the optional fields). Results without trustworthy coordinates
 (`registration_invalid`, `view_mismatch`, `input_error`) are refused, as is
 any result without a `rectified.view`. `--kit` optionally records the kit
 config's bytes hash as `kit_sha256`. Manual `record observation` remains

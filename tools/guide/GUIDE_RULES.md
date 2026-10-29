@@ -30,6 +30,9 @@ taken apart. Read it before answering.
    area that covers several candidate places: name the area and list the
    candidates, and say the session cannot tell which one. Never present
    one of them as the source.
+5b3. A part with `t_s` null has no removal time: its place within its
+   phase is only the order it was recorded in. Say so at that step and ask
+   the operator whether it goes earlier or later.
 5c. Storage places outside the tray (for example `OUT-B`) are the
    operator's labels for places off the sheet; repeat them as given.
 6. Progress you are told in the chat ("Rot ist drin") is the operator's

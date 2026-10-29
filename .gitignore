@@ -66,3 +66,36 @@ memory.jsonl
 # pair logs (*-pairs.json) preserve exact frame/PTS references.
 snes-02/**/*.jpg
 snes-02/**/*.JPG
+
+# Verified local delivery copies and generated QA evidence (preserved outside Git).
+/.microscopy-v011-qa/
+/ANASTYLOS_MICROSCOPY_CORE_v0.1.1/
+/ANASTYLOS_MICROSCOPY_CORE_v0.1.2.zip
+/anastylos-microscopy/qa-output/run-20261029-main/
+/anastylos-microscopy/qa-output/run-v012/cli-smoke-junction.log
+/anastylos-microscopy/qa-output/run-v012/cli-smoke.json
+/anastylos-microscopy/qa-output/run-v012/cli-smoke.log
+/anastylos-microscopy/qa-output/run-v012/core-tests-final.log
+/anastylos-microscopy/qa-output/run-v012/core-tests-isolated.log
+/anastylos-microscopy/qa-output/run-v012/core-tests.log
+/anastylos-microscopy/qa-output/run-v012/focused-qa03-final.log
+/anastylos-microscopy/qa-output/run-v012/focused-qa03.log
+/anastylos-microscopy/qa-output/run-v012/hash-mismatch-validate.log
+/anastylos-microscopy/qa-output/run-v012/manual-integration.log
+/anastylos-microscopy/qa-output/run-v012/mic-eval-dev/
+/anastylos-microscopy/qa-output/run-v012/multi-out/
+/anastylos-microscopy/qa-output/run-v012/multi-replay/
+/anastylos-microscopy/qa-output/run-v012/qa02-deep/
+/anastylos-microscopy/qa-output/run-v012/qa03-dev.json
+/anastylos-microscopy/qa-output/run-v012/qa03-dev.log
+/anastylos-microscopy/qa-output/run-v012/qa03-heldout.json
+/anastylos-microscopy/qa-output/run-v012/qa03-heldout.log
+/anastylos-microscopy/qa-output/run-v012/reader-regression.log
+/anastylos-microscopy/qa-output/run-v012/registry-smoke.log
+/anastylos-microscopy/qa-output/run-v012/smoke-out-junction/
+/anastylos-microscopy/qa-output/run-v012/smoke-out/
+/anastylos-microscopy/qa-output/run-v012/windows-junction-deep.py
+/calibration/print/anastylos_surface_a3_v2.pdf
+/snes-02/work/cam1.mono48k.wav
+/snes-02/work/cam2.mono48k.wav
+/snes-02/work/manifest.bak.json

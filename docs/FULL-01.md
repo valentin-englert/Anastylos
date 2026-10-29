@@ -333,3 +333,28 @@ screw from cell 1 into any of H1–H5" and names the basis (operator
 statement, measurement pending). Hole-level attribution is then not needed
 for reassembly; it would only matter for non-identical screws, where
 tool-contact evidence plus a cell counter would be the next step.
+
+## 15. Complete Assembly Memory and guide package (2026-10-29)
+
+Contract: owner decision to add operator-declared memory events
+(`phase`, `declared_removal`, `storage_link`, `compatible_group`),
+implemented in `assembly-memory` (commit `84171a4a`, 26/26 tests); readers
+updated separately (`assembly-reconstruction` accepts and does not project
+them, `7326b76e`, 54/54; guide package reads them, `e9c0ac4b`, 8/8).
+
+Memory `C:\ANASTYLOS\data\full-01\memory\session\memory.jsonl`
+(`667b7ee0164c4ca0096fef57a200e830764f1694feb61c95e2c421578f15df7a`), written
+by `memory\build_memory.py` (`80b90abd…`) from the owner-confirmed parts
+list (P2 order corrected by the owner: back shell, L, R, nubs R then L,
+PCB): 3 phases, 17 declared removals, 2 automatic observations (green and
+blue wells, change-detection evidence `E-0092_SRC-14` R10 and
+`E-0095_SRC-16` R5, owner-reviewed tray links to cells 3 and 6), 17
+storage links (cells and `OUT-A/B/E/F`), 2 compatible groups (5 screws,
+2 rubber nubs; operator statement, not measured).
+
+Guide package `C:\ANASTYLOS\data\full-01\guide\` (`session.json`
+`da31db46…`): 19 parts, 14 install steps in reverse removal order phase
+by phase (Start/Select first … back shell, then the 5 screws as one group
+step). The two automatic parts carry no names (memory never names an
+observed part); the guide refers to them as "the part from cell 3/6" at
+their measured location.

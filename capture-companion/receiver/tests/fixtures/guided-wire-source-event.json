@@ -1,0 +1,20 @@
+{
+  "_note": "SYNTHETIC fixture generated from ControlJournal; not a live capture. Contract G0 ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "event": {
+    "event_id": "00000000-0000-4000-8000-000000000014",
+    "session_id": "00000000-0000-4000-8000-000000000011",
+    "source_id": "00000000-0000-4000-8000-000000000003",
+    "request_id": "00000000-0000-4000-8000-000000000013",
+    "request_revision": 1,
+    "kind": "accepted",
+    "occurred_at": "2026-10-29T12:01:10Z",
+    "monotonic_ns": "987654321",
+    "attempt_id": null,
+    "reason": null
+  },
+  "ack": {
+    "accepted_event_id": "00000000-0000-4000-8000-000000000014",
+    "event_seq": 1,
+    "session_revision": 3
+  }
+}

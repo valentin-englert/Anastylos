@@ -252,3 +252,28 @@ the receiver deduplicates.
   with the unlocked phone can sync. Unpair + `revoke-tokens` on loss.
 - Not yet validated on physical phones or real LANs in this session —
   run the checklist in Section 3 on hardware before relying on it.
+
+## 8. Guided-control journal (Wave 1a, library only)
+
+`anastylos_control_journal.py` is the durable store for *new* guided
+state (frozen G0 contract `ec313f7f...`, read-only under
+`../control/contracts/`). Standard library only (`sqlite3`, WAL,
+single bounded writer, integrity check on open). It is additive: the
+JSON staging files above are untouched, and no guided HTTP route is
+wired yet — legacy upload/review behavior is unchanged.
+
+Covered: session open/get, request create/revise/cancel with
+compare-and-swap revisions, `(principal, session_id, operation_id,
+operation_kind)` idempotency, source-event dedupe, change cursor, and
+atomic capture-set sealing with `manifest_sha256`. Structural +
+semantic ViewRequest checks execute the frozen request vectors.
+
+Not yet: consent/grants, enrollment, attempt reservation, leases,
+sidecar/package binding, receipt qualification, scoped HTTP routes,
+resume, and the MCP adapter (`tools/capture-control/` records the
+`mcp==2.3.0` choice; install pending CONTRACT-OWNER approval).
+
+Tests: `tests/test_control_journal.py` (25 tests: valid vector,
+8 negative cases, CAS/idempotency/queue/cursor/seal transitions,
+5 wire fixtures). ANDROID consumes `tests/fixtures/guided-wire-*.json`
+read-only (synthetic, contract-tested); see `tests/fixtures/README.md`.

@@ -218,6 +218,14 @@ status column states what the code does today.
 | V6 | Loose-part and multi-agent removal cases (e.g. SNES-02 S5: loosened by tool, dropped, deposited by fingers) remain `UNKNOWN` for the MVP; no new event kind. | current code is the decision |
 | V7 | Transport or count evidence as an alternative proof of removal is deferred until after PROTO-01. | current code is the decision |
 
+Owner requirement of 2026-10-29 (Northstar P3, hand presence and
+occlusion). Binding for every custody observer version after v1.2; v1.1
+(E2R, preregistered) stays frozen.
+
+| ID | Requirement | Implementation status |
+|---|---|---|
+| H1 | Hand presence, visual occlusion and component state are separate signals. A static object is never classified as a hand by colour alone; detection uses a hand-free reference, temporal entry and tracking, geometry and optionally a hand-landmark model. Different skin tones, changing light and gloves must be supported; an optional per-user hand-colour calibration may supplement but never be required. Insufficient evidence stays occluded/unknown, and a hand that stops moving never becomes a component. No device- or colour-specific exceptions. Demographic robustness is claimed only after testing on varied hands. Test plan and model feasibility: [`docs/P3-HAND-OCCLUSION.md`](docs/P3-HAND-OCCLUSION.md). | not implemented; observers v1.0–v1.2 use a skin-colour test (`signals.py`), which fails on a skin-coloured part larger than a site (E2D, W-RED) |
+
 Implementation order: this section, then `SCHEMA.md`, then
 `validate.py` / `match.py` with tests, then producers. No observation
 file in the canonical format may be produced before V1, V2 and V4 are

@@ -710,3 +710,44 @@ holes are not visible from above; hand mask not tested on varied real
 hands and assumes fixed exposure; questions are offline and machine-styled
 (H3 open); PCB source and the red-button correspondence unresolved; no
 confirmed mechanical dependencies; live mode not implemented.
+
+## 25. PROV-01: provenance correctness (2026-10-29) — development data
+
+Experiment from Research Pass 01 (`random/research/ANASTYLOS-Research-Pass-01/research-to-code-gap.md`,
+EXP-1). Code: `b2f62f73`, `7b2606a7`.
+
+**Sealed check.** Before any code change, 20 guide answers against the active v20 package were sealed in
+`C:\ANASTYLOS\data\prov-01\` (`answers.md` `91c6754c…`, `key.json` `686175dc…`): 10 correct, 10 adversarial
+(wrong cell, wrong site, declared part called observed, automatic part attributed to the operator). Deviation
+from the plan: all 20 were written by the Technical Lead; the planned 10 owner-written ones were not available.
+
+| Check | Adversarial accepted | Correct rejected |
+|---|---|---|
+| `check.py` before PROV-01 (lexical) | 10 / 10 | 0 / 10 |
+| `check.py` with relation and basis checks | **0 / 10** | **0 / 10** |
+
+**Changes.**
+- `tray_link.inference` (relation, inferred_by, producer, assumptions) on every automatic custody link,
+  written by the session runner; the guide package lists it under unknowns; GUIDE_RULES 5a no longer calls
+  automatic links "observed".
+- Precision labels renamed by meaning: `region_spans_candidates`, `region_about_part_size`,
+  `no_candidate_feature`.
+- `check.py` verifies stated cells, sites and basis words per sentence against the package.
+- Linker 1.7 does not use hand visits. The first version of PROV-01 kept them as a veto; on the v21 rebuild
+  that veto dropped the owner-chosen source of the red button (E-0100: one arm sweep covered cell-5 at
+  71.588 s and the source at 71.788 s). The veto run is kept as `session-runs-v21-veto-discarded`.
+
+**Rebuild** `C:\ANASTYLOS\data\session-runs-v21\` (FULL-01 via `audit\rebuild.sh`, E2 by the session runner):
+
+| | v20 | v21 |
+|---|---|---|
+| FULL-01 automatic links | 4 (P2 L, R by hand order; P3 green, blue by elimination) | 2 (P3 green → 3, blue → 6, both `candidate_by_elimination` with assumptions) |
+| P2 L → 8, R → 11 | automatic | operator declarations (owner confirmation §18), choosing the formerly proposed candidates E-0035, E-0049 |
+| Questions | 10 | 12 (P2 cells 8 and 11 now asked) |
+| Install order | — | unchanged (P2: PCB, membranes, R, L, back shell) |
+| Invariants | 10/10 | 10/10, plus "every automatic tray link carries inference" |
+| E2 | 4 links | same 4 links (cells 6, 1, 5, 4), each with inference |
+
+Hashes (prefix): FULL-01 memory `8ae8e872…`, guide `session.json` `1b84d4c8…`, E2 memory `c58ccc58…`,
+`rebuild.sh` `3b9b6ce6…`. Reconstruction reads both v21 memories. v20 stays the active memory until the
+owner decides; v21 is the PROV-01 candidate.

@@ -75,7 +75,7 @@ OPEN); `protocol_prompt` ≤ 1 per 60 s, not during an open read-back, budget 2 
 end; `ask_dependency` only for parts committed in this session and not already asked; `leave_unresolved`
 only after ≥ 1 attempt, or zero candidates plus "weiß nicht", with the reason matching the state. Turn limit
 per episode = 3 × questions + 6; the policy gets a turn only while a question needs a decision. Hard proposer
-call cap for the whole L2 run: **600**.
+call cap for the whole L2 run: **910** (v2; was 600 in v1, see changelog).
 
 ## 6. Metrics
 
@@ -115,9 +115,21 @@ win/tie/loss counts are reported beside the pooled ratio. The result says nothin
 cd tools/live/l2sim
 python run.py --arm P0 --seeds 0,1,2 --out C:\ANASTYLOS\data\live-dev\D\<run>
 python run.py --arm PR --seeds 0,1,2 --out C:\ANASTYLOS\data\live-dev\D\<run>
-python run.py --arm L2 --proposer <module:factory> --seeds 0,1,2 --max-calls 600 --out C:\ANASTYLOS\data\live-dev\D\<run>
+python run.py --arm L2 --proposer <module:factory> --seeds 0,1,2 --max-calls 910 --out C:\ANASTYLOS\data\live-dev\D\<run>
+python compare.py --p0 <P0 run> --pr <PR run> --l2 <L2 run>
 ```
 
 ## Changelog
 
-- v1 (this commit): initial preregistration.
+- v1 (491183cd): initial preregistration.
+- v2 (with the simulator code, still before any model run; no L2 result exists):
+  - Hard call cap 600 → **910**. 600 was below what the arm can legitimately need: the turn limits sum to
+    3 × (3 × 62 + 6 × 13) = 792 turns over the 39 runs, plus at most 3 retries per episode-run (117), so 909
+    calls is the bound. The deterministic good fake already used 573 calls. 910 means the cap can only
+    stop a run that violates the turn/retry limits, never truncate a regular one. Supersedes "600" in §5
+    and §8.
+  - Made explicit (no behaviour change against v1's intent): `defer` and `leave_unresolved` carry
+    `question_revision` like `ask`, so every question action is checked for staleness ("ids exist at the
+    current revision", §5); after segment end the policy gets no turn while a question is in flight; a
+    turn ends with no executed action if neither the proposal nor P0 yields a valid one; the arms are
+    compared with `compare.py`, which refuses unpaired runs or runs made under different PREREG hashes.

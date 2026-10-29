@@ -1,0 +1,544 @@
+{
+  "schema": "anastylos-session-questions@1",
+  "phase": "P2",
+  "questions": [
+    {
+      "id": "Q-P2-01",
+      "kind": "source_of_part",
+      "part": "P2-C08",
+      "cell": "cell-8",
+      "deposit_window_s": [
+        36.794,
+        40.993
+      ],
+      "why": [
+        "2 removals pending when the deposit was observed"
+      ],
+      "candidates": [
+        {
+          "removal_event": "E-0035",
+          "window_s": [
+            24.796,
+            36.794
+          ],
+          "sources": [
+            {
+              "site": "SRC-1",
+              "centroid_mm": [
+                183.11,
+                172.17
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-15",
+              "centroid_mm": [
+                167.69,
+                173.77
+              ],
+              "area_mm2": 22.2
+            },
+            {
+              "site": "SRC-17",
+              "centroid_mm": [
+                163.18,
+                173.34
+              ],
+              "area_mm2": 9.0
+            },
+            {
+              "site": "SRC-18",
+              "centroid_mm": [
+                160.51,
+                179.55
+              ],
+              "area_mm2": 8.2
+            },
+            {
+              "site": "SRC-21",
+              "centroid_mm": [
+                168.45,
+                165.43
+              ],
+              "area_mm2": 56.7
+            },
+            {
+              "site": "SRC-22",
+              "centroid_mm": [
+                163.16,
+                173.52
+              ],
+              "area_mm2": 8.0
+            },
+            {
+              "site": "SRC-3",
+              "centroid_mm": [
+                191.87,
+                167.69
+              ],
+              "area_mm2": 8.7
+            },
+            {
+              "site": "SRC-4",
+              "centroid_mm": [
+                178.83,
+                174.09
+              ],
+              "area_mm2": 37.8
+            },
+            {
+              "site": "SRC-5",
+              "centroid_mm": [
+                165.22,
+                179.69
+              ],
+              "area_mm2": 345.9
+            },
+            {
+              "site": "SRC-7",
+              "centroid_mm": [
+                171.44,
+                154.22
+              ],
+              "area_mm2": 38.7
+            }
+          ]
+        },
+        {
+          "removal_event": "E-0049",
+          "window_s": [
+            39.993,
+            46.592
+          ],
+          "sources": [
+            {
+              "site": "SRC-10",
+              "centroid_mm": [
+                249.4,
+                179.2
+              ],
+              "area_mm2": 373.7
+            },
+            {
+              "site": "SRC-11",
+              "centroid_mm": [
+                260.21,
+                172.04
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-14",
+              "centroid_mm": [
+                263.06,
+                165.8
+              ],
+              "area_mm2": 55.8
+            },
+            {
+              "site": "SRC-9",
+              "centroid_mm": [
+                239.21,
+                168.27
+              ],
+              "area_mm2": 16.9
+            }
+          ]
+        }
+      ],
+      "ask": "Woher kam das Teil in cell-8 (abgelegt 36.8-41.0 s)?"
+    },
+    {
+      "id": "Q-P2-02",
+      "kind": "source_of_part",
+      "part": "P2-C11",
+      "cell": "cell-11",
+      "deposit_window_s": [
+        43.193,
+        47.992
+      ],
+      "why": [
+        "2 removals pending when the deposit was observed",
+        "other deposits overlap the custody window: E-0048"
+      ],
+      "candidates": [
+        {
+          "removal_event": "E-0035",
+          "window_s": [
+            24.796,
+            36.794
+          ],
+          "sources": [
+            {
+              "site": "SRC-1",
+              "centroid_mm": [
+                183.11,
+                172.17
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-15",
+              "centroid_mm": [
+                167.69,
+                173.77
+              ],
+              "area_mm2": 22.2
+            },
+            {
+              "site": "SRC-17",
+              "centroid_mm": [
+                163.18,
+                173.34
+              ],
+              "area_mm2": 9.0
+            },
+            {
+              "site": "SRC-18",
+              "centroid_mm": [
+                160.51,
+                179.55
+              ],
+              "area_mm2": 8.2
+            },
+            {
+              "site": "SRC-21",
+              "centroid_mm": [
+                168.45,
+                165.43
+              ],
+              "area_mm2": 56.7
+            },
+            {
+              "site": "SRC-22",
+              "centroid_mm": [
+                163.16,
+                173.52
+              ],
+              "area_mm2": 8.0
+            },
+            {
+              "site": "SRC-3",
+              "centroid_mm": [
+                191.87,
+                167.69
+              ],
+              "area_mm2": 8.7
+            },
+            {
+              "site": "SRC-4",
+              "centroid_mm": [
+                178.83,
+                174.09
+              ],
+              "area_mm2": 37.8
+            },
+            {
+              "site": "SRC-5",
+              "centroid_mm": [
+                165.22,
+                179.69
+              ],
+              "area_mm2": 345.9
+            },
+            {
+              "site": "SRC-7",
+              "centroid_mm": [
+                171.44,
+                154.22
+              ],
+              "area_mm2": 38.7
+            }
+          ]
+        },
+        {
+          "removal_event": "E-0049",
+          "window_s": [
+            39.993,
+            46.592
+          ],
+          "sources": [
+            {
+              "site": "SRC-10",
+              "centroid_mm": [
+                249.4,
+                179.2
+              ],
+              "area_mm2": 373.7
+            },
+            {
+              "site": "SRC-11",
+              "centroid_mm": [
+                260.21,
+                172.04
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-14",
+              "centroid_mm": [
+                263.06,
+                165.8
+              ],
+              "area_mm2": 55.8
+            },
+            {
+              "site": "SRC-9",
+              "centroid_mm": [
+                239.21,
+                168.27
+              ],
+              "area_mm2": 16.9
+            }
+          ]
+        }
+      ],
+      "ask": "Woher kam das Teil in cell-11 (abgelegt 43.2-48.0 s)?"
+    },
+    {
+      "id": "Q-P2-03",
+      "kind": "source_of_part",
+      "part": "P2-C02",
+      "cell": "cell-2",
+      "deposit_window_s": [
+        54.99,
+        59.99
+      ],
+      "why": [
+        "4 removals pending when the deposit was observed",
+        "other deposits overlap the custody window: E-0048, E-0053"
+      ],
+      "candidates": [
+        {
+          "removal_event": "E-0035",
+          "window_s": [
+            24.796,
+            36.794
+          ],
+          "sources": [
+            {
+              "site": "SRC-1",
+              "centroid_mm": [
+                183.11,
+                172.17
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-15",
+              "centroid_mm": [
+                167.69,
+                173.77
+              ],
+              "area_mm2": 22.2
+            },
+            {
+              "site": "SRC-17",
+              "centroid_mm": [
+                163.18,
+                173.34
+              ],
+              "area_mm2": 9.0
+            },
+            {
+              "site": "SRC-18",
+              "centroid_mm": [
+                160.51,
+                179.55
+              ],
+              "area_mm2": 8.2
+            },
+            {
+              "site": "SRC-21",
+              "centroid_mm": [
+                168.45,
+                165.43
+              ],
+              "area_mm2": 56.7
+            },
+            {
+              "site": "SRC-22",
+              "centroid_mm": [
+                163.16,
+                173.52
+              ],
+              "area_mm2": 8.0
+            },
+            {
+              "site": "SRC-3",
+              "centroid_mm": [
+                191.87,
+                167.69
+              ],
+              "area_mm2": 8.7
+            },
+            {
+              "site": "SRC-4",
+              "centroid_mm": [
+                178.83,
+                174.09
+              ],
+              "area_mm2": 37.8
+            },
+            {
+              "site": "SRC-5",
+              "centroid_mm": [
+                165.22,
+                179.69
+              ],
+              "area_mm2": 345.9
+            },
+            {
+              "site": "SRC-7",
+              "centroid_mm": [
+                171.44,
+                154.22
+              ],
+              "area_mm2": 38.7
+            }
+          ]
+        },
+        {
+          "removal_event": "E-0049",
+          "window_s": [
+            39.993,
+            46.592
+          ],
+          "sources": [
+            {
+              "site": "SRC-10",
+              "centroid_mm": [
+                249.4,
+                179.2
+              ],
+              "area_mm2": 373.7
+            },
+            {
+              "site": "SRC-11",
+              "centroid_mm": [
+                260.21,
+                172.04
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-14",
+              "centroid_mm": [
+                263.06,
+                165.8
+              ],
+              "area_mm2": 55.8
+            },
+            {
+              "site": "SRC-9",
+              "centroid_mm": [
+                239.21,
+                168.27
+              ],
+              "area_mm2": 16.9
+            }
+          ]
+        },
+        {
+          "removal_event": "E-0054",
+          "window_s": [
+            49.191,
+            53.791
+          ],
+          "sources": [
+            {
+              "site": "SRC-10",
+              "centroid_mm": [
+                249.4,
+                179.2
+              ],
+              "area_mm2": 373.7
+            },
+            {
+              "site": "SRC-11",
+              "centroid_mm": [
+                260.21,
+                172.04
+              ],
+              "area_mm2": 14.3
+            },
+            {
+              "site": "SRC-14",
+              "centroid_mm": [
+                263.06,
+                165.8
+              ],
+              "area_mm2": 55.8
+            }
+          ]
+        },
+        {
+          "removal_event": "E-0059",
+          "window_s": [
+            49.591,
+            64.589
+          ],
+          "sources": [
+            {
+              "site": "SRC-16",
+              "centroid_mm": [
+                161.27,
+                178.37
+              ],
+              "area_mm2": 10.3
+            },
+            {
+              "site": "SRC-17",
+              "centroid_mm": [
+                163.18,
+                173.34
+              ],
+              "area_mm2": 9.0
+            },
+            {
+              "site": "SRC-20",
+              "centroid_mm": [
+                165.2,
+                170.88
+              ],
+              "area_mm2": 9.3
+            },
+            {
+              "site": "SRC-21",
+              "centroid_mm": [
+                168.45,
+                165.43
+              ],
+              "area_mm2": 56.7
+            },
+            {
+              "site": "SRC-5",
+              "centroid_mm": [
+                165.22,
+                179.69
+              ],
+              "area_mm2": 345.9
+            },
+            {
+              "site": "SRC-7",
+              "centroid_mm": [
+                171.44,
+                154.22
+              ],
+              "area_mm2": 38.7
+            },
+            {
+              "site": "SRC-8",
+              "centroid_mm": [
+                167.2,
+                164.79
+              ],
+              "area_mm2": 8.0
+            }
+          ]
+        }
+      ],
+      "ask": "Woher kam das Teil in cell-2 (abgelegt 55.0-60.0 s)?"
+    }
+  ]
+}

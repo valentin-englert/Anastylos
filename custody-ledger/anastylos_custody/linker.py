@@ -260,7 +260,8 @@ def _judge(deposit: dict, pending: list[dict], deposits: list[dict], removals: l
     late = [item["event"] for item in removals if item not in pending and _overlaps(item, window)]
     if late:
         reasons.append("other removals overlap the custody window: " + ", ".join(late))
-    blind = sorted({item["zone"] for item in blind_sites if item["from_s"] <= window[1]})
+    blind = sorted({item["zone"] for item in blind_sites
+                    if item["from_s"] <= window[1] and (item.get("until_s") is None or item["until_s"] > window[0])})
     if blind:
         reasons.append("source sites unobservable during or before the window: " + ", ".join(blind))
     gap_hits = [gap for gap in gaps if gap[0] < window[1] and gap[1] > window[0]]
@@ -320,10 +321,20 @@ def _by_elimination(proposal: dict, choices: set | None, deposit: dict, deposits
 
 def _source_blind_spots(events_doc: dict) -> list[dict]:
     """Sites whose state is unknown from some time on (pose epoch ended, or never observed)."""
-    spots = [{"zone": event["zone"], "from_s": event["t_before_s"], "why": "pose_epoch_break"} for event in events_doc["events"] if event["kind"] == "pose_epoch_break"]
+    # Linker 1.5: when the device was re-acquired later (a newer device pose epoch in the events), a blind
+    # spot of an older epoch ends there: the new epoch watches the device again, and a later removal at the
+    # old place appears as a new source. Without re-acquisition a blind spot never ends.
+    starts = sorted(d["valid_from_s"] for d in events_doc.get("devices", []))
+
+    def until(t_s: float) -> float | None:
+        later = [s for s in starts if s > t_s]
+        return later[0] if later else None
+
+    spots = [{"zone": event["zone"], "from_s": event["t_before_s"], "until_s": until(event["t_before_s"]), "why": "pose_epoch_break"}
+             for event in events_doc["events"] if event["kind"] == "pose_epoch_break"]
     for zone in events_doc["zones"]:
         if zone["kind"] == "site" and zone["status"] == "inventory_not_observable":
-            spots.append({"zone": zone["zone"], "from_s": 0.0, "why": "inventory_not_observable"})
+            spots.append({"zone": zone["zone"], "from_s": 0.0, "until_s": None, "why": "inventory_not_observable"})
     return spots
 
 

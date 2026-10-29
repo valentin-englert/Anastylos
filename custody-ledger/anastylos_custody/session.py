@@ -32,9 +32,12 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
         sites, inventory_doc = load_inventory(inventory, custody["view"])
         zones = apply_tray_occupancy(zones, inventory_doc, inventory) + sites
     params = _observer_params(custody, rectifier.ppm)
-    device = _device_pose([zone for zone in zones if zone.kind == "site"], rectifier, custody)
+    site_zones = [zone for zone in zones if zone.kind == "site"]
+    devices = {start: _device_pose([z for z in site_zones if z.valid_from_s == start], rectifier, custody)
+               for start in sorted({z.valid_from_s for z in site_zones})}
+    device = devices[min(devices)] if devices else None
     observers = [ZoneObserver(zone.id, zone.kind, _geometry(zone, rectifier, custody["zones"]), params, zone.valid_from_s,
-                              device if zone.kind == "site" else None, initially_occupied=zone.initially_occupied)
+                              devices[zone.valid_from_s] if zone.kind == "site" else None, initially_occupied=zone.initially_occupied)
                  for zone in zones]
     for observer in observers:
         if observer.zone_id in trace_zones:
@@ -72,6 +75,8 @@ def observe_video(video: Path, inventory: Path | None, custody: dict, harness: d
         "sampling": _sampling_report(times, step, float(custody["sampling"]["max_gap_s"])),
         "zones": [observer.summary() for observer in observers],
         "device": None if device is None else {"region_px": list(device.region), "reference_t_s": device.reference_t_s, "realignments": device.realignments},
+        **({"devices": [{"valid_from_s": start, "region_px": list(d.region), "reference_t_s": d.reference_t_s,
+                         "realignments": len(d.realignments)} for start, d in devices.items()]} if len(devices) > 1 else {}),
         "traces": {observer.zone_id: observer.trace for observer in observers if observer.trace is not None},
         "events": events,
         "processing_s": round(time.perf_counter() - started, 1),

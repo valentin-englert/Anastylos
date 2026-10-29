@@ -121,5 +121,45 @@ class PoseTests(unittest.TestCase):
         self.assertEqual(track.proposals, [])
 
 
+
+class EpochSequenceTests(unittest.TestCase):
+    """proposals 0.3.0: a pose change ends an epoch; the next quiet scene re-acquires the device."""
+
+    def test_reacquired_device_gets_new_sources_after_a_pose_change(self):
+        from anastylos_custody.proposals import EpochSequence
+        mask = np.zeros(SHAPE, bool)
+        mask[DEVICE] = True
+        sequence = EpochSequence(PPM, 30.0, {**DEFAULTS, "min_area_mm2": 8.0})
+        opened = base()
+        opened[DEVICE] = 160.0                      # the whole device looks different (shell lifted)
+        later = opened.copy()
+        later[30:36, 50:56] = 60.0                  # then a part is removed from the opened device
+        t, previous = 0.0, base()
+        for seconds, gray in [(1, base()), (3, opened), (3, later)]:
+            for _ in range(int(seconds * 5)):
+                t = round(t + 0.2, 3)
+                sequence.update(t, gray, np.abs(gray - previous) > 14, lambda: mask)
+                previous = gray
+        self.assertEqual(len(sequence.epochs), 2)
+        self.assertIsNotNone(sequence.epochs[0]["tracker"].pose_epoch_end_s)
+        self.assertEqual(sequence.epochs[0]["tracker"].proposals, [])
+        self.assertEqual(len(sequence.epochs[1]["tracker"].proposals), 1)
+
+    def test_without_reacquire_the_first_epoch_is_the_last(self):
+        from anastylos_custody.proposals import EpochSequence
+        mask = np.zeros(SHAPE, bool)
+        mask[DEVICE] = True
+        sequence = EpochSequence(PPM, 30.0, {**DEFAULTS, "reacquire": False})
+        opened = base()
+        opened[DEVICE] = 160.0
+        t, previous = 0.0, base()
+        for seconds, gray in [(1, base()), (4, opened)]:
+            for _ in range(int(seconds * 5)):
+                t = round(t + 0.2, 3)
+                sequence.update(t, gray, np.abs(gray - previous) > 14, lambda: mask)
+                previous = gray
+        self.assertEqual(len(sequence.epochs), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

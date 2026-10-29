@@ -52,7 +52,8 @@ def load_inventory(path: Path, view: str) -> tuple[list[Zone], dict]:
     zones = []
     for site in sites:
         others = tuple(tuple(other["rect_mm"]) for other in sites if other["id"] != site["id"])
-        zones.append(Zone(site["id"], "site", tuple(site["rect_mm"]), valid_from_s=start, excluded_from_anchor=others,
+        zones.append(Zone(site["id"], "site", tuple(site["rect_mm"]), valid_from_s=float(site.get("valid_from_s", start)),
+                          excluded_from_anchor=others,
                           initially_occupied=_declared_occupancy(path, site["id"], site.get("initially"))))
     return zones, inventory
 

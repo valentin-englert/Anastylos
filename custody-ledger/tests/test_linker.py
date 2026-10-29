@@ -116,5 +116,29 @@ class AmbiguityLocalityTests(unittest.TestCase):
         self.assertEqual([p["status"] for p in doc["proposals"]], ["candidate_temporal_exclusive", "unattributed"])
 
 
+
+class ReacquisitionBlindSpotTests(unittest.TestCase):
+    """Linker 1.5: a blind spot of an older pose epoch ends where the device was re-acquired."""
+
+    def doc(self, devices):
+        events = [{"id": "E-0", "zone": "OLD", "zone_kind": "site", "kind": "pose_epoch_break", "t_before_s": 18, "t_after_s": 19},
+                  removal("E-1", "NEW", 30, 32), deposit("E-2", "cell-8", 33, 35)]
+        return {**events_doc(events), "devices": devices}
+
+    def test_after_reacquisition_a_new_epoch_link_is_not_blocked(self):
+        result = link(self.doc([{"valid_from_s": 0.0}, {"valid_from_s": 22.0}]))
+        self.assertEqual(result["proposals"][0]["status"], "candidate_temporal_exclusive")
+
+    def test_without_reacquisition_the_old_blind_spot_still_blocks(self):
+        result = link(self.doc([]))
+        self.assertEqual(result["proposals"][0]["status"], "ambiguous")
+
+    def test_a_window_overlapping_the_transition_stays_blocked(self):
+        events = [{"id": "E-0", "zone": "OLD", "zone_kind": "site", "kind": "pose_epoch_break", "t_before_s": 18, "t_after_s": 19},
+                  removal("E-1", "NEW", 17, 25), deposit("E-2", "cell-8", 26, 28)]
+        result = link({**events_doc(events), "devices": [{"valid_from_s": 0.0}, {"valid_from_s": 22.0}]})
+        self.assertEqual(result["proposals"][0]["status"], "ambiguous")
+
+
 if __name__ == "__main__":
     unittest.main()

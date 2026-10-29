@@ -41,6 +41,15 @@ class InventoryOccupancyTests(unittest.TestCase):
             cells = apply_tray_occupancy(CELLS, doc, path)
         self.assertEqual({cell.id: cell.initially_occupied for cell in cells}, {"cell-1": None, "cell-4": True})
 
+    def test_site_may_carry_its_own_start_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "inventory.json"
+            path.write_text(json.dumps({"schema": "custody-site-inventory@1", "view": "surface_a3", "inventory_t_s": 0.0,
+                                        "sites": [{"id": "S1", "rect_mm": [1, 1, 5, 5]},
+                                                  {"id": "S2", "rect_mm": [9, 1, 5, 5], "valid_from_s": 20.5}]}), encoding="utf-8")
+            sites, _ = load_inventory(path, "surface_a3")
+        self.assertEqual({s.id: s.valid_from_s for s in sites}, {"S1": 0.0, "S2": 20.5})
+
     def test_unknown_cell_or_value_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = _inventory(tmp, tray_initially={"cell-99": "occupied"})

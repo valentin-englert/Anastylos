@@ -27,12 +27,18 @@ import cv2
 import numpy as np
 
 REGISTRY_SCHEMA = "custody-source-registry@1"
-PROPOSALS_VERSION = "0.2.0"
+# Sites start observing up to init_tolerance_s (2 s) before valid_from_s; a new epoch's sites are shifted by
+# that margin so their first reference is taken in the quiet moment the epoch was re-acquired, not during
+# the change that ended the previous epoch.
+EPOCH_START_MARGIN_S = 2.0
+PROPOSALS_VERSION = "0.3.0"
 DEFAULTS = {
     "paper_min_value": 150, "paper_max_saturation": 40, "mask_closing_mm": 3.0,
     "quiet_hold_s": 0.6, "confirm_hold_s": 1.0, "min_area_mm2": 8.0,
     "occluder_min_outside_mm2": 4.0, "pose_break_fraction": 0.3, "merge_gap_mm": 1.0,
     "same_interval_s": 0.25, "proximity_ratio": 0.5,
+    # 0.3.0: after a pose epoch ends, wait for a quiet scene and re-acquire the device (new epoch).
+    "reacquire": True, "scene_quiet_motion_fraction": 0.0005,
 }
 
 
@@ -126,6 +132,36 @@ def mask_gap_mm(a: np.ndarray, b: np.ndarray, ppm: float) -> float:
     return max(0.0, float(distance[b].min()) - 1.0) / ppm  # centre distance minus one pixel = empty pixels between
 
 
+class EpochSequence:
+    """Device pose epochs: find the device in a quiet scene, track it until its pose epoch ends, then wait
+    for the next quiet scene and re-acquire it (proposals 0.3.0). Sources are never continued across epochs."""
+
+    def __init__(self, ppm: float, change_threshold: float, params: dict):
+        self.ppm, self.change_threshold, self.params = ppm, change_threshold, params
+        self.epochs: list[dict] = []
+        self._quiet_since: float | None = None
+
+    @property
+    def current(self) -> ProposalTracker | None:
+        return self.epochs[-1]["tracker"] if self.epochs else None
+
+    def update(self, t_s: float, gray: np.ndarray, motion: np.ndarray, find_device) -> None:
+        tracker = self.current
+        if tracker is not None and tracker.pose_epoch_end_s is None:
+            tracker.update(t_s, gray, motion)
+            return
+        if tracker is not None and not self.params["reacquire"]:
+            return
+        moving = motion.mean() > self.params["scene_quiet_motion_fraction"] or not self.epochs and t_s == 0.0
+        self._quiet_since = None if moving else (self._quiet_since if self._quiet_since is not None else t_s)
+        if self._quiet_since is not None and t_s - self._quiet_since >= self.params["quiet_hold_s"]:
+            mask = find_device()
+            if mask.any():
+                self.epochs.append({"epoch": len(self.epochs) + 1, "start_s": round(t_s, 3),
+                                    "tracker": ProposalTracker(mask, gray.copy(), self.ppm, self.change_threshold, self.params)})
+                self._quiet_since = None
+
+
 def merge_into_sources(proposals: list[dict], ppm: float, params: dict) -> list[dict]:
     """Spatiotemporal clustering of proposals into source candidates.
 
@@ -211,51 +247,59 @@ def discover_video(video, custody: dict, harness: dict, kit: dict, provenance: d
     spec = custody["session_registration"]
     drift = DriftTracker(reader, registration.marker_corners_px, int(spec["drift_min_markers"]), float(spec["drift_max_residual_px"]))
     signals = SignalTracker(custody["signal"], custody["skin"], rectifier.ppm)
-    tracker, quiet_since, next_drift, mask_t = None, None, 0.0, None
+    next_drift = 0.0
+    sequence = EpochSequence(rectifier.ppm, float(custody["signal"]["change_threshold"]), params)
     for sample in footage.sample_frames(video, step):
         if sample.t_s >= next_drift:
             drift.update(sample.t_s, sample.image)
             next_drift = sample.t_s + float(spec["drift_update_every_s"])
         rectified = rectifier.rectify(sample.image, drift.reference_to_current)
         frame = signals.update(sample.t_s, rectified)
-        if tracker is None:
-            moving = frame.motion.mean() > 0.0005 or sample.t_s == 0.0
-            quiet_since = None if moving else (quiet_since if quiet_since is not None else sample.t_s)
-            if quiet_since is not None and sample.t_s - quiet_since >= params["quiet_hold_s"]:
-                mask = device_mask(rectified, rectifier.rect_to_px(work), rectifier.ppm, params)
-                tracker = ProposalTracker(mask, frame.gray.copy(), rectifier.ppm, float(custody["signal"]["change_threshold"]), params)
-                mask_t = sample.t_s
-            continue
-        tracker.update(sample.t_s, frame.gray, frame.motion)
-    if tracker is None:
+        sequence.update(sample.t_s, frame.gray, frame.motion,
+                        lambda r=rectified: device_mask(r, rectifier.rect_to_px(work), rectifier.ppm, params))
+    epochs = sequence.epochs
+    if not epochs:
         raise SystemExit("no quiet sample to find the device")
 
     def to_mm(x, y):
         return float(x) / rectifier.ppm + rectifier.x0, float(y) / rectifier.ppm + rectifier.y0
 
-    groups = merge_into_sources(tracker.proposals, rectifier.ppm, params)
-    sources = [source_record(i, group, to_mm, rectifier.ppm) for i, group in enumerate(groups, start=1)]
+    sources = []
+    for epoch in epochs:
+        for group in merge_into_sources(epoch["tracker"].proposals, rectifier.ppm, params):
+            record = source_record(len(sources) + 1, group, to_mm, rectifier.ppm)
+            record["epoch"] = epoch["epoch"]
+            record["geometry"]["frame"] = f"sheet mm (device at rest, pose epoch {epoch['epoch']})"
+            sources.append(record)
+    starts = {epoch["epoch"]: epoch["start_s"] for epoch in epochs}
+    tracker = epochs[-1]["tracker"]
     registry = {
         "schema": REGISTRY_SCHEMA,
         "proposals_version": PROPOSALS_VERSION,
         "params": params,
         "provenance": {**provenance, "video": {**footage.describe(video), "sha256": footage.sha256_file(video)}},
-        "device": {"mask_from_t_s": mask_t, "mask_area_mm2": round(float(tracker.mask.sum()) / rectifier.ppm ** 2, 1),
-                   "pose_epoch_end_s": tracker.pose_epoch_end_s},
-        "proposal_count": len(tracker.proposals),
+        "epochs": [{"epoch": e["epoch"], "mask_from_t_s": e["start_s"],
+                    "mask_area_mm2": round(float(e["tracker"].mask.sum()) / rectifier.ppm ** 2, 1),
+                    "pose_epoch_end_s": e["tracker"].pose_epoch_end_s, "proposals": len(e["tracker"].proposals)} for e in epochs],
+        "proposal_count": sum(len(e["tracker"].proposals) for e in epochs),
         "sources": sources,
-        "unknowns": ([f"device pose epoch ended at {tracker.pose_epoch_end_s} s; later changes were not proposed"]
-                     if tracker.pose_epoch_end_s is not None else []),
+        "unknowns": ([f"last device pose epoch ended at {tracker.pose_epoch_end_s} s and no quiet scene followed; "
+                      "later changes were not proposed"] if tracker.pose_epoch_end_s is not None else [])
+                    + [f"epoch {e['epoch']} ended at {e['tracker'].pose_epoch_end_s} s; its sources are not continued"
+                       for e in epochs[:-1]],
     }
     inventory = {
         "schema": "custody-site-inventory@1",
         "view": custody["view"],
         "inventory_t_s": 0.0,
         "basis": {"kind": "adaptive proposal", "by": f"custody discover (proposals {PROPOSALS_VERSION})", "operator_accepted": False},
-        "coordinate_note": "bounding boxes of discovered change masks grown by 1 mm; valid for the device pose of epoch 1",
+        "coordinate_note": "bounding boxes of discovered change masks grown by 1 mm; each site is valid from its epoch's "
+                           "re-acquisition (plus the observer's initialisation margin) in that epoch's device pose",
         "sites": [{"id": s["id"], "rect_mm": [round(s["geometry"]["bbox_mm"][0] - 1, 2), round(s["geometry"]["bbox_mm"][1] - 1, 2),
                                               round(s["geometry"]["bbox_mm"][2] + 2, 2), round(s["geometry"]["bbox_mm"][3] + 2, 2)],
-                   "initially": "occupied"} for s in sources],
+                   "initially": "occupied", "epoch": s["epoch"],
+                   **({} if s["epoch"] == 1 else {"valid_from_s": round(starts[s["epoch"]] + EPOCH_START_MARGIN_S, 3)})}
+                  for s in sources],
     }
     return registry, inventory
 

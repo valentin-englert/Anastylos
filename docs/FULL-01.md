@@ -265,3 +265,36 @@ Also found: a site whose anchor ring is fully covered by other sites has
 an empty ring; the anchor fraction is then NaN (`RuntimeWarning: Mean of
 empty slice`), and the comparison silently takes the re-alignment path.
 To be fixed as its own change.
+
+## 12. Noise rules, linker 1.4 and observer 1.4.1 (2026-10-29) — development data
+
+Branch `feat/custody-v1.3` commit `8cce4790`, 74/74 tests (6 new). Rules
+fixed before the runs: (1) a grouped removal whose total changed area is
+below 25 mm² (the minimum a tray cell needs to count a part) is reported
+under `minor_site_changes`, not used as a removal; (2) fragments join when
+they start in the same interval (±0.25 s) and their windows overlap, the
+end may differ; (3) a site with an empty anchor ring (all ring pixels
+belong to other sites) relies on the device pose instead of a silent NaN
+that always ended its pose epoch.
+
+| Run | Links (linker 1.3 → 1.4) |
+|---|---|
+| E2 named / adaptive | 4 automatic → 4 automatic, unchanged |
+| FULL-01 P1 | 0 → 1 automatic (cell-1 ← SRC-16/33/6) — **suspect**, see below |
+| FULL-01 P2 | 0 → 0 (3 unattributed; no sources after the back shell lifts) |
+| FULL-01 P3 | 0 → **2 automatic by elimination**: cell-3 ← SRC-14+SRC-2 (≈ 241/144 mm, removed 51–55 s) and cell-6 ← SRC-16+SRC-17 (≈ 255/154 mm, removed 59–63 s); time and place fit the green and the blue button; 5 ambiguous |
+| FULL-01 P3 + draft OUT-x | the same 2 links, now counted `operator_assisted` (a declaration preceded them) |
+
+Minor site changes set aside: P3 SRC-3 (8.0 mm², the transient) and the
+late SRC-1 fragment at 66–75 s (17.9 mm²); P1 two (24.8 and 8.6 mm²).
+
+Caution on P1: the linked event starts at 14.4 s but ends at 89 s because
+one of its sites never became clean for 75 s, and one site (SRC-33,
+1050 mm²) is far larger than a screw hole. Rule (2) accepts any end as
+long as start and overlap match; that is weak evidence when the end is
+much later. This link is not counted as plausible until the owner checks
+it on the video; a bound on the end difference is a candidate for the
+next version.
+
+None of these are verified correspondences: FULL-01 has no sealed ground
+truth, and the owner compares them with the videos.

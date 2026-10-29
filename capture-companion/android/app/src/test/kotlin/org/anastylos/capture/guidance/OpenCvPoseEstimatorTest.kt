@@ -20,6 +20,8 @@ class OpenCvPoseEstimatorTest {
         var solution: OpenCvPoseEstimator.ArucoBackend.PnpSolution? = null,
         var detectThrows: Boolean = false,
         var solveThrows: Boolean = false,
+        var detectLinkageThrows: Boolean = false,
+        var solveLinkageThrows: Boolean = false,
     ) : OpenCvPoseEstimator.ArucoBackend {
         var lastDictionary = -1
         var released = false
@@ -31,6 +33,7 @@ class OpenCvPoseEstimatorTest {
             dictionary: Int,
         ): List<PoseMath.MarkerDetection> {
             lastDictionary = dictionary
+            if (detectLinkageThrows) throw UnsatisfiedLinkError("libopencv_java4.so missing")
             if (detectThrows) throw IllegalStateException("native init failed")
             return detections
         }
@@ -40,6 +43,7 @@ class OpenCvPoseEstimatorTest {
             imagePx: List<List<Double>>,
             intrinsics: PoseEstimator.Intrinsics,
         ): OpenCvPoseEstimator.ArucoBackend.PnpSolution? {
+            if (solveLinkageThrows) throw UnsatisfiedLinkError("libopencv_java4.so missing")
             if (solveThrows) throw IllegalStateException("solver failed")
             return solution
         }
@@ -233,5 +237,32 @@ class OpenCvPoseEstimatorTest {
         val backend = FakeBackend()
         OpenCvPoseEstimator(backend).close()
         assertThat(backend.released).isTrue()
+    }
+
+    @Test
+    fun backendLinkageErrorsContained() {
+        val failing = FakeBackend(detectLinkageThrows = true)
+        val lost = OpenCvPoseEstimator(failing).estimate(input(), intrinsics(), a3Board())
+        assertThat(lost.status).isEqualTo(WireRegistration.LOST)
+        val solveFail = FakeBackend(oracleDetections(), solveLinkageThrows = true)
+        val degraded = OpenCvPoseEstimator(solveFail).estimate(input(), intrinsics(), a3Board())
+        assertThat(degraded.status).isEqualTo(WireRegistration.DEGRADED)
+        assertThat(degraded.markerIdsSeen).isNotEmpty()
+    }
+
+    @Test
+    fun nativeMissingFailsClosedBeforeMat() {
+        // No desktop OpenCV ships with the unit-test runtime, so the
+        // real backend must report the missing library as a plain
+        // failure (contained upstream) — never as a LinkageError from
+        // a Mat allocated before init. Regression test for the
+        // on-device analyzer crash: init must precede any Mat.
+        val backend = OpenCvArucoBackend()
+        try {
+            backend.detect(ByteArray(64 * 48), 64, 48, org.opencv.objdetect.Objdetect.DICT_5X5_100)
+            throw AssertionError("expected IllegalStateException for the missing native library")
+        } catch (e: IllegalStateException) {
+            assertThat(e.message).contains("OpenCV native init failed")
+        }
     }
 }

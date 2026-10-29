@@ -74,6 +74,8 @@ class OpenCvPoseEstimator(
         }
         val detections = try {
             backend.detect(input.yPlane, input.width, input.height, dictionaryId)
+        } catch (_: LinkageError) {
+            return lost(input, quality)
         } catch (_: Exception) {
             return lost(input, quality)
         }
@@ -99,6 +101,8 @@ class OpenCvPoseEstimator(
                 correspondences.map { it.imagePx },
                 intrinsics,
             )
+        } catch (_: LinkageError) {
+            null
         } catch (_: Exception) {
             null
         } ?: return degraded(input, seen, corners, cornersPx, quality)
@@ -222,12 +226,36 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
     private val detectors = mutableMapOf<Int, ArucoDetector>()
     private var released = false
 
+    @Volatile private var loadFailed = false
+
+    /**
+     * Loads `libopencv_java4.so` before any Mat exists. Failure
+     * latches: a missing native library degrades every frame to
+     * LOST (via the estimator's containment) instead of retrying
+     * the load — and its log spam — at frame rate.
+     */
+    private fun ensureLoaded() {
+        check(!released) { "backend released" }
+        if (loadFailed) throw IllegalStateException("OpenCV native init failed")
+        val ok = try {
+            OpenCVLoader.initLocal()
+        } catch (_: LinkageError) {
+            false
+        } catch (_: Exception) {
+            // initLocal may explode instead of returning false
+            // (missing loader plumbing); either way native is out.
+            false
+        }
+        if (!ok) {
+            loadFailed = true
+            throw IllegalStateException("OpenCV native init failed")
+        }
+    }
+
     private fun detectorFor(dictionary: Int): ArucoDetector {
         check(!released) { "backend released" }
         return detectors.getOrPut(dictionary) {
-            if (!OpenCVLoader.initLocal()) {
-                throw IllegalStateException("OpenCV native init failed")
-            }
+            ensureLoaded()
             val dictionaryMat = Objdetect.getPredefinedDictionary(dictionary)
             ArucoDetector(dictionaryMat, DetectorParameters())
         }
@@ -239,6 +267,7 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
         height: Int,
         dictionary: Int,
     ): List<PoseMath.MarkerDetection> {
+        ensureLoaded()
         val image = Mat(height, width, CvType.CV_8UC1)
         val corners: MutableList<Mat> = mutableListOf()
         val ids = Mat()
@@ -270,9 +299,7 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
         intrinsics: PoseEstimator.Intrinsics,
     ): OpenCvPoseEstimator.ArucoBackend.PnpSolution? {
         require(objectMm.size == imagePx.size && objectMm.size >= 4) { "need >= 4 correspondences" }
-        if (!OpenCVLoader.initLocal()) {
-            throw IllegalStateException("OpenCV native init failed")
-        }
+        ensureLoaded()
         val objectPoints = MatOfPoint3f()
         val imagePoints = MatOfPoint2f()
         val cameraMatrix = Mat.zeros(3, 3, CvType.CV_64F)

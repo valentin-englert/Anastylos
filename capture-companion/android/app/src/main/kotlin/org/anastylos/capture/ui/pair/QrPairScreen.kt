@@ -331,8 +331,8 @@ private fun ScannerBody(onQrText: (String?) -> Unit, onCancel: () -> Unit) {
  * Single-fire: the first decoded QR text wins; later frames are
  * dropped without being closed late, and the ViewModel ignores
  * callbacks once it leaves [PairScreen.Scanning]. Binding follows
- * the composition lifecycle — leaving the screen unbinds the
- * camera and closes the scanner.
+ * the composition lifecycle — leaving the screen unbinds only its own use cases
+ * and closes the scanner.
  *
  */
 @Composable
@@ -352,6 +352,8 @@ private fun CameraScanner(onQrText: (String?) -> Unit, onCancel: () -> Unit) {
 
     DisposableEffect(previewView) {
         var provider: ProcessCameraProvider? = null
+        var boundPreview: CameraXPreview? = null
+        var boundAnalysis: ImageAnalysis? = null
         // getInstance() itself throws when CameraX has no backend on the
         // device — that must degrade to the error screen, never crash.
         val providerFuture = try {
@@ -378,6 +380,8 @@ private fun CameraScanner(onQrText: (String?) -> Unit, onCancel: () -> Unit) {
                     QrAnalyzer(scanner, fired, onQrText),
                 )
                 bound.unbindAll()
+                boundPreview = preview
+                boundAnalysis = analysis
                 camera = bound.bindToLifecycle(
                     lifecycleOwner,
                     CameraSelector.DEFAULT_BACK_CAMERA,
@@ -391,7 +395,13 @@ private fun CameraScanner(onQrText: (String?) -> Unit, onCancel: () -> Unit) {
         providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
         onDispose {
             try {
-                provider?.unbindAll()
+                // Selective: a dispose-time unbindAll would detach the
+                // next screen's camera (entering binds before leaving
+                // disposes on forward navigation).
+                val owned = listOfNotNull(boundPreview, boundAnalysis)
+                if (owned.isNotEmpty()) {
+                    provider?.unbind(*owned.toTypedArray())
+                }
             } catch (_: Exception) {
                 // Best effort; the process may already be torn down.
             }

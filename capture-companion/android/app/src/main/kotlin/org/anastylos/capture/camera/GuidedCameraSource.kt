@@ -27,7 +27,11 @@ import kotlin.coroutines.suspendCoroutine
  * [ImageAnalysis] + [ImageCapture] binding owned by the guided
  * screen. The legacy [CameraStillSource] keeps serving the session
  * screen; the two are never bound at once (each `bindAsync` starts
- * from `unbindAll`).
+ * from `unbindAll`, taking the camera over from the previous
+ * screen). Dispose unbinds only the owned use cases: on forward
+ * navigation the entering screen binds before the leaving screen
+ * disposes, so a dispose-time `unbindAll` would kill the new
+ * owner's camera (black preview, no error).
  *
  * Analyzer contract: YUV_420_888, KEEP_ONLY_LATEST, single bounded
  * worker; every ImageProxy is closed in `finally`, analyzer
@@ -53,6 +57,8 @@ class GuidedCameraSource(
 
     private var provider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
+    private var boundPreview: Preview? = null
+    private var boundAnalysis: ImageAnalysis? = null
     private var previewView: PreviewView? = null
     private var lensFacing: Int = CameraSelector.LENS_FACING_BACK
     private var analysisExecutor: java.util.concurrent.ExecutorService? = null
@@ -143,11 +149,15 @@ class GuidedCameraSource(
             cameraProvider.unbindAll()
             val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, analysis, capture)
             imageCapture = capture
+            boundPreview = preview
+            boundAnalysis = analysis
             intrinsics = Camera2Intrinsics.forAnalysisStream(camera, analysisWidth, analysisHeight)
             geometry = readGeometry(preview, analysis, analysisWidth, analysisHeight)
             true
         } catch (_: Exception) {
             imageCapture = null
+            boundPreview = null
+            boundAnalysis = null
             intrinsics = null
             geometry = null
             false
@@ -232,7 +242,10 @@ class GuidedCameraSource(
 
     override fun unbind() {
         try {
-            provider?.unbindAll()
+            val owned = listOfNotNull(boundPreview, boundAnalysis, imageCapture)
+            if (owned.isNotEmpty()) {
+                provider?.unbind(*owned.toTypedArray())
+            }
         } catch (_: Exception) {
         }
         try {
@@ -241,6 +254,8 @@ class GuidedCameraSource(
         }
         analysisExecutor = null
         imageCapture = null
+        boundPreview = null
+        boundAnalysis = null
         intrinsics = null
         geometry = null
         lastAnalysisRotation = 0

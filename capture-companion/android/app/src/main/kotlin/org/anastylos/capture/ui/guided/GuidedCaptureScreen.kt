@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -244,7 +245,10 @@ private fun dwellText(state: GuidanceUiState): String = when (val dwell = state.
 @Composable
 private fun TargetPicker(state: GuidanceUiState, viewModel: GuidanceViewModel) {
     Text("Target viewpoint", style = MaterialTheme.typography.titleSmall)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+    ) {
         LOCAL_TARGETS.forEach { target ->
             FilterChip(
                 selected = state.target?.id == target.id,
@@ -284,7 +288,10 @@ private fun ControlRow(state: GuidanceUiState, viewModel: GuidanceViewModel) {
             }
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+    ) {
         OutlinedButton(onClick = { viewModel.captureManual() }, enabled = !state.shutterBusy) {
             Text("Capture now (manual)")
         }

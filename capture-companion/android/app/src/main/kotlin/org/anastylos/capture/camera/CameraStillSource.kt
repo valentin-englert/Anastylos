@@ -48,6 +48,7 @@ class CameraStillSource(
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
     private var imageCapture: ImageCapture? = null
+    private var boundPreview: Preview? = null
 
     var lensFacing: Int = CameraSelector.LENS_FACING_BACK
         private set
@@ -104,16 +105,27 @@ class CameraStillSource(
         cameraProvider.unbindAll()
         camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, capture)
         imageCapture = capture
+        boundPreview = preview
         return true
     }
 
+    /**
+     * Releases only this source's use cases. A dispose-time
+     * `unbindAll` would detach the next screen's camera: on forward
+     * navigation the entering screen binds before the leaving
+     * screen disposes (black preview, no error).
+     */
     fun unbind() {
         try {
-            provider?.unbindAll()
+            val owned = listOfNotNull(boundPreview, imageCapture)
+            if (owned.isNotEmpty()) {
+                provider?.unbind(*owned.toTypedArray())
+            }
         } catch (_: Exception) {
         }
         camera = null
         imageCapture = null
+        boundPreview = null
     }
 
     fun setFlash(enabled: Boolean) {

@@ -358,3 +358,29 @@ by phase (Start/Select first … back shell, then the 5 screws as one group
 step). The two automatic parts carry no names (memory never names an
 observed part); the guide refers to them as "the part from cell 3/6" at
 their measured location.
+
+## 16. Automated session run (2026-10-29)
+
+`tools/session/session.py` runs one phase video end to end with the frozen
+custody worktree (`feat/custody-v1.3`, observer 1.4.1, linker 1.4,
+`custody-config.v14.json`): discover → observe → link → number the parts
+→ export evidence for every uniquely linked automatic part → write
+Assembly Memory (one `phase` per run; an `observation` from the removal's
+change-detection region and a `tray_link` with **evidence basis** from the
+deposit's region) → `parts.json` and `questions.json`. Parts are numbered
+by phase and cell (`P3-C03`, same-cell additions `P1-C01b`). Ambiguous,
+unattributed or coarse cases are never written to memory; they become
+questions with their candidates (`tools/session/tests`, 3/3).
+
+Development-data runs (`C:\ANASTYLOS\data\session-runs\`):
+
+| Run | Parts | Uniquely linked | Written with evidence | Questions |
+|---|---|---|---|---|
+| E2 | 5 | 4 | 4 | 1 (the C4 move) |
+| FULL-01 P1 | 4 | 1 | 0 (the coarse source has no bound change-detection region) | 4 |
+| FULL-01 P2 | 3 | 0 | 0 | 3 |
+| FULL-01 P3 | 7 | 2 | 2 (green, blue) | 6 |
+
+FULL-01 now needs 13 operator answers instead of a hand-written 14-row
+parts list plus manual memory commands. Next: turn answers into declared
+events automatically, and have the guide ask the questions.

@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["SUPERSEDES_SELF"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["supersedes"], "value": "00000000-0000-4000-8000-000000000001"}], "name": "supersedes-self"}

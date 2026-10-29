@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["BAD_TRANSFORM_BOTTOM_ROW"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "T_board_camera", "matrix", 15], "value": 2}], "name": "bad-bottom-row"}

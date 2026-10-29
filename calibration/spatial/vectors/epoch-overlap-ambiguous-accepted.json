@@ -1,0 +1,1 @@
+{"ctx": {"epochs": [{"end_utc": "2026-10-29T12:00:00.000Z", "epoch_id": "E1", "start_utc": "2026-10-29T11:59:00.000Z"}, {"end_utc": "2026-10-29T12:01:00.000Z", "epoch_id": "E2", "start_utc": "2026-10-29T12:00:00.000Z"}]}, "expect_reasons_any": [], "expect_verdict": "accept", "mutations": [], "name": "epoch-overlap-ambiguous-accepted"}

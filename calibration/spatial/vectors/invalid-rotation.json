@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["INVALID_ROTATION"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "T_board_camera", "matrix", 1], "value": 0.5}], "name": "invalid-rotation"}

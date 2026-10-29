@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["INLIER_NOT_DETECTED"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "metrics", "inlier_marker_ids"], "value": [10, 11, 13, 99]}], "name": "inlier-not-detected"}

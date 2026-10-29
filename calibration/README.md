@@ -80,3 +80,11 @@ Print the **PDF**, not the preview PNG.
 6. Fixture sheets: the outer dashed rectangle is the board cut. The inner dashed rectangle is the controller window. Glue the board flat. FRONT and BACK are different sheets and different coordinate frames.
 
 ChArUco is the portrait A4 sheet. Glue that flat as well.
+
+## Spatial evidence validation (AgentCam Wave 1)
+
+`spatial/` holds the CAD-0 spatial sidecar validator, replay evaluator,
+dataset builder, and the ANDROID handoff JSON (calibration profile +
+guidance sign vectors). Stdlib only; see `spatial/README.md`. It consumes
+the frozen G0 contract and this kit's `calibration-config.json` read-only
+and never edits print masters or config.

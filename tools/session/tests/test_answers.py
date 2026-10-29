@@ -97,12 +97,16 @@ class RemapTest(unittest.TestCase):
         self.assertEqual(replayed, [])
         self.assertEqual(report[0]["outcome"], "false_positive_eliminated")
 
-    def test_choice_without_unique_counterpart_is_reported_not_forced(self):
+    def test_choice_without_unique_counterpart_stays_a_declaration_without_a_link(self):
         new = {"Q-P3-04": {**self.NEW["Q-P3-04"], "candidates": [{"removal_event": "E-0066", "window_s": [40.0, 43.8],
-                                                                  "sources": [{"site": "SRC-6"}]}]}}
-        replayed, report = remap([{"question": "Q-P3-02", "choice": "E-0071"}], self.OLD, new)
-        self.assertEqual(replayed, [])
-        self.assertEqual(report[0]["outcome"], "unresolved_candidate")
+                                                                  "sources": [{"site": "SRC-5"}, {"site": "SRC-6"}]}]}}
+        replayed, report = remap([{"question": "Q-P3-02", "choice": "E-0071", "label": "D-pad"}], self.OLD, new)
+        self.assertEqual(report[0]["outcome"], "unresolved_candidate_kept_as_declaration")
+        self.assertIsNone(replayed[0]["choice"])
+        self.assertIn("E-0071", replayed[0]["source"])
+        self.assertNotIn("E-0066", replayed[0]["source"])
+        self.assertEqual(plan(replayed[0], {**new, "Q-P3-04": {**new["Q-P3-04"], "memory_phase": "phase-0003", "part": "P3-C07"}})["source"],
+                         replayed[0]["source"])
 
     def test_ambiguous_question_is_not_replayed(self):
         new = {"A": {**self.NEW["Q-P1-03"], "id": "A"}, "B": {**self.NEW["Q-P1-03"], "id": "B"}}
@@ -113,6 +117,8 @@ class RemapTest(unittest.TestCase):
         action = plan({"question": "Q-P3-01", "choice": "E-66", "replayed_from": {"question": "Q-P3-09"},
                        "provenance": "operator_answers.jsonl sha256 abc"}, QUESTIONS)
         self.assertIn("replayed from earlier run's Q-P3-09", action["note"])
+        same_id = plan({"question": "Q-P3-01", "choice": "E-66", "replayed_from": {"question": "Q-P3-01"}}, QUESTIONS)
+        self.assertIn("replayed from earlier run's Q-P3-01", same_id["note"])
         self.assertIn("sha256 abc", action["note"])
 
 

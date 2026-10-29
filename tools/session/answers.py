@@ -105,8 +105,16 @@ def remap(answers: list[dict], old_questions: dict, new_questions: dict, min_ove
             same = [c for c in new.get("candidates", []) if _sites(c["sources"]) == _sites(chosen["sources"])
                     and _overlap(c["window_s"], chosen["window_s"]) >= min_overlap]
             if len(same) != 1:
-                report.append({**result, "outcome": "unresolved_candidate", "old_choice": answer["choice"],
-                               "matches": [c["removal_event"] for c in same], "answer": answer})
+                # Keep what the operator said, quoting the earlier candidate; no automatic event is linked.
+                where = ", ".join(f"{s['site']} at {s['centroid_mm'][0]:.0f}/{s['centroid_mm'][1]:.0f} mm" if s.get("centroid_mm") else s["site"]
+                                  for s in chosen["sources"])
+                entry.update(choice=None, source=f"operator chose the earlier run's candidate {chosen['removal_event']} ({where}, "
+                                                 f"{chosen['window_s'][0]:.1f}-{chosen['window_s'][1]:.1f} s); no unique counterpart after the rebuild")
+                replayed.append(entry)
+                report.append({**result, "outcome": "unresolved_candidate_kept_as_declaration", "old_choice": answer["choice"],
+                               "matches": [c["removal_event"] for c in same],
+                               "rebuilt_candidates": [{"removal_event": c["removal_event"], "window_s": c["window_s"], "sites": sorted(_sites(c["sources"]))}
+                                                      for c in new.get("candidates", [])]})
                 continue
             entry["choice"] = same[0]["removal_event"]
             result["choice"] = [answer["choice"], same[0]["removal_event"]]
@@ -133,7 +141,8 @@ def plan(answer: dict, questions: dict) -> dict:
         # A part the operator named stays in memory even without its origin; the source is then explicitly unknown.
         source = str(answer.get("source") or "").strip() or None
         return {"label": answer["label"], "source": source, "location": answer["destination"], "phase": phase,
-                "part": None, "note": "operator-added part that raised no question" + ("" if source else "; source not stated"),
+                "part": None, "note": "operator-added part that raised no question" + ("" if source else "; source not stated")
+                + (f"; replayed; {answer['provenance']}" if answer.get("provenance") else ""),
                 "t_s": answer.get("t_s")}
     if question["kind"] == "source_of_part":
         if answer.get("choice"):
@@ -161,7 +170,7 @@ def plan(answer: dict, questions: dict) -> dict:
 
 def _note(question_id: str, answer: dict) -> str:
     replayed = (answer.get("replayed_from") or {}).get("question")
-    note = f"answer to {question_id}" + (f" (replayed from earlier run's {replayed})" if replayed and replayed != question_id else "")
+    note = f"answer to {question_id}" + (f" (replayed from earlier run's {replayed})" if replayed else "")
     return note + (f"; {answer['provenance']}" if answer.get("provenance") else "")
 
 

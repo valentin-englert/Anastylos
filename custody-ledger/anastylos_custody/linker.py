@@ -62,14 +62,14 @@ If exactly one pending removal passes, the deposit is linked
 resolved by that order, but sampling gaps, unobservable sources and an
 occupied cell still block. Assumption: one part is carried at a time.
 
-Linker 1.7 (PROV-01): hand order is a *veto*, not a link. A hand visit is the
-colour-free hand mask overlapping a zone; on real footage the mask touches every
-zone (Research Pass 01, R-011), and overlap is not contact. So a removal whose
-sites were not visited before the cell visit is dropped from the candidates of an
-ambiguous deposit, but the deposit stays ``ambiguous`` even when one candidate is
-left: the remaining choice goes to the operator. The status
-``candidate_by_hand_order`` is no longer produced. Every result carries
-``linker_version``.
+Linker 1.7 (PROV-01): hand visits are not used for linking or for narrowing
+candidates. A hand visit is the colour-free hand mask overlapping a zone; on real
+footage the mask touches every zone (Research Pass 01, R-011), and overlap is not
+contact. Used as a veto, first-coverage order dropped the owner-chosen source of
+the red button in FULL-01 P3: the same arm sweep reached the cell at 71.588 s and
+the source 0.2 s later. ``candidate_by_hand_order`` is no longer produced;
+ambiguous deposits keep all candidates for the operator. ``hand_visits`` stay in
+the events for later study. Every result carries ``linker_version``.
 """
 
 from __future__ import annotations
@@ -111,8 +111,6 @@ def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict
         proposal = _judge(deposit, pending, deposits, removals, blind_sites, gaps)
         if proposal["status"] == "ambiguous":
             proposal = _by_elimination(proposal, options.get(deposit["id"]), deposit, deposits, removals, blind_sites, gaps)
-        if proposal["status"] == "ambiguous" and events_doc.get("hand_visits"):
-            proposal = _hand_order_veto(proposal, deposit, events_doc["hand_visits"])
         if proposal["status"] in LINK_STATUSES:
             linked.add(proposal["removal"]["event"])
         proposal["autonomy"] = _autonomy(proposal, deposit, externals)
@@ -189,39 +187,6 @@ def group_removals(removals: list[dict], site_rects: dict) -> list[dict]:
                         "grouping": [{"a": observed[i]["event"], "b": observed[j]["event"], "gap_mm": g, "limit_mm": lim}
                                      for i, j, g, lim in joins if i in members]})
     return sorted(grouped + others, key=lambda r: r["t_after_s"])
-
-
-def _cell_visit_start(deposit: dict, visits: dict) -> float | None:
-    """Start of the last hand visit to the deposit's cell that overlaps the deposit window."""
-    spans = [s for s in visits.get(deposit["zone"], []) if s[0] <= deposit["t_after_s"] and s[1] >= deposit["t_before_s"]]
-    return max(s[0] for s in spans) if spans else None
-
-
-def _source_visited_before(removal: dict, visits: dict, t_s: float) -> list[list[float]]:
-    sites = removal.get("sites") or [removal["site"]]
-    return [s for site in sites for s in visits.get(site, [])
-            if s[0] < t_s and s[1] >= removal["t_before_s"] and s[0] <= removal["t_after_s"]]
-
-
-def _hand_order_veto(proposal: dict, deposit: dict, visits: dict) -> dict:
-    """Drop candidates whose sites the hand mask never covered before it reached the cell; never link."""
-    candidates = proposal.get("candidates") or []
-    start = _cell_visit_start(deposit, visits)
-    if start is None or not candidates:
-        return proposal
-    kept = [c for c in candidates if _source_visited_before(c, visits, start)]
-    vetoed = [c["event"] for c in candidates if c not in kept]
-    if not vetoed:
-        return proposal
-    if not kept:
-        return {**proposal, "hand_order_veto": {"cell_visit_start_s": start, "applied": False,
-                                                "why": "the hand mask covered no candidate before the cell; veto not applied"}}
-    return {**proposal, "candidates": kept,
-            "hand_order_veto": {"cell_visit_start_s": start, "applied": True, "vetoed": vetoed,
-                                "basis": "hand mask overlap, not contact; narrows the question, never links"},
-            "reasons": [*proposal.get("reasons", []),
-                        f"hand order: the hand mask covered no site of {', '.join(vetoed)} before reaching {deposit['zone']} "
-                        f"at {start} s, so they are dropped; {len(kept)} candidate(s) left for the operator"]}
 
 
 def _closed_before(removal: dict, closed: dict, t_s: float) -> bool:

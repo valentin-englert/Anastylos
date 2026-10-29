@@ -73,6 +73,15 @@ confirmation. Architecture source of truth stays in
    - the cell was empty.
 
    Otherwise the deposit is `ambiguous` (with reasons) or `unattributed`.
+   Linker 1.1 adds `candidate_by_elimination` (every valid assignment gives
+   the same removal). Linker 1.7 (PROV-01) uses colour-free hand visits
+   neither to link nor to narrow candidates: a visit is mask overlap, not
+   contact; on real footage the mask touches every zone, and as a veto the
+   first-coverage order dropped the owner-chosen source of the FULL-01 P3
+   red button (the same arm sweep reached the cell 0.2 s before the source).
+   `candidate_by_hand_order` (linker 1.6) is no longer produced;
+   `hand_visits` stay in the events. Every `custody-links@1` result carries
+   `linker_version`.
    Operator-declared removals (`custody-declared-removals@1`, `declared_by`
    required) are the documented human-assisted fallback. They are marked
    `basis: operator_declared`.

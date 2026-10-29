@@ -11,7 +11,7 @@ question for the operator, never a fact.
 
 from __future__ import annotations
 
-# Hand order (linker 1.6) is no longer a link: since linker 1.7 it only narrows candidates (PROV-01).
+# Hand order (linker 1.6) is no longer a link: linker 1.7 does not use hand visits at all (PROV-01).
 LINKED = ("candidate_temporal_exclusive", "candidate_by_elimination")
 # What each linking rule takes for granted; written to memory with every automatic link.
 ASSUMPTIONS = {

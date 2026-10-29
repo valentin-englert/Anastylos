@@ -142,36 +142,34 @@ class ReacquisitionBlindSpotTests(unittest.TestCase):
 
 
 class HandOrderTests(unittest.TestCase):
-    """Linker 1.7: hand order vetoes candidates the hand never reached first; it never links (PROV-01)."""
+    """Linker 1.7: hand visits neither link nor narrow candidates (PROV-01; the veto dropped a true source on FULL-01)."""
 
     EVENTS = [removal("E-1", "S-a", 10, 30), removal("E-2", "S-b", 12, 40), deposit("E-3", "cell-8", 20, 25)]
 
     def doc(self, visits, gaps=()):
         return {**events_doc(self.EVENTS, gaps=gaps), "hand_visits": visits}
 
-    def test_source_not_visited_first_is_vetoed_but_nothing_is_linked(self):
+    def test_hand_visits_change_neither_status_nor_candidates(self):
         visits = {"S-a": [[14, 16]], "S-b": [[27, 29]], "cell-8": [[18, 22]]}
-        result = link(self.doc(visits))
-        proposal = result["proposals"][0]
-        self.assertEqual(proposal["status"], "ambiguous")
-        self.assertEqual([c["event"] for c in proposal["candidates"]], ["E-1"])
-        self.assertEqual(proposal["hand_order_veto"]["vetoed"], ["E-2"])
-        self.assertNotIn("removal", proposal)
-        self.assertEqual(result["counts"]["candidate_links"], 0)
-        self.assertEqual(result["linker_version"], "1.7")
+        with_visits, without = link(self.doc(visits)), link(events_doc(self.EVENTS))
+        self.assertEqual(with_visits["proposals"], without["proposals"])
+        self.assertEqual(with_visits["proposals"][0]["status"], "ambiguous")
+        self.assertEqual(len(with_visits["proposals"][0]["candidates"]), 2)
+        self.assertEqual(with_visits["counts"]["candidate_links"], 0)
+        self.assertEqual(with_visits["linker_version"], "1.7")
+
+    def test_same_sweep_reaching_the_cell_first_does_not_drop_the_true_source(self):
+        # FULL-01 P3 red button: the arm covered cell-5 at 71.588 s and its source 0.2 s later.
+        events = [removal("E-1", "S-a", 66, 69), removal("E-2", "S-b", 71.6, 75.0), deposit("E-3", "cell-5", 71.4, 76.8)]
+        visits = {"S-a": [[66.4, 68.6]], "S-b": [[71.8, 74.4]], "cell-5": [[71.6, 76.4]]}
+        proposal = link({**events_doc(events), "hand_visits": visits})["proposals"][0]
+        self.assertIn("E-2", [c["event"] for c in proposal.get("candidates", [])])
 
     def test_two_sources_visited_before_the_cell_keep_both_candidates(self):
         visits = {"S-a": [[14, 16]], "S-b": [[15, 17]], "cell-8": [[18, 22]]}
         proposal = link(self.doc(visits))["proposals"][0]
         self.assertEqual(proposal["status"], "ambiguous")
         self.assertEqual(len(proposal["candidates"]), 2)
-        self.assertNotIn("hand_order_veto", proposal)
-
-    def test_veto_that_would_drop_every_candidate_is_not_applied(self):
-        visits = {"S-a": [[27, 28]], "S-b": [[27, 29]], "cell-8": [[18, 22]]}
-        proposal = link(self.doc(visits))["proposals"][0]
-        self.assertEqual(len(proposal["candidates"]), 2)
-        self.assertFalse(proposal["hand_order_veto"]["applied"])
 
     def test_without_a_visit_to_the_cell_nothing_is_resolved(self):
         visits = {"S-a": [[14, 16]], "S-b": [[27, 29]]}

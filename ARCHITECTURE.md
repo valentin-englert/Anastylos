@@ -177,7 +177,12 @@ fixtures; see each module README for its stated validation scope.
   the tray snapshot (`sheet_id`, `number`, `rect_frame_mm`) resolved
   from `calibration/calibration-config.json` at record time, plus either an
   evidence basis or a human confirmation — anything else is rejected
-  and nothing is written. Queries answer `located` / `ambiguous` /
+  and nothing is written. An evidence basis cites what was observed (the
+  cell change); a link that was *concluded* (automatic custody links)
+  also carries `inference` {`relation`, `inferred_by`, `producer`,
+  `assumptions`} (PROV-01, 2026-10-29, additive; older links lack it and
+  readers must treat their correspondence as concluded, not observed).
+  Queries answer `located` / `ambiguous` /
   `unknown` / `unassigned`, never a bare claim.
 - Calibration JSON: two key spellings share one physical meaning
   (image pixels per millimetre) and are NOT interchangeable across

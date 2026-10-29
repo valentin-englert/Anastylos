@@ -1,0 +1,222 @@
+{
+  "status": "PROPOSED; expand control.schema.json $defs into each schema before MCP registration",
+  "common_defs": "control.schema.json#/$defs",
+  "tools": [
+    {
+      "name": "capture.capabilities",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/SourceInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Capabilities"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.open_session",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/OpenInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Session"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.resume_session",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/MutationInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/StatusOutput"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.request_view",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/RequestInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RequestMutationOutput"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.status",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/SessionInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/StatusOutput"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.revise_view",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/ReviseInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RequestMutationOutput"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.cancel_view",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/CancelInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RequestMutationOutput"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.evidence",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/EvidenceInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/EvidenceOutput"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "capture.finish_set",
+      "description": "Proposed scoped operation; must enforce operator grant and session authority. See MCP-AND-TRANSPORT-CONTRACTS.md.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$ref": "#/$defs/MutationInput"
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "$ref": "#/$defs/CaptureSet"
+          },
+          {
+            "$ref": "#/$defs/Error"
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    }
+  ]
+}

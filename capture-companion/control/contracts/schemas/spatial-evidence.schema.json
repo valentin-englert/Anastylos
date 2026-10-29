@@ -1,0 +1,1776 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anastylos.invalid/schemas/spatial-evidence-v1.json",
+  "title": "ANASTYLOS spatial evidence v1 proposed contract",
+  "$comment": "Design only. Numeric finiteness, transform validity, hashes, authorization and cross-record relationships require semantic validation. This URL is an identifier and is not fetched.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "anastylos-spatial-evidence@1"
+    },
+    "evidence_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "session_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "source_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "request_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "request_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "attempt_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "supersedes": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "package_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "observation_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "image_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "asset_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 26214400
+        },
+        "mime": {
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif"
+          ]
+        }
+      },
+      "required": [
+        "package_id",
+        "observation_id",
+        "image_id",
+        "asset_id",
+        "sha256",
+        "byte_length",
+        "mime"
+      ]
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "camera_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "physical_lens_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lens_facing": {
+          "enum": [
+            "back",
+            "front",
+            "external"
+          ]
+        },
+        "sensor_mode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "zoom": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 100
+        },
+        "focus_distance_diopters": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "focus_status": {
+          "enum": [
+            "locked",
+            "converged",
+            "searching",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "camera_id",
+        "physical_lens_id",
+        "lens_facing",
+        "sensor_mode",
+        "zoom",
+        "focus_distance_diopters",
+        "focus_status"
+      ]
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "profile_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "layout_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "board_instance_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "board_instance_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "board_frame_id": {
+          "enum": [
+            "surface_a3",
+            "surface_a4",
+            "fixture_front",
+            "fixture_back"
+          ]
+        },
+        "metric_validity": {
+          "enum": [
+            "validated",
+            "nominal_only",
+            "invalid",
+            "unknown"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "minItems": 0,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "profile_id",
+        "profile_sha256",
+        "layout_sha256",
+        "board_instance_id",
+        "board_instance_sha256",
+        "board_frame_id",
+        "metric_validity",
+        "reasons"
+      ]
+    },
+    "image_geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width_px": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32768
+        },
+        "height_px": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32768
+        },
+        "exif_orientation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "pixel_convention": {
+          "const": "top_left_pixel_center_0_0_x_right_y_down"
+        },
+        "calibration_pixel_frame_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "reference_to_image": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 9,
+          "maxItems": 9
+        },
+        "distortion_before_image_transform": {
+          "const": true
+        },
+        "transform_epoch": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        }
+      },
+      "required": [
+        "width_px",
+        "height_px",
+        "exif_orientation",
+        "pixel_convention",
+        "calibration_pixel_frame_id",
+        "reference_to_image",
+        "distortion_before_image_transform",
+        "transform_epoch"
+      ]
+    },
+    "capture_time": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sensor_start_ns": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{1,20}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sensor_end_ns": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{1,20}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sensor_timestamp_source": {
+          "enum": [
+            "realtime",
+            "unknown"
+          ]
+        },
+        "boot_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "callback_utc": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "Z$"
+        },
+        "callback_monotonic_ns": {
+          "type": "string",
+          "pattern": "^[0-9]{1,20}$"
+        },
+        "exposure_utc_estimate": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "uncertainty_ms": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sync_exchange_ref": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "asset_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "asset_id",
+                "sha256"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "sensor_start_ns",
+        "sensor_end_ns",
+        "sensor_timestamp_source",
+        "boot_id",
+        "callback_utc",
+        "callback_monotonic_ns",
+        "exposure_utc_estimate",
+        "uncertainty_ms",
+        "sync_exchange_ref"
+      ]
+    },
+    "pose": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "validity": {
+          "enum": [
+            "valid",
+            "degraded",
+            "ambiguous",
+            "lost",
+            "bad_calibration",
+            "unregistered"
+          ]
+        },
+        "T_board_camera": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "to": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "units": {
+                  "const": "mm"
+                },
+                "matrix": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 16,
+                  "maxItems": 16
+                }
+              },
+              "required": [
+                "from",
+                "to",
+                "units",
+                "matrix"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "solve_source": {
+          "enum": [
+            "saved_image",
+            "timestamp_interpolated",
+            "unknown"
+          ]
+        },
+        "image_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "sample_sensor_ns": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9]{1,20}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sample_age_ms": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bracketing_samples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sample_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "sensor_ns": {
+                "type": "string",
+                "pattern": "^[0-9]{1,20}$"
+              },
+              "pose_asset": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "sha256"
+                ]
+              }
+            },
+            "required": [
+              "sample_id",
+              "sensor_ns",
+              "pose_asset"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 2
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "detected_marker_ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "minItems": 0,
+              "maxItems": 100
+            },
+            "inlier_marker_ids": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "minItems": 0,
+              "maxItems": 100
+            },
+            "rms_px": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "max_residual_px": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "residual_reference_width_px": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32768
+            },
+            "inlier_ratio": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alternate_solution_separation_mm": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alternate_solution_separation_deg": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "uncertainty_method": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "position_uncertainty_mm": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "angle_uncertainty_deg": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "corner_evidence": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "asset_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
+                  },
+                  "required": [
+                    "asset_id",
+                    "sha256"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "detected_marker_ids",
+            "inlier_marker_ids",
+            "rms_px",
+            "max_residual_px",
+            "residual_reference_width_px",
+            "inlier_ratio",
+            "alternate_solution_separation_mm",
+            "alternate_solution_separation_deg",
+            "uncertainty_method",
+            "position_uncertainty_mm",
+            "angle_uncertainty_deg",
+            "corner_evidence"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "minItems": 0,
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "validity",
+        "T_board_camera",
+        "method",
+        "version",
+        "solve_source",
+        "image_sha256",
+        "sample_sensor_ns",
+        "sample_age_ms",
+        "bracketing_samples",
+        "metrics",
+        "reasons"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "goal_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "requested_roi": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "frame": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "vertices_mm": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "minItems": 1,
+              "maxItems": 64
+            },
+            "basis": {
+              "enum": [
+                "board_plane",
+                "geometric_measurement",
+                "operator_testimony",
+                "model_assumption"
+              ]
+            },
+            "evidence_refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "sha256"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 64
+            }
+          },
+          "required": [
+            "frame",
+            "vertices_mm",
+            "basis",
+            "evidence_refs"
+          ]
+        },
+        "subject_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "object_pose_epoch_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "goal_sha256",
+        "requested_roi",
+        "subject_ref",
+        "object_pose_epoch_ref"
+      ]
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overall": {
+          "enum": [
+            "accepted",
+            "rejected",
+            "unknown"
+          ]
+        },
+        "pose": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "unknown"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "algorithm": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "unit",
+            "threshold",
+            "algorithm",
+            "reason"
+          ]
+        },
+        "motion": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "unknown"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "algorithm": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "unit",
+            "threshold",
+            "algorithm",
+            "reason"
+          ]
+        },
+        "focus": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "unknown"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "algorithm": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "unit",
+            "threshold",
+            "algorithm",
+            "reason"
+          ]
+        },
+        "exposure": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "unknown"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "algorithm": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "unit",
+            "threshold",
+            "algorithm",
+            "reason"
+          ]
+        },
+        "visibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "enum": [
+                "pass",
+                "fail",
+                "unknown"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "unit": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "threshold": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "algorithm": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "value",
+            "unit",
+            "threshold",
+            "algorithm",
+            "reason"
+          ]
+        },
+        "visibility_assessment": {
+          "enum": [
+            "visible",
+            "partially_occluded",
+            "occluded",
+            "unknown"
+          ]
+        },
+        "in_frame": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "threshold_config_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "overall",
+        "pose",
+        "motion",
+        "focus",
+        "exposure",
+        "visibility",
+        "visibility_assessment",
+        "in_frame",
+        "threshold_config_sha256"
+      ]
+    },
+    "observer_relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "observer_source_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_ref": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "asset_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "asset_id",
+                "sha256"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "epoch_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "time_mapping_ref": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "asset_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "asset_id",
+                "sha256"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "capture_interval_video_s": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "association": {
+          "enum": [
+            "verified",
+            "operator_declared",
+            "ambiguous",
+            "unknown"
+          ]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "observer_source_id",
+        "run_ref",
+        "epoch_id",
+        "time_mapping_ref",
+        "capture_interval_video_s",
+        "association",
+        "reason"
+      ]
+    },
+    "interpretations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "basis": {
+            "enum": [
+              "geometric_measurement",
+              "visual_observation",
+              "model_inference",
+              "operator_testimony",
+              "model_assumption"
+            ]
+          },
+          "state": {
+            "enum": [
+              "observed",
+              "derived",
+              "suggested",
+              "operator_declared",
+              "unknown"
+            ]
+          },
+          "claim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "asset_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "asset_id",
+                "sha256"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 64
+          },
+          "method": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "region_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operator_confirmation_ref": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "asset_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "asset_id",
+                  "sha256"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "basis",
+          "state",
+          "claim",
+          "evidence_refs",
+          "method",
+          "region_ref",
+          "operator_confirmation_ref"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "producer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "app_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "build_sha": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "algorithm_config_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "asset_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "asset_id",
+              "sha256"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "input_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "asset_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "asset_id",
+              "sha256"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 256
+        },
+        "basis": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "geometric_measurement",
+              "visual_observation",
+              "model_inference",
+              "operator_testimony",
+              "model_assumption"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 5
+        },
+        "operator_action_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "asset_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "asset_id",
+              "sha256"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 64
+        }
+      },
+      "required": [
+        "producer",
+        "app_version",
+        "build_sha",
+        "algorithm_config_refs",
+        "input_refs",
+        "basis",
+        "operator_action_refs"
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      },
+      "minItems": 0,
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "schema",
+    "evidence_id",
+    "session_id",
+    "source_id",
+    "request_id",
+    "request_revision",
+    "attempt_id",
+    "created_at",
+    "supersedes",
+    "asset",
+    "camera",
+    "calibration",
+    "image_geometry",
+    "capture_time",
+    "pose",
+    "target",
+    "quality",
+    "observer_relation",
+    "interpretations",
+    "provenance",
+    "limitations"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "pose": {
+            "properties": {
+              "validity": {
+                "const": "valid"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "pose": {
+            "properties": {
+              "T_board_camera": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "units": {
+                    "const": "mm"
+                  },
+                  "matrix": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 16,
+                    "maxItems": 16
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "units",
+                  "matrix"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "pose": {
+            "properties": {
+              "solve_source": {
+                "const": "timestamp_interpolated"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "pose": {
+            "properties": {
+              "bracketing_samples": {
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "quality": {
+            "properties": {
+              "overall": {
+                "const": "accepted"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "pose": {
+            "properties": {
+              "validity": {
+                "const": "valid"
+              }
+            }
+          },
+          "calibration": {
+            "properties": {
+              "metric_validity": {
+                "const": "validated"
+              }
+            }
+          },
+          "quality": {
+            "properties": {
+              "pose": {
+                "properties": {
+                  "status": {
+                    "const": "pass"
+                  }
+                }
+              },
+              "motion": {
+                "properties": {
+                  "status": {
+                    "const": "pass"
+                  }
+                }
+              },
+              "focus": {
+                "properties": {
+                  "status": {
+                    "const": "pass"
+                  }
+                }
+              },
+              "exposure": {
+                "properties": {
+                  "status": {
+                    "const": "pass"
+                  }
+                }
+              },
+              "visibility": {
+                "properties": {
+                  "status": {
+                    "const": "pass"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

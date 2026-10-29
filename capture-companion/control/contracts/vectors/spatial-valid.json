@@ -1,0 +1,253 @@
+{
+  "schema": "anastylos-spatial-evidence@1",
+  "evidence_id": "00000000-0000-4000-8000-000000000001",
+  "session_id": "00000000-0000-4000-8000-000000000002",
+  "source_id": "00000000-0000-4000-8000-000000000003",
+  "request_id": "00000000-0000-4000-8000-000000000004",
+  "request_revision": 1,
+  "attempt_id": "00000000-0000-4000-8000-000000000005",
+  "created_at": "2026-10-29T12:00:01.000Z",
+  "supersedes": null,
+  "asset": {
+    "package_id": "00000000-0000-4000-8000-000000000006",
+    "observation_id": "00000000-0000-4000-8000-000000000007",
+    "image_id": "00000000-0000-4000-8000-000000000008",
+    "asset_id": "00000000-0000-4000-8000-000000000009",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "byte_length": 1024,
+    "mime": "image/jpeg"
+  },
+  "camera": {
+    "camera_id": "synthetic-camera",
+    "physical_lens_id": null,
+    "lens_facing": "back",
+    "sensor_mode": "synthetic-1280x720",
+    "zoom": 1,
+    "focus_distance_diopters": null,
+    "focus_status": "locked"
+  },
+  "calibration": {
+    "profile_id": "00000000-0000-4000-8000-000000000010",
+    "profile_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "layout_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "board_instance_id": "00000000-0000-4000-8000-000000000011",
+    "board_instance_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "board_frame_id": "surface_a3",
+    "metric_validity": "validated",
+    "reasons": []
+  },
+  "image_geometry": {
+    "width_px": 1280,
+    "height_px": 720,
+    "exif_orientation": 1,
+    "pixel_convention": "top_left_pixel_center_0_0_x_right_y_down",
+    "calibration_pixel_frame_id": "synthetic-native-1280x720",
+    "reference_to_image": [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1
+    ],
+    "distortion_before_image_transform": true,
+    "transform_epoch": "00000000-0000-4000-8000-000000000012"
+  },
+  "capture_time": {
+    "sensor_start_ns": "1000000000",
+    "sensor_end_ns": "1005000000",
+    "sensor_timestamp_source": "realtime",
+    "boot_id": "00000000-0000-4000-8000-000000000013",
+    "callback_utc": "2026-10-29T12:00:00.100Z",
+    "callback_monotonic_ns": "1100000000",
+    "exposure_utc_estimate": "2026-10-29T12:00:00.000Z",
+    "uncertainty_ms": 5,
+    "sync_exchange_ref": {
+      "asset_id": "00000000-0000-4000-8000-000000000090",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "pose": {
+    "validity": "valid",
+    "T_board_camera": {
+      "from": "camera:synthetic-camera",
+      "to": "board:00000000-0000-4000-8000-000000000011:surface_a3",
+      "units": "mm",
+      "matrix": [
+        1,
+        0,
+        0,
+        100,
+        0,
+        1,
+        0,
+        80,
+        0,
+        0,
+        1,
+        -400,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "method": "synthetic-saved-image-fixture",
+    "version": "1",
+    "solve_source": "saved_image",
+    "image_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "sample_sensor_ns": "1000000000",
+    "sample_age_ms": 0,
+    "bracketing_samples": [],
+    "metrics": {
+      "detected_marker_ids": [
+        10,
+        11,
+        13
+      ],
+      "inlier_marker_ids": [
+        10,
+        11,
+        13
+      ],
+      "rms_px": 0.4,
+      "max_residual_px": 0.8,
+      "residual_reference_width_px": 1280,
+      "inlier_ratio": 1,
+      "alternate_solution_separation_mm": 10,
+      "alternate_solution_separation_deg": 4,
+      "uncertainty_method": "synthetic-test-value",
+      "position_uncertainty_mm": [
+        1,
+        1,
+        2
+      ],
+      "angle_uncertainty_deg": 0.5,
+      "corner_evidence": {
+        "asset_id": "00000000-0000-4000-8000-000000000090",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "reasons": []
+  },
+  "target": {
+    "goal_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "requested_roi": {
+      "frame": "board:00000000-0000-4000-8000-000000000011:surface_a3",
+      "vertices_mm": [
+        [
+          80,
+          60,
+          0
+        ],
+        [
+          120,
+          60,
+          0
+        ],
+        [
+          120,
+          100,
+          0
+        ],
+        [
+          80,
+          100,
+          0
+        ]
+      ],
+      "basis": "board_plane",
+      "evidence_refs": [
+        {
+          "asset_id": "00000000-0000-4000-8000-000000000090",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    "subject_ref": null,
+    "object_pose_epoch_ref": null
+  },
+  "quality": {
+    "overall": "accepted",
+    "pose": {
+      "status": "pass",
+      "value": 2,
+      "unit": "mm",
+      "threshold": 15,
+      "algorithm": "synthetic-pose",
+      "reason": null
+    },
+    "motion": {
+      "status": "pass",
+      "value": 0.1,
+      "unit": "px_per_100ms",
+      "threshold": 0.7,
+      "algorithm": "synthetic-flow",
+      "reason": null
+    },
+    "focus": {
+      "status": "pass",
+      "value": 0.9,
+      "unit": "relative_sharpness",
+      "threshold": 0.7,
+      "algorithm": "synthetic-sharpness",
+      "reason": null
+    },
+    "exposure": {
+      "status": "pass",
+      "value": 0.01,
+      "unit": "clipped_fraction",
+      "threshold": 0.05,
+      "algorithm": "synthetic-exposure",
+      "reason": null
+    },
+    "visibility": {
+      "status": "pass",
+      "value": 1,
+      "unit": "visible_fraction",
+      "threshold": 0.95,
+      "algorithm": "synthetic-visibility",
+      "reason": null
+    },
+    "visibility_assessment": "visible",
+    "in_frame": true,
+    "threshold_config_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "observer_relation": {
+    "observer_source_id": null,
+    "run_ref": null,
+    "epoch_id": null,
+    "time_mapping_ref": null,
+    "capture_interval_video_s": null,
+    "association": "unknown",
+    "reason": "Synthetic fixture has no observer association."
+  },
+  "interpretations": [],
+  "provenance": {
+    "producer": "synthetic-schema-fixture",
+    "app_version": "not-an-app-run",
+    "build_sha": "not-a-real-build",
+    "algorithm_config_refs": [
+      {
+        "asset_id": "00000000-0000-4000-8000-000000000090",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "input_refs": [
+      {
+        "asset_id": "00000000-0000-4000-8000-000000000090",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "basis": [
+      "geometric_measurement"
+    ],
+    "operator_action_refs": []
+  },
+  "limitations": [
+    "SYNTHETIC_SCHEMA_FIXTURE_ONLY: all IDs, hashes and measurements are test data; no backing image or physical evidence exists."
+  ]
+}

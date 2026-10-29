@@ -1,0 +1,113 @@
+{
+  "schema": "cad-feature-model-v1",
+  "model_id": "11111111-1111-4111-8111-111111111111",
+  "revision": 1,
+  "parent_model_sha256": null,
+  "dataset_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "units": "mm",
+  "T_CAD_B": {
+    "from": "B",
+    "to": "CAD",
+    "units": "mm",
+    "matrix": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      -1,
+      0,
+      0,
+      0,
+      0,
+      -1,
+      0,
+      0,
+      0,
+      0,
+      1
+    ]
+  },
+  "features": [
+    {
+      "feature_id": "base_plate",
+      "kind": "box",
+      "parameters": {
+        "size_mm": [
+          80,
+          50,
+          6
+        ]
+      },
+      "basis": "geometric_measurement",
+      "evidence_ids": [
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "uncertainty_mm": 0.4,
+      "assumptions": [],
+      "T_CAD_feature": {
+        "from": "feature",
+        "to": "CAD",
+        "units": "mm",
+        "matrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "feature_id": "hole_1",
+      "kind": "through_hole",
+      "parameters": {
+        "radius_mm": 3,
+        "depth_mm": 6,
+        "parent_feature_id": "base_plate"
+      },
+      "basis": "geometric_measurement",
+      "evidence_ids": [
+        "22222222-2222-4222-8222-222222222222"
+      ],
+      "uncertainty_mm": 0.3,
+      "assumptions": [
+        "depth equals parent thickness; semantic validator must check parent exists"
+      ],
+      "T_CAD_feature": {
+        "from": "feature",
+        "to": "CAD",
+        "units": "mm",
+        "matrix": [
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1
+        ]
+      }
+    }
+  ]
+}

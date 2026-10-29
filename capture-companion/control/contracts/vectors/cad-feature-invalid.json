@@ -1,0 +1,35 @@
+{
+  "_basis": "synthetic fixtures; each case mutates cad-feature-valid.json",
+  "cases": [
+    {
+      "id": "unknown-op-planar-profile",
+      "mutation": "features[0].kind=planar_profile_extrude",
+      "expect": "schema-reject (v1 kinds: box|cylinder|through_hole only; profile extrude is v2 extension)"
+    },
+    {
+      "id": "negative-size",
+      "mutation": "features[0].parameters.size_mm[0]=-1",
+      "expect": "schema-reject exclusiveMinimum 0"
+    },
+    {
+      "id": "bad-basis-suggested",
+      "mutation": "features[0].basis=model_suggested",
+      "expect": "schema-reject (map model suggestion to model_assumption + assumptions[] text)"
+    },
+    {
+      "id": "reflection-transform",
+      "mutation": "T_CAD_B.matrix=diag(1,1,-1,1)",
+      "expect": "semantic-reject det=-1; JSON schema cannot check determinant"
+    },
+    {
+      "id": "dangling-parent",
+      "mutation": "features[1].parameters.parent_feature_id=nope",
+      "expect": "semantic-reject unknown parent; schema cannot check existence"
+    },
+    {
+      "id": "parent-cycle",
+      "mutation": "two through_holes parenting each other",
+      "expect": "semantic-reject dependency cycle before kernel"
+    }
+  ]
+}

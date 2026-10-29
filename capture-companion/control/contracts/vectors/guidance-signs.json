@@ -1,0 +1,66 @@
+{
+  "basis": "synthetic analytic vectors",
+  "units": "mm",
+  "frame": "board x right y down z into plane",
+  "current_T_B_C": [
+    1,
+    0,
+    0,
+    100,
+    0,
+    1,
+    0,
+    80,
+    0,
+    0,
+    1,
+    -400,
+    0,
+    0,
+    0,
+    1
+  ],
+  "cases": [
+    {
+      "desired_center_B_mm": [
+        120,
+        70,
+        -450
+      ],
+      "expected_camera_delta_mm": [
+        20,
+        -10,
+        -50
+      ],
+      "expected_cues": [
+        "right 20",
+        "up 10",
+        "back 50"
+      ]
+    },
+    {
+      "desired_center_B_mm": [
+        100,
+        80,
+        -350
+      ],
+      "expected_camera_delta_mm": [
+        0,
+        0,
+        50
+      ],
+      "expected_cues": [
+        "closer 50"
+      ]
+    }
+  ],
+  "required_extensions": [
+    "90/180/270 display rotation",
+    "camera yaw",
+    "negative depth",
+    "same pose identity",
+    "crop/mirror refusal",
+    "cancel during shutter",
+    "hold reset on missing frame"
+  ]
+}

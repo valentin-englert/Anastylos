@@ -53,3 +53,29 @@ The 12-step acceptance checklist (install APK, pair over QR, capture,
 sync, verify bytes + hashes, reconnect, confirm no memory mutation)
 has not run on hardware — no phone was attached in this session. Do
 not present emulator results as hardware validation.
+
+## Wave-1 AgentCam (feat/agentcam-android)
+
+- **A0 async bind (implemented, device proof pending H0):**
+  `CameraStillSource` no longer blocks the UI thread on the CameraX
+  provider future. `bindAsync()` suspends on provider completion
+  (cancellable), then binds on the main thread as CameraX requires;
+  provider failure returns `false` instead of an ANR. Covered by
+  `CameraFuturesTest` (delayed/failing/cancelled futures). No other
+  camera behavior changed; `takeStill()` semantics untouched.
+- **A1 guidance foundation (pure JVM, unit-tested):** new
+  `guidance/` package — board-frame poses (+z into board, preserved),
+  screen-relative cues for all four phone rotations, stable-dwell
+  accumulator with hysteresis, H6 interim image-quality verdicts,
+  session/request/delivery/registration reducers, and the
+  `PoseEstimator` device seam. Tests assert frozen-contract literals
+  (`guidance-signs.json`, `control-transitions.json` ids, schema
+  enums). The device analyzer (ArUco PnP, overlays, shutter
+  arbitration) needs the OpenCV dependency decision (contract owner —
+  version catalog is not lane-owned) plus hardware; every physical
+  gate stays PENDING_EVIDENCE.
+- **Workstation note:** the Gradle suite above needs JDK 21 + SDK
+  and is BLOCKED on a JDK-17-only box. The new pure-JVM suites (78
+  guidance + 10 futures tests) additionally compile and pass under
+  the cached Kotlin 2.3.21 compiler on JDK 17; the full gate stays
+  the Gradle command on the HW-1 workstation.

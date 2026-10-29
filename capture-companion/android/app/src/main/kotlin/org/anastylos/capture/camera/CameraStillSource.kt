@@ -13,12 +13,27 @@ import androidx.lifecycle.LifecycleOwner
 import java.io.File
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.anastylos.capture.domain.nowUtc
+
+/** Default [CameraProviderSource]: the real CameraX provider future. */
+class DefaultCameraProviderSource(
+    private val context: Context,
+) : CameraProviderSource {
+    override fun providerFuture() = ProcessCameraProvider.getInstance(context)
+}
 
 /**
  * CameraX still source for the frame sampler. Device-only: binds
  * Preview + ImageCapture to the caller's lifecycle and hands full
  * JPEG stills back as bytes.
+ *
+ * Binding is main-safe: [bindAsync] suspends on provider completion
+ * and never blocks a thread, then performs the CameraX-required bind
+ * on the main thread. Cancelling the caller cancels a pending
+ * provider wait; a stalled provider surfaces as bind failure, never
+ * an ANR.
  *
  * Capability honesty: every control the UI exposes ([hasBackCamera],
  * [hasFrontCamera], [hasFlashUnit]) is probed on the real device at
@@ -28,6 +43,7 @@ class CameraStillSource(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
     private val previewView: PreviewView? = null,
+    private val providerSource: CameraProviderSource = DefaultCameraProviderSource(context),
 ) {
     private var provider: ProcessCameraProvider? = null
     private var camera: Camera? = null
@@ -53,12 +69,18 @@ class CameraStillSource(
     }
 
     /**
-     * Binds the selected lens. Falls back to whichever lens exists when
-     * the requested one is absent; returns false only when the device
-     * has no camera at all.
+     * Binds the selected lens without blocking any thread. Falls back
+     * to whichever lens exists when the requested one is absent;
+     * returns false when the device has no camera at all or the
+     * provider fails. Cancellation propagates to a pending provider
+     * wait; the CameraX bind itself runs on the main thread.
      */
-    fun bind(): Boolean {
-        val cameraProvider = ProcessCameraProvider.getInstance(context).get()
+    suspend fun bindAsync(): Boolean {
+        val cameraProvider = acquireProviderOrNull(providerSource) ?: return false
+        return withContext(Dispatchers.Main.immediate) { bindProvider(cameraProvider) }
+    }
+
+    private fun bindProvider(cameraProvider: ProcessCameraProvider): Boolean {
         provider = cameraProvider
         val back = cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)
         val front = cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
@@ -133,11 +155,7 @@ class CameraStillSource(
 
     companion object {
         /** False on misconfigured devices where CameraX cannot initialize. */
-        fun isAvailable(context: Context): Boolean = try {
-            ProcessCameraProvider.getInstance(context).get()
-            true
-        } catch (_: Exception) {
-            false
-        }
+        suspend fun isAvailable(source: CameraProviderSource): Boolean =
+            acquireProviderOrNull(source) != null
     }
 }

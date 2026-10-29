@@ -1,0 +1,16 @@
+{
+  "schema": "anastylos-fixture-manifest@1",
+  "copied": "2026-10-29",
+  "note": "Byte-exact copies; the guide packages are read-only originals. The development set is NOT the sealed evaluation set (see SEALED-PROTOCOL.md).",
+  "files": [
+    {"path": "cases.dev.json",
+     "source": "tools/live/seed/cases.dev.json at ea021c0b (integration/live-v1, TL-written)",
+     "sha256": "bb2ad1695900d15cd504d72f64ce8c4d4f794b9e142a3d902664b1b5094c7cd1"},
+    {"path": "fixtures/session.v21.json",
+     "source": "C:/ANASTYLOS/data/session-runs-v21/FULL-01/guide/session.json (active FULL-01 guide package, v21)",
+     "sha256": "1b84d4c8079c001c96c0b29979276abdf5a2f3a4b89919fa7d871e84d46cc83e"},
+    {"path": "fixtures/session.e2.json",
+     "source": "C:/ANASTYLOS/data/proto-01/guide-E2/session.json (PROTO-01 E2 package, older part layout under the same schema string)",
+     "sha256": "05f2769fe14f1a7cfba53db8652ad7e360daee3f126cfba03dba49fa43012541"}
+  ]
+}

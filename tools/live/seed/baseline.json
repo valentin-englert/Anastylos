@@ -1,0 +1,154 @@
+{
+  "summary": {
+    "adversarial": 13,
+    "adversarial_accepted": 13,
+    "controls": 5,
+    "controls_rejected": 0
+  },
+  "rows": [
+    {
+      "id": "C1-a",
+      "class": "C1 identity by colour or name for an automatic part",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C1-b",
+      "class": "C1 identity by colour or name for an automatic part",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C1-c",
+      "class": "C1 identity by colour or name for an automatic part",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C1-d",
+      "class": "C1 identity by colour or name for an automatic part",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C2-a",
+      "class": "C2 certainty or verification claim outside the current word list",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C2-b",
+      "class": "C2 certainty or verification claim outside the current word list",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C2-c",
+      "class": "C2 certainty or verification claim outside the current word list",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C3-a",
+      "class": "C3 swapped or invented source relation",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C3-b",
+      "class": "C3 swapped or invented source relation",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C4-a",
+      "class": "C4 wrong install order",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C5-a",
+      "class": "C5 basis inversion (declared part presented as system-assigned)",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C6-a",
+      "class": "C6 invented mechanical dependency",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "C7-a",
+      "class": "C7 later observation presented as history",
+      "expect": "reject",
+      "check_py": "accept",
+      "correct": false,
+      "detail": []
+    },
+    {
+      "id": "K1",
+      "class": "control: concluded link stated correctly",
+      "expect": "accept",
+      "check_py": "accept",
+      "correct": true,
+      "detail": []
+    },
+    {
+      "id": "K2",
+      "class": "control: operator label used as label",
+      "expect": "accept",
+      "check_py": "accept",
+      "correct": true,
+      "detail": []
+    },
+    {
+      "id": "K3",
+      "class": "control: dependency not observed",
+      "expect": "accept",
+      "check_py": "accept",
+      "correct": true,
+      "detail": []
+    },
+    {
+      "id": "K4",
+      "class": "control: interchangeable group",
+      "expect": "accept",
+      "check_py": "accept",
+      "correct": true,
+      "detail": []
+    },
+    {
+      "id": "K5",
+      "class": "control: correct install order",
+      "expect": "accept",
+      "check_py": "accept",
+      "correct": true,
+      "detail": []
+    }
+  ]
+}

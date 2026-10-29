@@ -1,0 +1,49 @@
+{
+  "$id": "anastylos-live-operator-input@1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "op_key",
+    "source",
+    "received_at"
+  ],
+  "properties": {
+    "schema": {
+      "const": "anastylos-live-operator-input@1"
+    },
+    "op_key": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "typed",
+        "screen_choice",
+        "speech_transcript"
+      ]
+    },
+    "text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2000
+    },
+    "choice": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "received_at": {
+      "type": "string"
+    },
+    "transcript": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

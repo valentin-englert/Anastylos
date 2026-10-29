@@ -1,0 +1,211 @@
+{
+  "schema": "anastylos-session-run@1",
+  "phase": "P3",
+  "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+  "video_sha256": "029e499d6646f6c987b790932c4f744f13182d2bb0ea61d8b4d709d541885908",
+  "observer_version": "1.7.0",
+  "counts": {
+    "parts": 7,
+    "linked_automatic": 2,
+    "written_to_memory": 2,
+    "questions": 6
+  },
+  "memory": {
+    "session": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\memory",
+    "phase": "phase-0003",
+    "written": [
+      "P3-C03",
+      "P3-C06"
+    ]
+  },
+  "parts": [
+    {
+      "part": "P3-C10",
+      "cell": "cell-10",
+      "deposit_event": "E-0070",
+      "deposit_window_s": [
+        30.595,
+        35.394
+      ],
+      "same_cell_group": null,
+      "link": "L-0001",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    },
+    {
+      "part": "P3-C07",
+      "cell": "cell-7",
+      "deposit_event": "E-0090",
+      "deposit_window_s": [
+        44.192,
+        47.192
+      ],
+      "same_cell_group": null,
+      "link": "L-0002",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    },
+    {
+      "part": "P3-C08",
+      "cell": "cell-8",
+      "deposit_event": "E-0091",
+      "deposit_window_s": [
+        43.792,
+        47.392
+      ],
+      "same_cell_group": null,
+      "link": "L-0003",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    },
+    {
+      "part": "P3-C03",
+      "cell": "cell-3",
+      "deposit_event": "E-0094",
+      "deposit_window_s": [
+        50.991,
+        56.59
+      ],
+      "same_cell_group": null,
+      "link": "L-0004",
+      "status": "candidate_by_elimination",
+      "autonomy": "automatic",
+      "hypothesis": "temporal_exclusive_by_elimination",
+      "linker_version": "1.7",
+      "assumptions": [
+        "every other open removal went into another observed deposit",
+        "the part came from a discovered site; removals from undiscovered places are invisible",
+        "one part per cell"
+      ],
+      "removal_event": "E-0092",
+      "removal_events": [
+        "E-0092",
+        "E-0093"
+      ],
+      "removal_window_s": [
+        51.191,
+        55.19
+      ],
+      "sources": [
+        {
+          "site": "SRC-14",
+          "centroid_mm": [
+            241.25,
+            144.15
+          ],
+          "area_mm2": 51.3
+        },
+        {
+          "site": "SRC-2",
+          "centroid_mm": [
+            237.45,
+            153.73
+          ],
+          "area_mm2": 114.9
+        }
+      ],
+      "precision": {
+        "precision": "region_about_part_size",
+        "candidate_features": [
+          "F1-13"
+        ],
+        "note": "source region region_about_part_size: covers 1 candidate feature(s) F1-13 at 242/142 mm (region 153 mm², deposited part 168 mm²)"
+      },
+      "memory": {
+        "status": "written",
+        "observation": "obs-0001",
+        "tray_link": "link-0001",
+        "source_region": "R10",
+        "source_regions_overlapping": 1
+      }
+    },
+    {
+      "part": "P3-C06",
+      "cell": "cell-6",
+      "deposit_event": "E-0098",
+      "deposit_window_s": [
+        58.59,
+        64.389
+      ],
+      "same_cell_group": null,
+      "link": "L-0005",
+      "status": "candidate_by_elimination",
+      "autonomy": "automatic",
+      "hypothesis": "temporal_exclusive_by_elimination",
+      "linker_version": "1.7",
+      "assumptions": [
+        "every other open removal went into another observed deposit",
+        "the part came from a discovered site; removals from undiscovered places are invisible",
+        "one part per cell"
+      ],
+      "removal_event": "E-0095",
+      "removal_events": [
+        "E-0095",
+        "E-0097"
+      ],
+      "removal_window_s": [
+        58.79,
+        62.789
+      ],
+      "sources": [
+        {
+          "site": "SRC-16",
+          "centroid_mm": [
+            254.52,
+            154.35
+          ],
+          "area_mm2": 53.8
+        },
+        {
+          "site": "SRC-17",
+          "centroid_mm": [
+            264.9,
+            156.42
+          ],
+          "area_mm2": 20.4
+        }
+      ],
+      "precision": {
+        "precision": "region_about_part_size",
+        "candidate_features": [
+          "F1-18",
+          "F1-25"
+        ],
+        "note": "source region region_about_part_size: covers 2 candidate feature(s) F1-18 at 256/152 mm, F1-25 at 256/161 mm; the region is about the part's size, not one source location (region 165 mm², deposited part 176 mm²)"
+      },
+      "memory": {
+        "status": "written",
+        "observation": "obs-0002",
+        "tray_link": "link-0002",
+        "source_region": "R5",
+        "source_regions_overlapping": 1
+      }
+    },
+    {
+      "part": "P3-C04",
+      "cell": "cell-4",
+      "deposit_event": "E-0102",
+      "deposit_window_s": [
+        65.989,
+        76.787
+      ],
+      "same_cell_group": null,
+      "link": "L-0006",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    },
+    {
+      "part": "P3-C05",
+      "cell": "cell-5",
+      "deposit_event": "E-0103",
+      "deposit_window_s": [
+        71.388,
+        76.787
+      ],
+      "same_cell_group": null,
+      "link": "L-0007",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "schema": "anastylos-session-questions@1",
+  "phase": "P1",
+  "questions": [
+    {
+      "id": "Q-P1-01",
+      "kind": "source_of_part",
+      "part": "P1-C01",
+      "cell": "cell-1",
+      "deposit_window_s": [
+        25.628,
+        28.627
+      ],
+      "why": [
+        "no observed or declared removal precedes this deposit"
+      ],
+      "candidates": [],
+      "ask": "Woher kam das Teil in cell-1 (abgelegt 25.6-28.6 s)?"
+    },
+    {
+      "id": "Q-P1-02",
+      "kind": "source_of_part",
+      "part": "P1-C01b",
+      "cell": "cell-1",
+      "deposit_window_s": [
+        38.225,
+        55.422
+      ],
+      "why": [
+        "deposit into an already occupied cell (one part per cell violated)"
+      ],
+      "candidates": [
+        {
+          "removal_event": "E-0049",
+          "window_s": [
+            41.025,
+            93.216
+          ],
+          "sources": [
+            {
+              "site": "SRC-24",
+              "centroid_mm": [
+                225.99,
+                194.06
+              ],
+              "area_mm2": 9.8
+            },
+            {
+              "site": "SRC-30",
+              "centroid_mm": [
+                228.53,
+                194.14
+              ],
+              "area_mm2": 11.4
+            }
+          ]
+        }
+      ],
+      "ask": "Woher kam das Teil in cell-1 (abgelegt 38.2-55.4 s)?"
+    },
+    {
+      "id": "Q-P1-03",
+      "kind": "source_of_part",
+      "part": "P1-C01c",
+      "cell": "cell-1",
+      "deposit_window_s": [
+        65.421,
+        88.617
+      ],
+      "why": [
+        "other deposits overlap the custody window: E-0047",
+        "deposit into an already occupied cell (one part per cell violated)"
+      ],
+      "candidates": [
+        {
+          "removal_event": "E-0049",
+          "window_s": [
+            41.025,
+            93.216
+          ],
+          "sources": [
+            {
+              "site": "SRC-24",
+              "centroid_mm": [
+                225.99,
+                194.06
+              ],
+              "area_mm2": 9.8
+            },
+            {
+              "site": "SRC-30",
+              "centroid_mm": [
+                228.53,
+                194.14
+              ],
+              "area_mm2": 11.4
+            }
+          ]
+        }
+      ],
+      "ask": "Woher kam das Teil in cell-1 (abgelegt 65.4-88.6 s)?"
+    }
+  ]
+}

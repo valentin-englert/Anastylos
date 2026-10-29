@@ -1,0 +1,63 @@
+{
+  "schema": "anastylos-live-task@1",
+  "task": "question_wording",
+  "input": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "op_key",
+      "kind",
+      "mode",
+      "facts",
+      "l0_text"
+    ],
+    "properties": {
+      "op_key": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "source_of_part",
+          "destination_of_removal"
+        ]
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "open",
+          "spoken_options",
+          "open_with_screen_options",
+          "destination"
+        ]
+      },
+      "facts": {
+        "type": "object"
+      },
+      "l0_text": {
+        "type": "string"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "text",
+      "facts_used"
+    ],
+    "properties": {
+      "text": {
+        "type": "string",
+        "maxLength": 400
+      },
+      "facts_used": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 12
+      }
+    }
+  }
+}

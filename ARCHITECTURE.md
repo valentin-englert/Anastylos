@@ -404,16 +404,34 @@ never be set by analysis code:
 
 ## Offline and future AI-provider boundaries
 
-- Python is offline except two explicit, isolated carve-outs:
+- Python is offline except three explicit, isolated carve-outs:
   `sam-tracking/anastylos_sam/client.py` (outbound, stdlib `urllib`
   only, imported lazily by `sam.py` live paths alone) and
   `capture-companion/receiver/anastylos_capture_receiver.py` (inbound
   stdlib `http.server` + `ssl` workstation receiver for capture
-  packages). Verified by import search 2026-10-28: no other Python
-  module outside `.venv/` imports HTTP, socket or TLS modules. The
+  packages), and `tools/live/providers/meta.py` (below). Verified by
+  import search 2026-10-28: no other Python module outside `.venv/`
+  imports HTTP, socket or TLS modules. The
   PWA caches its app shell and, since the M2 sync prototype, transfers
   packages to a paired receiver (`capture-companion/SYNC_PROTOCOL.md`).
-- Approved, not yet implemented (owner, 2026-10-28): a third outbound
+- `tools/live/providers/meta.py` (outbound, stdlib `urllib` only):
+  the Lane C Proposer for the live tasks `question_wording`,
+  `answer_interpretation`, `next_action`, `guide_claims`
+  (`tools/live/CONTRACT.md` §3.1, §4). Model
+  `muse-spark-1.3-contributor`, effort `max`, both constants;
+  `POST https://api.meta.ai/v1/responses` with strict `json_schema`;
+  output re-validated in code; advisory only, so every non-`ok`
+  status falls back to L0. Safeguards: 120 s timeout, ≤ 2 retries on
+  408/429/5xx, request-SHA-256 dedup cache and a caller-given call
+  cap per run dir, key only from `MODEL_API_KEY` in the process
+  environment (never written), sanitized traces under
+  `C:\ANASTYLOS\data\live-dev\`. Text-only synthetic or minimized
+  structured inputs; no images, audio, raw files or secrets. Imported
+  only from a consumer's `main()`; the live core never imports
+  `providers/`. Contributor tier with the provider default
+  `store: true`: the provider may retain and train on inputs and
+  outputs. Exists on `integration/live-v1`, not in `main`.
+- Approved, not yet implemented (owner, 2026-10-28): a further outbound
   carve-out for an advisory Muse narration of custody runs
   (`muse-spark-1.3-contributor`, effort max; budget at most 30 calls,
   about 0.25 M input / 0.6 M output tokens, text only, no images). It
@@ -441,8 +459,9 @@ never be set by analysis code:
 - Seam contract: providers may add evidence or notes, never change a
   verdict, never confirm an identity, never call the network from
   Python. SAM exists only as the isolated `sam-tracking/` experiment
-  with no pipeline consumer. No Meta Muse integration (the Gate 2A
-  client lives outside `main`), automated BOM sourcing, CAD
+  with no pipeline consumer. The only Meta Muse integration is the
+  advisory `tools/live/providers/` seam above (the Gate 2A client
+  lives outside `main`); no automated BOM sourcing, CAD
   reconstruction, or live sync exists — do not document any as
   present.
 

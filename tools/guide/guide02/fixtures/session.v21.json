@@ -1,0 +1,679 @@
+{
+  "schema": "anastylos-session-package@1",
+  "phases": [
+    {
+      "id": "phase-0001",
+      "label": "P1",
+      "starts_after": null
+    },
+    {
+      "id": "phase-0002",
+      "label": "P2",
+      "starts_after": "phase-0001"
+    },
+    {
+      "id": "phase-0003",
+      "label": "P3",
+      "starts_after": "phase-0002"
+    }
+  ],
+  "parts": [
+    {
+      "id": "dec-0012",
+      "basis": "operator_declared",
+      "operator_label": "Schraube",
+      "removal_index": 1,
+      "phase": "phase-0001",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "top-left screw hole H2",
+        "evidence_note": "answer to Q-P1-01; owner statement 2026-10-29 from the witness-video review ('first screw from the top-left hole H2', docs/FULL-01.md section 16); not image evidence"
+      },
+      "stored_in": {
+        "location": "cell-1",
+        "record": "store-0012",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P1-01; owner statement 2026-10-29 from the witness-video review ('first screw from the top-left hole H2', docs/FULL-01.md section 16); not image evidence"
+      },
+      "custody_history": [],
+      "group": {
+        "id": "grp-0001",
+        "label": "Schrauben (5, austauschbar)",
+        "members": [
+          "dec-0012",
+          "dec-0001",
+          "dec-0002"
+        ],
+        "basis": "operator_statement",
+        "note": "owner: five identical screws from the holes H1-H5 ('Die schrauben sind identisch', chat 2026-10-29; five holes per docs/FULL-01.md section 16). Memory holds three cell-1 deposit records, each may hold more than one screw; no further removal events are invented. Not measured."
+      },
+      "phase_label": "P1",
+      "t_s": 25.628
+    },
+    {
+      "id": "dec-0001",
+      "basis": "operator_declared",
+      "operator_label": "Schrauben",
+      "removal_index": 2,
+      "phase": "phase-0001",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "aus den versenkten/tiefen Löchern der Außenseite der Rückplatte des Gehäuses",
+        "evidence_note": "answer to Q-P1-02 (replayed from earlier run's Q-P1-02); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-1",
+        "record": "store-0001",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P1-02 (replayed from earlier run's Q-P1-02); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "group": {
+        "id": "grp-0001",
+        "label": "Schrauben (5, austauschbar)",
+        "members": [
+          "dec-0012",
+          "dec-0001",
+          "dec-0002"
+        ],
+        "basis": "operator_statement",
+        "note": "owner: five identical screws from the holes H1-H5 ('Die schrauben sind identisch', chat 2026-10-29; five holes per docs/FULL-01.md section 16). Memory holds three cell-1 deposit records, each may hold more than one screw; no further removal events are invented. Not measured."
+      },
+      "phase_label": "P1",
+      "t_s": 38.225
+    },
+    {
+      "id": "dec-0002",
+      "basis": "operator_declared",
+      "operator_label": "Schrauben",
+      "removal_index": 3,
+      "phase": "phase-0001",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "aus den versenkten/tiefen Löchern der Außenseite der Rückplatte des Gehäuses",
+        "evidence_note": "answer to Q-P1-03 (replayed from earlier run's Q-P1-03); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-1",
+        "record": "store-0002",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P1-03 (replayed from earlier run's Q-P1-03); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "group": {
+        "id": "grp-0001",
+        "label": "Schrauben (5, austauschbar)",
+        "members": [
+          "dec-0012",
+          "dec-0001",
+          "dec-0002"
+        ],
+        "basis": "operator_statement",
+        "note": "owner: five identical screws from the holes H1-H5 ('Die schrauben sind identisch', chat 2026-10-29; five holes per docs/FULL-01.md section 16). Memory holds three cell-1 deposit records, each may hold more than one screw; no further removal events are invented. Not measured."
+      },
+      "phase_label": "P1",
+      "t_s": 65.421
+    },
+    {
+      "id": "dec-0011",
+      "basis": "operator_declared",
+      "operator_label": "Rückwand des Gehäuses",
+      "removal_index": 4,
+      "phase": "phase-0002",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "Gehäuse",
+        "evidence_note": "operator-added part that raised no question; replayed; operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "ausserhalb des Viewports",
+        "record": "store-0011",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "operator-added part that raised no question; replayed; operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P2",
+      "t_s": 16.0
+    },
+    {
+      "id": "dec-0013",
+      "basis": "operator_declared",
+      "operator_label": "L-Taste",
+      "removal_index": 5,
+      "phase": "phase-0002",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "automatic candidate E-0035 (SRC-1 at 183/172 mm, SRC-15 at 168/174 mm, SRC-17 at 163/173 mm, SRC-18 at 161/180 mm, SRC-21 at 168/165 mm, SRC-22 at 163/174 mm, SRC-3 at 192/168 mm, SRC-4 at 179/174 mm, SRC-5 at 165/180 mm, SRC-7 at 171/154 mm), chosen by the operator",
+        "evidence_note": "answer to Q-P2-01; owner confirmation 2026-10-29 from the witness video ('L went to cell 8', docs/FULL-01.md section 18) of the link linker 1.6 had proposed by hand order; recorded as declaration since linker 1.7 no longer links by hand order"
+      },
+      "stored_in": {
+        "location": "cell-8",
+        "record": "store-0013",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P2-01; owner confirmation 2026-10-29 from the witness video ('L went to cell 8', docs/FULL-01.md section 18) of the link linker 1.6 had proposed by hand order; recorded as declaration since linker 1.7 no longer links by hand order"
+      },
+      "custody_history": [],
+      "phase_label": "P2",
+      "t_s": 24.796
+    },
+    {
+      "id": "dec-0014",
+      "basis": "operator_declared",
+      "operator_label": "R-Taste",
+      "removal_index": 6,
+      "phase": "phase-0002",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "automatic candidate E-0049 (SRC-10 at 249/179 mm, SRC-11 at 260/172 mm, SRC-14 at 263/166 mm, SRC-9 at 239/168 mm), chosen by the operator",
+        "evidence_note": "answer to Q-P2-02; owner confirmation 2026-10-29 from the witness video ('R to cell 11', docs/FULL-01.md section 18) of the link linker 1.6 had proposed by hand order; recorded as declaration since linker 1.7 no longer links by hand order"
+      },
+      "stored_in": {
+        "location": "cell-11",
+        "record": "store-0014",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P2-02; owner confirmation 2026-10-29 from the witness video ('R to cell 11', docs/FULL-01.md section 18) of the link linker 1.6 had proposed by hand order; recorded as declaration since linker 1.7 no longer links by hand order"
+      },
+      "custody_history": [],
+      "phase_label": "P2",
+      "t_s": 39.993
+    },
+    {
+      "id": "dec-0003",
+      "basis": "operator_declared",
+      "operator_label": "weisse Gummi-Membranen",
+      "removal_index": 7,
+      "phase": "phase-0002",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "Verbindung des Touch-Sensors der Controller-Platine mit den L- und R-Tasten auf der Rückseite des Controllers (erst rechte, dann linke Membran)",
+        "evidence_note": "answer to Q-P2-03 (replayed from earlier run's Q-P2-01); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-2",
+        "record": "store-0003",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P2-03 (replayed from earlier run's Q-P2-01); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P2",
+      "t_s": 54.99
+    },
+    {
+      "id": "dec-0009",
+      "basis": "operator_declared",
+      "operator_label": "Platine mitsamt Kabel",
+      "removal_index": 8,
+      "phase": "phase-0002",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": null,
+        "evidence_note": "operator-added part that raised no question; source not stated; replayed; operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "ausserhalb des Sichtfelds der Kamera",
+        "record": "store-0009",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "operator-added part that raised no question; source not stated; replayed; operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P2",
+      "t_s": 68.0
+    },
+    {
+      "id": "dec-0010",
+      "basis": "operator_declared",
+      "operator_label": "Gummimembran der RGBY-Tasten",
+      "removal_index": 9,
+      "phase": "phase-0003",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "RGBY-Tasten",
+        "evidence_note": "operator-added part that raised no question; replayed; operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "ausserhalb des Sichtfelds der Kamera",
+        "record": "store-0010",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "operator-added part that raised no question; replayed; operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 17.0
+    },
+    {
+      "id": "dec-0004",
+      "basis": "operator_declared",
+      "operator_label": "weisse Gummimembran des Steuerkreuz-D-Pads",
+      "removal_index": 10,
+      "phase": "phase-0003",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "Steuerkreuz / D-Pad",
+        "evidence_note": "answer to Q-P3-01 (replayed from earlier run's Q-P3-01); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-10",
+        "record": "store-0004",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P3-01 (replayed from earlier run's Q-P3-01); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 30.595
+    },
+    {
+      "id": "dec-0005",
+      "basis": "operator_declared",
+      "operator_label": "eigentliches D-Pad",
+      "removal_index": 11,
+      "phase": "phase-0003",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "automatic candidate E-0071 (SRC-10 at 186/152 mm, SRC-12 at 163/136 mm, SRC-13 at 174/134 mm, SRC-19 at 174/143 mm, SRC-4 at 165/143 mm, SRC-5 at 174/151 mm, SRC-6 at 157/152 mm, SRC-7 at 174/142 mm), chosen by the operator",
+        "evidence_note": "answer to Q-P3-02 (replayed from earlier run's Q-P3-02); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-7",
+        "record": "store-0005",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P3-02 (replayed from earlier run's Q-P3-02); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 39.993
+    },
+    {
+      "id": "obs-0001",
+      "basis": "automatic",
+      "operator_label": null,
+      "removal_index": 12,
+      "phase": "phase-0003",
+      "identity": "unknown: evidence of a removal, not a verified part",
+      "source": {
+        "site": null,
+        "label_basis": "anonymous: no inventory site contains the centroid",
+        "centroid_mm": [
+          242.28,
+          143.58
+        ],
+        "bbox_mm": [
+          236.5,
+          137.5,
+          12.5,
+          12.25
+        ],
+        "evidence_pair": "E-0092_SRC-14",
+        "evidence_result_sha256": "f18efd85979cf2222fb7241380a0ec5e1729c2a2f637471f014077ee1ef1a74a",
+        "note": "source region region_about_part_size: covers 1 candidate feature(s) F1-13 at 242/142 mm (region 153 mm², deposited part 168 mm²)"
+      },
+      "stored_in": {
+        "location": "cell-3",
+        "record": "link-0001",
+        "basis": "evidence",
+        "confirmed_by": null,
+        "note": null,
+        "inference": {
+          "relation": "source_to_cell",
+          "inferred_by": "candidate_by_elimination",
+          "hypothesis": "temporal_exclusive_by_elimination",
+          "producer": "custody linker 1.7 via tools/session",
+          "assumptions": [
+            "every other open removal went into another observed deposit",
+            "the part came from a discovered site; removals from undiscovered places are invisible",
+            "one part per cell"
+          ]
+        }
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 51.191
+    },
+    {
+      "id": "obs-0002",
+      "basis": "automatic",
+      "operator_label": null,
+      "removal_index": 13,
+      "phase": "phase-0003",
+      "identity": "unknown: evidence of a removal, not a verified part",
+      "source": {
+        "site": null,
+        "label_basis": "anonymous: no inventory site contains the centroid",
+        "centroid_mm": [
+          255.89,
+          154.41
+        ],
+        "bbox_mm": [
+          250.25,
+          147.0,
+          12.25,
+          13.5
+        ],
+        "evidence_pair": "E-0095_SRC-16",
+        "evidence_result_sha256": "a9d45b3ebac0378476da429ebc35f1bd18f12294d5fa2261c9def15ee99da376",
+        "note": "source region region_about_part_size: covers 2 candidate feature(s) F1-18 at 256/152 mm, F1-25 at 256/161 mm; the region is about the part's size, not one source location (region 165 mm², deposited part 176 mm²)"
+      },
+      "stored_in": {
+        "location": "cell-6",
+        "record": "link-0002",
+        "basis": "evidence",
+        "confirmed_by": null,
+        "note": null,
+        "inference": {
+          "relation": "source_to_cell",
+          "inferred_by": "candidate_by_elimination",
+          "hypothesis": "temporal_exclusive_by_elimination",
+          "producer": "custody linker 1.7 via tools/session",
+          "assumptions": [
+            "every other open removal went into another observed deposit",
+            "the part came from a discovered site; removals from undiscovered places are invisible",
+            "one part per cell"
+          ]
+        }
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 58.79
+    },
+    {
+      "id": "dec-0006",
+      "basis": "operator_declared",
+      "operator_label": "gelber Button (Taste B des Controllers)",
+      "removal_index": 14,
+      "phase": "phase-0003",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "automatic candidate E-0099 (SRC-15 at 256/132 mm), chosen by the operator",
+        "evidence_note": "answer to Q-P3-04 (replayed from earlier run's Q-P3-04); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-4",
+        "record": "store-0006",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P3-04 (replayed from earlier run's Q-P3-04); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 66.189
+    },
+    {
+      "id": "dec-0007",
+      "basis": "operator_declared",
+      "operator_label": "roter Button (Taste A)",
+      "removal_index": 15,
+      "phase": "phase-0003",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "operator chose the earlier run's candidate E-0101 (SRC-18 at 268/144 mm, 71.6-75.0 s); no unique counterpart after the rebuild",
+        "evidence_note": "answer to Q-P3-05 (replayed from earlier run's Q-P3-05); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "cell-5",
+        "record": "store-0007",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P3-05 (replayed from earlier run's Q-P3-05); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 71.388
+    },
+    {
+      "id": "dec-0008",
+      "basis": "operator_declared",
+      "operator_label": "Start/Select-Tasten (miteinander verbunden)",
+      "removal_index": 16,
+      "phase": "phase-0003",
+      "identity": "operator's label, not verified by the system",
+      "source": {
+        "described_as": "removal E-0104 (SRC-10 at 186/152 mm, SRC-20 at 208/142 mm, SRC-9 at 192/134 mm)",
+        "evidence_note": "answer to Q-P3-06 (replayed from earlier run's Q-P3-06); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "stored_in": {
+        "location": "ausserhalb des Bildes",
+        "record": "store-0008",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "answer to Q-P3-06 (replayed from earlier run's Q-P3-06); operator_answers.jsonl sha256 f048b5fc144ebd41ef6191e38f3f2bea084dc27033c442bd46f78fa45080d359"
+      },
+      "custody_history": [],
+      "phase_label": "P3",
+      "t_s": 78.186
+    }
+  ],
+  "install_order": {
+    "basis": "reverse removal order, phase by phase, within a phase by removal time t_s (log order where t_s is missing; no confirmed dependencies); interchangeable group members form one step",
+    "steps": [
+      {
+        "parts": [
+          "dec-0008"
+        ],
+        "label": "Start/Select-Tasten (miteinander verbunden)",
+        "basis": "operator_declared",
+        "from": "ausserhalb des Bildes",
+        "to": [
+          "removal E-0104 (SRC-10 at 186/152 mm, SRC-20 at 208/142 mm, SRC-9 at 192/134 mm)"
+        ],
+        "phase": "phase-0003",
+        "step": 1
+      },
+      {
+        "parts": [
+          "dec-0007"
+        ],
+        "label": "roter Button (Taste A)",
+        "basis": "operator_declared",
+        "from": "cell-5",
+        "to": [
+          "operator chose the earlier run's candidate E-0101 (SRC-18 at 268/144 mm, 71.6-75.0 s); no unique counterpart after the rebuild"
+        ],
+        "phase": "phase-0003",
+        "step": 2
+      },
+      {
+        "parts": [
+          "dec-0006"
+        ],
+        "label": "gelber Button (Taste B des Controllers)",
+        "basis": "operator_declared",
+        "from": "cell-4",
+        "to": [
+          "automatic candidate E-0099 (SRC-15 at 256/132 mm), chosen by the operator"
+        ],
+        "phase": "phase-0003",
+        "step": 3
+      },
+      {
+        "parts": [
+          "obs-0002"
+        ],
+        "label": null,
+        "basis": "automatic",
+        "from": "cell-6",
+        "to": [
+          [
+            255.89,
+            154.41
+          ]
+        ],
+        "phase": "phase-0003",
+        "step": 4
+      },
+      {
+        "parts": [
+          "obs-0001"
+        ],
+        "label": null,
+        "basis": "automatic",
+        "from": "cell-3",
+        "to": [
+          [
+            242.28,
+            143.58
+          ]
+        ],
+        "phase": "phase-0003",
+        "step": 5
+      },
+      {
+        "parts": [
+          "dec-0005"
+        ],
+        "label": "eigentliches D-Pad",
+        "basis": "operator_declared",
+        "from": "cell-7",
+        "to": [
+          "automatic candidate E-0071 (SRC-10 at 186/152 mm, SRC-12 at 163/136 mm, SRC-13 at 174/134 mm, SRC-19 at 174/143 mm, SRC-4 at 165/143 mm, SRC-5 at 174/151 mm, SRC-6 at 157/152 mm, SRC-7 at 174/142 mm), chosen by the operator"
+        ],
+        "phase": "phase-0003",
+        "step": 6
+      },
+      {
+        "parts": [
+          "dec-0004"
+        ],
+        "label": "weisse Gummimembran des Steuerkreuz-D-Pads",
+        "basis": "operator_declared",
+        "from": "cell-10",
+        "to": [
+          "Steuerkreuz / D-Pad"
+        ],
+        "phase": "phase-0003",
+        "step": 7
+      },
+      {
+        "parts": [
+          "dec-0010"
+        ],
+        "label": "Gummimembran der RGBY-Tasten",
+        "basis": "operator_declared",
+        "from": "ausserhalb des Sichtfelds der Kamera",
+        "to": [
+          "RGBY-Tasten"
+        ],
+        "phase": "phase-0003",
+        "step": 8
+      },
+      {
+        "parts": [
+          "dec-0009"
+        ],
+        "label": "Platine mitsamt Kabel",
+        "basis": "operator_declared",
+        "from": "ausserhalb des Sichtfelds der Kamera",
+        "to": [
+          null
+        ],
+        "phase": "phase-0002",
+        "step": 9
+      },
+      {
+        "parts": [
+          "dec-0003"
+        ],
+        "label": "weisse Gummi-Membranen",
+        "basis": "operator_declared",
+        "from": "cell-2",
+        "to": [
+          "Verbindung des Touch-Sensors der Controller-Platine mit den L- und R-Tasten auf der Rückseite des Controllers (erst rechte, dann linke Membran)"
+        ],
+        "phase": "phase-0002",
+        "step": 10
+      },
+      {
+        "parts": [
+          "dec-0014"
+        ],
+        "label": "R-Taste",
+        "basis": "operator_declared",
+        "from": "cell-11",
+        "to": [
+          "automatic candidate E-0049 (SRC-10 at 249/179 mm, SRC-11 at 260/172 mm, SRC-14 at 263/166 mm, SRC-9 at 239/168 mm), chosen by the operator"
+        ],
+        "phase": "phase-0002",
+        "step": 11
+      },
+      {
+        "parts": [
+          "dec-0013"
+        ],
+        "label": "L-Taste",
+        "basis": "operator_declared",
+        "from": "cell-8",
+        "to": [
+          "automatic candidate E-0035 (SRC-1 at 183/172 mm, SRC-15 at 168/174 mm, SRC-17 at 163/173 mm, SRC-18 at 161/180 mm, SRC-21 at 168/165 mm, SRC-22 at 163/174 mm, SRC-3 at 192/168 mm, SRC-4 at 179/174 mm, SRC-5 at 165/180 mm, SRC-7 at 171/154 mm), chosen by the operator"
+        ],
+        "phase": "phase-0002",
+        "step": 12
+      },
+      {
+        "parts": [
+          "dec-0011"
+        ],
+        "label": "Rückwand des Gehäuses",
+        "basis": "operator_declared",
+        "from": "ausserhalb des Viewports",
+        "to": [
+          "Gehäuse"
+        ],
+        "phase": "phase-0002",
+        "step": 13
+      },
+      {
+        "parts": [
+          "dec-0002",
+          "dec-0001",
+          "dec-0012"
+        ],
+        "label": "Schrauben",
+        "basis": "operator_declared",
+        "from": "cell-1",
+        "to": [
+          "aus den versenkten/tiefen Löchern der Außenseite der Rückplatte des Gehäuses",
+          "aus den versenkten/tiefen Löchern der Außenseite der Rückplatte des Gehäuses",
+          "top-left screw hole H2"
+        ],
+        "phase": "phase-0001",
+        "group": "grp-0001",
+        "rule": "any member into any listed source",
+        "step": 14
+      }
+    ]
+  },
+  "dependencies": {
+    "confirmed": [],
+    "note": "none recorded in this session"
+  },
+  "unknowns": [
+    "No mechanical dependency between parts was observed or confirmed; install order is only the reverse of the recorded removal order, phase by phase.",
+    "Part identity was never verified; automatic parts are followed by temporal custody, declared parts are the operator's statement.",
+    "Anything removed outside the watched sites and cells and not declared is not in this session.",
+    "Reassembly progress is known only from return checks below or from what the operator says in the chat.",
+    "obs-0001 (automatic): the link from its source to cell-3 was concluded by candidate_by_elimination, not observed; assumptions: every other open removal went into another observed deposit; the part came from a discovered site; removals from undiscovered places are invisible; one part per cell",
+    "obs-0002 (automatic): the link from its source to cell-6 was concluded by candidate_by_elimination, not observed; assumptions: every other open removal went into another observed deposit; the part came from a discovered site; removals from undiscovered places are invisible; one part per cell",
+    "dec-0009 (Platine mitsamt Kabel): the operator did not state where it came from; its source is unknown.",
+    "obs-0001 (automatic) source lies in no inventory site (anonymous location).",
+    "obs-0002 (automatic) source lies in no inventory site (anonymous location).",
+    "group grp-0001 (Schrauben (5, austauschbar)): interchangeability is the operator's statement, not measured."
+  ],
+  "inputs": {
+    "memory": {
+      "path": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\memory\\memory.jsonl",
+      "sha256": "8ae8e872f070cf698640b04a2a9e90dbeecc72c4513547a83a8b91e5a8c2e87e"
+    },
+    "inventory": null,
+    "custody": null,
+    "returns": null
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "anastylos-live-phase-words@1",
+  "provenance": "TL-supplied phase words for FULL-01 (docs/FULL-01.md sections 2 and 7, copied from tools/live/seed/h3r0.py PHASE_WORDS); stands in for the operator setup step",
+  "phases": {
+    "P1": "beim Abschrauben der Rückseite",
+    "P2": "beim Öffnen des Gehäuses",
+    "P3": "beim Ausbau aus der Vorderschale"
+  }
+}

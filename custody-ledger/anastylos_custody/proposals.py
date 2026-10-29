@@ -27,7 +27,7 @@ import cv2
 import numpy as np
 
 REGISTRY_SCHEMA = "custody-source-registry@1"
-PROPOSALS_VERSION = "0.1.0"
+PROPOSALS_VERSION = "0.2.0"
 DEFAULTS = {
     "paper_min_value": 150, "paper_max_saturation": 40, "mask_closing_mm": 3.0,
     "quiet_hold_s": 0.6, "confirm_hold_s": 1.0, "min_area_mm2": 8.0,

@@ -33,6 +33,9 @@ your task from these documents plus the code alone — and so must you.
   `component-fingerprints/`, `connector-matching/`, `tray-counter/`,
   `missing-parts/`.
 - `cable-routing/` — cable paths + read-only assembly-order graph.
+- `custody-ledger/` — video custody observer and linker;
+  `tools/session/`, `tools/guide/`, `tools/reassembly/` — session runs
+  into memory, guide packages, return checks.
 - `capture-companion/` — offline PWA (`app/`) + stdlib validator
   (`python/`); contract in `SCHEMA.md`.
 - `tools/compliance/` — SPDX inventory + checker.

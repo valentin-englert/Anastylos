@@ -121,7 +121,7 @@ unless noted) and match the current tree's test methods exactly.
 |---|---|---|---|---|
 | `calibration/` | printable sheets, ChArUco, px/mm frames | `generate.py` | integrated | 13 run, 9 pass (1 failure + 3 errors need native Cairo/poppler; known Windows gap) |
 | `change-detection/` | planar before/after change check | `detect.py` | integrated | 3 pass + synthetic selftest 16/16 |
-| `assembly-memory/` | append-only disassembly memory, where-goes queries | `memory.py` | integrated | 21 pass |
+| `assembly-memory/` | append-only disassembly memory, where-goes queries | `memory.py` | integrated | 28 pass |
 | `resistor-reader/` | resistor color-code reader (experimental) | `read.py` | integrated | 30 pass |
 | `tray-counter/` | tray addition/removal candidates | `count.py` | integrated | 14 pass |
 | `pcb-ocr/` | silkscreen reference-designator extraction (needs OCR engine) | `ocr.py` | integrated | 31 pass |
@@ -141,6 +141,10 @@ unless noted) and match the current tree's test methods exactly.
 | `tools/retrospective-custody/` | offline inspection of cached tool-mask endpoints in a video clip (diagnostic) | `retrospective_custody.py` | implemented, experimental geometry gate only | 8 pass; cached real-clip execution; physical contact, removals, deposits and correspondence are not implemented in this tool |
 | `tools/retrospective-custody/matcher/` | deposit-triggered source-to-tray correspondence over supplied `anastylos-observation-v1` events (see "Correspondence contracts and owner decisions") | `match.py`, `validate.py` | implemented, synthetic only | 22 pass; no real observation file has been consumed; owner decisions V1, V2, V4, V5 not yet implemented |
 | `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 54 pass; real replay on hardware-02 and PROTO-01-NOUV E2 memory |
+| `custody-ledger/` | video custody: adaptive source discovery, zone observation with colour-free hand mask, temporal/elimination/hand-order linker | `custody.py` | integrated (`eb9744a9`, observer 1.7.0, `custody-config.v15.json`) | 94 pass; development footage only (E2, FULL-01, SNES-01); frozen v1.1/v1.2 stay on their branches for E2R/E3-A |
+| `tools/session/` | one-command phase run (video → custody → numbered parts → evidence → memory → open questions); answer package/apply/remap | `session.py`, `answers.py` | integrated | 23 pass; FULL-01 v20 rebuilt and reproduced |
+| `tools/guide/` | guide (Muse) package from memory, rules, grounding check | `package.py`, `check.py` | integrated | 9 pass |
+| `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
 
 Hardware-validated: none. Every vision claim above rests on synthetic
 fixtures; see each module README for its stated validation scope.
@@ -224,9 +228,9 @@ occlusion). Binding for every custody observer version after v1.2; v1.1
 
 | ID | Requirement | Implementation status |
 |---|---|---|
-| H1 | Hand presence, visual occlusion and component state are separate signals. A static object is never classified as a hand by colour alone; detection uses a hand-free reference, temporal entry and tracking, geometry and optionally a hand-landmark model. Different skin tones, changing light and gloves must be supported; an optional per-user hand-colour calibration may supplement but never be required. Insufficient evidence stays occluded/unknown, and a hand that stops moving never becomes a component. No device- or colour-specific exceptions. Demographic robustness is claimed only after testing on varied hands. Test plan and model feasibility: [`docs/P3-HAND-OCCLUSION.md`](docs/P3-HAND-OCCLUSION.md). | implemented on branch `feat/custody-v1.3` only (not merged), observer 1.7.0 / hands 0.2.0, commit `45d7440d`: no skin-colour test remains; one colour-free hand mask (busy components against a hand-free reference in raw colour channels, reaching the sheet border or the edge of the camera's view) drives hand order, the zone-intrusion gate for clean samples and the hand exclusion of device alignment; skin-colour configs are refused. Frozen observers v1.0–v1.2 (E2R, E3-A pin) still use the skin-colour test. Limits: a resting hand over a background that looks the same in every channel is only partly found; raw channels assume fixed exposure. Synthetic tests cover light skin, dark skin and a blue glove; no test on varied real hands yet |
+| H1 | Hand presence, visual occlusion and component state are separate signals. A static object is never classified as a hand by colour alone; detection uses a hand-free reference, temporal entry and tracking, geometry and optionally a hand-landmark model. Different skin tones, changing light and gloves must be supported; an optional per-user hand-colour calibration may supplement but never be required. Insufficient evidence stays occluded/unknown, and a hand that stops moving never becomes a component. No device- or colour-specific exceptions. Demographic robustness is claimed only after testing on varied hands. Test plan and model feasibility: [`docs/P3-HAND-OCCLUSION.md`](docs/P3-HAND-OCCLUSION.md). | implemented in `main` (merged `eb9744a9` from `feat/custody-v1.3` @ `45d7440d`), observer 1.7.0 / hands 0.2.0: no skin-colour test remains; one colour-free hand mask (busy components against a hand-free reference in raw colour channels, reaching the sheet border or the edge of the camera's view) drives hand order, the zone-intrusion gate for clean samples and the hand exclusion of device alignment; skin-colour configs are refused. Frozen observers v1.0–v1.2 (E2R, E3-A pin) still use the skin-colour test. Limits: a resting hand over a background that looks the same in every channel is only partly found; raw channels assume fixed exposure. Synthetic tests cover light skin, dark skin and a blue glove; no test on varied real hands yet |
 
-| H2 | Spatial discovery is adaptive: grids or other sampling only propose candidate changes; discovered sources carry stable ids, mask geometry in device-relative coordinates, confidence and provenance; neighbouring proposals merge when they describe one persistent change and split only when independent changes are shown; geometry refinements are appended, never rewriting earlier evidence; uncertain segmentation or correspondence stays `ambiguous`/`unknown`. Assessment and next experiment: [`docs/P2-ADAPTIVE-DISCOVERY.md`](docs/P2-ADAPTIVE-DISCOVERY.md). | partial, branch `feat/custody-v1.3` only (not merged): proposals 0.4.0 (commit `27e7f4ed`) discover sources from busy components, cluster them into `SRC-n` with device pose epochs and candidate features; the grid only proposes. Development data only (E2, FULL-01). Frozen v1.2 (E3-A) uses the fixed grid |
+| H2 | Spatial discovery is adaptive: grids or other sampling only propose candidate changes; discovered sources carry stable ids, mask geometry in device-relative coordinates, confidence and provenance; neighbouring proposals merge when they describe one persistent change and split only when independent changes are shown; geometry refinements are appended, never rewriting earlier evidence; uncertain segmentation or correspondence stays `ambiguous`/`unknown`. Assessment and next experiment: [`docs/P2-ADAPTIVE-DISCOVERY.md`](docs/P2-ADAPTIVE-DISCOVERY.md). | partial, in `main` since `eb9744a9`: proposals 0.4.0 (commit `27e7f4ed`) discover sources from busy components, cluster them into `SRC-n` with device pose epochs and candidate features; the grid only proposes. Development data only (E2, FULL-01). Frozen v1.2 (E3-A) uses the fixed grid |
 
 | H3 | Clarification is asked in the operator's terms and at the moment it is needed. A question names the phase in words and anchors the unknown part on known neighbouring removals ("Was hast du nach dem Steuerkreuz herausgenommen und in Zelle 3 gelegt?"), describes places relative to the device or known parts rather than in mm, and offers time windows only as supporting detail. In a live session the system asks as soon as it cannot assign a removal, while the part is still at hand; the operator must never have to scrub a recording to answer. A very short change (for example under 0.5 s) is first treated as a likely hand or tool, not as a part. Answers stay `operator_declared` and never count as automatic evidence. | not implemented: `tools/session/answers.py` asks offline after the recording, per question id with mm positions and time windows; owner feedback and the FULL-01 answer round: [`docs/FULL-01.md`](docs/FULL-01.md) §21 |
 
@@ -457,15 +461,14 @@ What "integrated" concretely means today — and does not:
   manual `record observation` / `record tray-link` commands; the
   only read-only consumers of the log are `missing-parts`
   reconcile, the `cable-routing` graph and `assembly-reconstruction`.
-- Outside `main`: `custody-ledger/` (event-sourced tray/site observer
-  plus temporal-exclusive linker) is committed unchanged on branch
-  `feat/custody-ledger` as `496e323f` (worktree `Anastylos-custody`),
-  not merged. Checked 2026-10-28: 20/20 tests
-  pass; `custody-config.json` file SHA-256 `ba84253d…`, canonical
-  `10b58c2d…`, identical to the configuration cited by its SNES-01
-  development run. It is the only module with a real-video observer
-  (SNES-01: tray events 13/15 by interval overlap, 0/5 source
-  removals). Its module-local schemas are not `anastylos-observation-v1`.
+- `custody-ledger/` (real-video observer, adaptive discovery, linker)
+  is in `main` since `eb9744a9` (2026-10-29), byte-identical to
+  `feat/custody-v1.3` @ `45d7440d`. Frozen versions stay on their
+  branches and worktrees: v1.1 `feat/custody-ledger` (E2R), v1.2
+  `feat/custody-v1.2` @ `e057cf4f` (E3-A pin). Its module-local schemas
+  are not `anastylos-observation-v1`. Active FULL-01 development memory:
+  `C:\ANASTYLOS\data\session-runs-v20\FULL-01` (pointer
+  `C:\ANASTYLOS\data\active-memory.json`; v18 kept unchanged).
 - `snes-02/` (commit `4d1d5b3a`) is a research checkpoint, not a
   module: a dual-camera observability study in which the overhead
   view localized 0/5 screw sites and the oblique view 4/5, all five
@@ -520,9 +523,11 @@ not on devices; calibration print masters unmeasured
 3. npm transitive closure licenses unverified (compliance review
    item); direct capture devDeps are MIT/Apache-2.0 per installed
    metadata.
-4. One real-hardware run exists: PROTO-01-NOUV E2 (custody observer
-   on `feat/custody-ledger`, not merged; one take, operator-defined
-   inventory). No other module has a real-hardware result.
+4. Real-hardware runs are development data only: PROTO-01-NOUV E2
+   (frozen custody v1.1, one take, operator-defined inventory) and
+   FULL-01 (custody 1.7.0, owner answers). No independent validation;
+   E3-A is preregistered but not recorded. No other module has a
+   real-hardware result.
 5. Current priority: real-hardware validation and end-to-end demo
    readiness — print and measure the calibration sheets, photograph a
    real disassembly, score the `eval` harnesses on labelled real

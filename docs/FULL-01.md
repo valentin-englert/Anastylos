@@ -678,3 +678,35 @@ superseded. Hashes (prefix): `rebuild.sh` `7902d46eab6f0ff6`, `memory.jsonl` `9c
 guide `session.json` `4a8dbaff3e77379d`. Recommendation: make `session-runs-v20` the
 active FULL-01 memory once the owner agrees; `session-runs-v18` stays as
 the historical record and is not deleted.
+
+## 24. Research baseline (2026-10-29)
+
+Local annotated tag `research-baseline-2026-10-29` on the commit that adds
+this section (not pushed). State at the tag:
+
+- `main` contains `custody-ledger/` (merge `eb9744a9`, byte-identical to
+  `feat/custody-v1.3` @ `45d7440d`, observer 1.7.0, config v15) and the
+  session, answers, guide and return tools. Frozen custody v1.1 (E2R) and
+  v1.2 (E3-A pin `e057cf4f`) stay on their branches and worktrees.
+- Active FULL-01 development memory: `session-runs-v20` (pointer
+  `C:\ANASTYLOS\data\active-memory.json`, memory SHA-256 `9cb4a078…`,
+  guide `4a8dbaff…`); v18 unchanged, manifest re-verified.
+- Checks at the tag: custody 94, memory 28, reconstruction 54, session 23,
+  guide 9, reassembly 11, change-detection 3 pass; calibration 9/13 (the
+  known Cairo/poppler gap on Windows); compliance 0 errors, 11 open
+  reviews; FULL-01 invariants 10/10; guide package reproduced from the
+  active memory; grounding check accepts a cited answer and rejects an
+  invented id and site; E2 run with the custody code from `main` gives the
+  same memory as the branch run.
+- Not integrated: `feat/snes01-benchmark` (experimental; 2 commits and 22
+  uncommitted files in its worktree). Uncommitted, untouched: `.gitignore`
+  in `Anastylos-assembly`, `ARCHITECTURE.md` in `Anastylos-custody`, four
+  untracked data files in this checkout.
+
+Limitations carried into the research pass: all real-video results are
+development data (E2, FULL-01, SNES-01), no independent validation, E3-A
+not recorded and its observer version still to be decided; screws in deep
+holes are not visible from above; hand mask not tested on varied real
+hands and assumes fixed exposure; questions are offline and machine-styled
+(H3 open); PCB source and the red-button correspondence unresolved; no
+confirmed mechanical dependencies; live mode not implemented.

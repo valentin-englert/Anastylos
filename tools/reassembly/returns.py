@@ -84,6 +84,8 @@ def _movements(events: list[dict]) -> tuple[list[dict], list[dict]]:
     departures, arrivals = [], []
     for event in events:
         key = (event["zone_kind"], event["kind"])
+        if key not in DEPARTURES and key not in ARRIVALS:
+            continue  # reference_set, device_realigned, pose_epoch_break, ... carry no movement
         brief = {name: event[name] for name in ("id", "zone", "kind", "t_before_s", "t_after_s")}
         if key in DEPARTURES:
             departures.append({**brief, "meaning": DEPARTURES[key]})

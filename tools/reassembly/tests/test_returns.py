@@ -86,6 +86,12 @@ class ReassemblyReturnsTest(unittest.TestCase):
         check_events_doc({"provenance": v11, "zones": [{"zone": "cell-4", "kind": "tray_cell", "initially": "occupied"},
                                                        {"zone": "cell-2", "kind": "tray_cell"}]}, {"cell-4"})
 
+    def test_events_without_a_window_are_ignored(self):
+        reference = {"id": "E-0", "zone": "W-RED", "zone_kind": "site", "kind": "reference_set", "t_s": 0.0, "frame": 0}
+        result = verify(_doc([reference, _event("E-1", "cell-4", "vacated", 10, 12),
+                              _event("E-2", "W-RED", "site_filled", 11, 14)]), self.steps)
+        self.assertEqual(result["returns"][0]["memory_check"], "consistent_with_memory")
+
     def test_arrival_without_departure_is_unattributed(self):
         result = verify(_doc([_event("E-1", "W-RED", "site_filled", 11, 14)]), self.steps)
         self.assertEqual(result["returns"][0]["status"], "unattributed")

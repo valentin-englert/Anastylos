@@ -145,3 +145,9 @@ start empty, and undeclared means empty). This is a defect of the
 checker, found before any return result was seen. Fix: sites and every
 plan cell must be declared; other cells may stay undeclared. New
 `returns.py` `6d4fd7db08e2f802b749220d5e1c716ae0528a67700b57ae3b25a0d299532259`, test updated (7/7). Scoring criteria unchanged.
+
+Second checker defect, also found before any return result was seen: it
+read time-window fields from every event, so `reference_set` events
+(no window) crashed it. Fix: events that are neither a departure nor an
+arrival are skipped before reading them. New `returns.py` `4e9f61d2db7520dc32bd6763c5522433f0805adc180b1ddf4e2591afdfe4f5a6`,
+test added (8/8).

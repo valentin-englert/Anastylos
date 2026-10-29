@@ -122,3 +122,11 @@ with the clip's own first frame): phase correlation of the rectified
 static frames of E2 and E2R gives a shift of (−0.14, +0.03) mm; the E2
 well rectangles sit on the now empty wells. The E2 inventory geometry
 stays valid; no new baseline needed.
+
+## 10. Commitment ledger
+
+| Item | SHA-256 | Committed before |
+|---|---|---|
+| `nouv-E2R.script.json` (rolled with `roll_e2r_script.py` `0c4cc9cc…`, plan `62b8087b…`) | `4d74a37f8dbe88863bc5d9e6a2addcda140104ec9706ced8b7f189c78cc515df` | E2R take |
+| E2R outputs (`events.json`, `returns.json`) | pending | ground-truth reveal |
+| `nouv-E2R.actual.json` | pending | scoring |

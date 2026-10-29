@@ -8,7 +8,7 @@ evidence-based tray link). Everything the evidence leaves open goes to
 the memory session, so phases of one disassembly share one log.
 
     python tools/session/session.py --video P1.mp4 --phase P1 --custody-dir <worktree>/custody-ledger \
-        --config custody-config.v14.json --memory <session-dir> --out <run-dir>
+        --config custody-config.v15.json --memory <session-dir> --out <run-dir>
 """
 
 from __future__ import annotations
@@ -149,7 +149,7 @@ def main() -> None:
     parser.add_argument("--phase", required=True, help="short phase tag, e.g. P1")
     parser.add_argument("--phase-label", default=None, help="human label for the memory phase event")
     parser.add_argument("--custody-dir", required=True, type=Path, help="custody-ledger folder of the frozen worktree")
-    parser.add_argument("--config", default="custody-config.v14.json")
+    parser.add_argument("--config", default="custody-config.v15.json")
     parser.add_argument("--memory", required=True, type=Path, help="assembly-memory session folder (appended)")
     parser.add_argument("--kit", type=Path, default=REPO / "calibration" / "calibration-config.json")
     parser.add_argument("--out", required=True, type=Path)

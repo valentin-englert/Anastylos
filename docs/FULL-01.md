@@ -562,3 +562,49 @@ gelegt?"). The offline format worked for pre-recorded videos, but the
 northstar is a live session that intervenes as soon as a removal cannot be
 assigned; the operator should never have to scrub a recording to name a
 part.
+
+## 22. Skin colour retired: colour-free hand mask everywhere (2026-10-29) — development data
+
+Owner request "Hautfarbe ganz raus". On `feat/custody-v1.3` (commit
+`45d7440d`, observer 1.7.0, hands 0.2.0, `custody-config.v15.json`) the
+skin-colour test is gone: the colour-free hand mask now also decides
+clean samples (zone-intrusion gate) and which pixels device alignment
+ignores. Two weaknesses of the first colour-free mask came up on FULL-01
+P1 and were fixed before the comparison below:
+
+- **Normalization flattened forearms.** Grey and colour were divided by a
+  15 mm (then 80 mm) local mean; a forearm fills that window, turns paper
+  grey and is cut off from the border, so resting hands vanished from the
+  mask (P1 at 22–24, 30–34, 37–38, 57–62 s). The hand mask now compares
+  raw colour channels (the capture standard fixes exposure and white
+  balance). Pale skin on white paper was the case that grey alone missed
+  (synthetic test: 25.6 grey levels below the 30 threshold).
+- **Arms from outside the picture.** Where the sheet edge lies outside the
+  camera image, rectified pixels there never change, so an arm could not
+  reach "the border". The edge of the camera's view now counts as a border.
+
+P1 hand mask after both fixes: present in every sampled second 15–88 s,
+absent from 89 s (owner: unscrewing ends at about 89 s).
+
+Regression (`C:\ANASTYLOS\data\session-runs-v19b\`, same videos):
+
+| Run | Before (observer 1.6.0) | 1.7.0 |
+|---|---|---|
+| E2 | 4 linked, cells 6/1/5/4 | identical |
+| FULL-01 P1 | 1 linked (screw "specific H2"), 4 questions | 0 linked, 3 questions; both owner-confirmed false alarms (cell 6 at 38–49 s, 0.2 s at 92 s) gone |
+| FULL-01 P2 | 2 linked (L, R) | same links |
+| FULL-01 P3 | 2 linked (green, blue) | same links |
+| SNES-01 FREE | 0 linked, 14 questions | same, two windows longer |
+
+**The P1 "H2" link was an artefact.** Observer 1.6.0 treated samples with
+hands on the device as clean and accepted a 12 px device realignment at
+67.4 s under the hands, then a 1.7 px / 0.3° one at 89 s. Measured
+directly (normalized grey, 8 mm windows, 14.4 s vs 90 s): the five hole
+candidates change by at most 2.7 mm² without a shift (below the 8 mm²
+minimum), but by 132–141 px with a 1.6 px shift — the 145 px that 1.6.0
+reported at H2. The screws sit in deep recessed holes and are nearly
+invisible from above. §19's "P1 screw → cell 1, specific, H2" is
+withdrawn; it matched the owner's statement by coincidence. The owner's
+FULL-01 memory (`session-runs-v18`) still carries that observation
+(`obs-0001`, note "specific … F1-4"); it needs a correction before the
+guide uses it.

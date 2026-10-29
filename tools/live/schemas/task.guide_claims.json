@@ -1,0 +1,84 @@
+{
+  "schema": "anastylos-live-task@1",
+  "task": "guide_claims",
+  "input": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "package_sha256",
+      "operator_question",
+      "package_excerpt"
+    ],
+    "properties": {
+      "package_sha256": {
+        "type": "string"
+      },
+      "operator_question": {
+        "type": "string",
+        "maxLength": 500
+      },
+      "package_excerpt": {
+        "type": "object"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "claims",
+      "insufficient_evidence"
+    ],
+    "properties": {
+      "schema": {
+        "const": "anastylos-guide-claims@1"
+      },
+      "claims": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "relation",
+            "subject",
+            "object",
+            "basis_word"
+          ],
+          "properties": {
+            "relation": {
+              "type": "string",
+              "enum": [
+                "stored_in",
+                "removed_from",
+                "install_before",
+                "basis",
+                "dependency",
+                "unknown"
+              ]
+            },
+            "subject": {
+              "type": "string"
+            },
+            "object": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "basis_word": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "maxItems": 12
+      },
+      "insufficient_evidence": {
+        "type": "boolean"
+      }
+    }
+  }
+}

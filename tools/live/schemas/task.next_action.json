@@ -1,0 +1,105 @@
+{
+  "schema": "anastylos-live-task@1",
+  "task": "next_action",
+  "input": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "state",
+      "valid_actions"
+    ],
+    "properties": {
+      "state": {
+        "type": "object"
+      },
+      "valid_actions": {
+        "type": "array",
+        "items": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "action",
+      "question_id",
+      "question_revision",
+      "until",
+      "prompt_kind",
+      "part_ref",
+      "reason"
+    ],
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "ask",
+          "defer",
+          "protocol_prompt",
+          "ask_dependency",
+          "leave_unresolved"
+        ]
+      },
+      "question_id": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "question_revision": {
+        "type": [
+          "integer",
+          "null"
+        ]
+      },
+      "until": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "next_pause",
+          "segment_end",
+          null
+        ]
+      },
+      "prompt_kind": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "hands_off_2s",
+          "single_part_empty_cell",
+          "show_source_before_removal",
+          "device_still",
+          null
+        ]
+      },
+      "part_ref": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "reason": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "no_candidates_and_operator_unsure",
+          "operator_declined",
+          "budget",
+          null
+        ]
+      }
+    }
+  },
+  "disabled_actions": {
+    "request_view": "until the AgentCam G1 contract is approved by its Contract Owner"
+  }
+}

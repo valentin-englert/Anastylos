@@ -1,0 +1,86 @@
+{
+  "schema": "anastylos-live-task@1",
+  "task": "answer_interpretation",
+  "input": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "op_key",
+      "kind",
+      "allowed_choices",
+      "question_text",
+      "operator_text"
+    ],
+    "properties": {
+      "op_key": {
+        "type": "string"
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "source_of_part",
+          "destination_of_removal",
+          "read_back"
+        ]
+      },
+      "allowed_choices": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "question_text": {
+        "type": "string"
+      },
+      "operator_text": {
+        "type": "string",
+        "maxLength": 2000
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "intent",
+      "choice",
+      "place_text",
+      "label_text"
+    ],
+    "properties": {
+      "intent": {
+        "type": "string",
+        "enum": [
+          "choose",
+          "describe_place",
+          "confirm",
+          "reject",
+          "skip",
+          "unsure",
+          "correction",
+          "unclear"
+        ]
+      },
+      "choice": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "place_text": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 200
+      },
+      "label_text": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "maxLength": 120
+      }
+    }
+  }
+}

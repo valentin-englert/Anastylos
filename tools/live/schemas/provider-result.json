@@ -1,0 +1,96 @@
+{
+  "$id": "anastylos-live-provider-result@1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "request_id",
+    "task",
+    "status",
+    "output",
+    "model",
+    "reasoning_effort_requested",
+    "reasoning_effort_returned",
+    "latency_s",
+    "usage",
+    "request_sha256",
+    "cache_hit",
+    "error"
+  ],
+  "properties": {
+    "schema": {
+      "const": "anastylos-live-provider-result@1"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string",
+      "enum": [
+        "question_wording",
+        "answer_interpretation",
+        "next_action",
+        "guide_claims"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "invalid_output",
+        "timeout",
+        "provider_error",
+        "disabled",
+        "budget_exhausted"
+      ]
+    },
+    "output": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reasoning_effort_requested": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "reasoning_effort_returned": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "latency_s": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "usage": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "request_sha256": {
+      "type": "string"
+    },
+    "cache_hit": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

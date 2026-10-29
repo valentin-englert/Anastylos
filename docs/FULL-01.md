@@ -608,3 +608,73 @@ withdrawn; it matched the owner's statement by coincidence. The owner's
 FULL-01 memory (`session-runs-v18`) still carries that observation
 (`obs-0001`, note "specific … F1-4"); it needs a correction before the
 guide uses it.
+
+## 23. Memory rebuild with observer 1.7 and provenance audit (2026-10-29) — development data
+
+Owner request: rebuild FULL-01 non-destructively. Old session
+`C:\ANASTYLOS\data\session-runs-v18\FULL-01` is unchanged (135 files,
+SHA-256 manifest `audit\v18-preservation-manifest.json`, re-verified after
+the rebuild). New session `C:\ANASTYLOS\data\session-runs-v20\FULL-01`,
+produced by `audit\rebuild.sh` (production pipeline: `session.py` per
+phase, `answers.py remap` and `apply`, owner statement, group, guide
+package, `audit\compare.py`, `audit\check_invariants.py`). Custody
+`feat/custody-v1.3` @ `45d7440d` (observer 1.7.0, `custody-config.v15.json`).
+
+**Ingestion defect fixed.** The PCB answer (EXTRA, P2, 68 s, off camera)
+was collected but rejected on import because `source` was null. A
+`declared_removal` may now carry `source: null` (known part, unknown
+origin); the guide package lists it as unknown. Three stages, for the PCB:
+collected in `operator_answers.jsonl` (yes), imported as a memory entity
+(now yes, `dec-0009`), source resolved (no — the owner did not state it,
+and it is not asked again).
+
+**Replay by context.** `answers.py remap` maps an old answer only when
+exactly one rebuilt question has the same phase, kind and cell (or removal
+sites) and an overlapping window (IoU ≥ 0.5); a chosen candidate only to
+the one rebuilt candidate with the same sites. Result: 8 mapped (2 with
+re-identified candidates E-0071, E-0099), 2 dismissed false alarms without
+counterpart (eliminated, not replayed), 1 dismissal replayed (Q-P3-03),
+3 extra parts carried, 1 conflict: the red button's chosen candidate
+(E-0101, SRC-18 at 268/144 mm) is grouped in the rebuild with a 13 mm²
+neighbour (E-0100, SRC-1 + SRC-18); it is kept as the operator's
+declaration quoting the earlier choice, with no automatic link.
+
+| Part | Basis | Source | Stored |
+|---|---|---|---|
+| P1 screws (3 deposit records, group of 5 per owner) | operator | first: hole H2 (owner's witness-video statement); others: deep recessed holes of the back plate | cell 1 |
+| P2 back shell | operator | Gehäuse | off camera (16 s) |
+| P2 L / R | automatic | specific / coarse region (unchanged regions) | cell 8 / cell 11 |
+| P2 white membranes (R, then L) | operator | touch sensor link to L/R | cell 2 |
+| P2 PCB with cable | operator | **unknown** (not stated) | off camera (68 s) |
+| P3 RGBY membrane | operator | RGBY-Tasten | off camera (17 s) |
+| P3 D-pad membrane | operator | Steuerkreuz / D-Pad | cell 10 |
+| P3 D-pad | operator choosing automatic candidate E-0071 | coarse candidate (8 sites) | cell 7 |
+| P3 green / blue | automatic | specific | cell 3 / cell 6 |
+| P3 yellow B | operator choosing E-0099 | SRC-15 | cell 4 |
+| P3 red A | operator (replay conflict) | earlier choice E-0101 quoted, no link | cell 5 |
+| P3 Start/Select | operator | removal E-0104 | off camera |
+
+Old versus new: automatic observations 5 → 4; the P1 "H2" observation is
+removed (alignment artefact, §22); P2 L/R and P3 green/blue are kept with
+identical regions, notes and precision and point at the rebuilt
+evidence (hashes verified). Questions: P1 loses the two owner-confirmed
+false alarms and gains the first cell-1 deposit (formerly the artefact
+link), answered by the owner's H2 statement; P2/P3 unchanged. Parts 15 →
+16 (PCB added; screw group re-based on declared removals). Install order
+unchanged except the PCB now first in P2. All ten invariants pass
+(`audit\invariants.json`); the same checks run against v18 fail on the
+artefact observation, as intended. Remaining unknowns: PCB source; which
+screw went into which hole; screw count per deposit; red-button
+correspondence; no mechanical dependencies confirmed; P3 RGBY membrane at
+17 s puts it after the buttons on install.
+
+Reproducibility: `OUT=<empty dir> bash audit/rebuild.sh` (code main @
+`11285162`, custody `45d7440d`) was run into
+`C:\ANASTYLOS\data\session-runs-v20-verify2\FULL-01` and gives the same
+memory (36 events, equal apart from timestamps and path-bound result
+hashes), the same install order and no invariant violation.
+`session-runs-v20-verify` is an earlier check with unsorted group members,
+superseded. Hashes (prefix): `rebuild.sh` `7902d46eab6f0ff6`, `memory.jsonl` `9cb4a078b266f3de`,
+guide `session.json` `4a8dbaff3e77379d`. Recommendation: make `session-runs-v20` the
+active FULL-01 memory once the owner agrees; `session-runs-v18` stays as
+the historical record and is not deleted.

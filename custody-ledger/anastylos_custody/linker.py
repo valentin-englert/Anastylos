@@ -22,17 +22,30 @@ assignments differ, it stays ``ambiguous``. Hidden-movement reasons
 (overlaps, unobservable sources, sampling gaps, occupied cells) still make
 a deposit ``ambiguous`` whatever the assignments say; they are never
 resolved by elimination.
+
+Linker 1.2 (custody v1.3): declared external deposits
+(``custody-declared-deposits@1``) record parts the operator put somewhere
+the camera does not watch. Such a declaration closes a removal only when it
+names that removal's source (an event id or a site) with written evidence;
+the named removal must exist before the declared time and must not be
+closed twice or contradict an automatic link. A declaration without a named
+source closes nothing. A closed removal is no longer pending for deposits
+observed after the declaration. Every proposal states its ``autonomy``:
+``automatic``, or ``operator_assisted`` when a declared removal or any
+applied declaration could have shaped its candidate set; counts keep the
+two apart.
 """
 
 from __future__ import annotations
 
 LINKS_SCHEMA = "custody-links@1"
 DECLARED_SCHEMA = "custody-declared-removals@1"
+DECLARED_DEPOSITS_SCHEMA = "custody-declared-deposits@1"
 DEPOSIT_KINDS = ("appeared", "changed_while_occupied")
 SCOPE_NOTE = "exclusive only among inventoried sites and watched tray cells; parts taken from anywhere else are invisible to this check"
 
 
-def link(events_doc: dict, declared: dict | None = None) -> dict:
+def link(events_doc: dict, declared: dict | None = None, declared_deposits: dict | None = None) -> dict:
     events = events_doc["events"]
     removals = [_observed_removal(event) for event in events if event["kind"] == "site_changed"]
     if declared is not None:
@@ -42,24 +55,109 @@ def link(events_doc: dict, declared: dict | None = None) -> dict:
     blind_sites = _source_blind_spots(events_doc)
     gaps = events_doc["sampling"]["gaps_over_max"]
 
-    options = _assignment_options(deposits, removals)
+    externals = _resolve_declared_deposits(declared_deposits, removals) if declared_deposits is not None else []
+    closed = {item["removal"]["event"]: item["t_s"] for item in externals if item["status"] == "closes_removal"}
+    options = _assignment_options(deposits, removals, closed)
     proposals, linked = [], set()
     for deposit in deposits:
-        pending = [removal for removal in removals if removal["t_before_s"] < deposit["t_after_s"] and removal["event"] not in linked]
+        pending = [removal for removal in removals if removal["t_before_s"] < deposit["t_after_s"] and removal["event"] not in linked
+                   and not _closed_before(removal, closed, deposit["t_after_s"])]
         proposal = _judge(deposit, pending, deposits, removals, blind_sites, gaps)
         if proposal["status"] == "ambiguous":
             proposal = _by_elimination(proposal, options.get(deposit["id"]), deposit, deposits, removals, blind_sites, gaps)
         if proposal["status"] in ("candidate_temporal_exclusive", "candidate_by_elimination"):
             linked.add(proposal["removal"]["event"])
+        proposal["autonomy"] = _autonomy(proposal, deposit, externals)
         proposals.append(proposal)
-    orphans = [removal for removal in removals if removal["event"] not in linked]
-    return {
+    _flag_conflicts(proposals, externals)
+    linked = {p["removal"]["event"] for p in proposals if p["status"] in ("candidate_temporal_exclusive", "candidate_by_elimination")}
+    closed_events = {item["removal"]["event"] for item in externals if item["status"] == "closes_removal"}
+    orphans = [removal for removal in removals if removal["event"] not in linked and removal["event"] not in closed_events]
+    doc = {
         "schema": LINKS_SCHEMA,
         "scope_note": SCOPE_NOTE,
         "identity": "unverified: every proposal needs operator confirmation",
         "proposals": [{"id": f"L-{index:04d}", **proposal} for index, proposal in enumerate(proposals, 1)],
         "removals_without_linked_deposit": orphans,
         "source_blind_spots": blind_sites,
+        "counts": _counts(proposals, externals),
+    }
+    if declared_deposits is not None:
+        doc["declared_external_deposits"] = externals
+    return doc
+
+
+def _closed_before(removal: dict, closed: dict, t_s: float) -> bool:
+    return removal["event"] in closed and closed[removal["event"]] < t_s
+
+
+def _resolve_declared_deposits(declared: dict, removals: list[dict]) -> list[dict]:
+    """Validate operator-declared external deposits; only an explicitly named source closes a removal."""
+    if declared.get("schema") != DECLARED_DEPOSITS_SCHEMA:
+        raise SystemExit(f"declared deposits are not {DECLARED_DEPOSITS_SCHEMA}")
+    results, taken = [], {}
+    for item in sorted(declared["deposits"], key=lambda d: float(d["t_s"])):
+        for key in ("id", "location", "declared_by"):
+            if not str(item.get(key, "")).strip():
+                raise SystemExit(f"declared deposit {item.get('id')} has no {key!r}")
+        record = {"id": item["id"], "location": item["location"], "t_s": float(item["t_s"]), "basis": "operator_declared",
+                  "declared_by": item["declared_by"], "evidence": item.get("evidence")}
+        source = item.get("source") or {}
+        if not source:
+            results.append({**record, "status": "no_named_source", "note": "closes nothing; open removals stay open"})
+            continue
+        if not str(item.get("evidence", "")).strip():
+            results.append({**record, "status": "rejected", "note": "a named source needs written evidence"})
+            continue
+        before = [r for r in removals if r["t_before_s"] < record["t_s"]]
+        if "removal_event" in source:
+            match = [r for r in before if r["event"] == source["removal_event"]]
+        else:
+            match = sorted((r for r in before if r["site"] == source.get("site")), key=lambda r: r["t_after_s"])[-1:]
+        if not match:
+            results.append({**record, "status": "rejected", "note": f"no removal matching {source} before {record['t_s']} s"})
+            continue
+        removal = match[0]
+        if removal["event"] in taken:
+            results.append({**record, "status": "rejected", "removal": removal, "note": f"removal already closed by {taken[removal['event']]}"})
+            continue
+        taken[removal["event"]] = item["id"]
+        results.append({**record, "status": "closes_removal", "removal": removal})
+    return results
+
+
+def _autonomy(proposal: dict, deposit: dict, externals: list[dict]) -> str:
+    if proposal.get("removal", {}).get("basis") == "operator_declared":
+        return "operator_assisted"
+    shaped = any(item["status"] == "closes_removal" and item["t_s"] < deposit["t_after_s"] for item in externals)
+    return "operator_assisted" if shaped and proposal["status"].startswith("candidate") else "automatic"
+
+
+def _flag_conflicts(proposals: list[dict], externals: list[dict]) -> None:
+    """An operator closure of a removal that an automatic link already used is a contradiction, not a correction."""
+    for item in externals:
+        if item["status"] != "closes_removal":
+            continue
+        for proposal in proposals:
+            if proposal["status"].startswith("candidate") and proposal["removal"]["event"] == item["removal"]["event"]:
+                item["status"] = "conflict"
+                item["note"] = f"an automatic link already used this removal for {proposal['deposit']['zone']}"
+                proposal["status"] = "ambiguous"
+                proposal["reasons"] = [f"operator declared this removal deposited at {item['location']} ({item['id']})"]
+                proposal["candidates"] = [proposal.pop("removal")]
+
+
+def _counts(proposals: list[dict], externals: list[dict]) -> dict:
+    candidates = [p for p in proposals if p["status"].startswith("candidate")]
+    return {
+        "deposits": len(proposals),
+        "candidate_links": len(candidates),
+        "automatic_links": sum(p["autonomy"] == "automatic" for p in candidates),
+        "operator_assisted_links": sum(p["autonomy"] == "operator_assisted" for p in candidates),
+        "ambiguous": sum(p["status"] == "ambiguous" for p in proposals),
+        "unattributed": sum(p["status"] == "unattributed" for p in proposals),
+        "declared_closures": sum(item["status"] == "closes_removal" for item in externals),
+        "declarations_rejected_or_conflicting": sum(item["status"] in ("rejected", "conflict") for item in externals),
     }
 
 
@@ -98,7 +196,7 @@ def _judge(deposit: dict, pending: list[dict], deposits: list[dict], removals: l
 MAX_ASSIGNMENTS = 100_000
 
 
-def _assignment_options(deposits: list[dict], removals: list[dict]) -> dict[str, set | None]:
+def _assignment_options(deposits: list[dict], removals: list[dict], closed: dict | None = None) -> dict[str, set | None]:
     """deposit id -> removal events it takes across all valid assignments (None: too many to enumerate)."""
     options: dict[str, set] = {deposit["id"]: set() for deposit in deposits}
     count = 0
@@ -109,7 +207,8 @@ def _assignment_options(deposits: list[dict], removals: list[dict]) -> dict[str,
             count += 1
             return count <= MAX_ASSIGNMENTS
         deposit = deposits[index]
-        open_removals = [r["event"] for r in removals if r["t_before_s"] < deposit["t_after_s"] and r["event"] not in used]
+        open_removals = [r["event"] for r in removals if r["t_before_s"] < deposit["t_after_s"] and r["event"] not in used
+                         and not _closed_before(r, closed or {}, deposit["t_after_s"])]
         for event in open_removals or [None]:
             options[deposit["id"]].add(event)
             if not walk(index + 1, used | {event} if event else used):

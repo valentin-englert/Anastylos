@@ -64,10 +64,13 @@ def cmd_link(args) -> int:
     from anastylos_custody.linker import link
 
     declared = _read_json(args.declared_removals) if args.declared_removals else None
-    doc = link(_read_json(args.events), declared)
+    externals = _read_json(args.declared_deposits) if args.declared_deposits else None
+    doc = link(_read_json(args.events), declared, externals)
     doc["inputs"] = {"events": str(args.events), "events_sha256": _sha256(args.events),
                      "declared_removals": None if declared is None else str(args.declared_removals),
-                     "declared_removals_sha256": None if declared is None else _sha256(args.declared_removals)}
+                     "declared_removals_sha256": None if declared is None else _sha256(args.declared_removals),
+                     "declared_deposits": None if externals is None else str(args.declared_deposits),
+                     "declared_deposits_sha256": None if externals is None else _sha256(args.declared_deposits)}
     _write_json(Path(args.out), doc)
     for proposal in doc["proposals"]:
         deposit = proposal["deposit"]
@@ -145,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     linking = sub.add_parser("link", help="propose removal -> deposit custody links (never writes memory)")
     linking.add_argument("--events", type=Path, required=True)
     linking.add_argument("--declared-removals", type=Path, default=None, help="custody-declared-removals@1 JSON (operator-declared sources)")
+    linking.add_argument("--declared-deposits", type=Path, default=None, help="custody-declared-deposits@1 JSON (operator-declared deposits outside the watched cells)")
     linking.add_argument("--out", type=Path, required=True)
     linking.set_defaults(handler=cmd_link)
     export = sub.add_parser("export-pairs", help="write full-resolution keyframe pairs for change-detection")

@@ -135,6 +135,15 @@ never run by this module.
   - device realignments and optional traces.
 - `custody-links@1`: proposals, `removals_without_linked_deposit`, and
   `source_blind_spots`.
+- `custody-declared-deposits@1` (linker 1.2): operator-declared deposits
+  outside the watched cells, `{id, location, t_s, declared_by, evidence,
+  source?: {site | removal_event}}`. Only a declaration that names its
+  source with evidence closes that removal (for deposits observed after
+  `t_s`); without a named source it closes nothing; a named source with no
+  removal before `t_s`, a second closure of the same removal, or a closure
+  of a removal an automatic link already used is rejected or flagged as a
+  conflict. Links carry `autonomy` (`automatic` / `operator_assisted`) and
+  `counts` keep them apart. Command: `custody.py link … --declared-deposits <file>`.
 - `custody-declared-removals@1`, `custody-keyframes@1`,
   `custody-bindings@1`, `custody-gt/events@1` (for scoring).
 

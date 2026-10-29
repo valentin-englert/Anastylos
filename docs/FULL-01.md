@@ -449,5 +449,5 @@ Session runs (`C:\ANASTYLOS\data\session-runs-v16\`, `…-v16b\FULL-01`):
 
 FULL-01 memory written automatically: 3 phases, 5 observations with
 change-detection evidence, 5 evidence-based tray links; 11 open questions.
-The two P2 links are plausible from geometry but not yet confirmed by the
-owner's video review.
+The owner confirmed both P2 links from the video (2026-10-29): L went to
+cell 8, R to cell 11. Owner video review, not sealed ground truth.

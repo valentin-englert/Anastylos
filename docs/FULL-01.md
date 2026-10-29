@@ -26,10 +26,16 @@ After each removal or deposit: hands out of view for ~2 s. No speaking.
 | `FULL-01-P2.mp4` | transition | lift the controller out, open the shell, take out the PCB (with cable) and the back shell; parts that do not fit a cell go to a fixed place **outside** the sheet; place the front shell interior up in the nails; end with 10 s static (this is the P3 baseline pose) |
 | `FULL-01-P3.mp4` | front shell interior up | remove the remaining parts one at a time: face buttons, D-pad, Start/Select, membranes, shoulder parts; a part goes into an empty cell only if it lies fully inside it; otherwise to its fixed outside place |
 
-Cell use: one part per cell, never reuse a cell. Suggested: screws in
-cells 1–5, face buttons 6–9, small parts 10–12. Parts that do not fit:
-outside the sheet, each at its own labelled place (paper slips,
-`OUT-A`, `OUT-B`, …).
+Cell use (owner, 2026-10-29): twelve cells are not enough for one part
+per cell, so **all back-shell screws share one cell** and **the two
+identical white rubber nubs** (between the PCB sensor and the L/R buttons)
+**share one cell**; every other part that fits gets its own cell, and a
+cell is never reused for a different part type. Parts that do not fit go
+outside the sheet, each at its own labelled place (paper slips `OUT-A`,
+`OUT-B`, …). Expected consequence: only the first deposit into a shared
+cell can be linked; later ones are deposits into an occupied cell and stay
+`ambiguous` by the linker's rule, and identical parts in one cell are a
+compatible group, never individual identities.
 
 ## 3. Inventory policy
 

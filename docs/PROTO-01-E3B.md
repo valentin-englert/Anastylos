@@ -19,7 +19,7 @@ recessed or hidden fasteners, not generalisation beyond this device class.
 ## 2. Frozen software and configuration
 
 Pipeline commit `7b2606a7` (main); scoring tools commit `a76891bb`. No pipeline file changed between them
-(`git diff 7b2606a7 a76891bb` touches only `tools/proto-01/`). SHA-256 of the files as committed (LF):
+(`git diff 7b2606a7 a76891bb` touches only `tools/proto-01/` and `docs/FULL-01.md`). SHA-256 of the files as committed (LF):
 
 | File | SHA-256 |
 |---|---|

@@ -132,7 +132,7 @@ private fun CameraPreview(
 
     LaunchedEffect(Unit) {
         bound = try {
-            source.bind()
+            source.bindAsync()
         } catch (_: Exception) {
             false
         }

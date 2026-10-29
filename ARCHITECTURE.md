@@ -228,6 +228,21 @@ occlusion). Binding for every custody observer version after v1.2; v1.1
 
 | H2 | Spatial discovery is adaptive: grids or other sampling only propose candidate changes; discovered sources carry stable ids, mask geometry in device-relative coordinates, confidence and provenance; neighbouring proposals merge when they describe one persistent change and split only when independent changes are shown; geometry refinements are appended, never rewriting earlier evidence; uncertain segmentation or correspondence stays `ambiguous`/`unknown`. Assessment and next experiment: [`docs/P2-ADAPTIVE-DISCOVERY.md`](docs/P2-ADAPTIVE-DISCOVERY.md). | not implemented; E2-D uses a fixed 8 mm grid as an experimental baseline only |
 
+Proposed 2026-10-29, **not decided, not implemented**: additive Assembly
+Memory events for a complete disassembly (needed by FULL-01). Existing
+`observation` and `tray_link` stay unchanged; readers ignore unknown types
+until they opt in.
+
+| Proposed event | Fields | Why |
+|---|---|---|
+| `declared_removal` | `part_label` (operator's words), `source` (free text or `site_ref`), `phase`, `t_s` (optional), `declared_by`, `evidence_note`; no mm geometry required | parts without image evidence (back shell, PCB, membranes) |
+| `storage_link` | target `observation_id` or `declared_removal_id`, `location` (`cell-N` or free text such as `OUT-A`), `basis` (`evidence` / `human`) | storage outside tray cells |
+| `compatible_group` | `members` (ids), `basis` (`operator_statement` / `measured`), `measurement` (optional) | identical screws / nubs: interchangeable, no per-part identity |
+| `phase` | `label`, `pose` note, `starts_after` (event id or null) | ordering across pose changes (P1 → P2 → P3) |
+
+Every new event names its basis; operator-declared content is never
+counted as automatic evidence.
+
 Implementation order: this section, then `SCHEMA.md`, then
 `validate.py` / `match.py` with tests, then producers. No observation
 file in the canonical format may be produced before V1, V2 and V4 are

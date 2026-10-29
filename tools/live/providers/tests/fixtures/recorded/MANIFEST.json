@@ -1,0 +1,26 @@
+{
+ "schema": "anastylos-fixture-manifest@1",
+ "inputs": "synthetic (providers/smoke.py)",
+ "files": [
+  {
+   "file": "5e76e741395e1b9be87aac61929d2fab82118c940ecfb18d3217259b75dabef6.json",
+   "source": "C:\\ANASTYLOS\\data\\live-dev\\C\\smoke-20261029-01\\cache\\5e76e741395e1b9be87aac61929d2fab82118c940ecfb18d3217259b75dabef6.json",
+   "sha256": "51bedc158670d03ada18989feead8e76237ad8f67aa67804bb8c8faf4111f920"
+  },
+  {
+   "file": "dd3c050060be1af3e7b46115110869948db544d7c6642ce70ff6426f7b2b8e45.json",
+   "source": "C:\\ANASTYLOS\\data\\live-dev\\C\\smoke-20261029-01\\cache\\dd3c050060be1af3e7b46115110869948db544d7c6642ce70ff6426f7b2b8e45.json",
+   "sha256": "01799d3cc0c83fb798f8d95f0ac4c03db0ef5f73519f18ccd4d7319e445ae614"
+  },
+  {
+   "file": "edf65bcea08f49129b7d63dadce3d0e561b8b7ad8cfe5d23e469a39433e2279a.json",
+   "source": "C:\\ANASTYLOS\\data\\live-dev\\C\\smoke-20261029-01\\cache\\edf65bcea08f49129b7d63dadce3d0e561b8b7ad8cfe5d23e469a39433e2279a.json",
+   "sha256": "b14af75444a77bf3ac47e1de282c0416cd9ecfb5a79c956fc9e95744c303f322"
+  },
+  {
+   "file": "ff1ad49bf6c53d06e0c4cf7cfc1d65ba7b364bd0260b7045a10c8aba58149b13.json",
+   "source": "C:\\ANASTYLOS\\data\\live-dev\\C\\smoke-20261029-01\\cache\\ff1ad49bf6c53d06e0c4cf7cfc1d65ba7b364bd0260b7045a10c8aba58149b13.json",
+   "sha256": "db99b436607bfb671d4f8f62de761c74206272b8d00a9c0d956359a008f15acd"
+  }
+ ]
+}

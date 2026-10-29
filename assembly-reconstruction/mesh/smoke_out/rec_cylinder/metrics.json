@@ -1,0 +1,39 @@
+{
+  "accuracy_within_tau": 0.71865,
+  "bbox_dims_abs_err_mm": [
+    0.125,
+    0.125,
+    4.0
+  ],
+  "bbox_dims_gt_mm": [
+    40.0,
+    40.0,
+    40.0
+  ],
+  "bbox_dims_max_abs_err_mm": 4.0,
+  "bbox_dims_rec_mm": [
+    39.875,
+    39.875,
+    44.0
+  ],
+  "chamfer_gt_to_rec_mm": 0.837096830297976,
+  "chamfer_rec_to_gt_mm": 0.8529317275298359,
+  "chamfer_symmetric_mm": 0.8450142789139059,
+  "completeness_within_tau": 0.7334,
+  "faces": 41868,
+  "n_samples": 20000,
+  "scene": "cylinder",
+  "scene_params": {
+    "h": 40.0,
+    "r": 20.0,
+    "segments": 64.0
+  },
+  "seed": 0,
+  "tau_mm": 1.0,
+  "vertices": 20936,
+  "volume_abs_err_mm3": 5261.902999920079,
+  "volume_gt_mm3": 50265.482457436694,
+  "volume_rec_mm3": 55527.38545735677,
+  "volume_rel_err": 0.10468223406341919,
+  "volume_watertight": true
+}

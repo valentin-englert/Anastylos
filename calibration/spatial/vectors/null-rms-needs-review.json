@@ -1,0 +1,1 @@
+{"expect_metric_ready": false, "expect_reasons_any": ["NULL_RMS"], "expect_verdict": "needs_review", "mutations": [{"op": "set", "path": ["pose", "metrics", "rms_px"], "value": null}], "name": "null-rms-needs-review"}

@@ -1,0 +1,160 @@
+{
+  "algorithm_version": "mesh-vh-0.1.0",
+  "inputs": {
+    "image_sha256": [
+      "0b566071035769e44f0c29f533ab13ceb6a87f1cfcbc8ac2f075666e1c913f20",
+      "dd8a3e3ba07f2bb88ad193b4ebbbe23f32943ee691f82b1bcdf30a050e30fda8",
+      "a4a0932d9edc94f0653bfc3a646650eeeb96eafacf269c3f648bd077018567f4",
+      "7053600d83ea6d6473d292a124fd496bb7e3a33262f4d719755f3926482a8653",
+      "9fef68ed54ff28a571123f3007db4be591e91578673443c4632b702dbf1ed63d",
+      "bf32917323e8680ed177ee720ec72fecfcc385dc577d1fd042e7fc1fa8f3eb18",
+      "23e75fd11406284a26019485049d4cf0a5525b1859c923681b25d951f9986684",
+      "80bae6663dde886b6d9cf8d1d165f2fdb8a98716d10b5f9d34765c73693d60db"
+    ],
+    "mask_provenance": "synthetic",
+    "mask_sha256": [
+      "11f13badb9b02b9ffa94faa5e7631a7ded041644336c5ab15479cadfd1df6815",
+      "daa39000b63eac93ec99e9702d4113936f556123d3a21dc20bb1ab0c6ec5a220",
+      "372fdbc0d1ecf13cd1b9147f887944d652414b8b4c9dd21c1e11eb4fa1be5588",
+      "a79b6f7db94924af088efae881e5cbbc9f99d2f063c3166d38e675716b41d476",
+      "00e1ba03f322100731a4494bb439a9ad30a3c0410877a0fe6ddba3a16a6aa9e8",
+      "f21de103b2879ba8808cbebe53be5c7f466c6d760c7b001c534134eb130c42ae",
+      "6ba8e79e5d46734dd12f5816b42fbd1f773c127bf350b6394081da6ca869fd91",
+      "e1546d0d7e9a5d346c0c3ddcf8915ba172e3450405862e467db8359de7d73cc1"
+    ],
+    "pose_epochs": [
+      "synthetic-000",
+      "synthetic-001",
+      "synthetic-002",
+      "synthetic-003",
+      "synthetic-004",
+      "synthetic-005",
+      "synthetic-006",
+      "synthetic-007"
+    ],
+    "view_count": 8
+  },
+  "metrics": {
+    "baseline_deg": 130.0,
+    "dims": [
+      64,
+      45,
+      45
+    ],
+    "mean_observed_per_voxel": 8.0,
+    "min_baseline_deg": 5.0,
+    "min_observed": 2,
+    "observation_fraction": 1.0,
+    "occupied_fraction": 0.5782561728395061,
+    "occupied_voxels": 74942,
+    "per_view_observed_voxels": [
+      129600,
+      129600,
+      129600,
+      129600,
+      129600,
+      129600,
+      129600,
+      129600
+    ],
+    "surface": {
+      "components": 1,
+      "dims": [
+        64,
+        45,
+        45
+      ],
+      "faces": 26068,
+      "level": 0.5,
+      "occupied_voxels": 74942,
+      "raw_faces": 26068,
+      "raw_vertices": 13036,
+      "vertices": 13036,
+      "voxel_size_mm": 1.03125,
+      "watertight": true
+    },
+    "total_voxels": 129600,
+    "views": 8,
+    "voxels_meeting_min_observed": 129600
+  },
+  "non_normative": true,
+  "outputs": {
+    "ply": {
+      "faces": 26068,
+      "path": "mesh.ply",
+      "sha256": "7135790d6de0432ff804341f574fbc25963be0139c79d9ac0e8d6fb54be8ac04",
+      "vertices": 13036
+    },
+    "stl": {
+      "faces": 26068,
+      "path": "mesh.stl",
+      "sha256": "5daccb0ed6dd713addd68f864cb33f0fdfc5fac1b6f50a3f645e745396b90d37",
+      "vertices": 13036
+    }
+  },
+  "params": {
+    "margin": 0.05,
+    "min_observed": 2,
+    "resolution": 64,
+    "ring": {
+      "azimuth_start_deg": 0.0,
+      "distance_mm": 343.5921354681384,
+      "elevations_deg": [
+        25.0,
+        45.0
+      ],
+      "focal_px": 800.0,
+      "height": 240,
+      "n_views": 8,
+      "roi_center": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "roi_radius": 41.23105625617661,
+      "width": 320
+    },
+    "scene": "stepped",
+    "scene_params": {
+      "l1": 40.0,
+      "l2": 25.0,
+      "ox": 10.0,
+      "oy": -5.0,
+      "t1": 20.0,
+      "t2": 20.0,
+      "w1": 60.0,
+      "w2": 30.0
+    }
+  },
+  "schema": "mesh-evidence-v0",
+  "timing_ms": {
+    "carve_ms": 150.0635999836959,
+    "export_ms": 4.697599972132593,
+    "load_ms": 108.82879997370765,
+    "surface_ms": 63.62730002729222,
+    "total_ms": 327.21729995682836
+  },
+  "title": "NON-NORMATIVE mesh-evidence-v0",
+  "voxels": {
+    "bounds_mm": [
+      [
+        -33.0,
+        33.0
+      ],
+      [
+        -23.0,
+        23.0
+      ],
+      [
+        -3.0,
+        43.0
+      ]
+    ],
+    "dims": [
+      64,
+      45,
+      45
+    ],
+    "voxel_size_mm": 1.03125
+  }
+}

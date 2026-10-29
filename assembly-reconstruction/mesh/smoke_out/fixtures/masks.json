@@ -1,0 +1,82 @@
+[
+  {
+    "file": "masks/000.png",
+    "foreground_px": 13588,
+    "height": 240,
+    "image_file": "images/000.png",
+    "image_sha256": "631f362241e2f84bef8f0ce2d96516a2c2d4c286e6935dcb881ba201bb2c48c0",
+    "provenance": "synthetic",
+    "sha256": "729275ceb102a366fe658aceff1b285716122b41b644145615c719c4d2058b1c",
+    "width": 320
+  },
+  {
+    "file": "masks/001.png",
+    "foreground_px": 19352,
+    "height": 240,
+    "image_file": "images/001.png",
+    "image_sha256": "1e0604ff94904e034d4373335f92f36bef7519ec4eee15f2f9bce4a0f34d429a",
+    "provenance": "synthetic",
+    "sha256": "854b31159f6328aad082d20a7391a1f206fe05360f84aea40961a0d809d9471b",
+    "width": 320
+  },
+  {
+    "file": "masks/002.png",
+    "foreground_px": 16678,
+    "height": 240,
+    "image_file": "images/002.png",
+    "image_sha256": "5a45bf88e5455593678fca5db90af2ca39e6b1e0021ca674919406c92323d50f",
+    "provenance": "synthetic",
+    "sha256": "693b8935ac7271d0975b221fdd75234b2d23569d05350cbad1bba560ffe02ad1",
+    "width": 320
+  },
+  {
+    "file": "masks/003.png",
+    "foreground_px": 19352,
+    "height": 240,
+    "image_file": "images/003.png",
+    "image_sha256": "1d034407e111b661490b4ffd957b090daf9fc5fc2bdd96e92bc261c0c286c689",
+    "provenance": "synthetic",
+    "sha256": "9841df1780fff4bc3414ad06c6e2cebf6c5e66fe317b6c7a4a52318d6999ed42",
+    "width": 320
+  },
+  {
+    "file": "masks/004.png",
+    "foreground_px": 13588,
+    "height": 240,
+    "image_file": "images/004.png",
+    "image_sha256": "631f362241e2f84bef8f0ce2d96516a2c2d4c286e6935dcb881ba201bb2c48c0",
+    "provenance": "synthetic",
+    "sha256": "729275ceb102a366fe658aceff1b285716122b41b644145615c719c4d2058b1c",
+    "width": 320
+  },
+  {
+    "file": "masks/005.png",
+    "foreground_px": 19352,
+    "height": 240,
+    "image_file": "images/005.png",
+    "image_sha256": "1e0604ff94904e034d4373335f92f36bef7519ec4eee15f2f9bce4a0f34d429a",
+    "provenance": "synthetic",
+    "sha256": "854b31159f6328aad082d20a7391a1f206fe05360f84aea40961a0d809d9471b",
+    "width": 320
+  },
+  {
+    "file": "masks/006.png",
+    "foreground_px": 16678,
+    "height": 240,
+    "image_file": "images/006.png",
+    "image_sha256": "5a45bf88e5455593678fca5db90af2ca39e6b1e0021ca674919406c92323d50f",
+    "provenance": "synthetic",
+    "sha256": "693b8935ac7271d0975b221fdd75234b2d23569d05350cbad1bba560ffe02ad1",
+    "width": 320
+  },
+  {
+    "file": "masks/007.png",
+    "foreground_px": 19352,
+    "height": 240,
+    "image_file": "images/007.png",
+    "image_sha256": "1d034407e111b661490b4ffd957b090daf9fc5fc2bdd96e92bc261c0c286c689",
+    "provenance": "synthetic",
+    "sha256": "9841df1780fff4bc3414ad06c6e2cebf6c5e66fe317b6c7a4a52318d6999ed42",
+    "width": 320
+  }
+]

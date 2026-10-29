@@ -1,0 +1,2023 @@
+{
+  "algorithm_version": "mesh-vh-0.1.0",
+  "configs": {
+    "dev-box-r144": {
+      "profile": {
+        "azimuth_start_deg": 0.0,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "dev-box-r144",
+        "resolution": 144,
+        "scene": "box",
+        "scene_params": {},
+        "seed": 0,
+        "split": "dev",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            5.083333333333329,
+            4.916666666666664,
+            6.208333333333336
+          ],
+          "bbox_max_abs_err_mm": 6.208333333333336,
+          "bbox_rec_x_mm": 65.08333333333333,
+          "bbox_rec_y_mm": 44.916666666666664,
+          "bbox_rec_z_mm": 36.208333333333336,
+          "carve_ms": 3523.969300033059,
+          "chamfer_symmetric_mm": 1.6618082945558894,
+          "completeness_at_1mm": 0.3367,
+          "components": 1,
+          "config": "dev-box-r144",
+          "dim_x": 144,
+          "dim_y": 101,
+          "dim_z": 79,
+          "eval_ms": 219.05030001653358,
+          "export_ms": 21.694499999284744,
+          "faces": 126616,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r144/rep0/mesh.ply",
+          "occupied_voxels": 918292,
+          "peak_bytes": 225839104,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 2405948,
+          "render_ms": 1582.5385999633,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 144,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 6330884,
+          "surface_ms": 641.7052999604493,
+          "total_ms": 5769.907699956093,
+          "total_voxels": 1148976,
+          "verts": 63310,
+          "views": 8,
+          "volume_abs_err_mm3": 16401.07276596257,
+          "volume_rel_err": 0.2277926773050357,
+          "voxel_size_mm": 0.4583333333333333,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            5.083333333333329,
+            4.916666666666664,
+            6.208333333333336
+          ],
+          "bbox_max_abs_err_mm": 6.208333333333336,
+          "bbox_rec_x_mm": 65.08333333333333,
+          "bbox_rec_y_mm": 44.916666666666664,
+          "bbox_rec_z_mm": 36.208333333333336,
+          "carve_ms": 2537.0388999581337,
+          "chamfer_symmetric_mm": 1.6618082945558894,
+          "completeness_at_1mm": 0.3367,
+          "components": 1,
+          "config": "dev-box-r144",
+          "dim_x": 144,
+          "dim_y": 101,
+          "dim_z": 79,
+          "eval_ms": 160.0058000185527,
+          "export_ms": 11.920600023586303,
+          "faces": 126616,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r144/rep1/mesh.ply",
+          "occupied_voxels": 918292,
+          "peak_bytes": 225838333,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 2405948,
+          "render_ms": 1188.8060999917798,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 144,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 6330884,
+          "surface_ms": 435.62060000840575,
+          "total_ms": 4173.3861999819055,
+          "total_voxels": 1148976,
+          "verts": 63310,
+          "views": 8,
+          "volume_abs_err_mm3": 16401.07276596257,
+          "volume_rel_err": 0.2277926773050357,
+          "voxel_size_mm": 0.4583333333333333,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            5.083333333333329,
+            4.916666666666664,
+            6.208333333333336
+          ],
+          "bbox_max_abs_err_mm": 6.208333333333336,
+          "bbox_rec_x_mm": 65.08333333333333,
+          "bbox_rec_y_mm": 44.916666666666664,
+          "bbox_rec_z_mm": 36.208333333333336,
+          "carve_ms": 2519.2010999890044,
+          "chamfer_symmetric_mm": 1.6618082945558894,
+          "completeness_at_1mm": 0.3367,
+          "components": 1,
+          "config": "dev-box-r144",
+          "dim_x": 144,
+          "dim_y": 101,
+          "dim_z": 79,
+          "eval_ms": 152.84150000661612,
+          "export_ms": 13.535099977161735,
+          "faces": 126616,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r144/rep2/mesh.ply",
+          "occupied_voxels": 918292,
+          "peak_bytes": 225838456,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 2405948,
+          "render_ms": 1315.266000048723,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 144,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 6330884,
+          "surface_ms": 445.73949999175966,
+          "total_ms": 4293.741700006649,
+          "total_voxels": 1148976,
+          "verts": 63310,
+          "views": 8,
+          "volume_abs_err_mm3": 16401.07276596257,
+          "volume_rel_err": 0.2277926773050357,
+          "voxel_size_mm": 0.4583333333333333,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 6.208333333333336,
+          "mean": 6.208333333333336,
+          "min": 6.208333333333336,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 3523.969300033059,
+          "mean": 2860.069766660066,
+          "min": 2519.2010999890044,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 1.6618082945558894,
+          "mean": 1.6618082945558894,
+          "min": 1.6618082945558894,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.3367,
+          "mean": 0.3367,
+          "min": 0.3367,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 219.05030001653358,
+          "mean": 177.2992000139008,
+          "min": 152.84150000661612,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 21.694499999284744,
+          "mean": 15.71673333334426,
+          "min": 11.920600023586303,
+          "n": 3
+        },
+        "faces": {
+          "max": 126616.0,
+          "mean": 126616.0,
+          "min": 126616.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 918292.0,
+          "mean": 918292.0,
+          "min": 918292.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 225839104.0,
+          "mean": 225838631.0,
+          "min": 225838333.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 2405948.0,
+          "mean": 2405948.0,
+          "min": 2405948.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 1582.5385999633,
+          "mean": 1362.2035666679342,
+          "min": 1188.8060999917798,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 6330884.0,
+          "mean": 6330884.0,
+          "min": 6330884.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 641.7052999604493,
+          "mean": 507.6884666535382,
+          "min": 435.62060000840575,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 5769.907699956093,
+          "mean": 4745.678533314883,
+          "min": 4173.3861999819055,
+          "n": 3
+        },
+        "verts": {
+          "max": 63310.0,
+          "mean": 63310.0,
+          "min": 63310.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 16401.07276596257,
+          "mean": 16401.07276596257,
+          "min": 16401.07276596257,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.2277926773050357,
+          "mean": 0.2277926773050357,
+          "min": 0.2277926773050357,
+          "n": 3
+        }
+      }
+    },
+    "dev-box-r48": {
+      "profile": {
+        "azimuth_start_deg": 0.0,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "dev-box-r48",
+        "resolution": 48,
+        "scene": "box",
+        "scene_params": {},
+        "seed": 0,
+        "split": "dev",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            3.25,
+            5.375,
+            7.125
+          ],
+          "bbox_max_abs_err_mm": 7.125,
+          "bbox_rec_x_mm": 63.25,
+          "bbox_rec_y_mm": 45.375,
+          "bbox_rec_z_mm": 37.125,
+          "carve_ms": 137.03560002613813,
+          "chamfer_symmetric_mm": 1.74367144595875,
+          "completeness_at_1mm": 0.3266,
+          "components": 1,
+          "config": "dev-box-r48",
+          "dim_x": 48,
+          "dim_y": 34,
+          "dim_z": 27,
+          "eval_ms": 92.85220003221184,
+          "export_ms": 9.415200038347393,
+          "faces": 13924,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r48/rep0/mesh.ply",
+          "occupied_voxels": 34360,
+          "peak_bytes": 15998779,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 264798,
+          "render_ms": 1236.495599965565,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 48,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 696284,
+          "surface_ms": 365.00469996826723,
+          "total_ms": 1747.9510999983177,
+          "total_voxels": 44064,
+          "verts": 6964,
+          "views": 8,
+          "volume_abs_err_mm3": 17196.06380208333,
+          "volume_rel_err": 0.23883421947337957,
+          "voxel_size_mm": 1.375,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            3.25,
+            5.375,
+            7.125
+          ],
+          "bbox_max_abs_err_mm": 7.125,
+          "bbox_rec_x_mm": 63.25,
+          "bbox_rec_y_mm": 45.375,
+          "bbox_rec_z_mm": 37.125,
+          "carve_ms": 55.999400035943836,
+          "chamfer_symmetric_mm": 1.74367144595875,
+          "completeness_at_1mm": 0.3266,
+          "components": 1,
+          "config": "dev-box-r48",
+          "dim_x": 48,
+          "dim_y": 34,
+          "dim_z": 27,
+          "eval_ms": 74.2842000327073,
+          "export_ms": 3.7293999921530485,
+          "faces": 13924,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r48/rep1/mesh.ply",
+          "occupied_voxels": 34360,
+          "peak_bytes": 15900359,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 264798,
+          "render_ms": 1607.244000013452,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 48,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 696284,
+          "surface_ms": 54.70799998147413,
+          "total_ms": 1721.680800023023,
+          "total_voxels": 44064,
+          "verts": 6964,
+          "views": 8,
+          "volume_abs_err_mm3": 17196.06380208333,
+          "volume_rel_err": 0.23883421947337957,
+          "voxel_size_mm": 1.375,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            3.25,
+            5.375,
+            7.125
+          ],
+          "bbox_max_abs_err_mm": 7.125,
+          "bbox_rec_x_mm": 63.25,
+          "bbox_rec_y_mm": 45.375,
+          "bbox_rec_z_mm": 37.125,
+          "carve_ms": 80.65720001468435,
+          "chamfer_symmetric_mm": 1.74367144595875,
+          "completeness_at_1mm": 0.3266,
+          "components": 1,
+          "config": "dev-box-r48",
+          "dim_x": 48,
+          "dim_y": 34,
+          "dim_z": 27,
+          "eval_ms": 44.6595000103116,
+          "export_ms": 2.9608000186271966,
+          "faces": 13924,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r48/rep2/mesh.ply",
+          "occupied_voxels": 34360,
+          "peak_bytes": 15897351,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 264798,
+          "render_ms": 1445.300999970641,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 48,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 696284,
+          "surface_ms": 34.52899999683723,
+          "total_ms": 1563.4480000007898,
+          "total_voxels": 44064,
+          "verts": 6964,
+          "views": 8,
+          "volume_abs_err_mm3": 17196.06380208333,
+          "volume_rel_err": 0.23883421947337957,
+          "voxel_size_mm": 1.375,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 7.125,
+          "mean": 7.125,
+          "min": 7.125,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 137.03560002613813,
+          "mean": 91.23073335892211,
+          "min": 55.999400035943836,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 1.74367144595875,
+          "mean": 1.74367144595875,
+          "min": 1.74367144595875,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.3266,
+          "mean": 0.3266,
+          "min": 0.3266,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 92.85220003221184,
+          "mean": 70.59863335841025,
+          "min": 44.6595000103116,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 9.415200038347393,
+          "mean": 5.368466683042546,
+          "min": 2.9608000186271966,
+          "n": 3
+        },
+        "faces": {
+          "max": 13924.0,
+          "mean": 13924.0,
+          "min": 13924.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 34360.0,
+          "mean": 34360.0,
+          "min": 34360.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 15998779.0,
+          "mean": 15932163.0,
+          "min": 15897351.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 264798.0,
+          "mean": 264798.0,
+          "min": 264798.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 1607.244000013452,
+          "mean": 1429.6801999832194,
+          "min": 1236.495599965565,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 696284.0,
+          "mean": 696284.0,
+          "min": 696284.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 365.00469996826723,
+          "mean": 151.41389998219287,
+          "min": 34.52899999683723,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 1747.9510999983177,
+          "mean": 1677.6933000073768,
+          "min": 1563.4480000007898,
+          "n": 3
+        },
+        "verts": {
+          "max": 6964.0,
+          "mean": 6964.0,
+          "min": 6964.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 17196.06380208333,
+          "mean": 17196.06380208333,
+          "min": 17196.06380208333,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.23883421947337957,
+          "mean": 0.23883421947337957,
+          "min": 0.23883421947337957,
+          "n": 3
+        }
+      }
+    },
+    "dev-box-r96": {
+      "profile": {
+        "azimuth_start_deg": 0.0,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "dev-box-r96",
+        "resolution": 96,
+        "scene": "box",
+        "scene_params": {},
+        "seed": 0,
+        "split": "dev",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            4.625,
+            4.6875,
+            6.4375
+          ],
+          "bbox_max_abs_err_mm": 6.4375,
+          "bbox_rec_x_mm": 64.625,
+          "bbox_rec_y_mm": 44.6875,
+          "bbox_rec_z_mm": 36.4375,
+          "carve_ms": 1043.493999983184,
+          "chamfer_symmetric_mm": 1.6840873038831932,
+          "completeness_at_1mm": 0.3252,
+          "components": 1,
+          "config": "dev-box-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 53,
+          "eval_ms": 185.10990001959726,
+          "export_ms": 9.821099985856563,
+          "faces": 56132,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r96/rep0/mesh.ply",
+          "occupied_voxels": 273090,
+          "peak_bytes": 67455496,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1066751,
+          "render_ms": 1963.9373000245541,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 96,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 2806684,
+          "surface_ms": 215.26800002902746,
+          "total_ms": 3232.520400022622,
+          "total_voxels": 340896,
+          "verts": 28068,
+          "views": 8,
+          "volume_abs_err_mm3": 16711.15541585286,
+          "volume_rel_err": 0.23209938077573417,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            4.625,
+            4.6875,
+            6.4375
+          ],
+          "bbox_max_abs_err_mm": 6.4375,
+          "bbox_rec_x_mm": 64.625,
+          "bbox_rec_y_mm": 44.6875,
+          "bbox_rec_z_mm": 36.4375,
+          "carve_ms": 1115.1898999814875,
+          "chamfer_symmetric_mm": 1.6840873038831932,
+          "completeness_at_1mm": 0.3252,
+          "components": 1,
+          "config": "dev-box-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 53,
+          "eval_ms": 84.66900000348687,
+          "export_ms": 11.391900014132261,
+          "faces": 56132,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r96/rep1/mesh.ply",
+          "occupied_voxels": 273090,
+          "peak_bytes": 67454847,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1066751,
+          "render_ms": 1956.1917000100948,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 96,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 2806684,
+          "surface_ms": 226.34960000868887,
+          "total_ms": 3309.1231000144035,
+          "total_voxels": 340896,
+          "verts": 28068,
+          "views": 8,
+          "volume_abs_err_mm3": 16711.15541585286,
+          "volume_rel_err": 0.23209938077573417,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.00000000000003,
+          "bbox_dims_abs_err_mm": [
+            4.625,
+            4.6875,
+            6.4375
+          ],
+          "bbox_max_abs_err_mm": 6.4375,
+          "bbox_rec_x_mm": 64.625,
+          "bbox_rec_y_mm": 44.6875,
+          "bbox_rec_z_mm": 36.4375,
+          "carve_ms": 1138.8223000103608,
+          "chamfer_symmetric_mm": 1.6840873038831932,
+          "completeness_at_1mm": 0.3252,
+          "components": 1,
+          "config": "dev-box-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 53,
+          "eval_ms": 84.68679996440187,
+          "export_ms": 18.299700052011758,
+          "faces": 56132,
+          "input_sha256": "63acb67cdfa1356a79588e6fd50df95a7ed86237045ab82ec4d18eb72bb84da8",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/dev-box-r96/rep2/mesh.ply",
+          "occupied_voxels": 273090,
+          "peak_bytes": 67454872,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1066751,
+          "render_ms": 1825.176200014539,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 96,
+          "scene": "box",
+          "seed": 0,
+          "split": "dev",
+          "status": "ok",
+          "stl_bytes": 2806684,
+          "surface_ms": 230.73759995168075,
+          "total_ms": 3213.0358000285923,
+          "total_voxels": 340896,
+          "verts": 28068,
+          "views": 8,
+          "volume_abs_err_mm3": 16711.15541585286,
+          "volume_rel_err": 0.23209938077573417,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 6.4375,
+          "mean": 6.4375,
+          "min": 6.4375,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 1138.8223000103608,
+          "mean": 1099.1687333250109,
+          "min": 1043.493999983184,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 1.6840873038831932,
+          "mean": 1.6840873038831932,
+          "min": 1.6840873038831932,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.3252,
+          "mean": 0.3252,
+          "min": 0.3252,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 185.10990001959726,
+          "mean": 118.155233329162,
+          "min": 84.66900000348687,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 18.299700052011758,
+          "mean": 13.170900017333528,
+          "min": 9.821099985856563,
+          "n": 3
+        },
+        "faces": {
+          "max": 56132.0,
+          "mean": 56132.0,
+          "min": 56132.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 273090.0,
+          "mean": 273090.0,
+          "min": 273090.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 67455496.0,
+          "mean": 67455071.66666667,
+          "min": 67454847.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 1066751.0,
+          "mean": 1066751.0,
+          "min": 1066751.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 1963.9373000245541,
+          "mean": 1915.1017333497293,
+          "min": 1825.176200014539,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 2806684.0,
+          "mean": 2806684.0,
+          "min": 2806684.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 230.73759995168075,
+          "mean": 224.11839999646568,
+          "min": 215.26800002902746,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 3309.1231000144035,
+          "mean": 3251.559766688539,
+          "min": 3213.0358000285923,
+          "n": 3
+        },
+        "verts": {
+          "max": 28068.0,
+          "mean": 28068.0,
+          "min": 28068.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 16711.15541585286,
+          "mean": 16711.15541585286,
+          "min": 16711.15541585286,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.23209938077573417,
+          "mean": 0.2320993807757342,
+          "min": 0.23209938077573417,
+          "n": 3
+        }
+      }
+    },
+    "heldout-rotated-stepped-r96": {
+      "profile": {
+        "azimuth_start_deg": 37.5,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "heldout-rotated-stepped-r96",
+        "resolution": 96,
+        "scene": "stepped",
+        "scene_params": {},
+        "seed": 7,
+        "split": "held-out",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            0.5,
+            1.9375,
+            6.0625
+          ],
+          "bbox_max_abs_err_mm": 6.0625,
+          "bbox_rec_x_mm": 60.5,
+          "bbox_rec_y_mm": 41.9375,
+          "bbox_rec_z_mm": 46.0625,
+          "carve_ms": 904.5126999844797,
+          "chamfer_symmetric_mm": 2.4856451137810742,
+          "completeness_at_1mm": 0.3789,
+          "components": 1,
+          "config": "heldout-rotated-stepped-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 67,
+          "eval_ms": 98.18570001516491,
+          "export_ms": 8.138800039887428,
+          "faces": 64994,
+          "input_sha256": "b0ca33ad727b95e151097eb72ce797b88db02d892fb884935d0c8dd60782c628",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/heldout-rotated-stepped-r96/rep0/mesh.ply",
+          "occupied_voxels": 255877,
+          "peak_bytes": 85105125,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1235105,
+          "render_ms": 1771.8065000372007,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 96,
+          "scene": "stepped",
+          "seed": 7,
+          "split": "held-out",
+          "status": "ok",
+          "stl_bytes": 3249784,
+          "surface_ms": 189.33209998067468,
+          "total_ms": 2873.7901000422426,
+          "total_voxels": 430944,
+          "verts": 32497,
+          "views": 8,
+          "volume_abs_err_mm3": 20131.621938069657,
+          "volume_rel_err": 0.31954955457253426,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            0.5,
+            1.9375,
+            6.0625
+          ],
+          "bbox_max_abs_err_mm": 6.0625,
+          "bbox_rec_x_mm": 60.5,
+          "bbox_rec_y_mm": 41.9375,
+          "bbox_rec_z_mm": 46.0625,
+          "carve_ms": 732.0095999748446,
+          "chamfer_symmetric_mm": 2.4856451137810742,
+          "completeness_at_1mm": 0.3789,
+          "components": 1,
+          "config": "heldout-rotated-stepped-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 67,
+          "eval_ms": 122.50669999048114,
+          "export_ms": 7.507000002078712,
+          "faces": 64994,
+          "input_sha256": "b0ca33ad727b95e151097eb72ce797b88db02d892fb884935d0c8dd60782c628",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/heldout-rotated-stepped-r96/rep1/mesh.ply",
+          "occupied_voxels": 255877,
+          "peak_bytes": 85104623,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1235105,
+          "render_ms": 1504.5385000412352,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 96,
+          "scene": "stepped",
+          "seed": 7,
+          "split": "held-out",
+          "status": "ok",
+          "stl_bytes": 3249784,
+          "surface_ms": 170.0950000085868,
+          "total_ms": 2414.1501000267453,
+          "total_voxels": 430944,
+          "verts": 32497,
+          "views": 8,
+          "volume_abs_err_mm3": 20131.621938069657,
+          "volume_rel_err": 0.31954955457253426,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            0.5,
+            1.9375,
+            6.0625
+          ],
+          "bbox_max_abs_err_mm": 6.0625,
+          "bbox_rec_x_mm": 60.5,
+          "bbox_rec_y_mm": 41.9375,
+          "bbox_rec_z_mm": 46.0625,
+          "carve_ms": 707.2886000387371,
+          "chamfer_symmetric_mm": 2.4856451137810742,
+          "completeness_at_1mm": 0.3789,
+          "components": 1,
+          "config": "heldout-rotated-stepped-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 67,
+          "eval_ms": 96.98740002932027,
+          "export_ms": 7.897800009232014,
+          "faces": 64994,
+          "input_sha256": "b0ca33ad727b95e151097eb72ce797b88db02d892fb884935d0c8dd60782c628",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/heldout-rotated-stepped-r96/rep2/mesh.ply",
+          "occupied_voxels": 255877,
+          "peak_bytes": 85104599,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1235105,
+          "render_ms": 1496.2879999657162,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 96,
+          "scene": "stepped",
+          "seed": 7,
+          "split": "held-out",
+          "status": "ok",
+          "stl_bytes": 3249784,
+          "surface_ms": 165.72979994816706,
+          "total_ms": 2377.2041999618523,
+          "total_voxels": 430944,
+          "verts": 32497,
+          "views": 8,
+          "volume_abs_err_mm3": 20131.621938069657,
+          "volume_rel_err": 0.31954955457253426,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 6.0625,
+          "mean": 6.0625,
+          "min": 6.0625,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 904.5126999844797,
+          "mean": 781.2702999993538,
+          "min": 707.2886000387371,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 2.4856451137810742,
+          "mean": 2.4856451137810742,
+          "min": 2.4856451137810742,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.3789,
+          "mean": 0.3789,
+          "min": 0.3789,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 122.50669999048114,
+          "mean": 105.8932666783221,
+          "min": 96.98740002932027,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 8.138800039887428,
+          "mean": 7.847866683732718,
+          "min": 7.507000002078712,
+          "n": 3
+        },
+        "faces": {
+          "max": 64994.0,
+          "mean": 64994.0,
+          "min": 64994.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 255877.0,
+          "mean": 255877.0,
+          "min": 255877.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 85105125.0,
+          "mean": 85104782.33333333,
+          "min": 85104599.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 1235105.0,
+          "mean": 1235105.0,
+          "min": 1235105.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 1771.8065000372007,
+          "mean": 1590.877666681384,
+          "min": 1496.2879999657162,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 3249784.0,
+          "mean": 3249784.0,
+          "min": 3249784.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 189.33209998067468,
+          "mean": 175.05229997914284,
+          "min": 165.72979994816706,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 2873.7901000422426,
+          "mean": 2555.0481333436132,
+          "min": 2377.2041999618523,
+          "n": 3
+        },
+        "verts": {
+          "max": 32497.0,
+          "mean": 32497.0,
+          "min": 32497.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 20131.621938069657,
+          "mean": 20131.621938069657,
+          "min": 20131.621938069657,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.31954955457253426,
+          "mean": 0.31954955457253426,
+          "min": 0.31954955457253426,
+          "n": 3
+        }
+      }
+    },
+    "heldout-tall-cylinder-r96": {
+      "profile": {
+        "azimuth_start_deg": 67.5,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "heldout-tall-cylinder-r96",
+        "resolution": 96,
+        "scene": "cylinder",
+        "scene_params": {
+          "h": 70.0,
+          "r": 15.0
+        },
+        "seed": 7,
+        "split": "held-out",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            2.0833333333333357,
+            2.0833333333333357,
+            7.0
+          ],
+          "bbox_max_abs_err_mm": 7.0,
+          "bbox_rec_x_mm": 32.083333333333336,
+          "bbox_rec_y_mm": 32.083333333333336,
+          "bbox_rec_z_mm": 77.0,
+          "carve_ms": 482.183400017675,
+          "chamfer_symmetric_mm": 0.840919558262847,
+          "completeness_at_1mm": 0.8226,
+          "components": 1,
+          "config": "heldout-tall-cylinder-r96",
+          "dim_x": 47,
+          "dim_y": 47,
+          "dim_z": 96,
+          "eval_ms": 59.62920002639294,
+          "export_ms": 5.8117000153288245,
+          "faces": 35668,
+          "input_sha256": "7b064e30e84aa843daa11b85c4c94fdc27d5ad3d08718177ce062f8fa68f497c",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/heldout-tall-cylinder-r96/rep0/mesh.ply",
+          "occupied_voxels": 104441,
+          "peak_bytes": 185847515,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 677935,
+          "render_ms": 25771.247999975458,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 96,
+          "scene": "cylinder",
+          "seed": 7,
+          "split": "held-out",
+          "status": "ok",
+          "stl_bytes": 1783484,
+          "surface_ms": 131.6936999792233,
+          "total_ms": 26390.936799987685,
+          "total_voxels": 212064,
+          "verts": 17836,
+          "views": 8,
+          "volume_abs_err_mm3": 4375.579830249437,
+          "volume_rel_err": 0.08843113128601832,
+          "voxel_size_mm": 0.8020833333333334,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            2.0833333333333357,
+            2.0833333333333357,
+            7.0
+          ],
+          "bbox_max_abs_err_mm": 7.0,
+          "bbox_rec_x_mm": 32.083333333333336,
+          "bbox_rec_y_mm": 32.083333333333336,
+          "bbox_rec_z_mm": 77.0,
+          "carve_ms": 564.2174000386149,
+          "chamfer_symmetric_mm": 0.840919558262847,
+          "completeness_at_1mm": 0.8226,
+          "components": 1,
+          "config": "heldout-tall-cylinder-r96",
+          "dim_x": 47,
+          "dim_y": 47,
+          "dim_z": 96,
+          "eval_ms": 68.34599998546764,
+          "export_ms": 6.256399967242032,
+          "faces": 35668,
+          "input_sha256": "7b064e30e84aa843daa11b85c4c94fdc27d5ad3d08718177ce062f8fa68f497c",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/heldout-tall-cylinder-r96/rep1/mesh.ply",
+          "occupied_voxels": 104441,
+          "peak_bytes": 185846931,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 677935,
+          "render_ms": 27828.44000001205,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 96,
+          "scene": "cylinder",
+          "seed": 7,
+          "split": "held-out",
+          "status": "ok",
+          "stl_bytes": 1783484,
+          "surface_ms": 125.83259999519214,
+          "total_ms": 28524.7464000131,
+          "total_voxels": 212064,
+          "verts": 17836,
+          "views": 8,
+          "volume_abs_err_mm3": 4375.579830249437,
+          "volume_rel_err": 0.08843113128601832,
+          "voxel_size_mm": 0.8020833333333334,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            2.0833333333333357,
+            2.0833333333333357,
+            7.0
+          ],
+          "bbox_max_abs_err_mm": 7.0,
+          "bbox_rec_x_mm": 32.083333333333336,
+          "bbox_rec_y_mm": 32.083333333333336,
+          "bbox_rec_z_mm": 77.0,
+          "carve_ms": 388.71369999833405,
+          "chamfer_symmetric_mm": 0.840919558262847,
+          "completeness_at_1mm": 0.8226,
+          "components": 1,
+          "config": "heldout-tall-cylinder-r96",
+          "dim_x": 47,
+          "dim_y": 47,
+          "dim_z": 96,
+          "eval_ms": 53.30769997090101,
+          "export_ms": 4.76189999608323,
+          "faces": 35668,
+          "input_sha256": "7b064e30e84aa843daa11b85c4c94fdc27d5ad3d08718177ce062f8fa68f497c",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/heldout-tall-cylinder-r96/rep2/mesh.ply",
+          "occupied_voxels": 104441,
+          "peak_bytes": 185846980,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 677935,
+          "render_ms": 21567.739699967206,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 96,
+          "scene": "cylinder",
+          "seed": 7,
+          "split": "held-out",
+          "status": "ok",
+          "stl_bytes": 1783484,
+          "surface_ms": 96.33550001308322,
+          "total_ms": 22057.550799974706,
+          "total_voxels": 212064,
+          "verts": 17836,
+          "views": 8,
+          "volume_abs_err_mm3": 4375.579830249437,
+          "volume_rel_err": 0.08843113128601832,
+          "voxel_size_mm": 0.8020833333333334,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 7.0,
+          "mean": 7.0,
+          "min": 7.0,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 564.2174000386149,
+          "mean": 478.371500018208,
+          "min": 388.71369999833405,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 0.840919558262847,
+          "mean": 0.840919558262847,
+          "min": 0.840919558262847,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.8226,
+          "mean": 0.8226,
+          "min": 0.8226,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 68.34599998546764,
+          "mean": 60.427633327587195,
+          "min": 53.30769997090101,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 6.256399967242032,
+          "mean": 5.6099999928846955,
+          "min": 4.76189999608323,
+          "n": 3
+        },
+        "faces": {
+          "max": 35668.0,
+          "mean": 35668.0,
+          "min": 35668.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 104441.0,
+          "mean": 104441.0,
+          "min": 104441.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 185847515.0,
+          "mean": 185847142.0,
+          "min": 185846931.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 677935.0,
+          "mean": 677935.0,
+          "min": 677935.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 27828.44000001205,
+          "mean": 25055.80923331824,
+          "min": 21567.739699967206,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 1783484.0,
+          "mean": 1783484.0,
+          "min": 1783484.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 131.6936999792233,
+          "mean": 117.95393332916622,
+          "min": 96.33550001308322,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 28524.7464000131,
+          "mean": 25657.7446666585,
+          "min": 22057.550799974706,
+          "n": 3
+        },
+        "verts": {
+          "max": 17836.0,
+          "mean": 17836.0,
+          "min": 17836.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 4375.579830249437,
+          "mean": 4375.579830249437,
+          "min": 4375.579830249437,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.08843113128601832,
+          "mean": 0.08843113128601832,
+          "min": 0.08843113128601832,
+          "n": 3
+        }
+      }
+    },
+    "val-cylinder-r96": {
+      "profile": {
+        "azimuth_start_deg": 0.0,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "val-cylinder-r96",
+        "resolution": 96,
+        "scene": "cylinder",
+        "scene_params": {},
+        "seed": 0,
+        "split": "validation",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            0.3333333333333286,
+            0.3333333333333286,
+            4.0
+          ],
+          "bbox_max_abs_err_mm": 4.0,
+          "bbox_rec_x_mm": 40.33333333333333,
+          "bbox_rec_y_mm": 40.33333333333333,
+          "bbox_rec_z_mm": 44.0,
+          "carve_ms": 1456.8290999741293,
+          "chamfer_symmetric_mm": 0.9293479382775507,
+          "completeness_at_1mm": 0.6957,
+          "components": 1,
+          "config": "val-cylinder-r96",
+          "dim_x": 96,
+          "dim_y": 96,
+          "dim_z": 96,
+          "eval_ms": 92.28749998146668,
+          "export_ms": 9.100799972657114,
+          "faces": 95020,
+          "input_sha256": "5181176b3d39112f1cc4bcf738d0cf9ad861a3b619e34364b1c3fc702b7e6150",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/val-cylinder-r96/rep0/mesh.ply",
+          "occupied_voxels": 576536,
+          "peak_bytes": 185848011,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1805623,
+          "render_ms": 18973.270000016782,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 96,
+          "scene": "cylinder",
+          "seed": 0,
+          "split": "validation",
+          "status": "ok",
+          "stl_bytes": 4751084,
+          "surface_ms": 255.43220003601164,
+          "total_ms": 20694.63209999958,
+          "total_voxels": 884736,
+          "verts": 47512,
+          "views": 8,
+          "volume_abs_err_mm3": 5234.701377439851,
+          "volume_rel_err": 0.1041410749786882,
+          "voxel_size_mm": 0.4583333333333333,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            0.3333333333333286,
+            0.3333333333333286,
+            4.0
+          ],
+          "bbox_max_abs_err_mm": 4.0,
+          "bbox_rec_x_mm": 40.33333333333333,
+          "bbox_rec_y_mm": 40.33333333333333,
+          "bbox_rec_z_mm": 44.0,
+          "carve_ms": 1662.8023000084795,
+          "chamfer_symmetric_mm": 0.9293479382775507,
+          "completeness_at_1mm": 0.6957,
+          "components": 1,
+          "config": "val-cylinder-r96",
+          "dim_x": 96,
+          "dim_y": 96,
+          "dim_z": 96,
+          "eval_ms": 103.32300001755357,
+          "export_ms": 15.583400032483041,
+          "faces": 95020,
+          "input_sha256": "5181176b3d39112f1cc4bcf738d0cf9ad861a3b619e34364b1c3fc702b7e6150",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/val-cylinder-r96/rep1/mesh.ply",
+          "occupied_voxels": 576536,
+          "peak_bytes": 185847375,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1805623,
+          "render_ms": 20746.64839997422,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 96,
+          "scene": "cylinder",
+          "seed": 0,
+          "split": "validation",
+          "status": "ok",
+          "stl_bytes": 4751084,
+          "surface_ms": 296.58979998202994,
+          "total_ms": 22721.623899997212,
+          "total_voxels": 884736,
+          "verts": 47512,
+          "views": 8,
+          "volume_abs_err_mm3": 5234.701377439851,
+          "volume_rel_err": 0.1041410749786882,
+          "voxel_size_mm": 0.4583333333333333,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            0.3333333333333286,
+            0.3333333333333286,
+            4.0
+          ],
+          "bbox_max_abs_err_mm": 4.0,
+          "bbox_rec_x_mm": 40.33333333333333,
+          "bbox_rec_y_mm": 40.33333333333333,
+          "bbox_rec_z_mm": 44.0,
+          "carve_ms": 1682.8022999688983,
+          "chamfer_symmetric_mm": 0.9293479382775507,
+          "completeness_at_1mm": 0.6957,
+          "components": 1,
+          "config": "val-cylinder-r96",
+          "dim_x": 96,
+          "dim_y": 96,
+          "dim_z": 96,
+          "eval_ms": 97.79049997450784,
+          "export_ms": 11.320600053295493,
+          "faces": 95020,
+          "input_sha256": "5181176b3d39112f1cc4bcf738d0cf9ad861a3b619e34364b1c3fc702b7e6150",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/val-cylinder-r96/rep2/mesh.ply",
+          "occupied_voxels": 576536,
+          "peak_bytes": 185847367,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1805623,
+          "render_ms": 20224.074400030077,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 96,
+          "scene": "cylinder",
+          "seed": 0,
+          "split": "validation",
+          "status": "ok",
+          "stl_bytes": 4751084,
+          "surface_ms": 287.357900000643,
+          "total_ms": 22205.555200052913,
+          "total_voxels": 884736,
+          "verts": 47512,
+          "views": 8,
+          "volume_abs_err_mm3": 5234.701377439851,
+          "volume_rel_err": 0.1041410749786882,
+          "voxel_size_mm": 0.4583333333333333,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 4.0,
+          "mean": 4.0,
+          "min": 4.0,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 1682.8022999688983,
+          "mean": 1600.8112333171691,
+          "min": 1456.8290999741293,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 0.9293479382775507,
+          "mean": 0.9293479382775507,
+          "min": 0.9293479382775507,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.6957,
+          "mean": 0.6957,
+          "min": 0.6957,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 103.32300001755357,
+          "mean": 97.80033332450937,
+          "min": 92.28749998146668,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 15.583400032483041,
+          "mean": 12.00160001947855,
+          "min": 9.100799972657114,
+          "n": 3
+        },
+        "faces": {
+          "max": 95020.0,
+          "mean": 95020.0,
+          "min": 95020.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 576536.0,
+          "mean": 576536.0,
+          "min": 576536.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 185848011.0,
+          "mean": 185847584.33333334,
+          "min": 185847367.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 1805623.0,
+          "mean": 1805623.0,
+          "min": 1805623.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 20746.64839997422,
+          "mean": 19981.33093334036,
+          "min": 18973.270000016782,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 4751084.0,
+          "mean": 4751084.0,
+          "min": 4751084.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 296.58979998202994,
+          "mean": 279.7933000062282,
+          "min": 255.43220003601164,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 22721.623899997212,
+          "mean": 21873.937066683236,
+          "min": 20694.63209999958,
+          "n": 3
+        },
+        "verts": {
+          "max": 47512.0,
+          "mean": 47512.0,
+          "min": 47512.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 5234.701377439851,
+          "mean": 5234.701377439851,
+          "min": 5234.701377439851,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.1041410749786882,
+          "mean": 0.1041410749786882,
+          "min": 0.1041410749786882,
+          "n": 3
+        }
+      }
+    },
+    "val-stepped-r96": {
+      "profile": {
+        "azimuth_start_deg": 0.0,
+        "elevations_deg": [
+          25.0,
+          45.0
+        ],
+        "eval_samples": 10000,
+        "eval_tau_mm": 1.0,
+        "focal_px": null,
+        "height": 240,
+        "margin": 0.05,
+        "min_observed": 2,
+        "name": "val-stepped-r96",
+        "resolution": 96,
+        "scene": "stepped",
+        "scene_params": {},
+        "seed": 0,
+        "split": "validation",
+        "views": 8,
+        "width": 320
+      },
+      "repeats": [
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            4.625,
+            4.6875,
+            6.0625
+          ],
+          "bbox_max_abs_err_mm": 6.0625,
+          "bbox_rec_x_mm": 64.625,
+          "bbox_rec_y_mm": 44.6875,
+          "bbox_rec_z_mm": 46.0625,
+          "carve_ms": 844.45150004467,
+          "chamfer_symmetric_mm": 2.341239418567193,
+          "completeness_at_1mm": 0.3156,
+          "components": 1,
+          "config": "val-stepped-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 67,
+          "eval_ms": 94.00139999343082,
+          "export_ms": 7.9082000302150846,
+          "faces": 59092,
+          "input_sha256": "d5db794d66e95ffbba7c3230f2d80cad015f8b9ca1d463042fbe3ee1c2f4b863",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/val-stepped-r96/rep0/mesh.ply",
+          "occupied_voxels": 252947,
+          "peak_bytes": 85105478,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1122991,
+          "render_ms": 2033.571399981156,
+          "reopen_ok": true,
+          "rep": 0,
+          "resolution": 96,
+          "scene": "stepped",
+          "seed": 0,
+          "split": "validation",
+          "status": "ok",
+          "stl_bytes": 2954684,
+          "surface_ms": 166.72379994997755,
+          "total_ms": 3052.6549000060186,
+          "total_voxels": 430944,
+          "verts": 29548,
+          "views": 8,
+          "volume_abs_err_mm3": 19164.932820638016,
+          "volume_rel_err": 0.3042052828672701,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            4.625,
+            4.6875,
+            6.0625
+          ],
+          "bbox_max_abs_err_mm": 6.0625,
+          "bbox_rec_x_mm": 64.625,
+          "bbox_rec_y_mm": 44.6875,
+          "bbox_rec_z_mm": 46.0625,
+          "carve_ms": 780.8828999986872,
+          "chamfer_symmetric_mm": 2.341239418567193,
+          "completeness_at_1mm": 0.3156,
+          "components": 1,
+          "config": "val-stepped-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 67,
+          "eval_ms": 89.65510001871735,
+          "export_ms": 6.921100022736937,
+          "faces": 59092,
+          "input_sha256": "d5db794d66e95ffbba7c3230f2d80cad015f8b9ca1d463042fbe3ee1c2f4b863",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/val-stepped-r96/rep1/mesh.ply",
+          "occupied_voxels": 252947,
+          "peak_bytes": 85104878,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1122991,
+          "render_ms": 2303.4969000145793,
+          "reopen_ok": true,
+          "rep": 1,
+          "resolution": 96,
+          "scene": "stepped",
+          "seed": 0,
+          "split": "validation",
+          "status": "ok",
+          "stl_bytes": 2954684,
+          "surface_ms": 161.51689999969676,
+          "total_ms": 3252.8178000357,
+          "total_voxels": 430944,
+          "verts": 29548,
+          "views": 8,
+          "volume_abs_err_mm3": 19164.932820638016,
+          "volume_rel_err": 0.3042052828672701,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        },
+        {
+          "baseline_deg": 130.0,
+          "bbox_dims_abs_err_mm": [
+            4.625,
+            4.6875,
+            6.0625
+          ],
+          "bbox_max_abs_err_mm": 6.0625,
+          "bbox_rec_x_mm": 64.625,
+          "bbox_rec_y_mm": 44.6875,
+          "bbox_rec_z_mm": 46.0625,
+          "carve_ms": 858.9384000515565,
+          "chamfer_symmetric_mm": 2.341239418567193,
+          "completeness_at_1mm": 0.3156,
+          "components": 1,
+          "config": "val-stepped-r96",
+          "dim_x": 96,
+          "dim_y": 67,
+          "dim_z": 67,
+          "eval_ms": 97.09639998618513,
+          "export_ms": 8.7059999932535,
+          "faces": 59092,
+          "input_sha256": "d5db794d66e95ffbba7c3230f2d80cad015f8b9ca1d463042fbe3ee1c2f4b863",
+          "mask_provenance": "synthetic",
+          "mesh_relpath": "runs/val-stepped-r96/rep2/mesh.ply",
+          "occupied_voxels": 252947,
+          "peak_bytes": 85104854,
+          "peak_method": "tracemalloc.get_traced_memory()[1] peak across render+carve+surface+export; Python-level allocations only, numpy/native buffers excluded by tracemalloc design",
+          "ply_bytes": 1122991,
+          "render_ms": 1899.826499982737,
+          "reopen_ok": true,
+          "rep": 2,
+          "resolution": 96,
+          "scene": "stepped",
+          "seed": 0,
+          "split": "validation",
+          "status": "ok",
+          "stl_bytes": 2954684,
+          "surface_ms": 181.0266999527812,
+          "total_ms": 2948.4975999803282,
+          "total_voxels": 430944,
+          "verts": 29548,
+          "views": 8,
+          "volume_abs_err_mm3": 19164.932820638016,
+          "volume_rel_err": 0.3042052828672701,
+          "voxel_size_mm": 0.6875,
+          "watertight": true
+        }
+      ],
+      "stats_mean_min_max": {
+        "bbox_max_abs_err_mm": {
+          "max": 6.0625,
+          "mean": 6.0625,
+          "min": 6.0625,
+          "n": 3
+        },
+        "carve_ms": {
+          "max": 858.9384000515565,
+          "mean": 828.0909333649712,
+          "min": 780.8828999986872,
+          "n": 3
+        },
+        "chamfer_symmetric_mm": {
+          "max": 2.341239418567193,
+          "mean": 2.341239418567193,
+          "min": 2.341239418567193,
+          "n": 3
+        },
+        "completeness_at_1mm": {
+          "max": 0.3156,
+          "mean": 0.3156,
+          "min": 0.3156,
+          "n": 3
+        },
+        "eval_ms": {
+          "max": 97.09639998618513,
+          "mean": 93.58429999944444,
+          "min": 89.65510001871735,
+          "n": 3
+        },
+        "export_ms": {
+          "max": 8.7059999932535,
+          "mean": 7.84510001540184,
+          "min": 6.921100022736937,
+          "n": 3
+        },
+        "faces": {
+          "max": 59092.0,
+          "mean": 59092.0,
+          "min": 59092.0,
+          "n": 3
+        },
+        "occupied_voxels": {
+          "max": 252947.0,
+          "mean": 252947.0,
+          "min": 252947.0,
+          "n": 3
+        },
+        "peak_bytes": {
+          "max": 85105478.0,
+          "mean": 85105070.0,
+          "min": 85104854.0,
+          "n": 3
+        },
+        "ply_bytes": {
+          "max": 1122991.0,
+          "mean": 1122991.0,
+          "min": 1122991.0,
+          "n": 3
+        },
+        "render_ms": {
+          "max": 2303.4969000145793,
+          "mean": 2078.9649333261573,
+          "min": 1899.826499982737,
+          "n": 3
+        },
+        "stl_bytes": {
+          "max": 2954684.0,
+          "mean": 2954684.0,
+          "min": 2954684.0,
+          "n": 3
+        },
+        "surface_ms": {
+          "max": 181.0266999527812,
+          "mean": 169.75579996748516,
+          "min": 161.51689999969676,
+          "n": 3
+        },
+        "total_ms": {
+          "max": 3252.8178000357,
+          "mean": 3084.6567666740157,
+          "min": 2948.4975999803282,
+          "n": 3
+        },
+        "verts": {
+          "max": 29548.0,
+          "mean": 29548.0,
+          "min": 29548.0,
+          "n": 3
+        },
+        "volume_abs_err_mm3": {
+          "max": 19164.932820638016,
+          "mean": 19164.932820638016,
+          "min": 19164.932820638016,
+          "n": 3
+        },
+        "volume_rel_err": {
+          "max": 0.3042052828672701,
+          "mean": 0.3042052828672701,
+          "min": 0.3042052828672701,
+          "n": 3
+        }
+      }
+    }
+  },
+  "cpu_model": "Intel64 Family 6 Model 158 Stepping 10, GenuineIntel",
+  "determinism_note": "render/carve/surface/export are deterministic; reps are expected bitwise-identical except wall-clock timing and tracemalloc peaks. Aggregates report mean/min/max, never fastest-only.",
+  "heldout_verdicts": {
+    "heldout-rotated-stepped-r96": {
+      "checks": [
+        {
+          "actual": 2.4856451137810742,
+          "bound": 4.0,
+          "metric": "chamfer_symmetric_mm",
+          "op": "lt",
+          "pass": true
+        },
+        {
+          "actual": 0.3789,
+          "bound": 0.15,
+          "metric": "completeness_at_1mm",
+          "op": "gt",
+          "pass": true
+        },
+        {
+          "actual": 6.0625,
+          "bound": 12.0,
+          "metric": "bbox_max_abs_err_mm",
+          "op": "lt",
+          "pass": true
+        },
+        {
+          "actual": 0.31954955457253426,
+          "bound": 0.6,
+          "metric": "volume_rel_err",
+          "op": "lt",
+          "pass": true
+        },
+        {
+          "actual": true,
+          "bound": true,
+          "metric": "watertight",
+          "op": "eq",
+          "pass": true
+        },
+        {
+          "actual": 1,
+          "bound": 1,
+          "metric": "components",
+          "op": "eq",
+          "pass": true
+        }
+      ],
+      "config": "heldout-rotated-stepped-r96",
+      "pass": true
+    },
+    "heldout-tall-cylinder-r96": {
+      "checks": [
+        {
+          "actual": 0.840919558262847,
+          "bound": 3.0,
+          "metric": "chamfer_symmetric_mm",
+          "op": "lt",
+          "pass": true
+        },
+        {
+          "actual": 0.8226,
+          "bound": 0.25,
+          "metric": "completeness_at_1mm",
+          "op": "gt",
+          "pass": true
+        },
+        {
+          "actual": 7.0,
+          "bound": 10.0,
+          "metric": "bbox_max_abs_err_mm",
+          "op": "lt",
+          "pass": true
+        },
+        {
+          "actual": 0.08843113128601832,
+          "bound": 0.35,
+          "metric": "volume_rel_err",
+          "op": "lt",
+          "pass": true
+        },
+        {
+          "actual": true,
+          "bound": true,
+          "metric": "watertight",
+          "op": "eq",
+          "pass": true
+        },
+        {
+          "actual": 1,
+          "bound": 1,
+          "metric": "components",
+          "op": "eq",
+          "pass": true
+        }
+      ],
+      "config": "heldout-tall-cylinder-r96",
+      "pass": true
+    }
+  },
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python_version": "3.12.10",
+  "repeats": 3,
+  "total_wall_s": 284.37641930003883
+}

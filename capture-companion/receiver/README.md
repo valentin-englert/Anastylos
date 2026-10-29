@@ -252,3 +252,78 @@ the receiver deduplicates.
   with the unlocked phone can sync. Unpair + `revoke-tokens` on loss.
 - Not yet validated on physical phones or real LANs in this session —
   run the checklist in Section 3 on hardware before relying on it.
+
+## 8. Guided control (Wave 1b, wired)
+
+`anastylos_control_journal.py` is the durable store for guided state
+(frozen G0 contract `ec313f7f...`, read-only under
+`../control/contracts/`). Standard library only (`sqlite3`, WAL,
+single bounded writer, integrity check on open). It is additive: the
+JSON staging files above are untouched and legacy upload/review
+behavior is unchanged.
+
+Covered: sessions, request create/revise/cancel (dual CAS),
+`(principal, session_id, operation_id, operation_kind)` idempotency,
+consent/grants with effective-limit `min()`, claim/revoke, attempt
+reservation with exposure cap, immutable asset binding, guided
+package join with late-receipt classification, sidecar intake with
+revision CAS + supersedes chains, validator-report qualification via
+an injectable seam (unavailable by default: `package_only`, never
+`qualified`), lease renewal, ephemeral status, resume, multi-revision
+sealing, change cursor, and structural + semantic input checks.
+
+HTTP: `anastylos_guided_routes.py` serves the guided table below on
+the existing TLS listener; `anastylos_guided_auth.py` holds the
+enrollment registry + hashed scoped tokens (`source`,
+`adapter_bootstrap`, `adapter_session`, `spatial`, `reader`).
+Legacy tokens get 401 on guided routes except the single
+`POST /v1/guided/enroll` exchange; guided tokens get 401 on legacy
+routes. Authenticated scope failures answer one generic 404.
+
+| Method + path | Auth | Meaning |
+|---|---|---|
+| `POST /v1/guided/enroll` | legacy Bearer (sole exception) | enrolled device → `{source_id, token, expires_at}` |
+| `POST /v1/guided/sources/{id}/capabilities` | source | publish bounded capabilities |
+| `GET /v1/guided/sources/{id}/pending-sessions` | source | ≤20 DISARMED sessions |
+| `GET /v1/guided/capabilities?source_id=` | scoped | published caps or stale-unpublished stub |
+| `POST /v1/guided/sessions` | adapter bootstrap | 201 DISARMED session |
+| `GET /v1/guided/sessions/{id}` | scoped | snapshot (requests, status, receipts) |
+| `POST /v1/guided/sessions/{id}/requests` | adapter session | 201 `{request, session_revision}` |
+| `POST /v1/guided/requests/{id}/revise` | adapter session | new immutable revision (dual CAS) |
+| `POST /v1/guided/requests/{id}/cancel` | adapter session | cancel one request |
+| `GET /v1/guided/sessions/{id}/changes?after=` | source/adapter | ≤100 changes + cursor |
+| `POST /v1/guided/sessions/{id}/events` | source | source event ack |
+| `POST /v1/guided/sessions/{id}/status` | source | ephemeral status (guidance mirrors request) |
+| `POST /v1/guided/sessions/{id}/consent` | source | arm (grant) / disarm (cancel) |
+| `POST /v1/guided/sessions/{id}/attempts` | source | 201 exposure reservation |
+| `POST /v1/guided/attempts/{id}/asset-binding` | source | immutable ID/hash binding |
+| `POST /v1/packages` + `X-Guided-*` | source | validated join → 201/200 `{report, receipt}` |
+| `POST /v1/guided/attempts/{id}/spatial` | source/spatial | receipt or `SPATIAL_PENDING` |
+| `POST /v1/guided/sessions/{id}/lease` | adapter session | renewed lease ≤ grant/request TTL |
+| `POST /v1/guided/grants/{id}/claim` | adapter bootstrap | creating adapter → session token |
+| `POST /v1/guided/sessions/{id}/finalize` | adapter session | seal one set revision |
+| `POST /v1/guided/sessions/{id}/resume` | adapter session | recover (always DISARMED) |
+| `GET /v1/guided/sessions/{id}/assets/{image}` | adapter/spatial/reader | re-hashed image bytes |
+| `GET /v1/guided/sessions/{id}/capture-set` | scoped | latest sealed revision |
+
+Error mapping: `invalid_input` → 400, `revision_conflict` /
+`idempotency_conflict` / `unarmed` → 409, `expired` → 410, `busy` →
+429, `unauthorized` / `not_found` → generic 404, missing Bearer →
+401. Control bodies ≤ 64 KiB, sidecar uploads ≤ 320 KiB.
+
+CLI: `guided-enroll <pair-prefix>`, `guided-bootstrap --principal`,
+`guided-reader <session> <spatial|reader>`, `guided-revoke-grant`,
+`guided-revoke-tokens --session`, `guided-status [--json]`.
+
+Not yet: the live spatial validator executable (SPATIAL lane owns
+it; `anastylos_validator_seam.py` defines the handoff), cursor
+compaction/HMAC, and the `mcp` SDK install (`tools/capture-control/`
+ships the adapter against `mcp==2.3.0`; install pending
+CONTRACT-OWNER manifest/SPDX approval).
+
+Tests: `tests/test_control_journal.py` (25), `tests/test_control_pipeline.py`
+(34: consent/grants/attempts/binding/receipts/sidecar/lease/status/
+resume/migration + fixtures), `tests/test_guided_routes.py` (9 live
+loopback incl. auth matrix + CLI). ANDROID consumes
+`tests/fixtures/guided-wire-*.json` read-only (synthetic,
+contract-tested); see `tests/fixtures/README.md`.

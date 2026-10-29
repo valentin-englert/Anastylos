@@ -1,0 +1,18 @@
+{
+  "azimuth_start_deg": 0.0,
+  "distance_mm": 325.42706982944395,
+  "elevations_deg": [
+    25.0,
+    45.0
+  ],
+  "focal_px": 800.0,
+  "height": 240,
+  "n_views": 8,
+  "roi_center": [
+    0.0,
+    0.0,
+    15.0
+  ],
+  "roi_radius": 39.05124837953327,
+  "width": 320
+}

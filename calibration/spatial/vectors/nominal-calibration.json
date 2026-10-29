@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["CONTRADICTORY_QUALITY_CALIBRATION"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["calibration", "metric_validity"], "value": "nominal_only"}], "name": "nominal-calibration"}

@@ -1,0 +1,12 @@
+# name==version | License first line (verbatim) + License-Expression + License classifiers, read from installed dist-info METADATA; full texts stay in METADATA
+ImageIO==2.38.1 | License: (License field absent) | License-Expression: BSD-2-Clause
+lazy-loader==0.6 | License: (License field absent) | License-Expression: BSD-3-Clause
+networkx==3.7 | License: (License field absent) | License-Expression: BSD-3-Clause
+numpy==2.5.4 | License: (License field absent) | License-Expression: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+opencv-python-headless==5.0.0.93 | License: Apache 2.0 | Classifiers: License :: OSI Approved :: Apache Software License
+packaging==26.3 | License: (License field absent) | License-Expression: Apache-2.0 OR BSD-2-Clause
+pillow==13.0.0 | License: (License field absent) | License-Expression: MIT-CMU
+scikit-image==0.26.0 | License: Files: * [+6556 more chars in METADATA] | Classifiers: License :: OSI Approved :: BSD License
+scipy==1.18.1 | License: Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers. [+46491 more chars in METADATA] | Classifiers: License :: OSI Approved :: BSD License
+tifffile==2026.10.15 | License: BSD-3-Clause
+trimesh==5.2.0 | License: The MIT License (MIT) [+1068 more chars in METADATA] | Classifiers: License :: OSI Approved :: MIT License

@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["MIRRORED_IMAGE_TRANSFORM"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["image_geometry", "reference_to_image"], "value": [-1, 0, 1280, 0, 1, 0, 0, 0, 1]}], "name": "mirrored-image-transform"}

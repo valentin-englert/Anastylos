@@ -1,0 +1,125 @@
+{
+  "fixture_provenance": "synthetic",
+  "fixture_note": "SYNTHETIC_TEST_FIXTURE_ONLY: no real camera, no real calibration images; test K/dist only.",
+  "schema": "anastylos-camera-calibration@1",
+  "profile_id": "00000000-0000-4000-8000-000000000010",
+  "source_id": "10000000-0000-4000-8000-000000000002",
+  "camera_id": "synthetic-camera",
+  "physical_lens_id": null,
+  "sensor_mode": "synthetic-1280x720",
+  "created_at": "2026-10-29T12:00:00.000Z",
+  "algorithm": "synthetic-test-fit",
+  "algorithm_version": "synthetic-1",
+  "build_sha": "synthetic-test-build",
+  "camera_model": "brown_conrady_5",
+  "reference_image_size_px": [
+    1280,
+    720
+  ],
+  "K": [
+    800.0,
+    0.0,
+    640.0,
+    0.0,
+    800.0,
+    360.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "pixel_convention": "top_left_pixel_center_0_0_x_right_y_down",
+  "reference_pixel_frame_id": "synthetic-native-1280x720",
+  "focus_distance_diopters": null,
+  "zoom": 1,
+  "sensor_crop": null,
+  "calibration_image_assets": [
+    {
+      "asset_id": "eae68606-e3c6-58a2-bb63-0cd78e1607ad",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "validation": {
+    "calibration_view_ids": [
+      "26d06e84-487c-554a-9444-918a7c2582eb",
+      "0a69f0bd-9d68-5a39-aab9-541e5289ba5c",
+      "64b0fe56-b39d-5d6f-bd0e-ebe12d0fcc1a",
+      "c18916a9-061a-52e9-8d8b-2e37bf767158",
+      "9809d101-e0ac-54e1-9668-f63dcb832517",
+      "e5926a81-5bcb-5995-8584-07ad81e216bf",
+      "b017ec20-abf9-5125-9fcc-870314eee450",
+      "8535e018-51c8-5ea5-b05c-df8dcad0f34e",
+      "c967447d-bfd4-5f25-8e76-ff0c5301b595",
+      "cb3fc28f-1de9-5e21-affa-ba2e40047a74",
+      "8a05a943-b85e-5f7a-863b-44f615cdb986",
+      "80ef7cb1-2d19-5fd4-addd-38ca2d54c74b",
+      "5ac4f672-0a5a-5917-babd-4db7a1649f18",
+      "6403e57f-d228-5d9c-8c0b-5bfe4b3e357d",
+      "d96a3795-eeb0-584b-985f-359f72563a67",
+      "ba996662-7869-5d76-b185-5f4783c974f6",
+      "491f42f7-a8ff-52c3-b6eb-5c59f8a9fbfa",
+      "1b4cfed1-363a-5959-a63d-b344479ea294",
+      "3780df0e-e1e5-5ab4-a451-5f158408badc",
+      "c2d67c38-6487-55e6-9537-31c5336ef529",
+      "ee60a3f8-3545-5854-a6c2-93c1929203e6",
+      "2462151e-bd23-5b61-a43d-b89ddb0e46f7",
+      "578a327f-f352-537d-9890-62bc10f424b1",
+      "3b6eb9bf-6ecb-5f73-9482-d6883c73a548",
+      "34607ef1-aa60-518e-887a-c66eead57bc0"
+    ],
+    "held_out_view_ids": [
+      "26d06e84-487c-554a-9444-918a7c2582eb",
+      "0a69f0bd-9d68-5a39-aab9-541e5289ba5c",
+      "64b0fe56-b39d-5d6f-bd0e-ebe12d0fcc1a",
+      "c18916a9-061a-52e9-8d8b-2e37bf767158",
+      "9809d101-e0ac-54e1-9668-f63dcb832517",
+      "e5926a81-5bcb-5995-8584-07ad81e216bf",
+      "b017ec20-abf9-5125-9fcc-870314eee450",
+      "8535e018-51c8-5ea5-b05c-df8dcad0f34e"
+    ],
+    "per_view_rms_px": {
+      "26d06e84-487c-554a-9444-918a7c2582eb": 0.5,
+      "0a69f0bd-9d68-5a39-aab9-541e5289ba5c": 0.5,
+      "64b0fe56-b39d-5d6f-bd0e-ebe12d0fcc1a": 0.5,
+      "c18916a9-061a-52e9-8d8b-2e37bf767158": 0.5,
+      "9809d101-e0ac-54e1-9668-f63dcb832517": 0.5,
+      "e5926a81-5bcb-5995-8584-07ad81e216bf": 0.5,
+      "b017ec20-abf9-5125-9fcc-870314eee450": 0.5,
+      "8535e018-51c8-5ea5-b05c-df8dcad0f34e": 0.5,
+      "c967447d-bfd4-5f25-8e76-ff0c5301b595": 0.5,
+      "cb3fc28f-1de9-5e21-affa-ba2e40047a74": 0.5,
+      "8a05a943-b85e-5f7a-863b-44f615cdb986": 0.5,
+      "80ef7cb1-2d19-5fd4-addd-38ca2d54c74b": 0.5,
+      "5ac4f672-0a5a-5917-babd-4db7a1649f18": 0.5,
+      "6403e57f-d228-5d9c-8c0b-5bfe4b3e357d": 0.5,
+      "d96a3795-eeb0-584b-985f-359f72563a67": 0.5,
+      "ba996662-7869-5d76-b185-5f4783c974f6": 0.5,
+      "491f42f7-a8ff-52c3-b6eb-5c59f8a9fbfa": 0.5,
+      "1b4cfed1-363a-5959-a63d-b344479ea294": 0.5,
+      "3780df0e-e1e5-5ab4-a451-5f158408badc": 0.5,
+      "c2d67c38-6487-55e6-9537-31c5336ef529": 0.5,
+      "ee60a3f8-3545-5854-a6c2-93c1929203e6": 0.5,
+      "2462151e-bd23-5b61-a43d-b89ddb0e46f7": 0.5,
+      "578a327f-f352-537d-9890-62bc10f424b1": 0.5,
+      "3b6eb9bf-6ecb-5f73-9482-d6883c73a548": 0.5,
+      "34607ef1-aa60-518e-887a-c66eead57bc0": 0.5
+    },
+    "held_out_rms_px": 0.5,
+    "edge_coverage": 0.9,
+    "independent_scale_check_mm": {
+      "nominal_mm": 100.0,
+      "measured_mm": 100.1,
+      "uncertainty_mm": 0.05
+    }
+  },
+  "metric_validity": "validated",
+  "limitations": [
+    "SYNTHETIC_TEST_FIXTURE_ONLY: fitted K/dist are invented test values."
+  ]
+}

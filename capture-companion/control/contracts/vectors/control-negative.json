@@ -1,0 +1,58 @@
+{
+  "basis": "synthetic fixtures, not live requests",
+  "base": "control-request-valid.json",
+  "cases": [
+    {
+      "id": "unknown-key",
+      "patch": {
+        "unexpected": true
+      },
+      "expected": "schema-reject"
+    },
+    {
+      "id": "bad-revision",
+      "patch": {
+        "revision": 0
+      },
+      "expected": "schema-reject"
+    },
+    {
+      "id": "wrong-source",
+      "patch": {
+        "source_id": "00000000-0000-4000-8000-000000000099"
+      },
+      "expected": "authorization-reject; structurally valid"
+    },
+    {
+      "id": "wrong-board-side",
+      "json_pointer": "/target/T_B_C/matrix/11",
+      "value": 450,
+      "expected": "semantic-reject; structurally valid"
+    },
+    {
+      "id": "reflection",
+      "json_pointer": "/target/T_B_C/matrix/0",
+      "value": -1,
+      "expected": "semantic-reject determinant -1"
+    },
+    {
+      "id": "expired",
+      "patch": {
+        "expires_at": "2026-10-29T11:00:00Z"
+      },
+      "expected": "semantic-reject relative to created_at and server now"
+    },
+    {
+      "id": "nan",
+      "raw_json_token": "NaN",
+      "expected": "parse-reject before schema"
+    },
+    {
+      "id": "same-operation-new-body",
+      "patch": {
+        "target_label": "Changed"
+      },
+      "expected": "409 after original accepted"
+    }
+  ]
+}

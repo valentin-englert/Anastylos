@@ -1,0 +1,26 @@
+{
+  "fixture_provenance": "synthetic",
+  "fixture_note": "SYNTHETIC_TEST_FIXTURE_ONLY: ROI grid for synthetic adapter tests.",
+  "grid": {
+    "bounds_mm": [
+      [
+        80,
+        120
+      ],
+      [
+        60,
+        100
+      ],
+      [
+        0,
+        40
+      ]
+    ],
+    "voxel_size_mm": 5.0
+  },
+  "carve": {
+    "min_observed": 2,
+    "min_views": 2,
+    "min_baseline_deg": 5.0
+  }
+}

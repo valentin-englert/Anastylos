@@ -124,10 +124,13 @@ slice, not the full native product:
   any custom image via `virtualscene-image` wedges the virtual camera
   HAL and the app ANRs at startup until a cold emulator restart;
   ML Kit decode of a real QR stays a hardware gate; (b) the startup
-  ANR itself exposed a real app defect for M4 — the CameraX provider
-  bind runs on the UI thread (`SessionScreen` → `CameraStillSource`),
-  so any camera stall becomes an app-killing ANR instead of an error
-  state; (c) the "Paired" header is local-only and still shows after
+  ANR itself exposed a real app defect — the CameraX provider bind
+  ran on the UI thread (`SessionScreen` → `CameraStillSource`), so
+  any camera stall became an app-killing ANR instead of an error
+  state. Wave-1 A0 reworked it into cancellable async bind
+  (`bindAsync`, failure returns `false`); 20-cold-start H0 device
+  proof still pending; (c) the "Paired" header is local-only and
+  still shows after
   server-side revocation until the next upload attempt surfaces the
   401. Screenshots under `.toolchain/m3-shots/` (gitignored).
 

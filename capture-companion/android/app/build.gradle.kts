@@ -93,6 +93,9 @@ dependencies {
     implementation(platform(libs.kotlinx.coroutines.bom))
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
+    // ArUco detection + PnP pose (Wave-2 guided capture). All 4 ABIs ship
+    // in the APK (x86_64 required for emulator verification).
+    implementation(libs.opencv.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.truth)

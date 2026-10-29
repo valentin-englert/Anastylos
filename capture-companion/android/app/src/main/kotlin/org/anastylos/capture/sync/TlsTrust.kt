@@ -216,6 +216,19 @@ fun pinnedSpkiSocketFactory(pinnedSpkiSha256: ByteArray): PinnedTls {
     return PinnedTls(context.socketFactory, HostnameVerifier { _, _ -> true })
 }
 
+/**
+ * Pinned TLS identity for a stored pairing: exactly one of the two
+ * pin flavors must be present (manual cert pin wins when both are
+ * set, which only happens across a re-pairing window).
+ */
+fun tlsForPairing(pairing: StoredPairing): PinnedTls {
+    if (pairing.pinnedCertSha256Hex.isNotBlank()) {
+        return pinnedSocketFactory(parseHexSha256(pairing.pinnedCertSha256Hex))
+    }
+    require(pairing.pinnedSpkiSha256Hex.isNotBlank()) { "pairing holds no pin; re-pair" }
+    return pinnedSpkiSocketFactory(parseHexSha256(pairing.pinnedSpkiSha256Hex))
+}
+
 fun loadPemCertificates(pemBytes: ByteArray): List<X509Certificate> {
     val factory = CertificateFactory.getInstance("X.509")
     return factory.generateCertificates(ByteArrayInputStream(pemBytes))

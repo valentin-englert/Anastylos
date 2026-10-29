@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anastylos.local/schemas/mesh-evidence-v0.json",
+  "title": "NON-NORMATIVE mesh-evidence-v0",
+  "description": "NON-NORMATIVE experiment interchange record for mesh visual-hull runs. Not a system contract; carries provenance, params, input hashes, voxel resolution, timing, metrics, and output sha256 pins.",
+  "type": "object",
+  "required": ["schema", "title", "non_normative", "algorithm_version", "params", "inputs", "voxels", "timing_ms", "metrics", "outputs"],
+  "properties": {
+    "schema": {"const": "mesh-evidence-v0"},
+    "title": {"const": "NON-NORMATIVE mesh-evidence-v0"},
+    "non_normative": {"const": true},
+    "algorithm_version": {"type": "string", "minLength": 1},
+    "params": {"type": "object"},
+    "inputs": {
+      "type": "object",
+      "required": ["image_sha256", "mask_sha256", "pose_epochs", "mask_provenance", "view_count"],
+      "properties": {
+        "image_sha256": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "minItems": 1},
+        "mask_sha256": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "minItems": 1},
+        "pose_epochs": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+        "mask_provenance": {"type": "string", "enum": ["synthetic", "manual", "auto"]},
+        "view_count": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "voxels": {
+      "type": "object",
+      "required": ["voxel_size_mm", "dims", "bounds_mm"],
+      "properties": {
+        "voxel_size_mm": {"type": "number", "exclusiveMinimum": 0},
+        "dims": {"type": "array", "items": {"type": "integer", "minimum": 1}, "minItems": 3, "maxItems": 3},
+        "bounds_mm": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}
+        }
+      },
+      "additionalProperties": false
+    },
+    "timing_ms": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "number", "minimum": 0}},
+    "metrics": {"type": "object"},
+    "outputs": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "sha256", "vertices", "faces"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "vertices": {"type": "integer", "minimum": 0},
+          "faces": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "extra": {"type": "object"}
+  },
+  "additionalProperties": false
+}

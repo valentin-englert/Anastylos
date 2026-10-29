@@ -1,0 +1,90 @@
+{
+  "_basis": "synthetic executable transition vectors; base=control-request-valid.json; each case is a reducer/transport expectation, not a schema instance",
+  "cases": [
+    {
+      "id": "revoke-then-qualify",
+      "given": "grant revoked after PACKAGE_ACCEPTED before sidecar validates",
+      "expect": "Receipt rejected or late_after_revoke; never qualified; bytes retained audit-only"
+    },
+    {
+      "id": "session-cancel-no-shutter",
+      "given": "Session CANCELLED via consent disarm while request QUEUED",
+      "expect": "request CANCELLED; no attempt reservation allowed"
+    },
+    {
+      "id": "cancel-races-shutter-not-triggered",
+      "given": "cancel CAS wins before shutter latch",
+      "expect": "CANCELLED, no shutter, no image"
+    },
+    {
+      "id": "cancel-races-shutter-triggered",
+      "given": "shutter latch wins before cancel CAS",
+      "expect": "image preserved, Receipt late_after_cancel, does not fulfill"
+    },
+    {
+      "id": "expire-races-shutter",
+      "given": "request EXPIRED before latch",
+      "expect": "no shutter; late bytes if any = late_after_expire"
+    },
+    {
+      "id": "supersede-late-bytes",
+      "given": "revision 1 bytes arrive after revision 2 created",
+      "expect": "late_after_supersede; cannot satisfy revision 2"
+    },
+    {
+      "id": "cas-revision-conflict",
+      "given": "revise with stale expected_request_revision",
+      "expect": "409 revision_conflict; no state change"
+    },
+    {
+      "id": "dedupe-same-operation",
+      "given": "same (principal,session,operation_id)+same body replay",
+      "expect": "original response replayed; no duplicate request/attempt"
+    },
+    {
+      "id": "dedupe-different-body",
+      "given": "same operation_id different body",
+      "expect": "409 idempotency_conflict"
+    },
+    {
+      "id": "event-out-of-order-gap",
+      "given": "Changes cursor gap in session_revision",
+      "expect": "snapshot_required; phone fetches snapshot before re-arming; cursor not advanced past gap"
+    },
+    {
+      "id": "sidecar-before-package",
+      "given": "sidecar arrives before ZIP visible",
+      "expect": "SPATIAL_PENDING/package_only pending; no qualified until package validates; pending expires with request TTL then rejected"
+    },
+    {
+      "id": "package-before-sidecar",
+      "given": "ZIP validates, sidecar fails semantic check",
+      "expect": "PACKAGE_ACCEPTED/SPATIAL_PENDING then REJECTED on failed sidecar; repair only via new sidecar revision with supersedes"
+    },
+    {
+      "id": "duplicate-upload-same-bytes",
+      "given": "same package hash + same guided binding retried after response loss",
+      "expect": "duplicate collapsed; one Receipt; no duplicate shutter"
+    },
+    {
+      "id": "concurrent-requests-one-active",
+      "given": "second request_view while first active on same source",
+      "expect": "queued (max 20) not active; one active request/source enforced"
+    },
+    {
+      "id": "consent-cap-counts-retakes",
+      "given": "max_images=20, every shutter incl retake/failed counts",
+      "expect": "21st reservation denied; CAD set spanning grants must reference multiple sessions/grants explicitly"
+    },
+    {
+      "id": "pause-retains-queue",
+      "given": "operator Pause in foreground",
+      "expect": "Session PAUSED; queue retained; no shutter; Resume returns to ACTIVE only foreground; background/process death = DISARMED"
+    },
+    {
+      "id": "attempt-delivery-mapping",
+      "given": "delivery ACKNOWLEDGED",
+      "expect": "equivalent to Receipt qualified only; PACKAGE_ACCEPTED = package_only"
+    }
+  ]
+}

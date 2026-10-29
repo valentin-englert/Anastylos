@@ -1,0 +1,15 @@
+# Large regenerable benchmark meshes; keep the small deterministic
+# benchmark_results.json/.csv + expected-outcomes.json committable.
+benchmark_out/runs/
+# Large smoke-test meshes (>100KB each, ~10.3MB total); keep the small
+# deterministic fixtures (all PNGs are <1KB), manifests, and
+# metrics.json reference outputs committable.
+smoke_out/**/*.ply
+smoke_out/**/*.stl
+# Bytecode and virtualenv; the root .gitignore already covers .venv/,
+# __pycache__/, and *.py[cod] at every level (verified with
+# git check-ignore). Repeated here so this directory stays clean if it
+# is ever vendored or moved elsewhere.
+.venv/
+__pycache__/
+*.pyc

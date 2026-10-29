@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["RMS_OVER_GATE"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "metrics", "rms_px"], "value": 5.0}], "name": "rms-over-gate"}

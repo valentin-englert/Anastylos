@@ -25,6 +25,16 @@ data class StoredPairing(
     val pinnedCertSha256Hex: String = "",
     /** Lowercase hex SPKI SHA-256. Blank unless a QR pairing. */
     val pinnedSpkiSha256Hex: String = "",
+    /**
+     * Guided-control source identity + scoped token from the
+     * guided enroll exchange. Blank until the first guided
+     * exchange; additive keys, so pre-guided installs load
+     * with blanks and enroll on demand.
+     */
+    val guidedSourceId: String = "",
+    val guidedToken: String = "",
+    /** ISO-8601 UTC expiry of [guidedToken]. Blank when unknown. */
+    val guidedTokenExpiresAt: String = "",
 )
 
 interface PairingStore {
@@ -64,7 +74,12 @@ class EncryptedPairingStore(context: Context) : PairingStore {
         ) {
             return null
         }
-        return StoredPairing(baseUrl, workstationId, token, pin, spki)
+        return StoredPairing(
+            baseUrl, workstationId, token, pin, spki,
+            prefs.getString(KEY_GUIDED_SOURCE, null).orEmpty(),
+            prefs.getString(KEY_GUIDED_TOKEN, null).orEmpty(),
+            prefs.getString(KEY_GUIDED_EXPIRY, null).orEmpty(),
+        )
     }
 
     override fun save(pairing: StoredPairing) {
@@ -74,6 +89,9 @@ class EncryptedPairingStore(context: Context) : PairingStore {
             putString(KEY_TOKEN, pairing.token)
             putString(KEY_PIN, pairing.pinnedCertSha256Hex)
             putString(KEY_SPKI, pairing.pinnedSpkiSha256Hex)
+            putString(KEY_GUIDED_SOURCE, pairing.guidedSourceId)
+            putString(KEY_GUIDED_TOKEN, pairing.guidedToken)
+            putString(KEY_GUIDED_EXPIRY, pairing.guidedTokenExpiresAt)
         }
     }
 
@@ -89,6 +107,9 @@ class EncryptedPairingStore(context: Context) : PairingStore {
         private const val KEY_TOKEN = "token"
         private const val KEY_PIN = "pinned_cert_sha256"
         private const val KEY_SPKI = "pinned_spki_sha256"
+        private const val KEY_GUIDED_SOURCE = "guided_source_id"
+        private const val KEY_GUIDED_TOKEN = "guided_token"
+        private const val KEY_GUIDED_EXPIRY = "guided_token_expires_at"
     }
 }
 

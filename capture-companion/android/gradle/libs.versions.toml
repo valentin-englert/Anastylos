@@ -28,6 +28,11 @@ runner = "1.7.0"
 serialization = "1.12.0"
 coroutines = "1.11.0"
 robolectric = "4.17"
+# Official OpenCV Android AAR (org.opencv, Apache-2.0). 4.14.0 matches the
+# calibration-side opencv-contrib-python==4.14.0.94 major.minor; ArUco and
+# calib3d ship in the main-repo Android build (objdetect since 4.7).
+# AAR 123,380,341 bytes, SHA-256 recorded in WAVE2-GUIDED-CAPTURE.md.
+opencv = "4.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
@@ -63,6 +68,7 @@ kotlinx-coroutines-bom = { group = "org.jetbrains.kotlinx", name = "kotlinx-coro
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
+opencv-android = { group = "org.opencv", name = "opencv", version.ref = "opencv" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 

@@ -1,0 +1,83 @@
+{
+  "contract": "anastylos-agentcam-g0",
+  "version": "g0",
+  "date": "2026-10-29",
+  "base_commit": "f98badb38515cbc415a8da466189218fc84d8794",
+  "contract_sha256": "ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3330,
+      "sha256": "ae8e56b3e45f35ce68101b26904353d8da0fa1783c25458ad8e457d4f519d4e2"
+    },
+    {
+      "path": "schemas/cad-feature-model.schema.json",
+      "bytes": 11608,
+      "sha256": "385857fa9a5485fd17f9292d7dd5f4bfedc9e83308376e807453c37436023197"
+    },
+    {
+      "path": "schemas/control.schema.json",
+      "bytes": 51912,
+      "sha256": "d5b05731a2443f261c02e84ea90b95302b38fda8e70bff63220a62e827cad566"
+    },
+    {
+      "path": "schemas/mcp-tools.expanded.json",
+      "bytes": 2259071,
+      "sha256": "38cb02b4898d993a451b704dd378b328933f43d0dad63470f16d869cc291f80e"
+    },
+    {
+      "path": "schemas/mcp-tools.json",
+      "bytes": 6569,
+      "sha256": "5132d52be6e58e5406dd7a36d3fb70656076f8fa656576c44e8063d36ded3566"
+    },
+    {
+      "path": "schemas/spatial-evidence.schema.json",
+      "bytes": 43711,
+      "sha256": "b1c254371968d5ac2599375dfd5324f38f0993751907c67dc33dde458d2cd40b"
+    },
+    {
+      "path": "vectors/cad-feature-invalid.json",
+      "bytes": 1205,
+      "sha256": "f6f9efee05667597bbcc6a82e6eb677a3f34296e7fa24fdf20107c3731cee688"
+    },
+    {
+      "path": "vectors/cad-feature-valid.json",
+      "bytes": 1991,
+      "sha256": "508d25d04187bd9c2e47fe32a20b5f5a71e93a544fcd3c0bc2f6498b493330ac"
+    },
+    {
+      "path": "vectors/control-negative.json",
+      "bytes": 1328,
+      "sha256": "77883ce2f13f1871d88fa64baed4791a8eae28d1929752c0e967cae773b0c267"
+    },
+    {
+      "path": "vectors/control-request-valid.json",
+      "bytes": 1458,
+      "sha256": "ebc4ff7c7efe4e1b4b7b51761334039d044947154c1f025641e8652879d2d81c"
+    },
+    {
+      "path": "vectors/control-transitions.json",
+      "bytes": 3620,
+      "sha256": "2eb4b962b6c9a19e166fc44a1e0d50a20aaebfdcfb419f744cb20f9c85623f31"
+    },
+    {
+      "path": "vectors/guidance-signs.json",
+      "bytes": 975,
+      "sha256": "124a3b04c566957ef08e3183d1bd111e4dc5285a8c9efb4a812ac67a8d68fb06"
+    },
+    {
+      "path": "vectors/spatial-valid.json",
+      "bytes": 6938,
+      "sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742"
+    }
+  ],
+  "validation": {
+    "validator": "ajv v8 (2020 build) via ajv-cli 5, Node v24.22.1",
+    "schema_vector_checks": "41/41 PASS (validate-g0.js)",
+    "guidance_analytic": "2/2 PASS",
+    "mcp_bundle": "18/18 tool schemas compile, 0 dangling refs",
+    "receiver_suite": "90 tests OK (3 skipped), Python 3.12.10",
+    "capture_validator": "22/22 OK (ZIP-v1 compatible)",
+    "compliance": "0 errors, 1 warning, 10 open reviews"
+  }
+}

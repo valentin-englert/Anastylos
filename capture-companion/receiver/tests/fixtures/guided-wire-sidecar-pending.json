@@ -1,0 +1,57 @@
+{
+  "_note": "SYNTHETIC fixture generated from ControlJournal; not a live capture. Contract G0 ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "request": {
+    "operation_id": "00000000-0000-4000-8000-00000000004d",
+    "expected_sidecar_revision": 0,
+    "sidecar": {
+      "schema": "anastylos-spatial-evidence@1",
+      "evidence_id": "00000000-0000-4000-8000-00000000004c",
+      "session_id": "00000000-0000-4000-8000-000000000041",
+      "source_id": "00000000-0000-4000-8000-000000000003",
+      "request_id": "00000000-0000-4000-8000-000000000043",
+      "request_revision": 1,
+      "attempt_id": "00000000-0000-4000-8000-000000000047",
+      "created_at": "2026-10-29T12:01:10Z",
+      "supersedes": null,
+      "asset": {
+        "stub": true
+      },
+      "camera": {
+        "stub": true
+      },
+      "calibration": {
+        "stub": true
+      },
+      "image_geometry": {
+        "stub": true
+      },
+      "capture_time": {
+        "stub": true
+      },
+      "pose": {
+        "stub": true
+      },
+      "target": {
+        "stub": true
+      },
+      "quality": {
+        "stub": true
+      },
+      "observer_relation": {
+        "stub": true
+      },
+      "interpretations": [],
+      "provenance": {
+        "stub": true
+      },
+      "limitations": []
+    }
+  },
+  "response": {
+    "attempt_id": "00000000-0000-4000-8000-000000000047",
+    "request_id": "00000000-0000-4000-8000-000000000043",
+    "request_revision": 1,
+    "state": "SPATIAL_PENDING",
+    "receipt_status": null
+  }
+}

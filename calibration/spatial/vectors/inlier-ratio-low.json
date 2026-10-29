@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["INLIER_RATIO_LOW"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "metrics", "inlier_ratio"], "value": 0.5}], "name": "inlier-ratio-low"}

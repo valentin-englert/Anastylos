@@ -1,0 +1,1 @@
+{"expect_metric_ready": false, "expect_reasons_any": [], "expect_verdict": "accept", "mutations": [{"op": "set", "path": ["quality", "overall"], "value": "rejected"}, {"op": "set", "path": ["pose", "validity"], "value": "degraded"}, {"op": "set", "path": ["pose", "T_board_camera"], "value": null}], "name": "rejected-quality-record"}

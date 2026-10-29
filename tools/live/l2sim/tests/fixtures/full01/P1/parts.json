@@ -1,0 +1,59 @@
+{
+  "schema": "anastylos-session-run@1",
+  "phase": "P1",
+  "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P1.mp4",
+  "video_sha256": "f94d72b76af7632baf6dea69c677b82706025a0ed01a68dc81db980af4a45563",
+  "observer_version": "1.7.0",
+  "counts": {
+    "parts": 3,
+    "linked_automatic": 0,
+    "written_to_memory": 0,
+    "questions": 3
+  },
+  "memory": {
+    "session": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\memory",
+    "phase": "phase-0001",
+    "written": []
+  },
+  "parts": [
+    {
+      "part": "P1-C01",
+      "cell": "cell-1",
+      "deposit_event": "E-0046",
+      "deposit_window_s": [
+        25.628,
+        28.627
+      ],
+      "same_cell_group": null,
+      "link": "L-0001",
+      "status": "unattributed",
+      "autonomy": "automatic"
+    },
+    {
+      "part": "P1-C01b",
+      "cell": "cell-1",
+      "deposit_event": "E-0047",
+      "deposit_window_s": [
+        38.225,
+        55.422
+      ],
+      "same_cell_group": true,
+      "link": "L-0002",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    },
+    {
+      "part": "P1-C01c",
+      "cell": "cell-1",
+      "deposit_event": "E-0048",
+      "deposit_window_s": [
+        65.421,
+        88.617
+      ],
+      "same_cell_group": true,
+      "link": "L-0003",
+      "status": "ambiguous",
+      "autonomy": "automatic"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "python": "3.12.10",
+  "platform": "win32",
+  "modules": [
+    {
+      "module": "resistor-reader",
+      "exit_code": 0,
+      "tests": 30,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "smd-reader",
+      "exit_code": 0,
+      "tests": 31,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "pcb-ocr",
+      "exit_code": 0,
+      "tests": 31,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "component-markings",
+      "exit_code": 0,
+      "tests": 54,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "polarity-reader",
+      "exit_code": 0,
+      "tests": 60,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "screw-reader",
+      "exit_code": 0,
+      "tests": 45,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "screw-measurement",
+      "exit_code": 0,
+      "tests": 81,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "washer-spacer",
+      "exit_code": 0,
+      "tests": 82,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "component-fingerprints",
+      "exit_code": 0,
+      "tests": 61,
+      "skipped": 0,
+      "result": "OK"
+    },
+    {
+      "module": "connector-matching",
+      "exit_code": 0,
+      "tests": 68,
+      "skipped": 0,
+      "result": "OK"
+    }
+  ],
+  "total": 543,
+  "ok": true
+}

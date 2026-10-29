@@ -1,0 +1,38 @@
+== validate --kind capture_manifest (frames/ -> symlinked dir outside capture root)
+{
+  "file": "<TMP>/capture/capture-manifest.json",
+  "kind": "capture_manifest",
+  "valid": false,
+  "errors": [
+    "frames[0] 'frames/escape.jpg': outside_capture_root: frame 'frames/escape.jpg' resolves outside the capture root (via symlink frames)"
+  ]
+}
+exit=1
+== inspect --manifest
+batch outcome failure: 1 of 1 entries did not complete (see <TMP>/out/batch.json)
+{
+  "batch_json": "<TMP>/out/batch.json",
+  "count": 1,
+  "status_counts": {
+    "manifest_rejected": 1
+  },
+  "outcome": "failure",
+  "outcome_counts": {
+    "total": 1,
+    "completed": 0,
+    "completed_with_reader_errors": 0,
+    "unavailable": 0,
+    "reader_error": 0,
+    "input_error": 0,
+    "manifest_rejected": 1,
+    "crashed": 0,
+    "usable_records": 0,
+    "problem_entries": 1,
+    "abstentions": 0,
+    "candidates": 0,
+    "core_downgraded": 0
+  },
+  "exit_code": 1
+}
+exit=1
+entries: [('frames/escape.jpg', None, "manifest entry rejected: outside_capture_root: frame 'frames/escape.jpg' resolves outside the capture root (via symlink frames)")]

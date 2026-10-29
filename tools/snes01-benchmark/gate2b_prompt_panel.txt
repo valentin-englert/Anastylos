@@ -1,0 +1,12 @@
+You are comparing two real evidence crops from a workbench teardown video, combined into ONE comparison panel.
+The panel shows: LEFT half labeled A = source crop {src_box} from frame {src_frame} at t={src_t}s; RIGHT half labeled B = dest crop {dest_box} from frame {dest_frame} at t={dest_t}s. Display pixels, 2160x3840, origin top-left. Both halves show the identical source pixels, only scaled to equal height.
+
+Task — physical correspondence. Question: could the object visible in half B be the SAME physical component previously visible in half A?
+
+Verdict (exactly one): "same_instance_candidate" | "different_instance_candidate" | "insufficient_evidence".
+Choose "insufficient_evidence" whenever the pixels do not clearly support a same/different call: occlusion, different visible faces, tiny/blurry crops, or lookalike parts all qualify. A confident verdict requires named visual features (shape, color, markings, texture, size cues) that you actually observe in BOTH halves.
+
+Rules: do not invent identities, positions, or mechanical relationships. Do not use component names as evidence; describe only visible features. A persuasive story without pixel support is not a match.
+
+Return JSON only, exactly this shape:
+{"verdict": "...", "component_description": "...or null if not visually supported", "supporting_features": ["..."], "contradicting_features": ["..."], "ambiguities": ["..."], "missing_evidence": ["..."], "confidence_uncalibrated": 0.0}

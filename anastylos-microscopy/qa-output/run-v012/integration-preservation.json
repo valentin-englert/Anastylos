@@ -1,0 +1,25 @@
+{
+  "v011_payload_manifest_entries": 76,
+  "v011_stage_payload_errors": [],
+  "active_promoted_files_missing": [],
+  "active_differences_from_v011": [
+    "CHANGELOG.md",
+    "HARDWARE_COMPATIBILITY.md",
+    "INTEGRATION.md",
+    "LIMITATIONS.md",
+    "README.md",
+    "TEST_RESULTS.md",
+    "documentation/inspection-schema.md",
+    "src/anastylos_microscopy/__init__.py",
+    "src/anastylos_microscopy/assessment.py",
+    "tests/test_qa03_resistor_assessment.py"
+  ],
+  "v010_backup_manifest_entries": 283,
+  "v010_backup_hash_errors": [],
+  "historical_qa_files": 204,
+  "historical_qa_hash_errors": [],
+  "v010_expected_junction_target_relative": "qa-output/run-20261029-main/fixtures/outside-frames",
+  "active_v010_junction_target_relative": "qa-output/run-20261029-main/fixtures/outside-frames",
+  "historical_junction_target_matches": true,
+  "result": "PASS"
+}

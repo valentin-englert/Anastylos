@@ -1,0 +1,10 @@
+You are shown ONE real evidence crop from a workbench teardown video: crop {box} from frame {frame} at t={t}s (display pixels, 2160x3840, origin top-left).
+
+Task — single-image visibility check. Describe ONLY what is visible in this one image:
+- Visible objects, surfaces, hands, or tools.
+- Whether the image is clear enough that a later comparison could judge physical identity (state what is missing if not).
+
+Rules: do not compare with any other image. Do not invent identities or positions. If you cannot see image content, say so explicitly in "visible": false.
+
+Return JSON only, exactly this shape:
+{"visible": true, "description": "...", "clarity": "high|medium|low", "missing_detail": ["..."]}

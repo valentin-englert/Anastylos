@@ -1,0 +1,173 @@
+{
+ "tool": "tools/qa03_resistor_sweep.py",
+ "assessor": "anastylos-microscopy-resistor-evidence/1",
+ "note": "SYNTHETIC renders from anastylos_resistor.synthetic at Anastylos a172fbb9; per-render rows are regenerated with --json; this is not real-image validation",
+ "results": {
+  "dev": {
+   "grid": "dev",
+   "renders": 1200,
+   "native_ok": 933,
+   "classes": {
+    "accepted_correct": 338,
+    "caught_wrong": 311,
+    "false_acceptance": 58,
+    "false_rejection": 226,
+    "native_ambiguous": 211,
+    "native_unknown": 56
+   },
+   "false_acceptance_rate_among_wrong_ok": 0.1572,
+   "false_rejection_rate_among_correct_ok": 0.4007,
+   "baseline_v010_false_confident": 369,
+   "by_condition": {
+    "brightness=0.75 glare=False": {
+     "accepted_correct": 85,
+     "caught_wrong": 12,
+     "native_ambiguous": 15,
+     "native_unknown": 8
+    },
+    "brightness=0.75 glare=True": {
+     "accepted_correct": 49,
+     "native_ambiguous": 43,
+     "false_acceptance": 6,
+     "caught_wrong": 15,
+     "false_rejection": 2,
+     "native_unknown": 5
+    },
+    "brightness=1.0 glare=False": {
+     "accepted_correct": 98,
+     "native_ambiguous": 9,
+     "caught_wrong": 5,
+     "false_acceptance": 1,
+     "native_unknown": 7
+    },
+    "brightness=1.0 glare=True": {
+     "accepted_correct": 63,
+     "false_acceptance": 24,
+     "caught_wrong": 16,
+     "native_ambiguous": 13,
+     "false_rejection": 2,
+     "native_unknown": 2
+    },
+    "brightness=1.3 glare=False": {
+     "false_rejection": 63,
+     "accepted_correct": 17,
+     "caught_wrong": 15,
+     "native_ambiguous": 18,
+     "native_unknown": 7
+    },
+    "brightness=1.3 glare=True": {
+     "false_rejection": 25,
+     "false_acceptance": 15,
+     "caught_wrong": 35,
+     "accepted_correct": 25,
+     "native_ambiguous": 17,
+     "native_unknown": 3
+    },
+    "brightness=1.6 glare=False": {
+     "caught_wrong": 49,
+     "false_rejection": 39,
+     "native_ambiguous": 25,
+     "native_unknown": 7
+    },
+    "brightness=1.6 glare=True": {
+     "caught_wrong": 64,
+     "false_acceptance": 5,
+     "native_ambiguous": 23,
+     "false_rejection": 25,
+     "accepted_correct": 1,
+     "native_unknown": 2
+    },
+    "brightness=1.9 glare=False": {
+     "caught_wrong": 42,
+     "false_rejection": 39,
+     "native_ambiguous": 25,
+     "native_unknown": 14
+    },
+    "brightness=1.9 glare=True": {
+     "caught_wrong": 58,
+     "false_acceptance": 7,
+     "false_rejection": 31,
+     "native_ambiguous": 23,
+     "native_unknown": 1
+    }
+   },
+   "validation_class": "synthetic (reader's own renderer); not real-image validation"
+  },
+  "heldout": {
+   "grid": "heldout",
+   "renders": 512,
+   "native_ok": 196,
+   "classes": {
+    "accepted_correct": 24,
+    "caught_wrong": 91,
+    "false_acceptance": 43,
+    "false_rejection": 38,
+    "native_ambiguous": 171,
+    "native_unknown": 145
+   },
+   "false_acceptance_rate_among_wrong_ok": 0.3209,
+   "false_rejection_rate_among_correct_ok": 0.6129,
+   "baseline_v010_false_confident": 134,
+   "by_condition": {
+    "brightness=0.85 glare=False": {
+     "false_acceptance": 12,
+     "native_unknown": 17,
+     "native_ambiguous": 15,
+     "caught_wrong": 2,
+     "false_rejection": 6,
+     "accepted_correct": 12
+    },
+    "brightness=0.85 glare=True": {
+     "false_acceptance": 9,
+     "native_unknown": 21,
+     "native_ambiguous": 30,
+     "caught_wrong": 1,
+     "accepted_correct": 3
+    },
+    "brightness=1.15 glare=False": {
+     "native_ambiguous": 16,
+     "native_unknown": 17,
+     "false_acceptance": 5,
+     "caught_wrong": 8,
+     "false_rejection": 10,
+     "accepted_correct": 8
+    },
+    "brightness=1.15 glare=True": {
+     "caught_wrong": 12,
+     "native_unknown": 17,
+     "false_acceptance": 12,
+     "native_ambiguous": 17,
+     "false_rejection": 5,
+     "accepted_correct": 1
+    },
+    "brightness=1.45 glare=False": {
+     "native_ambiguous": 27,
+     "native_unknown": 21,
+     "false_rejection": 9,
+     "caught_wrong": 7
+    },
+    "brightness=1.45 glare=True": {
+     "caught_wrong": 25,
+     "native_unknown": 17,
+     "native_ambiguous": 18,
+     "false_rejection": 2,
+     "false_acceptance": 2
+    },
+    "brightness=1.75 glare=False": {
+     "caught_wrong": 18,
+     "native_unknown": 16,
+     "native_ambiguous": 24,
+     "false_rejection": 3,
+     "false_acceptance": 3
+    },
+    "brightness=1.75 glare=True": {
+     "native_unknown": 19,
+     "caught_wrong": 18,
+     "native_ambiguous": 24,
+     "false_rejection": 3
+    }
+   },
+   "validation_class": "synthetic (reader's own renderer); not real-image validation"
+  }
+ }
+}

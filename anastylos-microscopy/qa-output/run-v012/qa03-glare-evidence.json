@@ -1,0 +1,24 @@
+{
+  "fixture": "examples/synthetic_mic/images/unknown_glare.png",
+  "documented_expected_ohms": 2200,
+  "image_sha256": "9bd3c70338c25cd905bc87f7deace0d8007c8d176e442cfe36dce9a0614bf8c4",
+  "inspection_id": "mi-b1418dcba79c380641f2",
+  "native_status": "ok",
+  "native_candidate_ohms": 22900.0,
+  "native_score": 0.926,
+  "native_result_matches_stored_reader_result": true,
+  "core_status": "ambiguous",
+  "core_assessor": "anastylos-microscopy-resistor-evidence/2",
+  "core_action": "downgraded",
+  "failed_checks": [
+    "band_geometry",
+    "band_color_fidelity"
+  ],
+  "candidate_preserved": true,
+  "candidate_confirmed": false,
+  "candidate_value": "22.9 k\u03a9",
+  "preserved_original_sha256": "9bd3c70338c25cd905bc87f7deace0d8007c8d176e442cfe36dce9a0614bf8c4",
+  "original_copy_sha256": "9bd3c70338c25cd905bc87f7deace0d8007c8d176e442cfe36dce9a0614bf8c4",
+  "reader_result_sha256": "f57d32afef62d117c0ead08fa2575470cab198cb7d991e222d488e1f7ebb4308",
+  "result": "PASS"
+}

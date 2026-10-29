@@ -1,0 +1,15 @@
+You are analyzing real workbench teardown photos. Four images follow in order:
+1. BEFORE: full frame {before_frame} at video time t={before_t}s.
+2. AFTER: full frame {after_frame} at video time t={after_t}s.
+3. SOURCE CROP: pixels {src_box} from the BEFORE frame (display pixels, 2160x3840, origin top-left).
+4. DEST CROP: pixels {dest_box} from the AFTER frame.
+
+Task A — visual interpretation. Describe ONLY what is visible:
+- What changed between BEFORE and AFTER (objects, positions, hands, tools)?
+- Which visible regions could plausibly be removable physical components? For each, say which image it is in and where roughly (e.g. "center", "bottom tray row, left side").
+- What is unclear, occluded, or ambiguous?
+
+Rules: do not invent object identities, part names, counts, or positions you cannot see. It is acceptable and often correct to report that evidence is insufficient. Never state that two regions show the same physical object unless the pixels clearly support it.
+
+Return JSON only, exactly this shape:
+{"changes": ["..."], "candidate_objects": [{"image": "BEFORE|AFTER|SOURCE_CROP|DEST_CROP", "position_hint": "...", "description": "...", "certainty": "high|medium|low"}], "ambiguities": ["..."], "missing_evidence": ["..."], "confidence_uncalibrated": 0.0}

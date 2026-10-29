@@ -1,0 +1,14 @@
+{
+  "inspection_json": "<TMP>/o/mi-f4cf9de1b6dfcb1e5271/inspection.json",
+  "inspection_id": "mi-f4cf9de1b6dfcb1e5271",
+  "overall_status": "candidate",
+  "readers": {
+    "resistor": "ok"
+  },
+  "digest": "c48f83893ecd773d15c73b84edd45c7e012c52d14192568d89e3ef36b2106bc8"
+}
+exit=0
+overall: candidate | reader status: ok native: ok
+native top: 22.9 kΩ 0.926 ['red', 'red', 'white', 'red', 'gold']
+core glare_fraction: 0.10007 flags: []
+core_assessment: null

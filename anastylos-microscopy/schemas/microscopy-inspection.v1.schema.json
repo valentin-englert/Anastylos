@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anastylos-microscopy-inspection/1",
+  "title": "ANASTYLOS MicroscopyInspection v1",
+  "description": "One inspection of one image (+ optional ROI) by the ANASTYLOS Microscopy Core. Layers are kept separate: observed_evidence (what was seen), interpretations (algorithmic readings), candidates (unconfirmed identifications). Human confirmation lives only in separate review records; human_review.confirmed_identification is always null here.",
+  "type": "object",
+  "required": ["schema", "core_version", "inspection_id", "session_id", "component_observation_id",
+               "ingested_utc", "source", "image", "orientation", "roi", "calibration", "request",
+               "selection", "quality", "recognizers", "observed_evidence", "interpretations",
+               "candidates", "reconciliation", "uncertainty", "human_review", "artifacts",
+               "provenance", "digest", "run"],
+  "properties": {
+    "schema": {"const": "anastylos-microscopy-inspection/1"},
+    "core_version": {"type": "string"},
+    "inspection_id": {"type": "string", "pattern": "^mi-[0-9a-f]{20}$"},
+    "session_id": {"type": ["string", "null"]},
+    "component_observation_id": {"type": ["string", "null"]},
+    "ingested_utc": {"$ref": "#/$defs/utc"},
+    "source": {
+      "type": "object",
+      "required": ["origin", "camera_id", "capture_utc", "validation_class"],
+      "properties": {
+        "origin": {"enum": ["file", "batch", "capture_manifest"]},
+        "camera_id": {"type": ["string", "null"]},
+        "node_id": {"type": ["string", "null"]},
+        "optical_profile": {"type": ["string", "null"]},
+        "capture_utc": {"anyOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]},
+        "capture_manifest": {"type": ["object", "null"]},
+        "validation_class": {"enum": ["unspecified", "synthetic", "sample", "real_microscope"]}
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": ["original_path", "file_name"],
+      "properties": {
+        "original_path": {"type": "string"},
+        "file_name": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "format": {"enum": ["jpeg", "png", "bmp", "tiff", null]},
+        "resolution": {
+          "type": "object", "required": ["width", "height"],
+          "properties": {"width": {"type": "integer", "minimum": 1},
+                         "height": {"type": "integer", "minimum": 1}}
+        },
+        "integrity": {"type": "object", "required": ["checks", "status"],
+                      "properties": {"status": {"enum": ["pass", "fail"]}}},
+        "exif_orientation": {"type": ["integer", "null"], "minimum": 1, "maximum": 8}
+      }
+    },
+    "orientation": {
+      "type": "object",
+      "required": ["stored_pixels_modified", "applied_by_core", "declared_display_rotation_cw_deg"],
+      "properties": {
+        "stored_pixels_modified": {"const": false},
+        "applied_by_core": {"const": false},
+        "declared_display_rotation_cw_deg": {"enum": [0, 90, 180, 270, null]}
+      }
+    },
+    "roi": {
+      "type": "object", "required": ["xywh", "coordinates"],
+      "properties": {
+        "xywh": {"anyOf": [{"type": "null"},
+                            {"type": "array", "minItems": 4, "maxItems": 4,
+                             "items": {"type": "integer", "minimum": 0}}]}
+      }
+    },
+    "calibration": {
+      "type": "object", "required": ["status", "valid", "pixels_per_mm", "reasons"],
+      "properties": {
+        "status": {"enum": ["absent", "invalid", "valid"]},
+        "valid": {"type": "boolean"},
+        "pixels_per_mm": {"type": ["number", "null"]},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "request": {"type": "object", "required": ["mode"]},
+    "selection": {
+      "type": "object", "required": ["mode", "readers", "skipped", "rationale"],
+      "properties": {
+        "mode": {"enum": ["resistor", "smd", "pcb_ocr", "markings", "polarity", "screw",
+                          "screw_measure", "washer", "fingerprints", "connectors", "multi", "auto"]},
+        "readers": {"type": "array", "items": {"$ref": "#/$defs/reader"}}
+      }
+    },
+    "quality": {"type": ["object", "null"]},
+    "recognizers": {"type": "array", "items": {"$ref": "#/$defs/recognizer"}},
+    "observed_evidence": {"type": "array", "items": {"$ref": "#/$defs/layer_item"}},
+    "interpretations": {"type": "array", "items": {"$ref": "#/$defs/layer_item"}},
+    "candidates": {
+      "type": "array",
+      "items": {"type": "object", "required": ["reader", "identification", "confirmed"],
+                "properties": {"reader": {"$ref": "#/$defs/reader"},
+                               "confirmed": {"const": false}}}
+    },
+    "reconciliation": {
+      "type": "object", "required": ["claims", "conflicts", "agreements"],
+      "properties": {"conflicts": {"type": "array"}, "agreements": {"type": "array"}}
+    },
+    "uncertainty": {
+      "type": "object", "required": ["overall_status", "reasons", "statement"],
+      "properties": {
+        "overall_status": {"enum": ["candidate", "ambiguous", "conflict", "unknown",
+                                    "unavailable", "error", "recorded", "input_error"]},
+        "reasons": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "human_review": {
+      "type": "object", "required": ["status", "required", "confirmed_identification"],
+      "properties": {"status": {"const": "pending"}, "required": {"const": true},
+                     "confirmed_identification": {"type": "null"}}
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {"type": "object", "required": ["role", "path", "sha256"],
+                "properties": {"path": {"type": "string", "pattern": "^[^/\\\\][^:]*$"},
+                               "sha256": {"$ref": "#/$defs/sha256"}}}
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["anastylos", "core", "config_sha256", "replay",
+                   "blobcam_runtime_dependency", "assembly_memory_writes"],
+      "properties": {
+        "blobcam_runtime_dependency": {"const": false},
+        "assembly_memory_writes": {"const": false},
+        "config_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "digest": {
+      "type": "object", "required": ["algorithm", "value"],
+      "properties": {"algorithm": {"const": "sha256"}, "value": {"$ref": "#/$defs/sha256"}}
+    },
+    "run": {"type": "object", "required": ["volatile"], "properties": {"volatile": {"const": true}}}
+  },
+  "$defs": {
+    "utc": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "reader": {"enum": ["resistor", "smd", "pcb_ocr", "markings", "polarity", "screw",
+                        "screw_measure", "washer", "fingerprints", "connectors"]},
+    "layer_item": {"type": "object", "required": ["reader", "kind"],
+                   "properties": {"reader": {"$ref": "#/$defs/reader"}, "kind": {"type": "string"}}},
+    "recognizer": {
+      "type": "object",
+      "required": ["reader", "module", "package", "entry_point", "code_sha256",
+                   "matches_pinned_revision", "status", "native_status", "reason",
+                   "calibration_adaptation", "native_result", "artifacts"],
+      "properties": {
+        "reader": {"$ref": "#/$defs/reader"},
+        "status": {"enum": ["ok", "ambiguous", "unknown", "unavailable", "rejected", "reader_error",
+                            "input_error", "not_applicable", "enrolled", "observed"]},
+        "native_status": {"type": ["string", "null"]},
+        "core_assessment": {
+          "description": "v0.1.1 (QA-03), optional/additive: Core evidence assessment of a native verdict. action=downgraded means the native 'ok' is held as 'ambiguous'; native_result and candidates are preserved.",
+          "type": "object", "required": ["assessor", "action"],
+          "properties": {
+            "assessor": {"type": "string"},
+            "action": {"enum": ["none", "kept", "downgraded"]},
+            "supports_ok": {"type": "boolean"},
+            "failed_checks": {"type": "array", "items": {"type": "string"}},
+            "checks": {"type": "array", "items": {"type": "object", "required": ["check", "status"],
+                       "properties": {"status": {"enum": ["pass", "fail", "not_applicable", "not_evaluable"]}}}}
+          }
+        },
+        "native_result": {"type": ["object", "null"]},
+        "matches_pinned_revision": {"type": ["boolean", "null"]}
+      }
+    }
+  }
+}

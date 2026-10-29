@@ -1,0 +1,19 @@
+== case A: ANASTYLOS_ROOT unset, batch of 3
+{
+  "batch_json": "<TMP>/outA/batch.json",
+  "count": 3,
+  "status_counts": {
+    "crashed": 3
+  }
+}
+exit=0
+== case B: mixed batch valid+corrupt
+{
+  "batch_json": "<TMP>/outB/batch.json",
+  "count": 2,
+  "status_counts": {
+    "input_error": 1,
+    "candidate": 1
+  }
+}
+exit=0

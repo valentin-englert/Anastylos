@@ -1,6 +1,6 @@
 # tools/live — LIVE-CORE (Lane A)
 
-Deterministic coordinator for live clarification questions (CONTRACT `anastylos-live-contract@0.1`, A2).
+Deterministic coordinator for live clarification questions (current CONTRACT `anastylos-live-contract@0.2`, A2).
 Stdlib only. Files: `states.py` (§3.3 state machine, op_key), `questions.py` (questions.json + revisions),
 `templates.py` (L0 wording ported from `seed/h3r0.py`, rubric R1–R7), `interpret.py` (operator input → answers.py
 answer, read-back), `gate.py` (L1 gates, schema subset validator), `journal.py` (`anastylos-live-journal@1`,
@@ -18,6 +18,13 @@ journal/memory line → stopped, no truncation; EO-6 stale revision never commit
 detected → stopped. Read-back confirmation is L0 only (no model decides a "yes").
 
 ## Limits (fail closed; frozen files not changed)
+- The journal still emits Lane A fields such as `at`, rather than all contract 0.2 fields such as
+  `t_wall`; integration does not establish journal conformance. The original fixture manifest also
+  retains its CRLF-source versus LF-blob mismatch for `audit/memory.before-answers.jsonl`; the local
+  integration report records both hashes without changing the forensic fixture or its manifest.
+- l2sim's `session.py` shadows `tools/session/session.py`; run the simulator in its own process,
+  as the integration tests do. The real L2 evaluation remains independently owned; no benefit is claimed.
+- `request_view` remains gated. Contract 0.3 and refreshed provider fixtures remain future work.
 - memory.py/store.py do not fsync: a memory line may be lost on power failure. Recovery treats memory as truth and stops
   if the journal acknowledges an event memory lacks.
 - No op_key field in memory: the op_key travels in the existing free-text note (`live op_key=...` via `provenance`);

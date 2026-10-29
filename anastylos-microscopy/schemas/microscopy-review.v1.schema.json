@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anastylos-microscopy-review/1",
+  "title": "ANASTYLOS Microscopy human review record v1",
+  "type": "object",
+  "required": ["schema", "inspection_id", "inspection_sha256", "inspection_digest", "reviewed_utc",
+               "operator", "decision", "confirmed_identification"],
+  "properties": {
+    "schema": {"const": "anastylos-microscopy-review/1"},
+    "inspection_id": {"type": "string", "pattern": "^mi-[0-9a-f]{20}$"},
+    "inspection_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "inspection_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "reviewed_utc": {"type": "string"},
+    "operator": {"type": "string", "minLength": 1},
+    "decision": {"enum": ["confirmed", "rejected", "needs_recapture", "inconclusive"]},
+    "confirmed_identification": {"type": ["string", "null"]},
+    "operator_evidence": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": ["string", "null"]},
+    "supersedes": {"type": ["string", "null"]}
+  }
+}

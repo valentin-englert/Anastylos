@@ -1,0 +1,19 @@
+== validate --kind capture_manifest (frames/ -> symlinked dir outside capture root)
+{
+  "file": "<TMP>/capture/capture-manifest.json",
+  "kind": "capture_manifest",
+  "valid": true,
+  "errors": []
+}
+exit=0
+== inspect --manifest
+{
+  "batch_json": "<TMP>/out/batch.json",
+  "count": 1,
+  "status_counts": {
+    "candidate": 1
+  }
+}
+exit=0
+entries: [('frames/escape.jpg', 'candidate', None)]
+decoded image sha: 9bd3c70338c25cd9 path: <TMP>/capture/frames/escape.jpg

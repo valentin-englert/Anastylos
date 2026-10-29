@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anastylos.local/schemas/microscopy-batch.v1.schema.json",
+  "title": "ANASTYLOS Microscopy batch summary (anastylos-microscopy-batch/1, formalized in Core v0.1.1)",
+  "description": "Written by inspect --batch-dir / --manifest as <out>/batch.json. v0.1.0 fields (schema, created_utc, count, status_counts, entries, capture_manifest) are unchanged; v0.1.1 adds outcome, exit_code, outcome_counts, reader_status_counts, ocr and per-entry processing.",
+  "type": "object",
+  "required": ["schema", "created_utc", "count", "status_counts", "entries", "outcome", "exit_code",
+               "outcome_counts", "reader_status_counts", "ocr"],
+  "properties": {
+    "schema": {"const": "anastylos-microscopy-batch/1"},
+    "created_utc": {"type": "string", "pattern": "Z$"},
+    "count": {"type": "integer", "minimum": 0},
+    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "outcome": {"enum": ["success", "partial_failure", "failure", "environment_unavailable", "empty"]},
+    "exit_code": {"enum": [0, 1, 3, 4]},
+    "exit_code_semantics": {"type": "string"},
+    "outcome_counts": {
+      "type": "object",
+      "required": ["total", "completed", "completed_with_reader_errors", "unavailable", "reader_error",
+                   "input_error", "manifest_rejected", "crashed", "usable_records", "problem_entries",
+                   "abstentions", "candidates", "core_downgraded"],
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "reader_status_counts": {"type": "object",
+                             "additionalProperties": {"type": "object",
+                                                      "additionalProperties": {"type": "integer"}}},
+    "ocr": {"type": "object", "required": ["readers", "unavailable_entries"],
+            "properties": {"unavailable_entries": {"type": "integer", "minimum": 0}}},
+    "capture_manifest": {"type": "object", "required": ["path", "sha256", "validation_class"],
+                         "properties": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["file", "inspection_id", "overall_status", "digest", "inspection_json", "error",
+                     "processing"],
+        "properties": {
+          "processing": {"enum": ["completed", "completed_with_reader_errors", "unavailable",
+                                  "reader_error", "input_error", "manifest_rejected", "crashed"]},
+          "inspection_id": {"type": ["string", "null"]},
+          "overall_status": {"type": ["string", "null"]},
+          "digest": {"type": ["string", "null"]},
+          "inspection_json": {"type": ["string", "null"]},
+          "error": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

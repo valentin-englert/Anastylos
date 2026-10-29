@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anastylos-microscopy-capture-manifest/1",
+  "title": "ANASTYLOS Microscopy capture manifest v1 (future capture-node handoff)",
+  "description": "Folder handoff from a capture node (planned: Raspberry Pi 3B+ + UGREEN 25854 + MUSTOOL HDMI microscope) to the Windows-side Core. Frames are the original JPEG bytes; the Core verifies every sha256 and never modifies them. Orientation is metadata only.",
+  "type": "object",
+  "required": ["schema", "source", "validation_class", "frames"],
+  "properties": {
+    "schema": {"const": "anastylos-microscopy-capture-manifest/1"},
+    "node_id": {"type": ["string", "null"]},
+    "session_id": {"type": ["string", "null"]},
+    "validation_class": {"enum": ["synthetic", "sample", "real_microscope"]},
+    "source": {
+      "type": "object", "required": ["camera_id"],
+      "properties": {
+        "camera_id": {"type": "string"},
+        "optical_profile": {"type": ["string", "null"]},
+        "capture_device": {"type": ["string", "null"]},
+        "capture_format": {"type": ["string", "null"]},
+        "capture_resolution": {"type": ["array", "null"]},
+        "camera_settings_note": {"type": ["string", "null"]}
+      }
+    },
+    "orientation_cw_deg": {"enum": [0, 90, 180, 270, null]},
+    "calibration": {"type": ["object", "null"]},
+    "frames": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["file", "sha256"],
+        "properties": {
+          "file": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "seq": {"type": ["integer", "null"]},
+          "captured_utc": {"type": ["string", "null"]},
+          "orientation_cw_deg": {"enum": [0, 90, 180, 270, null]},
+          "roi_xywh": {"type": ["array", "null"]},
+          "component_observation_id": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

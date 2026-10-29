@@ -1,0 +1,11 @@
+{
+  "archive": "C:\\Users\\HP\\Documents\\Anastylos\\ANASTYLOS_MICROSCOPY_CORE_v0.1.2.zip",
+  "archive_sha256": "7a4810b09ae318337ae0b6b020d60116075f4565f941eb04de14455df88bd151",
+  "delivery_manifest_sha256": "00afd57287df7749d133c91cc6cd1eb6c07dfcb7b24e2a8266011e900f20a3da",
+  "payload_entries": 76,
+  "archive_entries": 77,
+  "hash_mismatches": [],
+  "integrity_errors": [],
+  "excluded_qa_output": true,
+  "result": "PASS"
+}

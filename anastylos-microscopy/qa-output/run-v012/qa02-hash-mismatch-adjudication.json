@@ -1,0 +1,29 @@
+{
+  "qa02_original_helper_result": "FAIL",
+  "qa02_helper_expected": "entry.rejection == hash_mismatch",
+  "observed_contract": {
+    "validate": "exit 1, valid false, sha256 mismatch",
+    "inspect": {
+      "batch_exit": 1,
+      "processing": "input_error",
+      "overall_status": "input_error",
+      "error": "manifest_sha256_mismatch: file hash e059f6e13b37bb7f... does not match capture manifest 0000000000000000...",
+      "recognizers": 0,
+      "inspection_record_schema_valid": true,
+      "evidence_copy_sha256": "e059f6e13b37bb7f38079418851f769e3f923343b8f9acc645c7c047a790daeb",
+      "actual_file_sha256": "e059f6e13b37bb7f38079418851f769e3f923343b8f9acc645c7c047a790daeb",
+      "declared_manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "adjudication": "The manifest hash mismatch is detected and no reader executes. Inspection retains a schema-valid input_error record and evidence of the actual in-root bytes for provenance, instead of using a manifest_rejected entry. The helper assertion was narrower than this behavior; the differing classification is documented, not hidden.",
+  "checks": {
+    "validation_exit": true,
+    "inspection_exit": true,
+    "inspection_error_is_hash_mismatch": true,
+    "no_recognizers_ran": true,
+    "record_schema_valid": true,
+    "evidence_is_actual_input": true,
+    "declared_hash_differs": true
+  },
+  "result": "PASS"
+}

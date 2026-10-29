@@ -1,0 +1,31 @@
+== case A: ANASTYLOS_ROOT unset, batch of 3
+ANASTYLOS_ROOT is not set; point it at a checkout of valentin-englert/Anastylos (tested revision a172fbb9e127)
+exit=3
+== case B: mixed batch valid+corrupt
+batch outcome partial_failure: 1 of 2 entries did not complete (see <TMP>/outB/batch.json)
+{
+  "batch_json": "<TMP>/outB/batch.json",
+  "count": 2,
+  "status_counts": {
+    "input_error": 1,
+    "ambiguous": 1
+  },
+  "outcome": "partial_failure",
+  "outcome_counts": {
+    "total": 2,
+    "completed": 1,
+    "completed_with_reader_errors": 0,
+    "unavailable": 0,
+    "reader_error": 0,
+    "input_error": 1,
+    "manifest_rejected": 0,
+    "crashed": 0,
+    "usable_records": 1,
+    "problem_entries": 1,
+    "abstentions": 1,
+    "candidates": 0,
+    "core_downgraded": 1
+  },
+  "exit_code": 4
+}
+exit=4

@@ -1,0 +1,24 @@
+{
+  "policy": "anastylos-microscopy-resistor-evidence/2",
+  "core_version": "0.1.2",
+  "source_revision": "f98badb38515cbc415a8da466189218fc84d8794",
+  "assessment_sha256": "d4a4705080ae881a4c6e507a0261558d1f8575400b2933bc673b4dae284d65e3",
+  "package_core_code_sha256": "006fbb278c8c725e17d1cadbe9d6d08ab70e8002134f6545c1305a7adbf71221",
+  "init_sha256": "d22cfedb0d3640086e7792f2710da4bb6b13e0290673ae2740740e2fbd7548fc",
+  "development_grid": "qa03_resistor_sweep.py --grid dev",
+  "development_results_sha256": "19136a2ad597c42b1ebe6692c5f731a3e1acb4af353f261ab3ca9a74a881b0ad",
+  "development_counts": {
+    "accepted_correct": 294,
+    "caught_wrong": 344,
+    "false_acceptance": 25,
+    "false_rejection": 270,
+    "native_ambiguous": 211,
+    "native_unknown": 56
+  },
+  "thresholds": {
+    "clip_level": 250,
+    "max_clipped_fraction_per_decoded_band": 0.1
+  },
+  "selection_basis": "The dev-only profile showed 58 to 25 false acceptances and 338 to 294 accepted-correct native-ok results; threshold is conservative and not calibrated.",
+  "heldout_status": "not run at freeze time"
+}

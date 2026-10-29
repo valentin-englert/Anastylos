@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anastylos-microscopy-calibration/1",
+  "title": "ANASTYLOS Microscopy calibration evidence v1",
+  "description": "Operator-measured scale for ONE optical configuration at ONE capture resolution (e.g. stage micrometer photographed at the same zoom). Exactly one scale form is enough; if several are given they must agree within 1%. The historical BlobCam '~10 x 6 mm at 0.5x' note is not calibration evidence.",
+  "type": "object",
+  "required": ["schema", "provenance", "image_resolution"],
+  "properties": {
+    "schema": {"const": "anastylos-microscopy-calibration/1"},
+    "pixels_per_mm": {"type": "number", "minimum": 0},
+    "px_per_mm": {"type": "number", "minimum": 0},
+    "pixels_per_mm_std": {"type": "number", "minimum": 0},
+    "reference": {"type": "object", "required": ["length_mm", "pixels"],
+                  "properties": {"length_mm": {"type": "number"}, "pixels": {"type": "number"},
+                                 "label": {"type": "string"}}},
+    "provenance": {"type": "string", "minLength": 3},
+    "image_resolution": {"type": "array", "minItems": 2, "maxItems": 2,
+                         "items": {"type": "integer", "minimum": 1}},
+    "optical_profile": {"type": "string"},
+    "frame": {"type": "string"},
+    "view": {"type": "string"},
+    "origin_frame_mm": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+    "measured_utc": {"type": ["string", "null"]}
+  },
+  "anyOf": [{"required": ["pixels_per_mm"]}, {"required": ["px_per_mm"]}, {"required": ["reference"]}]
+}

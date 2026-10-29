@@ -1,0 +1,202 @@
+{
+  "schema": "anastylos-microscopy-dataset/1",
+  "dataset_id": "synthetic-mic-v1",
+  "provenance": {
+    "kind": "synthetic",
+    "specimen": "rendered fixtures (NOT the MSI GTX 970)",
+    "is_msi_gtx970_capture": false,
+    "operator": null,
+    "notes": "built by examples/build_synthetic_examples.py"
+  },
+  "items": [
+    {
+      "id": "mic01-472",
+      "image": "images/smd_472.png",
+      "sha256": "f9bcdf4023e95d8f436fd41668ef1985eba66c4a49a56c4205f1f383bf387276",
+      "split": "dev",
+      "workflow": "MIC-01",
+      "mode": "smd",
+      "expected": {
+        "visible_marking": "472"
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic01-103",
+      "image": "images/smd_103_heldout.png",
+      "sha256": "fba3993b5a1106997f448409b9d4e9bc8cc9d96debdbb8ab2035df20607c8f2c",
+      "split": "heldout",
+      "workflow": "MIC-01",
+      "mode": "smd",
+      "expected": {
+        "visible_marking": "103"
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic01-unmarked",
+      "image": "images/smd_unmarked.png",
+      "sha256": "e7fdc30c3e570aca77e9d3cc4c248051f7bf48e760741db6cd7d787c7eadfa35",
+      "split": "dev",
+      "workflow": "MIC-01",
+      "mode": "smd",
+      "expected": {
+        "abstain": true
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic02-silk",
+      "image": "images/silk_r12_c5.png",
+      "sha256": "9643dc1e1932f728341f04086a08c8ee4331dd319d8884539c1c2390d9bc9646",
+      "split": "dev",
+      "workflow": "MIC-02",
+      "mode": "pcb_ocr",
+      "expected": {
+        "designators": [
+          "R12",
+          "C5"
+        ]
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic03-lm358",
+      "image": "images/ic_lm358n.png",
+      "sha256": "49db55443a82faae44845257682358c2339ea1bb5eb3f62bd8bc39cf0286050e",
+      "split": "dev",
+      "workflow": "MIC-03",
+      "mode": "markings",
+      "expected": {
+        "visible_marking": "LM358N"
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic04-ic-query",
+      "image": "images/fp_ic_query_rot30.png",
+      "sha256": "ec472ba06e30792ced446580768a065531e535869dbe91ee40b9a5f3a3cef868",
+      "split": "dev",
+      "workflow": "MIC-04",
+      "mode": "fingerprints",
+      "expected": {
+        "gallery_id": "synthetic-ic-01"
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      },
+      "options": {
+        "gallery": "gallery"
+      }
+    },
+    {
+      "id": "mic04-negative",
+      "image": "images/fp_capacitor_negative.png",
+      "sha256": "67ba2c67a7b3350700afe24c78023cd81ab103cdd32e854c01d3a60315da6401",
+      "split": "dev",
+      "workflow": "MIC-04",
+      "mode": "fingerprints",
+      "expected": {
+        "gallery_id": null
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      },
+      "options": {
+        "gallery": "gallery"
+      }
+    },
+    {
+      "id": "mic05-uniform",
+      "image": "images/unknown_uniform.png",
+      "sha256": "146aa598506f97bcb6eebe098f42234adea194ed137031c58f3fe7a760e7afef",
+      "split": "dev",
+      "workflow": "MIC-05",
+      "mode": "auto",
+      "expected": {
+        "abstain": true
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic05-blur",
+      "image": "images/unknown_blurred_resistor.png",
+      "sha256": "bd7efd2440ec3b0ae199676bd226f57d2f5a7d268d55ff0853e8280f8dcdb8a4",
+      "split": "dev",
+      "workflow": "MIC-05",
+      "mode": "resistor",
+      "expected": {
+        "abstain": true
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    },
+    {
+      "id": "mic05-glare",
+      "image": "images/unknown_glare.png",
+      "sha256": "9bd3c70338c25cd905bc87f7deace0d8007c8d176e442cfe36dce9a0614bf8c4",
+      "split": "dev",
+      "workflow": "MIC-05",
+      "mode": "resistor",
+      "expected": {
+        "abstain": true
+      },
+      "optical_profile": null,
+      "component_type_confirmed": null,
+      "known_uncertainty": "synthetic render",
+      "annotation": {
+        "operator": "generator",
+        "notes": "synthetic; not a microscope photo"
+      }
+    }
+  ]
+}

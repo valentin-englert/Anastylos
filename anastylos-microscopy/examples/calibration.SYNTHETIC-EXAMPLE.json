@@ -1,0 +1,11 @@
+{
+  "schema": "anastylos-microscopy-calibration/1",
+  "pixels_per_mm": 160.0,
+  "pixels_per_mm_std": 1.5,
+  "image_resolution": [1920, 1080],
+  "optical_profile": "EXAMPLE-ONLY",
+  "frame": "custom:microscope-example",
+  "view": "microscope_top",
+  "provenance": "SYNTHETIC EXAMPLE VALUE - not a measurement. Replace with a stage-micrometer photo taken at the same zoom/lens/resolution.",
+  "measured_utc": null
+}

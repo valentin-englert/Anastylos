@@ -1,0 +1,147 @@
+{
+  "inspection_json": "<TMP>/o/mi-92e9b11bf820c7aef701/inspection.json",
+  "inspection_id": "mi-92e9b11bf820c7aef701",
+  "overall_status": "ambiguous",
+  "processing": "completed",
+  "readers": {
+    "resistor": "ambiguous"
+  },
+  "native_readers": {
+    "resistor": "ok"
+  },
+  "digest": "f7feddf5472a62dc14655581ca7cb5131d9dab29352f214cae0e01a1251d72f7",
+  "exit_code": 0
+}
+exit=0
+overall: ambiguous | reader status: ambiguous native: ok
+native top: 22.9 kΩ 0.926 ['red', 'red', 'white', 'red', 'gold']
+core glare_fraction: 0.10007 flags: [{'blocking': False, 'detail': '34.7% of pixels have a colour channel >= 250: colour evidence there is unreliable (advisory; colour-band readers are additionally checked by the Core assessment)', 'flag': 'channel_clipping'}]
+core_assessment: {
+ "action": "downgraded",
+ "applies_to_native_status": "ok",
+ "assessor": "anastylos-microscopy-resistor-evidence/1",
+ "candidate_preserved": true,
+ "checks": [
+  {
+   "check": "evidence_complete",
+   "detail": "one in-bounds box with colour candidates per decoded band",
+   "status": "pass"
+  },
+  {
+   "band_widths_px": [
+    31.0,
+    30.0,
+    4.0,
+    27.0,
+    29.0
+   ],
+   "check": "band_geometry",
+   "detail": "band(s) [2] narrower than 40% of the median band width (29.0 px): likely segmentation artefact",
+   "narrow_bands": [
+    2
+   ],
+   "status": "fail",
+   "width_ratios": [
+    1.069,
+    1.034,
+    0.138,
+    0.931,
+    1.0
+   ]
+  },
+  {
+   "check": "band_color_determinacy",
+   "detail": "each decoded colour is its band's majority top colour",
+   "status": "pass",
+   "weak_bands": []
+  },
+  {
+   "check": "band_color_consistency",
+   "detail": "band colours stable along each band",
+   "segments": [
+    {
+     "band": 0,
+     "decoded": "red",
+     "segment_top_colors": [
+      "red",
+      "red",
+      "red"
+     ]
+    },
+    {
+     "band": 1,
+     "decoded": "red",
+     "segment_top_colors": [
+      "red",
+      "red",
+      "red"
+     ]
+    },
+    {
+     "band": 2,
+     "decoded": "white",
+     "segment_top_colors": [
+      "white",
+      "white",
+      "gold"
+     ]
+    },
+    {
+     "band": 3,
+     "decoded": "red",
+     "segment_top_colors": [
+      "red",
+      "red",
+      "red"
+     ]
+    },
+    {
+     "band": 4,
+     "decoded": "gold",
+     "segment_top_colors": [
+      "gold",
+      "gold",
+      "gold"
+     ]
+    }
+   ],
+   "status": "pass",
+   "unstable_bands": []
+  },
+  {
+   "band_clipped_fraction": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "check": "band_color_fidelity",
+   "clipped_bands": [
+    0,
+    1,
+    2,
+    3,
+    4
+   ],
+   "detail": "5/5 bands have >= 50% pixels with a clipped colour channel (>= 250): hue/saturation/value evidence destroyed",
+   "status": "fail"
+  }
+ ],
+ "failed_checks": [
+  "band_geometry",
+  "band_color_fidelity"
+ ],
+ "from_status": "ok",
+ "note": "heuristic consistency checks on the reader's own evidence; uncalibrated, synthetic-only validation; never a confirmation",
+ "supports_ok": false,
+ "thresholds": {
+  "band_clipped_fraction": 0.5,
+  "clip_level": 250,
+  "clipped_band_share": 0.5,
+  "max_evaluable_angle_deg": 35.0,
+  "min_band_color_share": 0.5,
+  "min_band_width_ratio": 0.4
+ },
+ "to_status": "ambiguous"
+}

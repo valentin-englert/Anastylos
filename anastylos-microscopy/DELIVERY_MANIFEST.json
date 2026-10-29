@@ -1,0 +1,473 @@
+{
+  "name": "ANASTYLOS Microscopy Core",
+  "version": "0.1.2",
+  "created": "2026-10-29",
+  "kind": "Windows-integrated reliability follow-up release; no reader implementation changes",
+  "previous_release": {
+    "version": "0.1.1",
+    "archive": "ANASTYLOS_MICROSCOPY_CORE_v0.1.1.zip",
+    "archive_sha256": null,
+    "archive_hash_status": "NOT VERIFIED: original ZIP was unavailable to Codex",
+    "payload_manifest_files_verified": "76/76 against the staged v0.1.1 DELIVERY_MANIFEST.json"
+  },
+  "preserved_release": {
+    "version": "0.1.0",
+    "backup_directory": ".microscopy-v011-qa/preserved-v0.1.0-exact",
+    "regular_files": 283,
+    "sha256_manifest": ".microscopy-v011-qa/preservation-manifest.json",
+    "all_hashes_verified": true,
+    "historical_qa_files_preserved": 204
+  },
+  "license": "none declared (Anastylos licensing deliberately deferred); no third-party code relicensed",
+  "source_revisions": {
+    "valentin-englert/Anastylos": {
+      "required_reader_pin": "a172fbb9e127e7a3a93b128516b6592bfbbc81ef",
+      "qa_checkout_head": "f98badb38515cbc415a8da466189218fc84d8794",
+      "qa_checkout_is_exact_pin": false,
+      "all_ten_reader_code_hashes_match_pin": true,
+      "reader_code_sha256": {
+        "anastylos_revision": "a172fbb9e127e7a3a93b128516b6592bfbbc81ef",
+        "note": "SHA-256 over LF-normalized *.py files of each reader package at the pinned revision (see env.code_sha256)",
+        "readers": {
+          "connectors": "a8995b4928cdcecb29957a5a8a7b8be4aa33e8bd2d5ec82e19d2dbf2b9c33598",
+          "fingerprints": "697a9b34c79b05c3ebbfdf3202aef76400394d13512367d44903f4a99526c833",
+          "markings": "da209d604ff3e4cb7216cafc2eb9b532c5467b3ecbbc53ea4a167611514c48bf",
+          "pcb_ocr": "e9dfa16e59700d9839bbfde999016fe8e3616afb1f01120ec110979045560323",
+          "polarity": "3e7392e65eb5b38617fc048d1ac62af9e12bb874c0e28f4bc8df1e92c3b25dbd",
+          "resistor": "d69a4a5ef3028566a23ec8ac8297fd725f16d2e31b8417e3493936c67fee4bd0",
+          "screw": "f2ceb96762ee10dfb7191cfd82fdff2c4468656b5bb997fb9d2c4738e460d979",
+          "screw_measure": "19facad2ab73db8ef61f1c70edca1b7c6451b3fe1b3d9180bc24d90158c85d1a",
+          "smd": "a38bb79135e2f5dccf76e7f51468267a64e8881ef7e5da2f182d8f37c1dd21ea",
+          "washer": "e738c2d045f29f9a0d104b15a61c59cc9fc99605c5be7bf77cd927e84b304bd2"
+        }
+      }
+    }
+  },
+  "remote_repositories_modified": false,
+  "commits_or_pushes_made": false,
+  "changes_vs_v0.1.1": {
+    "assessor": "anastylos-microscopy-resistor-evidence/2",
+    "policy": "Hold native resistor ok as ambiguous if at least 10% of any decoded band has a channel value >=250. Preserve native reader evidence and unconfirmed candidate.",
+    "reader_implementations_modified": false,
+    "dependencies_added": false,
+    "inspection_schema_changed": false
+  },
+  "qa_summary": {
+    "windows": "Core 83 total / 76 passed / 7 skipped / 0 failed; reader regression 543 passed; CLI smoke 20/20 passed",
+    "windows_junctions": "in-root accepted; outside-root rejected by validation and inspection; junction replacement identity defense passed",
+    "qa03_dev": {
+      "renders": 1200,
+      "accepted_correct": 294,
+      "accepted_incorrect": 25,
+      "rejected_correct": 270,
+      "rejected_incorrect": 344,
+      "candidate_precision": 0.9216
+    },
+    "qa03_heldout_frozen": {
+      "renders": 512,
+      "accepted_correct": 15,
+      "accepted_incorrect": 23,
+      "rejected_correct": 47,
+      "rejected_incorrect": 111,
+      "candidate_precision": 0.3947
+    },
+    "hardware_validation": "NOT PERFORMED"
+  },
+  "limitations": [
+    "Resistor candidate precision on held-out synthetic grid is 39.5%; not suitable for automatic identification.",
+    "Windows symlink scenarios remain pending because symlink creation was denied with WinError 1314; actual junction tests passed.",
+    "Tesseract is unavailable on the QA workstation.",
+    "No real microscope or GTX 970 images were tested."
+  ],
+  "dependencies": {
+    "added": false,
+    "runtime": "existing OpenCV and NumPy dependencies; OCR requires externally installed Tesseract"
+  },
+  "excluded_from_zip": [
+    "anastylos-microscopy/qa-output/ (historical evidence and current QA run outputs)",
+    "VCS metadata, bytecode caches, Python virtual environments, credentials/secrets, unrelated repositories"
+  ],
+  "file_sha256_note": "SHA-256 covers each listed payload file; DELIVERY_MANIFEST.json is included in the ZIP but excluded from its own file list. ZIP SHA-256 is supplied in qa-output/run-v012/delivery-verification.json and QA_REPORT.md.",
+  "files": [
+    {
+      "path": "anastylos-microscopy/CHANGELOG.md",
+      "bytes": 4603,
+      "sha256": "0a4ebb356d3607ff690d2984ccbaf7e98dfc0192f96b8896cd83c69e78baba1b"
+    },
+    {
+      "path": "anastylos-microscopy/DEPENDENCY_NOTICES.md",
+      "bytes": 1517,
+      "sha256": "241427a1a1d6196b3775da5bdc1df3b7aef2812a2e59626d989754ac9e30a796"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/audit-findings.md",
+      "bytes": 3534,
+      "sha256": "b55dcc4b940727aa26042d8007e0e5be59dd04b74d5da18ca3224534619c786f"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/calibration.md",
+      "bytes": 2024,
+      "sha256": "137ea497893250357b13a81c42a24d29e9433f69878fb4bcb58cf57fa7b67625"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/capture-adapter.md",
+      "bytes": 2362,
+      "sha256": "5953ef3608b69931cd8c6d7072f72ae619e2d143b96dea01840d325fc77dce69"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/inspection-schema.md",
+      "bytes": 2778,
+      "sha256": "8c3bc323834ccac484904e690a9bf4adb3bb8ba6df94aa68e3826d06d0f8e6d4"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/mic-workflows.md",
+      "bytes": 1997,
+      "sha256": "cfe56b5d765b52a70862fdbab25394d15ffd5a5d6fc57117ac144790d1a58a77"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa-evidence/v0.1.0_qa01.log",
+      "bytes": 321,
+      "sha256": "5e34f3a02013a60f2e21e1380672a5624b50386f926eeadebdb6b6ca376e8a5b"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa-evidence/v0.1.0_qa02.log",
+      "bytes": 463,
+      "sha256": "2f8a2681f32c9327f0d9da71640180bc51b176426e517f3c662bf6e0f2b51cd0"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa-evidence/v0.1.0_qa03.log",
+      "bytes": 459,
+      "sha256": "ac8a907d0f25da5ff1b73cbc2d6d559e893a23ee9d0a4412fb21da6042291aac"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa-evidence/v0.1.1_qa01.log",
+      "bytes": 806,
+      "sha256": "3e9d5d951490a902ea5b48cd197d36dcf84aa9052604237d92d7b925681e39b0"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa-evidence/v0.1.1_qa02.log",
+      "bytes": 1117,
+      "sha256": "8fe3f7d1164ca1013c8739743378a1de642628559c3f29cec8c823f26e0265e3"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa-evidence/v0.1.1_qa03.log",
+      "bytes": 3212,
+      "sha256": "1f5934d63fa4ec88259a2f57e1599842d3673a1aca233ecef914f8885e6ae839"
+    },
+    {
+      "path": "anastylos-microscopy/documentation/qa03-sweep-summary.json",
+      "bytes": 4589,
+      "sha256": "6d116ed2b87b9c155e1c9c82d761beb6eb390ee1c8f3f22b5278ea6a030c4849"
+    },
+    {
+      "path": "anastylos-microscopy/examples/build_synthetic_examples.py",
+      "bytes": 7599,
+      "sha256": "407d4dc8b7e3e87a601fa35dd2662f26739d0e3475bf0aac22e43e0ae365d1f7"
+    },
+    {
+      "path": "anastylos-microscopy/examples/calibration.SYNTHETIC-EXAMPLE.json",
+      "bytes": 414,
+      "sha256": "5274f45b32b4f4c0086e8c2149a697881dc0f1892bd21996b55de6cb5866493d"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/capture_node_example/capture-manifest.json",
+      "bytes": 1258,
+      "sha256": "99b3ac17cbf8bcc92224f9fe06f9c0257632d5534c6b332ddefc03c66698a4bd"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/capture_node_example/frames/frame_000001_20261029T120001000Z.jpg",
+      "bytes": 12881,
+      "sha256": "e059f6e13b37bb7f38079418851f769e3f923343b8f9acc645c7c047a790daeb"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/capture_node_example/frames/frame_000002_20261029T120002000Z.jpg",
+      "bytes": 12619,
+      "sha256": "e2580ae1560effd5d53032608a4b59dec14beda4158ab6886224ca29761c6a88"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/dataset.json",
+      "bytes": 5845,
+      "sha256": "b9d781c6ab887c9914c9f8909d354e3ab38a1811bd18defca9d9b729f80ecf8a"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/gallery/synthetic-ic-01.json",
+      "bytes": 10941,
+      "sha256": "b2f644f8c1c6ce762f7f1a1330ae70e1bb103d390a54a7ca51dcfb1babb33f8f"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/fp_capacitor_negative.png",
+      "bytes": 5104,
+      "sha256": "67ba2c67a7b3350700afe24c78023cd81ab103cdd32e854c01d3a60315da6401"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/fp_ic_enroll.png",
+      "bytes": 3748,
+      "sha256": "7bb142368c1e5d202e4e496467fee547b26b94d5729fec94ec77361307dab5f9"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/fp_ic_query_rot30.png",
+      "bytes": 10985,
+      "sha256": "ec472ba06e30792ced446580768a065531e535869dbe91ee40b9a5f3a3cef868"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/ic_lm358n.png",
+      "bytes": 8971,
+      "sha256": "49db55443a82faae44845257682358c2339ea1bb5eb3f62bd8bc39cf0286050e"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/silk_r12_c5.png",
+      "bytes": 6805,
+      "sha256": "9643dc1e1932f728341f04086a08c8ee4331dd319d8884539c1c2390d9bc9646"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/smd_103_heldout.png",
+      "bytes": 4242,
+      "sha256": "fba3993b5a1106997f448409b9d4e9bc8cc9d96debdbb8ab2035df20607c8f2c"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/smd_472.png",
+      "bytes": 3668,
+      "sha256": "f9bcdf4023e95d8f436fd41668ef1985eba66c4a49a56c4205f1f383bf387276"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/smd_unmarked.png",
+      "bytes": 605,
+      "sha256": "e7fdc30c3e570aca77e9d3cc4c248051f7bf48e760741db6cd7d787c7eadfa35"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/unknown_blurred_resistor.png",
+      "bytes": 80019,
+      "sha256": "bd7efd2440ec3b0ae199676bd226f57d2f5a7d268d55ff0853e8280f8dcdb8a4"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/unknown_glare.png",
+      "bytes": 24862,
+      "sha256": "9bd3c70338c25cd905bc87f7deace0d8007c8d176e442cfe36dce9a0614bf8c4"
+    },
+    {
+      "path": "anastylos-microscopy/examples/synthetic_mic/images/unknown_uniform.png",
+      "bytes": 604,
+      "sha256": "146aa598506f97bcb6eebe098f42234adea194ed137031c58f3fe7a760e7afef"
+    },
+    {
+      "path": "anastylos-microscopy/HARDWARE_COMPATIBILITY.md",
+      "bytes": 2501,
+      "sha256": "2da439ec367e64909e79e734f8fb30ff42017a42b812006c77fc21f1e34f4235"
+    },
+    {
+      "path": "anastylos-microscopy/INTEGRATION.md",
+      "bytes": 7418,
+      "sha256": "3100defc4cba9c75086a1e6ccfb62fb7291c7eb8914d6a2a56625788c478e295"
+    },
+    {
+      "path": "anastylos-microscopy/LIMITATIONS.md",
+      "bytes": 4906,
+      "sha256": "6904c7e2fe8e28079732da9f87173c2ae5443b6292e46f162ce868c930adb1fb"
+    },
+    {
+      "path": "anastylos-microscopy/QA_FIX_REPORT.md",
+      "bytes": 11418,
+      "sha256": "77cd8dc96d19364c807fd441abe12cb713c8c77500a1ec829308e83f4f9fb6be"
+    },
+    {
+      "path": "anastylos-microscopy/README.md",
+      "bytes": 9378,
+      "sha256": "576cbbf00e30013b492c7bb3044d1f209ef5d6c9857aee282c19aa73875b78b1"
+    },
+    {
+      "path": "anastylos-microscopy/schemas/capture-manifest.v1.schema.json",
+      "bytes": 1938,
+      "sha256": "956af50a3165e8bbf4666f4e0b4d646d4bfe4ad426309c53c253055e6a607689"
+    },
+    {
+      "path": "anastylos-microscopy/schemas/microscopy-batch.v1.schema.json",
+      "bytes": 2903,
+      "sha256": "6ef1ed0ac8e2440d9105875b4d29b97c2aabf8bd74ad43a189f8494b50b97998"
+    },
+    {
+      "path": "anastylos-microscopy/schemas/microscopy-calibration.v1.schema.json",
+      "bytes": 1607,
+      "sha256": "fb6a13d4ac2a2794e9ed06b1058ea6630dd9e2611cbeb6082c724a127f70b4db"
+    },
+    {
+      "path": "anastylos-microscopy/schemas/microscopy-dataset.v1.schema.json",
+      "bytes": 2009,
+      "sha256": "aae102d025bd62109079ab003f052007307ec94dd3955fee5168f73c6bc6bda1"
+    },
+    {
+      "path": "anastylos-microscopy/schemas/microscopy-inspection.v1.schema.json",
+      "bytes": 8668,
+      "sha256": "b015eff1f07526a7ea469332ef34cb4e2ec6be8153a2d3823f12132d33778340"
+    },
+    {
+      "path": "anastylos-microscopy/schemas/microscopy-review.v1.schema.json",
+      "bytes": 1059,
+      "sha256": "9dab324e14c46f84400d178a97942d0cc68469ffd1399b64804d1d16886ab156"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/__init__.py",
+      "bytes": 883,
+      "sha256": "d22cfedb0d3640086e7792f2710da4bb6b13e0290673ae2740740e2fbd7548fc"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/__main__.py",
+      "bytes": 103,
+      "sha256": "34a9eac8bfdb571bd54d5490510ef8c16d04d7fb8786d49b52c21deb231b8098"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/adapters.py",
+      "bytes": 27904,
+      "sha256": "b94ffb17424d8a3ac2ad28d24c16a2c8818e1d5a4a3b3b306d405a32bbb2addd"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/assessment.py",
+      "bytes": 13321,
+      "sha256": "d4a4705080ae881a4c6e507a0261558d1f8575400b2933bc673b4dae284d65e3"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/calibration.py",
+      "bytes": 6999,
+      "sha256": "a05b5ab1b417764abaf8cd3585e734b41f7acb0ae6ec0c42544c6ad255cc293f"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/capture.py",
+      "bytes": 16574,
+      "sha256": "6f1e3cf1c4c74cea8be0345d4c0c93acb74fd5a2ab5d62161f47aab2c6ecb330"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/cli.py",
+      "bytes": 16208,
+      "sha256": "4352503cf591377b8b173b1a040de738799bef8ab5e8d979b2ddbd35d61f403f"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/env.py",
+      "bytes": 6231,
+      "sha256": "ba5ba1a5cb2a097d3c101d39f8053592f5055e3dca074b6ba8a5761f955278a0"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/evaluation.py",
+      "bytes": 9024,
+      "sha256": "4aea9e4a9b7d820fb65d6cbb287d74a8b79c187005028a45a3fdb6346ebe6e39"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/evidence.py",
+      "bytes": 11716,
+      "sha256": "b49e5b2e282dc7827e109b427b72b6ccebd9fce59e1dd81ad6e35eeb290a4bc7"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/orchestrator.py",
+      "bytes": 26255,
+      "sha256": "dac721bbb4c50cc1c88ecdd8511adbcd19e8d401c42475fb518bac34b12a1c9d"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/pinned_reader_hashes.json",
+      "bytes": 1049,
+      "sha256": "6814a872d9b801c12cef7c3e52bab1b1354cd3aec389e205da9cdfd871bdacc4"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/report.py",
+      "bytes": 3408,
+      "sha256": "a36cbdefbb31e5d8766c6a0667b3bf83a85d9c0ce100a6991cd78a02b6c51c5b"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/review.py",
+      "bytes": 2137,
+      "sha256": "1bcbd377d16ff7cf9482afb823a97504aa707b762c52c8e9fb37725fec37e3e4"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/runner.py",
+      "bytes": 13869,
+      "sha256": "d2e9aeec5b6bbdbc6415f78d9445df7d9014c68df18e57753497c2f465c5a8ee"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/schema.py",
+      "bytes": 4848,
+      "sha256": "f2ad30e5d0e40028349312ca49650df8e231ab81c189c2d57abdf7a57779b928"
+    },
+    {
+      "path": "anastylos-microscopy/src/anastylos_microscopy/util.py",
+      "bytes": 3152,
+      "sha256": "1331004ced488cc2ab3d5333dac64b524ff7c9f02bcfdacdd31659e93b31394e"
+    },
+    {
+      "path": "anastylos-microscopy/TEST_RESULTS.md",
+      "bytes": 7485,
+      "sha256": "bad342e2520743e970333382d3256b7e920382d954e2fed90657ce641a9f8a66"
+    },
+    {
+      "path": "anastylos-microscopy/tests/_support.py",
+      "bytes": 3979,
+      "sha256": "3f599f69e6d0f734ca5683fbba4fd5049fa0e48a3859982efeca45af3a7dbc7f"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_calibration.py",
+      "bytes": 4370,
+      "sha256": "64c2e6bcaac518f05a14cdf58189e86c07c7493b8d38bddb81d4b8e4ce65fe3b"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_evaluation_isolation.py",
+      "bytes": 6071,
+      "sha256": "28782e67ee88cd776747d52499f16b128ff281153fb5ca0d625b7c398fcbfbd9"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_intake_provenance.py",
+      "bytes": 5236,
+      "sha256": "2fe963e76cae46d59d0fa4395f69411d8bcee5240252dac92a13f6f55fe0dd95"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_orchestration.py",
+      "bytes": 8328,
+      "sha256": "d4acb1fac92ba10d4bd76ac9487a10e5fb17ea8b9635c0b28ad27fddeef8a942"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_qa01_batch_exit_status.py",
+      "bytes": 12395,
+      "sha256": "1f7da58d11c980f3461ffaf7ebfedf388f9d1aa479dd83c0c355fbc5368216a3"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_qa02_capture_confinement.py",
+      "bytes": 18771,
+      "sha256": "7d15a31dd99daaf40ea6b1fda0540e7623880cd17e10267de53879a25f79ec3a"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_qa03_resistor_assessment.py",
+      "bytes": 11406,
+      "sha256": "2af5be208d5239000638b89f55f6d9f49e0bfb7469fbdde4fa01aeb03bd7c5f5"
+    },
+    {
+      "path": "anastylos-microscopy/tests/test_replay_batch_review.py",
+      "bytes": 6708,
+      "sha256": "26985ebedd8c0700158bda81a84207b0bc838488a651075bc28c2998a6dcf57b"
+    },
+    {
+      "path": "anastylos-microscopy/tools/qa03_resistor_sweep.py",
+      "bytes": 6406,
+      "sha256": "3268e6e156bf80aa96a546b267fac10326d8e134ef08cd33d5cb349338824219"
+    },
+    {
+      "path": "anastylos-microscopy/tools/qa_repro/repro_qa01.sh",
+      "bytes": 831,
+      "sha256": "e7ec3ac6763c59cf7882e3560d9a310e38991cf6a0fa6b40452fe5fedfc8f161"
+    },
+    {
+      "path": "anastylos-microscopy/tools/qa_repro/repro_qa02.sh",
+      "bytes": 1429,
+      "sha256": "56aeb153a520abd685d4ea8736e3c72df8cb617f4a9d8f8c267ee59242f1bfc7"
+    },
+    {
+      "path": "anastylos-microscopy/tools/qa_repro/repro_qa03.sh",
+      "bytes": 931,
+      "sha256": "3510a44b788c33fced150e780e72b707e2ef67ec5e308018bd4d174ad255ebd8"
+    },
+    {
+      "path": "anastylos-microscopy/tools/run_reader_regression.py",
+      "bytes": 2435,
+      "sha256": "b9184a6b30bc79c9150b4e790517a93069f25b5b9ac8d0c3a28288dbf05266ee"
+    },
+    {
+      "path": "anastylos-microscopy/tools/smoke_cli.py",
+      "bytes": 9033,
+      "sha256": "0028a9f363a87fd0930d243a6bf2224d68c2527b022d42fbfa1f21cbcb0c7b81"
+    }
+  ]
+}

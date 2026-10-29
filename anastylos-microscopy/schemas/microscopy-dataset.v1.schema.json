@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "anastylos-microscopy-dataset/1",
+  "title": "ANASTYLOS Microscopy evaluation dataset v1 (MIC-01..MIC-05)",
+  "type": "object",
+  "required": ["schema", "dataset_id", "provenance", "items"],
+  "properties": {
+    "schema": {"const": "anastylos-microscopy-dataset/1"},
+    "dataset_id": {"type": "string"},
+    "provenance": {
+      "type": "object", "required": ["kind", "specimen"],
+      "properties": {
+        "kind": {"enum": ["synthetic", "sample", "real_microscope"]},
+        "specimen": {"type": "string"},
+        "is_msi_gtx970_capture": {"type": "boolean"},
+        "operator": {"type": ["string", "null"]},
+        "notes": {"type": ["string", "null"]}
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "image", "split", "workflow", "mode"],
+        "properties": {
+          "id": {"type": "string"},
+          "image": {"type": "string"},
+          "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+          "split": {"enum": ["dev", "heldout"]},
+          "workflow": {"enum": ["MIC-01", "MIC-02", "MIC-03", "MIC-04", "MIC-05"]},
+          "mode": {"type": "string"},
+          "hypothesis": {"type": ["string", "null"]},
+          "roi_xywh": {"type": ["array", "null"]},
+          "options": {"type": ["object", "null"]},
+          "optical_profile": {"type": ["string", "null"]},
+          "component_type_confirmed": {"type": ["string", "null"]},
+          "expected": {
+            "type": "object",
+            "properties": {
+              "visible_marking": {"type": ["string", "null"]},
+              "designators": {"type": ["array", "null"]},
+              "gallery_id": {"type": ["string", "null"]},
+              "abstain": {"type": "boolean"}
+            }
+          },
+          "known_uncertainty": {"type": ["string", "null"]},
+          "annotation": {"type": ["object", "null"]}
+        }
+      }
+    }
+  }
+}

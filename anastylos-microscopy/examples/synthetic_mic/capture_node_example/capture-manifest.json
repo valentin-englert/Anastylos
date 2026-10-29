@@ -1,0 +1,39 @@
+{
+  "schema": "anastylos-microscopy-capture-manifest/1",
+  "node_id": "SYNTHETIC-EXAMPLE-NODE",
+  "session_id": "synthetic-session-001",
+  "validation_class": "synthetic",
+  "source": {
+    "camera_id": "synthetic-renderer",
+    "optical_profile": null,
+    "capture_device": null,
+    "capture_format": "JPEG (synthetic, re-encoded render)",
+    "capture_resolution": [
+      900,
+      320
+    ],
+    "camera_settings_note": "synthetic; a real node would record MUSTOOL settings read off the microscope by the operator"
+  },
+  "orientation_cw_deg": 0,
+  "calibration": null,
+  "frames": [
+    {
+      "file": "frames/frame_000001_20261029T120001000Z.jpg",
+      "sha256": "e059f6e13b37bb7f38079418851f769e3f923343b8f9acc645c7c047a790daeb",
+      "seq": 1,
+      "captured_utc": "2026-10-29T12:00:01.000Z",
+      "orientation_cw_deg": 0,
+      "roi_xywh": null,
+      "component_observation_id": "synthetic-obs-1"
+    },
+    {
+      "file": "frames/frame_000002_20261029T120002000Z.jpg",
+      "sha256": "e2580ae1560effd5d53032608a4b59dec14beda4158ab6886224ca29761c6a88",
+      "seq": 2,
+      "captured_utc": "2026-10-29T12:00:02.000Z",
+      "orientation_cw_deg": 0,
+      "roi_xywh": null,
+      "component_observation_id": "synthetic-obs-2"
+    }
+  ]
+}

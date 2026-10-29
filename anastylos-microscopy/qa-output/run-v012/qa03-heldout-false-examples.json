@@ -1,0 +1,170 @@
+{
+ "purpose": "post-hoc error analysis only; no policy changes or retuning",
+ "examples": [
+  {
+   "expected_sequence": [
+    "gray",
+    "red",
+    "orange",
+    "gold"
+   ],
+   "expected_ohms": 82000.0,
+   "native_sequence": [
+    "gray",
+    "red",
+    "gold",
+    "gold"
+   ],
+   "native_ohms": 8.200000000000001,
+   "native_score": 0.913,
+   "native_status": "ok",
+   "core_supports_ok": true,
+   "failed_checks": [],
+   "band_clipped_fraction": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "condition": {
+    "body": "tan",
+    "rotation": 3.0,
+    "brightness": 0.85,
+    "glare": false,
+    "noise": 3.0
+   }
+  },
+  {
+   "expected_sequence": [
+    "gray",
+    "red",
+    "orange",
+    "gold"
+   ],
+   "expected_ohms": 82000.0,
+   "native_sequence": [
+    "gray",
+    "red",
+    "gold",
+    "gold"
+   ],
+   "native_ohms": 8.200000000000001,
+   "native_score": 0.909,
+   "native_status": "ok",
+   "core_supports_ok": true,
+   "failed_checks": [],
+   "band_clipped_fraction": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "condition": {
+    "body": "tan",
+    "rotation": 3.0,
+    "brightness": 0.85,
+    "glare": true,
+    "noise": 3.0
+   }
+  },
+  {
+   "expected_sequence": [
+    "gray",
+    "red",
+    "orange",
+    "gold"
+   ],
+   "expected_ohms": 82000.0,
+   "native_sequence": [
+    "gray",
+    "red",
+    "gold",
+    "gold"
+   ],
+   "native_ohms": 8.200000000000001,
+   "native_score": 0.913,
+   "native_status": "ok",
+   "core_supports_ok": true,
+   "failed_checks": [],
+   "band_clipped_fraction": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "condition": {
+    "body": "tan",
+    "rotation": -6.0,
+    "brightness": 0.85,
+    "glare": false,
+    "noise": 3.0
+   }
+  },
+  {
+   "expected_sequence": [
+    "gray",
+    "red",
+    "orange",
+    "gold"
+   ],
+   "expected_ohms": 82000.0,
+   "native_sequence": [
+    "gray",
+    "red",
+    "gold",
+    "gold"
+   ],
+   "native_ohms": 8.200000000000001,
+   "native_score": 0.903,
+   "native_status": "ok",
+   "core_supports_ok": true,
+   "failed_checks": [],
+   "band_clipped_fraction": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "condition": {
+    "body": "tan",
+    "rotation": -6.0,
+    "brightness": 0.85,
+    "glare": true,
+    "noise": 3.0
+   }
+  },
+  {
+   "expected_sequence": [
+    "gray",
+    "red",
+    "orange",
+    "gold"
+   ],
+   "expected_ohms": 82000.0,
+   "native_sequence": [
+    "gray",
+    "red",
+    "gold",
+    "gold"
+   ],
+   "native_ohms": 8.200000000000001,
+   "native_score": 0.914,
+   "native_status": "ok",
+   "core_supports_ok": true,
+   "failed_checks": [],
+   "band_clipped_fraction": [
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "condition": {
+    "body": "tan",
+    "rotation": 12.0,
+    "brightness": 0.85,
+    "glare": false,
+    "noise": 3.0
+   }
+  }
+ ]
+}

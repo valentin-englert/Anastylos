@@ -143,8 +143,11 @@ unless noted) and match the current tree's test methods exactly.
 | `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 54 pass; real replay on hardware-02 and PROTO-01-NOUV E2 memory |
 | `custody-ledger/` | video custody: adaptive source discovery, zone observation with colour-free hand mask, temporal/elimination/hand-order linker | `custody.py` | integrated (`eb9744a9`, observer 1.7.0, `custody-config.v15.json`) | 94 pass; development footage only (E2, FULL-01, SNES-01); frozen v1.1/v1.2 stay on their branches for E2R/E3-A |
 | `tools/session/` | one-command phase run (video → custody → numbered parts → evidence → memory → open questions); answer package/apply/remap | `session.py`, `answers.py` | integrated | 23 pass; FULL-01 v20 rebuilt and reproduced |
-| `tools/guide/` | guide (Muse) package from memory, rules, grounding check | `package.py`, `check.py` | integrated | 9 pass |
+| `tools/guide/` | guide (Muse) package from memory, rules, grounding and advisory claims checks | `package.py`, `check.py`, `claims.py` | integrated | 51 pass (local consolidation, 2026-10-29) |
 | `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
+| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | implemented; pinned integration `ebf7f46a`, with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; L2 benefit PENDING_EVIDENCE |
+| `anastylos-microscopy/` | offline file orchestration over ten unchanged readers; separate operator reviews | `python -m anastylos_microscopy` | implemented, synthetic validation only | 83 run: 76 pass, 7 platform skips; 543 reader tests pass; historical held-out retained-candidate precision 39.5%, no automatic identification claim |
+| `tools/snes01-benchmark/` | standalone research preparation, correspondence experiments and gated API runners | see module README | implemented research tooling; no product runtime connection | 84 offline tests pass; historical scientific outcomes were not rerun |
 
 Hardware-validated: none. Every vision claim above rests on synthetic
 fixtures; see each module README for its stated validation scope.
@@ -404,14 +407,14 @@ never be set by analysis code:
 
 ## Offline and future AI-provider boundaries
 
-- Python is offline except three explicit, isolated carve-outs:
+- Product Python is offline except three explicit, isolated carve-outs:
   `sam-tracking/anastylos_sam/client.py` (outbound, stdlib `urllib`
   only, imported lazily by `sam.py` live paths alone) and
   `capture-companion/receiver/anastylos_capture_receiver.py` (inbound
   stdlib `http.server` + `ssl` workstation receiver for capture
-  packages), and `tools/live/providers/meta.py` (below). Verified by
-  import search 2026-10-28: no other Python module outside `.venv/`
-  imports HTTP, socket or TLS modules. The
+  packages), and `tools/live/providers/meta.py` (below). Standalone SNES
+  research has a separate opt-in API client (below); no research runner
+  is wired into the product runtime. The
   PWA caches its app shell and, since the M2 sync prototype, transfers
   packages to a paired receiver (`capture-companion/SYNC_PROTOCOL.md`).
 - `tools/live/providers/meta.py` (outbound, stdlib `urllib` only):
@@ -430,7 +433,15 @@ never be set by analysis code:
   only from a consumer's `main()`; the live core never imports
   `providers/`. Contributor tier with the provider default
   `store: true`: the provider may retain and train on inputs and
-  outputs. Exists on `integration/live-v1`, not in `main`.
+  outputs. Pinned completed implementation: `integration/live-v1` at
+  `ebf7f46a`; integrating it establishes no scientific L2 benefit.
+- `tools/snes01-benchmark/gate2a_client.py` is preserved standalone
+  research tooling using stdlib `urllib`, with credentials supplied at
+  execution time through the environment or stdin. Its Gate 2 runners
+  can send bench images to the provider and retain prompts/responses in
+  the caller's output directory. They remain opt-in, subject to their
+  annotation and budget gates; local consolidation ran offline tests
+  only, made no model calls and changed no provider retention setting.
 - Approved, not yet implemented (owner, 2026-10-28): a further outbound
   carve-out for an advisory Muse narration of custody runs
   (`muse-spark-1.3-contributor`, effort max; budget at most 30 calls,
@@ -460,8 +471,8 @@ never be set by analysis code:
   verdict, never confirm an identity, never call the network from
   Python. SAM exists only as the isolated `sam-tracking/` experiment
   with no pipeline consumer. The only Meta Muse integration is the
-  advisory `tools/live/providers/` seam above (the Gate 2A client
-  lives outside `main`); no automated BOM sourcing, CAD
+  advisory `tools/live/providers/` seam above; the preserved Gate 2A
+  research client is independent. No automated BOM sourcing, CAD
   reconstruction, or live sync exists — do not document any as
   present.
 

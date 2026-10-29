@@ -1,0 +1,16 @@
+{
+  "anastylos_revision": "a172fbb9e127e7a3a93b128516b6592bfbbc81ef",
+  "note": "SHA-256 over LF-normalized *.py files of each reader package at the pinned revision (see env.code_sha256)",
+  "readers": {
+    "connectors": "a8995b4928cdcecb29957a5a8a7b8be4aa33e8bd2d5ec82e19d2dbf2b9c33598",
+    "fingerprints": "697a9b34c79b05c3ebbfdf3202aef76400394d13512367d44903f4a99526c833",
+    "markings": "da209d604ff3e4cb7216cafc2eb9b532c5467b3ecbbc53ea4a167611514c48bf",
+    "pcb_ocr": "e9dfa16e59700d9839bbfde999016fe8e3616afb1f01120ec110979045560323",
+    "polarity": "3e7392e65eb5b38617fc048d1ac62af9e12bb874c0e28f4bc8df1e92c3b25dbd",
+    "resistor": "d69a4a5ef3028566a23ec8ac8297fd725f16d2e31b8417e3493936c67fee4bd0",
+    "screw": "f2ceb96762ee10dfb7191cfd82fdff2c4468656b5bb997fb9d2c4738e460d979",
+    "screw_measure": "19facad2ab73db8ef61f1c70edca1b7c6451b3fe1b3d9180bc24d90158c85d1a",
+    "smd": "a38bb79135e2f5dccf76e7f51468267a64e8881ef7e5da2f182d8f37c1dd21ea",
+    "washer": "e738c2d045f29f9a0d104b15a61c59cc9fc99605c5be7bf77cd927e84b304bd2"
+  }
+}

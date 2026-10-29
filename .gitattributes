@@ -13,3 +13,6 @@
 *.jpg binary
 *.jpeg binary
 
+
+# Preserve exact microscopy delivery and historical QA hashes.
+anastylos-microscopy/** -text

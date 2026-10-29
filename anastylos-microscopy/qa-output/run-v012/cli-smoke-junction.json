@@ -1,0 +1,302 @@
+{
+  "python": "3.12.10",
+  "platform": "win32",
+  "out": "qa-output\\run-v012\\smoke-out-junction",
+  "steps": [
+    {
+      "step": "readers",
+      "args": [
+        "readers"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "inspect single image (resistor, clean render via capture frame)",
+      "args": [
+        "inspect",
+        "--image",
+        "C:\\Users\\HP\\Documents\\Anastylos\\anastylos-microscopy\\examples\\synthetic_mic\\capture_node_example\\frames\\frame_000001_20261029T120001000Z.jpg",
+        "--mode",
+        "resistor",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\single"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "inspect glare fixture -> ambiguous (QA-03), exit 0",
+      "args": [
+        "inspect",
+        "--image",
+        "C:\\Users\\HP\\Documents\\Anastylos\\anastylos-microscopy\\examples\\synthetic_mic\\images\\unknown_glare.png",
+        "--mode",
+        "resistor",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\glare"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "inspect --manifest example",
+      "args": [
+        "inspect",
+        "--manifest",
+        "C:\\Users\\HP\\Documents\\Anastylos\\anastylos-microscopy\\examples\\synthetic_mic\\capture_node_example\\capture-manifest.json",
+        "--mode",
+        "resistor",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\manifest"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "validate capture_manifest example",
+      "args": [
+        "validate",
+        "--kind",
+        "capture_manifest",
+        "C:\\Users\\HP\\Documents\\Anastylos\\anastylos-microscopy\\examples\\synthetic_mic\\capture_node_example\\capture-manifest.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "validate inspection",
+      "args": [
+        "validate",
+        "--kind",
+        "inspection",
+        "qa-output\\run-v012\\smoke-out-junction\\single\\mi-87706800123f4a60301a\\inspection.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "replay inspection (identical digest)",
+      "args": [
+        "replay",
+        "--inspection",
+        "qa-output\\run-v012\\smoke-out-junction\\single\\mi-87706800123f4a60301a\\inspection.json",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\replay"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "review record",
+      "args": [
+        "review",
+        "--inspection",
+        "qa-output\\run-v012\\smoke-out-junction\\single\\mi-87706800123f4a60301a\\inspection.json",
+        "--operator",
+        "smoke-test",
+        "--decision",
+        "inconclusive",
+        "--clock",
+        "2026-10-29T12:00:00Z"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "validate batch.json",
+      "args": [
+        "validate",
+        "--kind",
+        "batch",
+        "qa-output\\run-v012\\smoke-out-junction\\manifest\\batch.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "batch all completed -> 0",
+      "args": [
+        "inspect",
+        "--batch-dir",
+        "qa-output\\run-v012\\smoke-out-junction\\in_good",
+        "--mode",
+        "resistor",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\b_good"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "batch valid + corrupt -> 4",
+      "args": [
+        "inspect",
+        "--batch-dir",
+        "qa-output\\run-v012\\smoke-out-junction\\in_mixed",
+        "--mode",
+        "resistor",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\b_mixed"
+      ],
+      "expected_exit": 4,
+      "exit": 4,
+      "pass": true
+    },
+    {
+      "step": "batch all invalid -> 1",
+      "args": [
+        "inspect",
+        "--batch-dir",
+        "qa-output\\run-v012\\smoke-out-junction\\in_bad",
+        "--mode",
+        "resistor",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\b_bad"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "pass": true
+    },
+    {
+      "step": "batch empty -> 1",
+      "args": [
+        "inspect",
+        "--batch-dir",
+        "qa-output\\run-v012\\smoke-out-junction\\in_empty",
+        "--mode",
+        "resistor",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\b_empty"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "pass": true
+    },
+    {
+      "step": "batch without ANASTYLOS_ROOT -> 3",
+      "args": [
+        "inspect",
+        "--batch-dir",
+        "qa-output\\run-v012\\smoke-out-junction\\in_good",
+        "--mode",
+        "resistor",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\b_noroot"
+      ],
+      "expected_exit": 3,
+      "exit": 3,
+      "pass": true
+    },
+    {
+      "step": "batch OCR unavailable -> 3",
+      "args": [
+        "inspect",
+        "--batch-dir",
+        "qa-output\\run-v012\\smoke-out-junction\\in_good",
+        "--mode",
+        "smd",
+        "--tesseract-cmd",
+        "tesseract-not-installed-smoke",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\b_noocr"
+      ],
+      "expected_exit": 3,
+      "exit": 3,
+      "pass": true
+    },
+    {
+      "step": "validate manifest with frames/ junction outside root -> 1",
+      "args": [
+        "validate",
+        "--kind",
+        "capture_manifest",
+        "qa-output\\run-v012\\smoke-out-junction\\cap\\capture-manifest.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "pass": true
+    },
+    {
+      "step": "inspect --manifest with frames/ junction outside root -> 1",
+      "args": [
+        "inspect",
+        "--manifest",
+        "qa-output\\run-v012\\smoke-out-junction\\cap\\capture-manifest.json",
+        "--mode",
+        "resistor",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\escape"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "pass": true
+    },
+    {
+      "step": "eval --print-fingerprint",
+      "args": [
+        "eval",
+        "--print-fingerprint"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "eval dev split (no Tesseract unless installed)",
+      "args": [
+        "eval",
+        "--dataset",
+        "C:\\Users\\HP\\Documents\\Anastylos\\anastylos-microscopy\\examples\\synthetic_mic\\dataset.json",
+        "--split",
+        "dev",
+        "--clock",
+        "2026-10-29T12:00:00Z",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\eval"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "pass": true
+    },
+    {
+      "step": "eval heldout without --frozen-config -> 1",
+      "args": [
+        "eval",
+        "--dataset",
+        "C:\\Users\\HP\\Documents\\Anastylos\\anastylos-microscopy\\examples\\synthetic_mic\\dataset.json",
+        "--split",
+        "heldout",
+        "--out",
+        "qa-output\\run-v012\\smoke-out-junction\\eval2"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "pass": true
+    }
+  ],
+  "mic05_glare": "correct_abstention",
+  "ok": true
+}

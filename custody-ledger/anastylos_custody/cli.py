@@ -35,6 +35,20 @@ def cmd_observe(args) -> int:
     return 0
 
 
+def cmd_discover(args) -> int:
+    from anastylos_custody.config import load_custody_config
+    from anastylos_custody.proposals import DEFAULTS, discover_video
+
+    custody, harness, kit, provenance = load_custody_config(args.config)
+    registry, inventory = discover_video(Path(args.video), custody, harness, kit, provenance, dict(DEFAULTS))
+    _write_json(Path(args.out) / "registry.json", registry)
+    _write_json(Path(args.out) / "inventory.json", inventory)
+    print(f"{registry['proposal_count']} proposals -> {len(registry['sources'])} sources -> {args.out}")
+    for source in registry["sources"]:
+        print(source["id"], source["geometry"]["centroid_mm"], source["first_change"], source["confidence"])
+    return 0
+
+
 def cmd_score(args) -> int:
     from anastylos_custody.scoring import score
 
@@ -117,6 +131,11 @@ def main(argv: list[str] | None = None) -> int:
     observe.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     observe.add_argument("--trace", nargs="*", default=[], help="zone ids to trace per sample (diagnostics)")
     observe.set_defaults(handler=cmd_observe)
+    discover = sub.add_parser("discover", help="adaptive pass 1: propose sources without an inventory")
+    discover.add_argument("--video", required=True)
+    discover.add_argument("--out", required=True)
+    discover.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    discover.set_defaults(handler=cmd_discover)
     scoring = sub.add_parser("score", help="score events.json against annotated ground truth")
     scoring.add_argument("--events", type=Path, required=True)
     scoring.add_argument("--gt", type=Path, required=True)

@@ -1,0 +1,99 @@
+"""Adaptive discovery pass 1 on synthetic planes: colour-free occluders, merge/split, pose break.
+
+Run from the custody-ledger directory:
+
+    ..\\.venv\\Scripts\\python -m unittest discover -s tests -v
+"""
+
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+import numpy as np  # noqa: E402
+
+from anastylos_custody.proposals import DEFAULTS, ProposalTracker, merge_into_sources  # noqa: E402
+
+PPM = 1.0  # 1 px per mm keeps areas readable
+SHAPE = (60, 100)
+DEVICE = (slice(20, 50), slice(20, 80))  # device occupies rows 20-49, cols 20-79
+
+
+def base():
+    gray = np.full(SHAPE, 200.0, np.float32)  # paper
+    gray[DEVICE] = 100.0
+    return gray
+
+
+def tracker():
+    mask = np.zeros(SHAPE, bool)
+    mask[DEVICE] = True
+    params = {**DEFAULTS, "min_area_mm2": 8.0, "occluder_min_outside_mm2": 4.0}
+    return ProposalTracker(mask, base(), PPM, 30.0, params)
+
+
+def run(track, timeline):
+    """timeline: list of (seconds, gray, moving) sampled at 5 Hz from t=0.2."""
+    t, previous = 0.0, base()
+    for seconds, gray, moving in timeline:
+        for _ in range(int(round(seconds * 5))):
+            t = round(t + 0.2, 3)
+            motion = np.abs(gray - previous) > 14 if not moving else np.ones(SHAPE, bool)
+            track.update(t, gray, motion)
+            previous = gray
+    return track
+
+
+def removed(*boxes):
+    gray = base()
+    for rows, cols in boxes:
+        gray[rows, cols] = 160.0  # well floor visible after the part left
+    return gray
+
+
+def with_arm(gray):
+    arm = gray.copy()
+    arm[0:35, 30:40] = 250.0  # arm reaches in from the top edge, outside the device
+    return arm
+
+
+class ProposalTests(unittest.TestCase):
+    def test_removal_seen_after_arm_leaves_is_one_proposal(self):
+        part = (slice(30, 36), slice(50, 56))
+        track = run(tracker(), [(1, base(), False), (1, with_arm(base()), True), (2, with_arm(removed(part)), False),
+                                (3, removed(part), False)])
+        self.assertEqual(len(track.proposals), 1)
+        self.assertTrue(track.proposals[0]["mask"][32, 52])
+        self.assertFalse(track.proposals[0]["mask"][25, 35], "the arm must never become a source")
+
+    def test_motionless_arm_from_outside_stays_an_occluder(self):
+        track = run(tracker(), [(1, base(), False), (1, with_arm(base()), True), (8, with_arm(base()), False)])
+        self.assertEqual(track.proposals, [])
+
+    def test_object_inside_device_is_judged_by_change_not_colour(self):
+        bright = base()
+        bright[30:36, 50:56] = 240.0  # any colour: a part that changes inside the device is a candidate
+        track = run(tracker(), [(1, base(), False), (3, bright, False)])
+        self.assertEqual(len(track.proposals), 1)
+
+    def test_separate_windows_split_and_touching_overlap_merges(self):
+        a, b = (slice(30, 36), slice(30, 36)), (slice(30, 36), slice(60, 66))
+        track = run(tracker(), [(1, base(), False), (3, removed(a), False), (3, removed(a, b), False)])
+        self.assertEqual(len(merge_into_sources(track.proposals, PPM, 1.0)), 2)
+        touching = [{"mask": np.zeros(SHAPE, bool), "t_before_s": 1.0, "t_confirmed_s": 3.0} for _ in range(2)]
+        touching[0]["mask"][30:36, 30:36] = True
+        touching[1]["mask"][30:36, 36:40] = True
+        self.assertEqual(len(merge_into_sources(touching, PPM, 1.0)), 1)
+
+    def test_whole_device_change_ends_pose_epoch_without_proposals(self):
+        shifted = base()
+        shifted[DEVICE] = 160.0  # the whole device looks different at once (flipped or moved away)
+        track = run(tracker(), [(1, base(), False), (3, shifted, False)])
+        self.assertIsNotNone(track.pose_epoch_end_s)
+        self.assertEqual(track.proposals, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

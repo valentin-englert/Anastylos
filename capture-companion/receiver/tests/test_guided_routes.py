@@ -206,7 +206,11 @@ class GuidedCase(unittest.TestCase):
 
 
 class GuidedFlowTests(GuidedCase):
-    def test_full_loop_to_package_only_receipt(self):
+    def test_full_loop_sidecar_qualifies_and_rejects(self):
+        # Wave-1.5 contract change (task section 5): the seam now runs the
+        # real spatial validator. A stub sidecar honestly rejects; a real
+        # sidecar bound to the uploaded bytes qualifies. Both outcomes are
+        # pinned here; the old validator-absent package_only pin is retired.
         source_id, source_token, _legacy = self.enroll_source()
         bootstrap = self.bootstrap()
         session = self.open_session(bootstrap, source_id)
@@ -291,11 +295,13 @@ class GuidedFlowTests(GuidedCase):
         self.assertTrue(redelivery["duplicate"])
         self.assertEqual(redelivery["receipt"]["receipt_id"],
                          upload["receipt"]["receipt_id"])
-        # Sidecar associates; asset re-hashes; lease renews.
+        # A stub sidecar is invalid spatial evidence: it rejects.
         deep = {"stub": True}
+        stub_evidence = new_id()
         sidecar = {
             "schema": "anastylos-spatial-evidence@1",
-            "evidence_id": new_id(), "session_id": session["session_id"],
+            "evidence_id": stub_evidence,
+            "session_id": session["session_id"],
             "source_id": source_id, "request_id": request["request_id"],
             "request_revision": 1, "attempt_id": attempt_id,
             "created_at": STAMP, "supersedes": None, "asset": deep,
@@ -310,7 +316,33 @@ class GuidedFlowTests(GuidedCase):
             body={"operation_id": new_id(),
                   "expected_sidecar_revision": 0, "sidecar": sidecar})
         self.assertEqual(status, 200, receipt)
-        self.assertEqual(receipt["status"], "package_only")
+        self.assertEqual(receipt["status"], "rejected")
+        self.assertIn("rejected", receipt["reason_codes"])
+        self.assertIn("BAD_CAMERA_ID", receipt["reason_codes"])
+        # A real sidecar bound to the uploaded bytes qualifies; asset
+        # re-hashes; lease renews.
+        real = json.loads(
+            (VECTORS / "spatial-valid.json").read_text(encoding="utf-8"))
+        real["evidence_id"] = new_id()
+        real["session_id"] = session["session_id"]
+        real["source_id"] = source_id
+        real["request_id"] = request["request_id"]
+        real["request_revision"] = 1
+        real["attempt_id"] = attempt_id
+        real["supersedes"] = stub_evidence
+        real["asset"]["package_id"] = package_id
+        real["asset"]["observation_id"] = observation_id
+        real["asset"]["image_id"] = image_id
+        real["asset"]["sha256"] = image_sha
+        real["asset"]["byte_length"] = len(payload)
+        real["pose"]["image_sha256"] = image_sha
+        status, receipt, _headers = self.json_call(
+            "POST", "/v1/guided/attempts/%s/spatial" % attempt_id,
+            token=source_token,
+            body={"operation_id": new_id(),
+                  "expected_sidecar_revision": 1, "sidecar": real})
+        self.assertEqual(status, 200, receipt)
+        self.assertEqual(receipt["status"], "qualified")
         status, data, headers = self.call(
             "GET", "/v1/guided/sessions/%s/assets/%s"
             % (session["session_id"], image_id), token=claimed["token"])

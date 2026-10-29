@@ -1811,7 +1811,14 @@ class ControlJournal:
             return receipt
 
     def maybe_qualify(self, receipt_id):
-        """Run the validator seam once; unavailable keeps package_only."""
+        """Run the validator seam once; unavailable keeps package_only.
+
+        The latest sidecar must be this receipt's own sidecar (hashes
+        agree and stored bytes re-hash): a stale receipt joined against
+        a later sidecar, or a corrupt sidecar store, fails closed to
+        the current receipt — later observations are never promoted
+        into earlier custody claims.
+        """
         with self._lock:
             row = self._conn.execute(
                 "SELECT receipt_id, session_id, source_id, request_id,"
@@ -1824,13 +1831,31 @@ class ControlJournal:
             if row[14] != "package_only":
                 return self._receipt_of(row)
             sidecar = self._conn.execute(
-                "SELECT sidecar_json FROM sidecars WHERE attempt_id = ?"
+                "SELECT sidecar_json, sha256 FROM sidecars WHERE attempt_id = ?"
                 " ORDER BY sidecar_revision DESC LIMIT 1",
                 (row[5],)).fetchone()
+            if sidecar is None:
+                if row[11] is not None:
+                    return self._receipt_of(row)
+                parsed = None
+            else:
+                try:
+                    parsed = json.loads(sidecar[0])
+                except ValueError:
+                    return self._receipt_of(row)
+                if sidecar[1] != row[11]:
+                    return self._receipt_of(row)
+                try:
+                    intact = body_sha256(parsed) == sidecar[1]
+                except ControlError:
+                    intact = False
+                if not intact:
+                    return self._receipt_of(row)
             request_payload = {
                 "receipt_id": row[0], "package_sha256": row[10],
                 "image_sha256": row[9], "sidecar_sha256": row[11],
-                "sidecar": json.loads(sidecar[0]) if sidecar else None,
+                "package_id": row[6], "image_id": row[8],
+                "sidecar": parsed,
             }
         report = self._validator_runner(request_payload)
         if not isinstance(report, dict) or not report.get("available", True):

@@ -81,7 +81,7 @@ Print the **PDF**, not the preview PNG.
 
 ChArUco is the portrait A4 sheet. Glue that flat as well.
 
-## Spatial evidence validation (AgentCam Wave 1)
+## Spatial evidence validation (ANASTYLOS Guided Capture Wave 1)
 
 `spatial/` holds the CAD-0 spatial sidecar validator, replay evaluator,
 dataset builder, and the ANDROID handoff JSON (calibration profile +

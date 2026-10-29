@@ -54,7 +54,7 @@ sync, verify bytes + hashes, reconnect, confirm no memory mutation)
 has not run on hardware — no phone was attached in this session. Do
 not present emulator results as hardware validation.
 
-## Wave-1 AgentCam (feat/agentcam-android)
+## Wave-1 Guided Capture (feat/agentcam-android)
 
 - **A0 async bind (implemented, device proof pending H0):**
   `CameraStillSource` no longer blocks the UI thread on the CameraX

@@ -1,4 +1,4 @@
-# Spatial evidence validation (AgentCam Wave 1, CAD-0)
+# Spatial evidence validation (ANASTYLOS Guided Capture Wave 1, CAD-0)
 
 Replayable validator for `anastylos-spatial-evidence@1` sidecars: semantic
 checks JSON Schema cannot express (rigid-transform validity, reflection and

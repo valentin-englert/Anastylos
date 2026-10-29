@@ -594,7 +594,8 @@ def cmd_replay(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="AgentCam/CAD Wave-1 acceptance harness")
+        description="ANASTYLOS Guided Capture / CAD Reconstruction "
+                        "Wave-1 acceptance harness")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run all gates, emit scorecard")
     run.add_argument("--candidate", required=True,

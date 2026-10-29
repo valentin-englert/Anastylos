@@ -1,8 +1,9 @@
 # tools/agentcam-acceptance — Wave-1 evaluator harness
 
-INTEGRATION-QA owned. Independent evaluator for ANASTYLOS AgentCam + CAD
-candidates. Product source is read-only to this lane; failures are routed
-to owning lanes, never fixed here. Project status index stays in
+INTEGRATION-QA owned. Independent evaluator for ANASTYLOS Guided
+Capture + CAD Reconstruction candidates. Product source is read-only
+to this lane; failures are routed to owning lanes, never fixed here.
+Project status index stays in
 [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
 
 ## What it does (Wave-1 scope)

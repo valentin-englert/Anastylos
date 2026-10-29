@@ -92,3 +92,54 @@ Screw removals are likely not observable from overhead (pre-flight B).
 Parts larger than 26 mm, the PCB with cable and the shell halves cannot
 be deposited in cells and will only appear as operator-declared. Moving
 the device from P1 to P3 ends every source location of P1.
+
+## 7. What happened (2026-10-29) — descriptive, development data
+
+Recorded: `FULL-01-static.mp4` (`5b4844cb…`, 7 markers, all 12 cells
+measured empty), `FULL-01-P1.mp4` (`f94d72b7…`, 98 s, **no hands-off
+pauses**), `FULL-01-P2.mp4` (`8fb51279…`, 76 s), `FULL-01-P3.mp4`
+(`029e499d…`, 93 s). Deviations: no ground-truth CSV (owner compares the
+outputs with the videos himself); P2 lifted only the back shell, so the
+front shell stayed in the nails (no device pose change between P2 and
+P3); L in cell 8, R in cell 11, D-pad and its membrane in free cells as
+overhang tests. Processing: frozen observer v1.3 `104772a9` with
+`custody-config.paper.json`, `discover` → `observe` → `link`; outputs in
+`C:\ANASTYLOS\data\full-01\<phase>\`. Registration 7 markers in every
+phase (RMS 0.29–0.31 mm), all drift fits accepted, no sampling gaps.
+
+| Phase | Discovery | Tray events | Links |
+|---|---|---|---|
+| P1 screws, no pauses | 33 sources, 8–1050 mm² (fragments of screw holes, cable, hand shadows); the device was re-registered 34 times (pushed while unscrewing); 16 sources ended in pose breaks | cell-1 `appeared` at 25.6–28.6 s, then twice `changed_while_occupied` (more screws); cell-6 `changed_while_empty` twice (no part) | 3 deposits into cell-1, all `ambiguous` (many pending sources; occupied cell) |
+| P2 back shell, PCB, nubs, L/R | 0 sources: lifting the back shell changes the whole device, so the pose epoch ends at 18.2 s and nothing later is proposed | L → cell-8 `appeared`, R → cell-11 `appeared`; nubs → cell-2 only `changed_while_empty` (white rubber on white paper stays below the paper-model threshold); cell-12 `changed_while_empty` (R overhang) | L, R `unattributed` |
+| P3 front shell parts | 20 sources; the four face-button wells are found at the right places and times (≈ 53–75 s), each as 1–2 fragments | face buttons → cells 3, 6, 4, 5 all `appeared`; D-pad or its membrane → cell-7 `appeared`; cell-8 `changed_while_occupied` (overhang into L's cell); cell-10 `changed_while_empty` | 6 deposits, all `ambiguous` |
+
+Exploratory pass-2 variant (development only, not a frozen config):
+paper model plus the v1.2 ring rule (`custody-config.paper-ring.json`
+`e7b4c390…`, kept in the data folder). It removes every pose break in P3
+(27 `anchor_ring_changed` instead), but the links stay `ambiguous`
+because 28–35 removals are pending at each deposit.
+
+## 8. Findings for the next versions
+
+1. **Parts that leave for unwatched places poison the linker.** Removals
+   of the PCB, shells, membranes and Start/Select go outside the sheet;
+   they are never deposited in a cell, so they stay pending forever and
+   every later deposit is ambiguous. Needed: operator-declared outside
+   deposits (`OUT-x`) as input, the counterpart of declared removals.
+2. **Large removals cause mass changes.** Removing a membrane or the back
+   shell changes many neighbouring sources at once (P3 14–28 s, P2 whole
+   device). Needed: treat a large change over many sources as one removal
+   (or as a new pose) instead of many removals.
+3. **No pauses blur everything.** P1 without hands-off pauses gives one
+   deposit window for several screws and 33 fragment sources. Pauses help;
+   the Northstar needs hand tracking (H1) instead.
+4. **White and low-contrast parts** (rubber nubs) are below the paper
+   model's grey-level threshold. Needed: a colour/saturation term or
+   texture, not just grey contrast.
+5. **Overhang** of D-pad/R into neighbour cells shows up as
+   `changed_while_*` in the neighbour, not as a false deposit — the paper
+   model helps here.
+6. **Config combination:** the paper model and the ring rule must be one
+   frozen configuration for any next test.
+7. Positive: all four face-button sources and all tray deposits of
+   cell-sized parts were observed in a full disassembly.

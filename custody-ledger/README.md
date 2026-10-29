@@ -124,6 +124,15 @@ never run by this module.
   `custody-config.paper.json` sets it (3 mm, 25 mm², values taken from
   E2/E2R development footage). Limit: parts with little grey contrast
   against white paper (yellow, white) are near the threshold.
+  Observer v1.4 adds two optional paper-model cues, any of which marks a
+  cell occupied: saturated area (`cell_min_saturation`, same stroke opening
+  and minimum area) for coloured parts with little grey contrast, and edge
+  length (`cell_min_edge_mm`, Canny on the raw grey image) for white parts
+  on white paper; a change of cue occupancy also starts a candidate.
+  `custody-config.v14.json` combines paper model, ring rule and cues
+  (60 saturation, 120 mm edges; values from E2R/FULL-01 development frames:
+  empty cells 22–59 mm of edges, white rubber 189–292 mm, yellow button
+  saturated 176 mm²).
   A change between two states that both differ from the start is
   `changed_while_occupied` (empty-start cell) or
   `changed_while_away_from_start` (occupied-start cell).

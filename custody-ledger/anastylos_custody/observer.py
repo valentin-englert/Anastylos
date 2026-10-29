@@ -33,7 +33,7 @@ import numpy as np
 from anastylos_custody.device_alignment import DevicePose
 from anastylos_custody.signals import FrameSignals
 
-OBSERVER_VERSION = "1.3.0"
+OBSERVER_VERSION = "1.4.0"
 KEYFRAME_CANDIDATES = 10
 Box = tuple[int, int, int, int]
 
@@ -69,6 +69,11 @@ class ObserverParams:
     cell_occupancy: str = "start_relative"
     print_stroke_px: int = 0
     min_part_area_px: float = 0.0
+    # v1.4 paper-model cues: a cell is also occupied when its saturated area (HSV S above
+    # min_saturation, same stroke opening) reaches min_part_area_px, or when its edge length
+    # reaches min_edge_px (white parts on white paper). 0 disables a cue.
+    min_saturation: float = 0.0
+    min_edge_px: float = 0.0
 
 
 @dataclass
@@ -116,6 +121,10 @@ class ZoneObserver:
     _candidate_at: _Snapshot | None = None
     _candidate_frames: list[int] = field(default_factory=list)
     _anchor_moved_since: _Snapshot | None = None
+    _cues_now: tuple | None = None
+    _baseline_cues: tuple | None = None
+    _reference_cues: tuple | None = None
+    _candidate_cues: tuple | None = None
 
     def observe(self, signals: FrameSignals, frame_index: int) -> None:
         t = signals.t_s
@@ -133,6 +142,8 @@ class ZoneObserver:
             return
         self.clean_s += dt
         now = _Snapshot(t, frame_index)
+        if self._uses_paper_model() and signals.saturation is not None:
+            self._cues_now = (_crop(signals.saturation, self.geometry.content), _crop(signals.edges, self.geometry.content))
         context = layers.crop(layers.gray, self.geometry.context)
         if self._reference is None:
             self._initialize(context, now)
@@ -143,6 +154,10 @@ class ZoneObserver:
                 return
         content = _crop(context, _relative(self.geometry.content, self.geometry.context))
         changed = self._changed_area(content, self._reference)
+        if self._uses_paper_model() and self._cues_now is not None and changed < self.params.min_changed_area_px:
+            # A part that barely changes the grey image (white or pale on paper) still changes the cues.
+            if self._cue_report(content, self._cues_now)["occupied"] != self._cue_report(self._reference, self._reference_cues)["occupied"]:
+                changed = int(self.params.min_changed_area_px)
         if changed < self.params.min_changed_area_px:
             self._settle(now)
             return
@@ -160,7 +175,7 @@ class ZoneObserver:
         if self.initially_occupied is not None:
             summary["initially"] = "occupied" if self.initially_occupied else "empty"
         if self._uses_paper_model() and self._baseline is not None:
-            measured = self._paper_occupied(self._baseline)
+            measured = self._cue_report(self._baseline, self._baseline_cues)["occupied"]
             summary["initially_measured"] = "occupied" if measured else "empty"
             if self.initially_occupied is not None and self.initially_occupied != measured:
                 summary["declared_contradicts_measurement"] = True
@@ -201,6 +216,7 @@ class ZoneObserver:
         content = _crop(context, _relative(self.geometry.content, self.geometry.context))
         self._baseline = content.copy()
         self._reference = content.copy()
+        self._baseline_cues = self._reference_cues = self._cues_now
         self._anchor_reference = context.copy()
         self.status = "observing"
         self._settle(now)
@@ -251,8 +267,10 @@ class ZoneObserver:
         self._run_broken = False
 
     def _track_candidate(self, content: np.ndarray, now: _Snapshot, changed: int) -> None:
-        if self._candidate is None or self._changed_area(content, self._candidate) >= self.params.min_changed_area_px:
+        if (self._candidate is None or self._changed_area(content, self._candidate) >= self.params.min_changed_area_px
+                or self._cue_flip(content)):
             self._candidate = content.copy()
+            self._candidate_cues = self._cues_now
             self._candidate_at = now
             self._candidate_frames = [now.frame_index]
             return
@@ -263,6 +281,8 @@ class ZoneObserver:
         occupancy_after = self._changed_area(self._candidate, self._baseline)
         if self._uses_paper_model():
             occupancy_before, occupancy_after = self._paper_area(self._reference), self._paper_area(self._candidate)
+            cues_before = self._cue_report(self._reference, self._reference_cues)
+            cues_after = self._cue_report(self._candidate, self._candidate_cues)
         details = {
             "changed_area_px": changed,
             "occupancy_before_px": occupancy_before,
@@ -273,11 +293,14 @@ class ZoneObserver:
         }
         if self.device is not None:
             details["device_warp"] = [[round(float(value), 5) for value in row] for row in self.device.warp]
-        kind = self._paper_kind(occupancy_before, occupancy_after) if self._uses_paper_model() else self._change_kind(occupancy_before, occupancy_after)
         if self._uses_paper_model():
-            details["occupancy_rule"] = "paper_model"
+            kind = self._paper_kind(cues_before["occupied"], cues_after["occupied"])
+            details.update({"occupancy_rule": "paper_model", "cues_before": cues_before, "cues_after": cues_after})
+        else:
+            kind = self._change_kind(occupancy_before, occupancy_after)
         self.events.append(self._event(kind, self._last_clean, self._candidate_at, details))
         self._reference = self._candidate
+        self._reference_cues = self._candidate_cues
         self._run_broken = True
         self._settle(now)
 
@@ -309,12 +332,30 @@ class ZoneObserver:
         k = max(1, int(self.params.print_stroke_px))
         return int(cv2.morphologyEx(nonpaper, cv2.MORPH_OPEN, np.ones((k, k), np.uint8)).sum())
 
-    def _paper_occupied(self, content: np.ndarray) -> bool:
-        return self._paper_area(content) >= self.params.min_part_area_px
+    def _cue_report(self, content: np.ndarray, cues: tuple | None) -> dict:
+        """Occupancy cues of one clean cell state: grey contrast, saturation, edge length (any cue suffices)."""
+        report = {"grey_px": self._paper_area(content)}
+        occupied = report["grey_px"] >= self.params.min_part_area_px
+        if cues is not None:
+            saturation, edges = cues
+            k = max(1, int(self.params.print_stroke_px))
+            if self.params.min_saturation > 0:
+                saturated = (saturation > self.params.min_saturation).astype(np.uint8)
+                report["saturated_px"] = int(cv2.morphologyEx(saturated, cv2.MORPH_OPEN, np.ones((k, k), np.uint8)).sum())
+                occupied = occupied or report["saturated_px"] >= self.params.min_part_area_px
+            if self.params.min_edge_px > 0:
+                report["edge_px"] = int(edges.sum())
+                occupied = occupied or report["edge_px"] >= self.params.min_edge_px
+        report["occupied"] = bool(occupied)
+        return report
 
-    def _paper_kind(self, area_before: int, area_after: int) -> str:
-        before = area_before >= self.params.min_part_area_px
-        after = area_after >= self.params.min_part_area_px
+    def _cue_flip(self, content: np.ndarray) -> bool:
+        """True when the cue occupancy of this sample differs from the tracked candidate's (paper model only)."""
+        if not self._uses_paper_model() or self._cues_now is None or self._candidate is None:
+            return False
+        return self._cue_report(content, self._cues_now)["occupied"] != self._cue_report(self._candidate, self._candidate_cues)["occupied"]
+
+    def _paper_kind(self, before: bool, after: bool) -> str:
         if not before and after:
             return "appeared"
         if before and not after:

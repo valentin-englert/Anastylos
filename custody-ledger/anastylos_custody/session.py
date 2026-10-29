@@ -92,6 +92,8 @@ def _observer_params(custody: dict, ppm: float) -> ObserverParams:
         cell_occupancy=_occupancy_rule(content.get("cell_occupancy", "start_relative")),
         print_stroke_px=int(round(float(content.get("cell_print_stroke_mm", 0.0)) * ppm)),
         min_part_area_px=float(content.get("min_part_area_mm2", 0.0)) * ppm ** 2,
+        min_saturation=float(content.get("cell_min_saturation", 0.0)),
+        min_edge_px=float(content.get("cell_min_edge_mm", 0.0)) * ppm,
     )
 
 

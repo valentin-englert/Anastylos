@@ -14,6 +14,8 @@ class FrameSignals:
     gray: np.ndarray          # illumination-normalized, float32
     motion: np.ndarray        # bool: changed since the previous sample
     fresh_skin: np.ndarray    # bool: skin-coloured and not static for long
+    saturation: np.ndarray | None = None  # float32 HSV saturation 0-255 (v1.4, colour cue for tray cells)
+    edges: np.ndarray | None = None       # bool Canny edges of the raw grey image (v1.4, structure cue)
 
 
 class SignalTracker:
@@ -50,7 +52,9 @@ class SignalTracker:
         still = skin & ~moving_near
         self._still_skin_s = np.where(still, self._still_skin_s + dt, 0.0).astype(np.float32)
         self._previous, self._previous_t = gray, t_s
-        return FrameSignals(t_s, gray, motion, skin & (self._still_skin_s < self.static_after_s))
+        saturation = cv2.cvtColor(rectified_bgr, cv2.COLOR_BGR2HSV)[..., 1].astype(np.float32)
+        edges = cv2.Canny(cv2.cvtColor(rectified_bgr, cv2.COLOR_BGR2GRAY), 40, 100) > 0
+        return FrameSignals(t_s, gray, motion, skin & (self._still_skin_s < self.static_after_s), saturation, edges)
 
 
 def normalized_gray(bgr: np.ndarray, normalize_sigma_px: float, blur_sigma_px: float) -> np.ndarray:

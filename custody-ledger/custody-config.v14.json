@@ -1,0 +1,70 @@
+{
+  "schema": "custody-config@1",
+  "change_detection_harness": "../change-detection/harness-config.json",
+  "view": "surface_a3",
+  "sampling": {
+    "step_frames": 6,
+    "max_gap_s": 0.5
+  },
+  "rectified": {
+    "px_per_mm": 3.0,
+    "margin_mm": 5.0
+  },
+  "session_registration": {
+    "search_window_s": 15.0,
+    "drift_update_every_s": 1.0,
+    "drift_min_markers": 3,
+    "drift_max_residual_px": 1.5
+  },
+  "signal": {
+    "normalize_sigma_mm": 15.0,
+    "blur_sigma_mm": 0.5,
+    "motion_threshold": 14.0,
+    "change_threshold": 30.0
+  },
+  "skin": {
+    "ycrcb_min": [
+      40,
+      138,
+      80
+    ],
+    "ycrcb_max": [
+      255,
+      175,
+      128
+    ],
+    "static_after_s": 4.0,
+    "intrusion_min_area_mm2": 10.0
+  },
+  "zones": {
+    "content_shrink_mm": 1.0,
+    "intrusion_margin_mm": 3.0,
+    "context_grow_mm": 20.0,
+    "anchor_inner_mm": 1.0,
+    "anchor_outer_mm": 8.0
+  },
+  "clean": {
+    "quiet_hold_s": 0.6,
+    "max_motion_fraction": 0.004
+  },
+  "content": {
+    "min_changed_area_mm2": 8.0,
+    "confirm_hold_s": 1.0,
+    "max_anchor_changed_fraction": 0.12,
+    "cell_occupancy": "paper_model",
+    "cell_print_stroke_mm": 3.0,
+    "min_part_area_mm2": 25.0,
+    "ring_change_with_verified_pose": "content",
+    "cell_min_saturation": 60.0,
+    "cell_min_edge_mm": 120.0
+  },
+  "device_alignment": {
+    "region_grow_mm": 25.0,
+    "max_shift_mm": 40.0,
+    "max_rotation_deg": 30.0,
+    "min_correlation": 0.8
+  },
+  "linking": {
+    "max_unobserved_gap_s": 0.5
+  }
+}

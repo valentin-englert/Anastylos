@@ -88,9 +88,33 @@ physical validation. All 76 microscopy payload hashes also match in the Git inde
   `input_error` versus the expected manifest/hash-rejection classification.
   No assertion was weakened. Historical held-out retained-candidate precision
   is 39.5%; no automatic identification or hardware claim follows.
-- Spatial/Wave 2/Mesh and their source lanes remain deferred to Muse's completed
-  handoff. The live evaluation worktree remains protected. LAT-1's nine source
+- Spatial/Wave 2/Mesh were initially deferred; the completed HARDWARE-03
+  follow-up below supersedes that disposition. The live evaluation worktree remains protected. LAT-1's nine source
   files are backed up and retained; an owning Claude process was observed.
 - The assembly `.gitignore` patch contains malformed backslash patterns; the
   custody architecture patch is superseded by current main. Exact patches and
   relevant generated assembly evidence were preserved, not applied.
+
+## HARDWARE-03 consolidation follow-up
+
+Starting main: `436905697dd5cceec859e70c73124698d50f484d`. Entire spatial
+integration history pinned at `bcea631012d3b7dff2735ce9a5a90160f5424b9d`
+was merged normally, including its existing Wave 2, Spatial/Core/CAD/QA and
+Mesh work. Source lanes were not replayed. Sampling was confirmed stopped by
+the owner; the still-running Receiver checkout and Claude L2/LAT-1 work stay
+protected. The merge preserves consolidated Live/Microscopy work.
+
+Follow-up preservation is in the existing preservation workspace's
+`spatial-preservation/`: full inventory, exact binary patches, safety refs,
+verified `before.bundle`, reparse-ancestor-safe file manifest, hardware images
+and twelve Receiver package artifacts with SHA-256 values. Fixture aliases
+are rejected before opening files. Existing environments were reused without
+installation. Raw hardware evidence remains outside Git.
+
+Hardware claims and limits are exactly those in `docs/integration/HARDWARE-03.md`:
+camera, seven marker IDs, positive age, persisted capture and authenticated
+hash-identical transfer reported PASS; intrinsics/print metrology, guided
+auto-shutter, tracking loss and full Camera→Memory→SVG→Muse remain unverified.
+Approximately 33 fps preview/analysis does not establish Core throughput.
+The existing external `INTEGRATION_REPORT.md` records the final main SHA,
+combined regression results, frozen hashes and every removal/retention outcome.

@@ -6,11 +6,21 @@ bare claims: millimetre coordinates cite their calibration, verdicts
 stay `unknown`/`ambiguous` when evidence is weak, and nothing is
 confirmed without explicit operator confirmation.
 
-Real-hardware validation is limited to one result: PROTO-01-NOUV E2
+Real-hardware correspondence validation is limited to PROTO-01-NOUV E2
 (2026-10-28, `docs/PROTO-01-NOUV.md` §10), four correct automatic
 source-to-deposit links on a real controller, given an operator-defined
 site inventory. All other vision results below come from synthetic
-fixtures and unit tests.
+fixtures and unit tests, except the bounded capture validation below.
+
+HARDWARE-03 (`docs/integration/HARDWARE-03.md`, source `bcea6310`): real
+camera, seven ArUco IDs, positive pose age, persisted captures and authenticated
+hash-identical Receiver transfer were reported PASS. Uncalibrated intrinsics
+correctly block metric pose. Intrinsics/print metrology, Guided Auto-Shutter,
+tracking-loss testing and full Camera→Assembly Memory→SVG→Muse remain
+PENDING_EVIDENCE. Preview/analysis around 33 fps is not continuous end-to-end
+Core throughput. The complete spatial integration history (Wave 2,
+Spatial/Core/CAD/QA and Mesh) is consolidated locally; this does not validate
+metric reconstruction, CAD licensing or pending physical gates.
 
 ## Design rules (observed, keep them)
 
@@ -146,6 +156,9 @@ unless noted) and match the current tree's test methods exactly.
 | `tools/guide/` | guide (Muse) package from memory, rules, grounding and advisory claims checks | `package.py`, `check.py`, `claims.py` | integrated | 51 pass (local consolidation, 2026-10-29) |
 | `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
 | `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | implemented; pinned integration `ebf7f46a`, with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; L2 benefit PENDING_EVIDENCE |
+| `calibration/spatial/` | spatial evidence validator and dataset builder | `validate.py` | locally integrated via `integration/spatial-capture-v1` at `bcea6310` | synthetic checks; physical metric calibration pending |
+| `assembly-reconstruction/cad/` | isolated trusted CAD worker | `cadwork.py` | locally integrated; existing isolated runtime only | licensing/redistribution owner reviews and real-image/FreeCAD gates remain open |
+| `assembly-reconstruction/mesh/` | silhouette-constrained reconstruction experiment | `anastylos_mesh.cli` | locally integrated, synthetic only | known Case A z-floor failure retained; no real reconstruction claim |
 | `anastylos-microscopy/` | offline file orchestration over ten unchanged readers; separate operator reviews | `python -m anastylos_microscopy` | implemented, synthetic validation only | 83 run: 76 pass, 7 platform skips; 543 reader tests pass; historical held-out retained-candidate precision 39.5%, no automatic identification claim |
 | `tools/snes01-benchmark/` | standalone research preparation, correspondence experiments and gated API runners | see module README | implemented research tooling; no product runtime connection | 84 offline tests pass; historical scientific outcomes were not rerun |
 

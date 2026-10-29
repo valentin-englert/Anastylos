@@ -128,8 +128,7 @@ stays valid; no new baseline needed.
 | Item | SHA-256 | Committed before |
 |---|---|---|
 | `nouv-E2R.script.json` (rolled with `roll_e2r_script.py` `0c4cc9cc…`, plan `62b8087b…`) | `4d74a37f8dbe88863bc5d9e6a2addcda140104ec9706ced8b7f189c78cc515df` | E2R take |
-| E2R outputs: `run1\events.json` / `run1
-eturns.json` | `dd6d2157eaffa75402aa8ec499c6bf99d2fee44b7c3e04a7af322424d33c601d` / `e2a2d84cdcd22249ca3485df0eb81550bb0255265adf20d02f090b64f8633233` | ground-truth reveal |
+| E2R outputs: `run1\events.json` / `run1eturns.json` | `dd6d2157eaffa75402aa8ec499c6bf99d2fee44b7c3e04a7af322424d33c601d` / `e2a2d84cdcd22249ca3485df0eb81550bb0255265adf20d02f090b64f8633233` | ground-truth reveal |
 | `nouv-E2R.actual.json` | pending | scoring |
 
 ## 11. Deviation before scoring (2026-10-29)

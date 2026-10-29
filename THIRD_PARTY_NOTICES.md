@@ -113,10 +113,17 @@ preserved and referenced here, not duplicated.
 | Package | Version | SPDX license | Role | Evidence |
 |---|---|---|---|---|
 | meta-sam-parser (vendored) | 0.1.0 | LicenseRef-SAM-License (custom Meta terms, not an SPDX-listed license) | Official SAM 3.x wire-grammar parser + mask decoder used by `sam-tracking/` only | `sam-tracking/vendor/VENDOR.md` (pinned commit `40318970…`, per-file SHA-256) + `sam-tracking/vendor/LICENSE.meta-sam` |
+| COCO API mask module port (inside meta-sam-parser) | cocoapi `maskApi.c` / `_mask.pyx` | BSD-2-Clause-Views | RLE routines ported in `meta_sam_parser/_mask_conversion.py` | Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin; full notice, conditions and disclaimer in `sam-tracking/vendor/THIRD_PARTY_NOTICES.md` (upstream file, verbatim) |
 
-The SAM License file travels with the tree per its section 1.b.i.
-Obligations (publication acknowledgment, termination) need a human
-read before the tree is shared (review item 9).
+The SAM License file travels with the tree per its section 1.b.i, and
+the COCO API notice travels in `sam-tracking/vendor/THIRD_PARTY_NOTICES.md`
+as BSD-2-Clause condition 1 requires. The SAM License was reviewed by
+the owner on 2026-10-29 and distribution in the owner's private
+repository approved; section 1.b.ii (acknowledge the SAM Materials in
+any research publication) remains a duty for future publications.
+Historical caveat: commits `3e8cb59c` … `89aad323` contain the vendored
+files without the COCO API notice; the notice was added forward-only
+and history was not rewritten.
 
 ## Bundled native components (inside wheels, not the repo)
 
@@ -191,9 +198,10 @@ repo; packaging for redistribution must carry them from these sources.
    required before sharing the APK beyond the developer workstation.
 6. Android Maven closure (AndroidX, CameraX, Kotlinx, …) — ships in
    the APK; per-artifact licenses unverified until M5.
-7. meta-sam-parser sources (LicenseRef-SAM-License) — committed
-   under `sam-tracking/vendor/`; shared with every copy of this tree
-   (review item 9).
+7. meta-sam-parser sources (LicenseRef-SAM-License, with a
+   BSD-2-Clause-Views COCO API port) — committed under
+   `sam-tracking/vendor/`; shared with every copy of this tree; SAM
+   License human-reviewed 2026-10-29 for the private repository.
 
 ## Open review items (need a human)
 
@@ -201,9 +209,9 @@ Every pinned dependency is directly inventoried (11 Python pins, 5 npm
 devDependencies, 1 Maven pin, 1 vendored source tree, the
 CPython/pip/Tesseract platform entries, and the observed native
 bundles); the items below are the license questions that stay open.
-The checker prints 11 `REVIEW:` annotations from the SPDX file — this
-list groups them into 9 narrative items (the three Pillow
-static-library annotations share item 3):
+The checker prints 10 `REVIEW:` annotations from the SPDX file — this
+list groups them into 8 open narrative items (the three Pillow
+static-library annotations share item 3); item 9 is human-reviewed:
 
 1. Pillow: confirm MIT-CMU versus HPND SPDX mapping with upstream.
 2. FFmpeg DLL: exact version and GPL-free build flags.
@@ -221,10 +229,11 @@ static-library annotations share item 3):
 8. Android Maven closure: per-artifact POM license fields unverified;
    inventory each runtime-shipped artifact individually before M5 APK
    distribution.
-9. SAM License: custom Meta terms (not an SPDX-listed license); a
-   human must confirm redistribution, publication-acknowledgment, and
-   termination obligations before this tree is shared beyond the
-   developer workstation.
+9. SAM License — human-reviewed 2026-10-29 by the owner: redistribution
+   with the license text (1.b.i) is met, distribution in the owner's
+   private GitHub repository approved; publication acknowledgment
+   (1.b.ii) applies to any future publication; any wider distribution
+   (public repository, packages) needs a new decision.
 
 The checker prints the same list from the SPDX annotations:
 

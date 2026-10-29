@@ -356,7 +356,18 @@
       "licenseConcluded": "LicenseRef-SAM-License",
       "licenseDeclared": "LicenseRef-SAM-License",
       "copyrightText": "Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.",
-      "annotations": [{"annotationDate": "2026-10-28T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=vendored-source-committed; source=sam-tracking/vendor (meta-sam-parser 0.1.0 at commit 40318970a81301f31e97cdd7d605117293332b0f, per-file SHA-256 in sam-tracking/vendor/VENDOR.md); evidence=LICENSE.meta-sam shipped alongside per SAM License 1.b.i; used-by=sam-tracking SAM 3.1 wire-grammar parsing and mask decoding only; not a PyPI pin, no purl by design"}, {"annotationDate": "2026-10-28T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: SAM License (Last Updated November 19, 2025) is a custom Meta terms document, not an SPDX-listed license. A human must read sam-tracking/vendor/LICENSE.meta-sam and confirm redistribution, publication-acknowledgment, and termination obligations before this tree is shared beyond the developer workstation."}]
+      "annotations": [{"annotationDate": "2026-10-28T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=vendored-source-committed; source=sam-tracking/vendor (meta-sam-parser 0.1.0 at commit 40318970a81301f31e97cdd7d605117293332b0f, per-file SHA-256 in sam-tracking/vendor/VENDOR.md); evidence=LICENSE.meta-sam shipped alongside per SAM License 1.b.i; used-by=sam-tracking SAM 3.1 wire-grammar parsing and mask decoding only; not a PyPI pin, no purl by design"}, {"annotationDate": "2026-10-29T00:00:00Z", "annotationType": "REVIEW", "annotator": "Person: valentin-englert (owner)", "comment": "HUMAN-REVIEWED: Human review 2026-10-29 by the owner (valentin-englert): SAM License of 19 November 2025 read; section 1.a permits reproduction, modification and distribution, 1.b.i requires redistribution under the same agreement with the license text, which ships as LICENSE.meta-sam; no prohibition on a private GitHub repository. Distribution approved for the private repository only. 1.b.ii (acknowledge SAM Materials in any research publication) stays a duty for any future publication. Caveat: commit 3e8cb59c and its descendants up to 89aad323 carry the vendored files without the COCO API notice; it was added forward-only, history is not rewritten. Earlier open item: REVIEW: SAM License (Last Updated November 19, 2025) is a custom Meta terms document, not an SPDX-listed license. A human must read sam-tracking/vendor/LICENSE.meta-sam and confirm redistribution, publication-acknowledgment, and termination obligations before this tree is shared beyond the developer workstation."}]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-vendored-coco-mask-port",
+      "name": "COCO API mask module port (inside vendored meta-sam-parser)",
+      "versionInfo": "NOASSERTION",
+      "downloadLocation": "https://github.com/cocodataset/cocoapi",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-2-Clause-Views",
+      "licenseDeclared": "BSD-2-Clause-Views",
+      "copyrightText": "Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin. All rights reserved.",
+      "annotations": [{"annotationDate": "2026-10-29T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=vendored-source-committed; source=sam-tracking/vendor/meta_sam_parser/_mask_conversion.py (port of common/maskApi.c and PythonAPI/pycocotools/_mask.pyx); evidence=sam-tracking/vendor/THIRD_PARTY_NOTICES.md sha256 119cb44600de2a1f2ce93bd9fc0adaa5382870b3bde2c09103531acd94608547, upstream meta-sam commit 40318970a81301f31e97cdd7d605117293332b0f, verbatim; BSD-2-Clause text plus the FreeBSD views clause; added forward-only 2026-10-29, absent in commits 3e8cb59c..89aad323"}]
     }
   ],
   "hasExtractedLicensingInfos": [
@@ -387,6 +398,7 @@
     {"spdxElementId": "SPDXRef-Package-npm-fake-indexeddb", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
     {"spdxElementId": "SPDXRef-Package-npm-types-node", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
     {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-maven-mlkit-barcode-scanning"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-vendored-metasam-parser"}
+    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-vendored-metasam-parser"},
+    {"spdxElementId": "SPDXRef-Package-vendored-metasam-parser", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-vendored-coco-mask-port"}
   ]
 }

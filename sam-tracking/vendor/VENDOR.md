@@ -22,6 +22,8 @@ SHA-256 at vendor time:
 - `4585702556f8487fae314cd4b64c41b240aabc23e025c963c95f5d3c4f95e4da  README.md`
 - `4dea99bfaa016e21bc860d73f344236bd1e5c4977d1a9a8fd32f822b500ae1be  LICENSE.meta-sam`
 - `7e4ac06f04564a8388ceaea5f7f8da061c37100ed1302922f6a29c4bf71cdd30  compatibility.json`
+- `119cb44600de2a1f2ce93bd9fc0adaa5382870b3bde2c09103531acd94608547  THIRD_PARTY_NOTICES.md`
+  (added 2026-10-29: upstream repository-root file at the pinned commit, verbatim)
 
 Re-verify: `Get-FileHash sam-tracking/vendor/meta_sam_parser/* -Algorithm SHA256`
 plus the four loose files above, and compare against this list.
@@ -29,9 +31,18 @@ plus the four loose files above, and compare against this list.
 ## License
 
 SAM License (custom, not SPDX-listed), full text in `LICENSE.meta-sam`.
-Recorded in the SPDX inventory as `LicenseRef-SAM-License` with an open
-human review item (same pattern as the ML Kit terms). Redistribution
-carries this agreement file per its section 1.b.i.
+Recorded in the SPDX inventory as `LicenseRef-SAM-License`; human review
+by the owner on 2026-10-29 (private-repository distribution approved).
+Redistribution carries this agreement file per its section 1.b.i.
+
+`meta_sam_parser/_mask_conversion.py` contains a port of the COCO API mask
+module, Copyright (c) 2014 Piotr Dollar and Tsung-Yi Lin, under the
+Simplified BSD License with the FreeBSD views clause (SPDX
+`BSD-2-Clause-Views`). Its file header points to upstream's
+repository-root `THIRD_PARTY_NOTICES.md`; that file is vendored here
+unchanged and carries the full copyright notice, conditions and
+disclaimer. It was missing from the first vendoring (commit `3e8cb59c`)
+and added forward-only on 2026-10-29.
 
 ## Why vendored, not installed
 

@@ -1,0 +1,47 @@
+{
+  "schema": "anastylos-live-fixture-manifest@1",
+  "copied": "2026-10-29",
+  "note": "verbatim copies of the read-only FULL-01 v21 run; tests copy these again into a temp dir before writing",
+  "files": [
+    {
+      "path": "audit/memory.before-answers.jsonl",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\audit\\memory.before-answers.jsonl",
+      "sha256": "6ef053707183e4e71f6820cab839d0370ba8f872b7e40febdac95c0d4aee9e69"
+    },
+    {
+      "path": "audit/apply_input.jsonl",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\audit\\apply_input.jsonl",
+      "sha256": "ced07aff6839324a40372a3b8d0df1718c172847f9d56e88c079c527a5852a8d"
+    },
+    {
+      "path": "P1/questions.json",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\P1\\questions.json",
+      "sha256": "6459da9cecc76e744e86073b37c02119501b6cb92dd043e9c925b90a4b877616"
+    },
+    {
+      "path": "P1/parts.json",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\P1\\parts.json",
+      "sha256": "b70286390e03296650f5f8d33b314f62d568418da73480ad0b6670fbcff0ff18"
+    },
+    {
+      "path": "P2/questions.json",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\P2\\questions.json",
+      "sha256": "24675a843407049c963801c3940a72a872f211db22fcd61d48e0a8837a7e6859"
+    },
+    {
+      "path": "P2/parts.json",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\P2\\parts.json",
+      "sha256": "a9ff72651fd6ec0bc288eb6a8a05fd319344ebca574e57af1f8dde1d5f07eb6f"
+    },
+    {
+      "path": "P3/questions.json",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\P3\\questions.json",
+      "sha256": "f306aa1b1e2d5277c6149bb2139ef201bf99f798df5db9e45ad1a68f5e45ff50"
+    },
+    {
+      "path": "P3/parts.json",
+      "source": "C:\\ANASTYLOS\\data\\session-runs-v21\\FULL-01\\P3\\parts.json",
+      "sha256": "524c726a3584212877caef9fdcc3157dc040a1c5003f48e2799c2642615916f4"
+    }
+  ]
+}

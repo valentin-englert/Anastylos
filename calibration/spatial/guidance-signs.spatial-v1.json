@@ -1,0 +1,78 @@
+{
+  "schema": "anastylos-guidance-signs-spatial@1",
+  "version": 1,
+  "evidence_class": "synthetic",
+  "basis": {
+    "contract_sha256": "ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+    "guidance_signs_sha256": "124a3b04c566957ef08e3183d1bd111e4dc5285a8c9efb4a812ac67a8d68fb06",
+    "note": "Extensions to the frozen guidance-signs.json analytic vectors (same board frame, same cue words). The frozen file stays authoritative for its two cases."
+  },
+  "frame": "board x right y down z into plane",
+  "cue_rule": "e_C = R_C_B (c* - c); +x right, -x left; +y down, -y up; +z closer, -z back. Components below 0.5 mm are omitted; cues emit in x/y/z order.",
+  "display_rotation_convention": "display_rotation_deg is the clockwise rotation of the display relative to the camera buffer (0/90/180/270). Screen axes stay x right, y down: 0 -> (x, y); 90 -> (-y, x); 180 -> (-x, -y); 270 -> (y, -x). Cue words name screen axes, so physical direction stays correct after display mapping.",
+  "cases": [
+    {
+      "name": "display-90-cw",
+      "kind": "display_rotation",
+      "current_T_B_C": [1, 0, 0, 100, 0, 1, 0, 80, 0, 0, 1, -400, 0, 0, 0, 1],
+      "desired_center_B_mm": [120, 70, -450],
+      "display_rotation_deg": 90,
+      "expected_cues": ["right 10", "down 20", "back 50"]
+    },
+    {
+      "name": "display-180",
+      "kind": "display_rotation",
+      "current_T_B_C": [1, 0, 0, 100, 0, 1, 0, 80, 0, 0, 1, -400, 0, 0, 0, 1],
+      "desired_center_B_mm": [120, 70, -450],
+      "display_rotation_deg": 180,
+      "expected_cues": ["left 20", "down 10", "back 50"]
+    },
+    {
+      "name": "display-270",
+      "kind": "display_rotation",
+      "current_T_B_C": [1, 0, 0, 100, 0, 1, 0, 80, 0, 0, 1, -400, 0, 0, 0, 1],
+      "desired_center_B_mm": [120, 70, -450],
+      "display_rotation_deg": 270,
+      "expected_cues": ["left 10", "up 20", "back 50"]
+    },
+    {
+      "name": "camera-yaw-90",
+      "kind": "yaw",
+      "current_T_B_C": [0, -1, 0, 100, 1, 0, 0, 80, 0, 0, 1, -400, 0, 0, 0, 1],
+      "desired_center_B_mm": [120, 70, -450],
+      "display_rotation_deg": 0,
+      "expected_cues": ["left 10", "up 20", "back 50"]
+    },
+    {
+      "name": "same-pose-identity",
+      "kind": "identity",
+      "current_T_B_C": [1, 0, 0, 100, 0, 1, 0, 80, 0, 0, 1, -400, 0, 0, 0, 1],
+      "desired_center_B_mm": [100, 80, -400],
+      "display_rotation_deg": 0,
+      "expected_cues": []
+    },
+    {
+      "name": "mirror-crop-refusal",
+      "kind": "mirror_transform",
+      "reference_to_image": [-1, 0, 1280, 0, 1, 0, 0, 0, 1],
+      "expect_refusal": "MIRRORED_IMAGE_TRANSFORM"
+    },
+    {
+      "name": "negative-depth-refusal",
+      "kind": "negative_depth",
+      "current_T_B_C": [1, 0, 0, 100, 0, -1, 0, 80, 0, 0, -1, -400, 0, 0, 0, 1],
+      "board_point_B_mm": [100, 80, 0],
+      "K": [1000, 0, 639.5, 0, 1000, 359.5, 0, 0, 1],
+      "distortion": [0, 0, 0, 0, 0],
+      "expect_refusal": "NEGATIVE_DEPTH"
+    }
+  ],
+  "android_owned_extensions": [
+    "cancel during shutter",
+    "hold reset on missing frame"
+  ],
+  "android_owned_note": "Routed to ANDROID-GUIDANCE (state-machine behavior, not spatial math). NOT_TESTED by the spatial replay.",
+  "limitations": [
+    "SYNTHETIC_SIGN_VECTORS_ONLY: analytic recomputations of frozen geometry; no physical sign verification (H3 stays PENDING_EVIDENCE)."
+  ]
+}

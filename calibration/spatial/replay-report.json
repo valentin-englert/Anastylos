@@ -1,0 +1,575 @@
+{
+  "schema": "anastylos-spatial-replay@1",
+  "evidence_class": "synthetic",
+  "validator_version": "1.0.0-wave1",
+  "candidate_commit": "9f4a496d74350f19012df577bc5278da66babcf7",
+  "contract_sha256": "ec313f7ff814a62bc7bcd487b18169b9b34e2ba8bee9e6d829e61d4373da4663",
+  "contract_files_ok": true,
+  "contract_mismatches": [],
+  "inputs": {
+    "spatial_valid_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+    "guidance_signs_sha256": "124a3b04c566957ef08e3183d1bd111e4dc5285a8c9efb4a812ac67a8d68fb06",
+    "spatial_extensions_sha256": "64a025c0fb89a8be4cf7e36d9c611d49105b29eda31c9c4b971a9500f9a6ed79",
+    "synthetic_profile_sha256": "bb37f6245d63ccf207b32ae64032189236b98fd3590da6e5275d6d0ecda24ff1"
+  },
+  "sidecar_valid": {
+    "verdict": "accept",
+    "metric_ready": true,
+    "reasons": [],
+    "reviews": [],
+    "notes": [
+      "EPOCH_CHECK_SKIPPED",
+      "LAYOUT_CHECK_SKIPPED",
+      "NO_ASSET_STORE"
+    ],
+    "matched": true
+  },
+  "guidance_frozen": {
+    "cases": [
+      {
+        "index": 0,
+        "delta_mm": [
+          20.0,
+          -10.0,
+          -50.0
+        ],
+        "delta_matched": true,
+        "cues": [
+          "right 20",
+          "up 10",
+          "back 50"
+        ],
+        "expected_cues": [
+          "right 20",
+          "up 10",
+          "back 50"
+        ],
+        "cues_matched": true
+      },
+      {
+        "index": 1,
+        "delta_mm": [
+          0.0,
+          0.0,
+          50.0
+        ],
+        "delta_matched": true,
+        "cues": [
+          "closer 50"
+        ],
+        "expected_cues": [
+          "closer 50"
+        ],
+        "cues_matched": true
+      }
+    ],
+    "matched": 2,
+    "total": 2
+  },
+  "guidance_extensions": {
+    "cases": [
+      {
+        "name": "display-90-cw",
+        "kind": "display_rotation",
+        "delta_mm": [
+          20.0,
+          -10.0,
+          -50.0
+        ],
+        "display_rotation_deg": 90,
+        "cues": [
+          "right 10",
+          "down 20",
+          "back 50"
+        ],
+        "expected_cues": [
+          "right 10",
+          "down 20",
+          "back 50"
+        ],
+        "matched": true
+      },
+      {
+        "name": "display-180",
+        "kind": "display_rotation",
+        "delta_mm": [
+          20.0,
+          -10.0,
+          -50.0
+        ],
+        "display_rotation_deg": 180,
+        "cues": [
+          "left 20",
+          "down 10",
+          "back 50"
+        ],
+        "expected_cues": [
+          "left 20",
+          "down 10",
+          "back 50"
+        ],
+        "matched": true
+      },
+      {
+        "name": "display-270",
+        "kind": "display_rotation",
+        "delta_mm": [
+          20.0,
+          -10.0,
+          -50.0
+        ],
+        "display_rotation_deg": 270,
+        "cues": [
+          "left 10",
+          "up 20",
+          "back 50"
+        ],
+        "expected_cues": [
+          "left 10",
+          "up 20",
+          "back 50"
+        ],
+        "matched": true
+      },
+      {
+        "name": "camera-yaw-90",
+        "kind": "yaw",
+        "delta_mm": [
+          -10.0,
+          -20.0,
+          -50.0
+        ],
+        "display_rotation_deg": 0,
+        "cues": [
+          "left 10",
+          "up 20",
+          "back 50"
+        ],
+        "expected_cues": [
+          "left 10",
+          "up 20",
+          "back 50"
+        ],
+        "matched": true
+      },
+      {
+        "name": "same-pose-identity",
+        "kind": "identity",
+        "delta_mm": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "display_rotation_deg": 0,
+        "cues": [],
+        "expected_cues": [],
+        "matched": true
+      },
+      {
+        "name": "mirror-crop-refusal",
+        "kind": "mirror_transform",
+        "refused": true,
+        "expected_refusal": "MIRRORED_IMAGE_TRANSFORM",
+        "matched": true
+      },
+      {
+        "name": "negative-depth-refusal",
+        "kind": "negative_depth",
+        "projection": null,
+        "expected_refusal": "NEGATIVE_DEPTH",
+        "matched": true
+      }
+    ],
+    "matched": 7,
+    "total": 7
+  },
+  "negatives": {
+    "vectors": [
+      {
+        "name": "bad-bottom-row",
+        "vector_sha256": "b54b01d793276a56ae6436f49ec2feb438b7065d69d9fc1b710ba23fdbbba1cc",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "BAD_TRANSFORM_BOTTOM_ROW"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "BAD_TRANSFORM_BOTTOM_ROW"
+        ],
+        "matched": true
+      },
+      {
+        "name": "cross-timebase-interpolation",
+        "vector_sha256": "a6b5ce8619fb2883281c320f842d0cf61795c5a9bb1c5ae790784b74b3521fb1",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "CROSS_TIMEBASE_SUBTRACTION"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "CROSS_TIMEBASE_SUBTRACTION"
+        ],
+        "matched": true
+      },
+      {
+        "name": "epoch-overlap-ambiguous-accepted",
+        "vector_sha256": "ce039eba2305f6479aa7d80953424e0fc1462a8e0ca59ce1607114476bc21b7d",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "accept",
+        "metric_ready": true,
+        "reasons": [],
+        "reviews": [],
+        "expected_verdict": "accept",
+        "expected_reasons_any": [],
+        "matched": true
+      },
+      {
+        "name": "epoch-overlap-verified",
+        "vector_sha256": "098d1c1133c088f381c4fe197944a413564d0d208b5b3b4a80e077a07b8a8eb2",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "EPOCH_OVERLAP_ACROSS_BREAK"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "EPOCH_OVERLAP_ACROSS_BREAK"
+        ],
+        "matched": true
+      },
+      {
+        "name": "inlier-not-detected",
+        "vector_sha256": "94cb647a95b0dd81e4c9b23380061cf1de839c8bcfcf734df05ede33edb1ca3e",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "INLIER_NOT_DETECTED"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "INLIER_NOT_DETECTED"
+        ],
+        "matched": true
+      },
+      {
+        "name": "inlier-ratio-low",
+        "vector_sha256": "5ce96172a884b0ead70ee3b6934491c7e06d0af5ae2e13a9856a9e20d088192b",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "INLIER_RATIO_LOW"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "INLIER_RATIO_LOW"
+        ],
+        "matched": true
+      },
+      {
+        "name": "interpolated-gap-too-large",
+        "vector_sha256": "003e019c804ae90cfee9f051f73e4fc29c0fa9619665a8ea8cacdb6373ca0822",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "BRACKET_GAP_TOO_LARGE"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "BRACKET_GAP_TOO_LARGE"
+        ],
+        "matched": true
+      },
+      {
+        "name": "interpolated-without-bracketing",
+        "vector_sha256": "1105915e6978209e6c703c89589e1599007849aeeb7527cf93d093e5b6b2da1b",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "BRACKETING_COUNT"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "BRACKETING_COUNT"
+        ],
+        "matched": true
+      },
+      {
+        "name": "invalid-rotation",
+        "vector_sha256": "4251093e1f10441831f99bd3f2a9c9dfe770883ead143adc97037a9368887efb",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "INVALID_ROTATION"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "INVALID_ROTATION"
+        ],
+        "matched": true
+      },
+      {
+        "name": "inverted-board-z",
+        "vector_sha256": "1db1b159d07f51f0c61b0a1f32105fbfbf6f1e98da5565f427e675449608fdcb",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "INVERTED_BOARD_Z"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "INVERTED_BOARD_Z"
+        ],
+        "matched": true
+      },
+      {
+        "name": "mirrored-image-transform",
+        "vector_sha256": "c036a4d14150408934a9abd5da4a4088be783d5b8f17ac26ba9c8b280b7a2dd7",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "MIRRORED_IMAGE_TRANSFORM"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "MIRRORED_IMAGE_TRANSFORM"
+        ],
+        "matched": true
+      },
+      {
+        "name": "nominal-calibration",
+        "vector_sha256": "c44520e2c6a8208409b2214f416cf6e30ae607eb8baa076fdd22116f76992091",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "CONTRADICTORY_QUALITY_CALIBRATION"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "CONTRADICTORY_QUALITY_CALIBRATION"
+        ],
+        "matched": true
+      },
+      {
+        "name": "null-rms-needs-review",
+        "vector_sha256": "381ab67d663b8d2f999af865d894968e91762fd7dc030a086afbd3e40f84878e",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "needs_review",
+        "metric_ready": false,
+        "reasons": [],
+        "reviews": [
+          "NULL_RMS"
+        ],
+        "expected_verdict": "needs_review",
+        "expected_reasons_any": [
+          "NULL_RMS"
+        ],
+        "matched": true
+      },
+      {
+        "name": "off-plane-board-basis",
+        "vector_sha256": "e0cffd9fc116ab1e18a82f456b57cbe5ba58532e428cdee8205c92ce85ae7a75",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "OFF_PLANE_BOARD_BASIS"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "OFF_PLANE_BOARD_BASIS"
+        ],
+        "matched": true
+      },
+      {
+        "name": "promoted-suggestion",
+        "vector_sha256": "a8e92d76669e214d535df9aa377ff6b500df6df3132631beeb717b56e4307553",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "PROMOTED_SUGGESTION"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "PROMOTED_SUGGESTION"
+        ],
+        "matched": true
+      },
+      {
+        "name": "quality-accepted-failed-gate",
+        "vector_sha256": "64e683468d5404bfaaab3e56506eff0f864192db22151a9a663a53606bae975e",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "CONTRADICTORY_QUALITY_GATE"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "CONTRADICTORY_QUALITY_GATE"
+        ],
+        "matched": true
+      },
+      {
+        "name": "reflection-det-minus-one",
+        "vector_sha256": "e24db1a6091c099076e3c7b14019e7bd72cd2e4bf46eac0d7a52992b4d1b462c",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "REFLECTION_DET_MINUS_ONE"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "REFLECTION_DET_MINUS_ONE"
+        ],
+        "matched": true
+      },
+      {
+        "name": "rejected-quality-record",
+        "vector_sha256": "303a438a9cd62e14fdd69120f0416eadd165048dff41421f9a32b84f8ba189f5",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "accept",
+        "metric_ready": false,
+        "reasons": [],
+        "reviews": [],
+        "expected_verdict": "accept",
+        "expected_reasons_any": [],
+        "matched": true
+      },
+      {
+        "name": "rms-over-gate",
+        "vector_sha256": "2c2bfc3a6b11040ac092a5c70c8760fbdd4228980e04afd8c8a426869c1aa259",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "RMS_OVER_GATE"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "RMS_OVER_GATE"
+        ],
+        "matched": true
+      },
+      {
+        "name": "stale-sample",
+        "vector_sha256": "f172868f67d73a7a83323fbe9ec9ef2463dd6973e685a4fe6770bd6fb7e8a45a",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "STALE_SAMPLE"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "STALE_SAMPLE"
+        ],
+        "matched": true
+      },
+      {
+        "name": "supersedes-self",
+        "vector_sha256": "e41d592a25aa8f9a8615de89f04f5e00d504ceab6151b243a605d2fb672286b3",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "SUPERSEDES_SELF"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "SUPERSEDES_SELF"
+        ],
+        "matched": true
+      },
+      {
+        "name": "time-order-violation",
+        "vector_sha256": "d2009393e5ddb692e0662f2805fcd75b18ca5879acc79cb5bbfeef6e8d85fb73",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "TIME_ORDER_VIOLATION"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "TIME_ORDER_VIOLATION"
+        ],
+        "matched": true
+      },
+      {
+        "name": "unknown-basis",
+        "vector_sha256": "4a12875436ab55ee14d626afb0a2e6e73c608c1d9b9f1d5c93a3a6d1eaf1ad6b",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "UNKNOWN_BASIS"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "UNKNOWN_BASIS"
+        ],
+        "matched": true
+      },
+      {
+        "name": "wrong-source-image",
+        "vector_sha256": "b1b7ea220f365644f5fafa59cce594dd87fb074e7a6cfd48ebb3eedaf491a61d",
+        "base_sha256": "ee0d89e29898b8aed352d618ae66936f67f8b30c3afc8e4aa59e7b5222110742",
+        "verdict": "reject",
+        "metric_ready": false,
+        "reasons": [
+          "WRONG_SOURCE_IMAGE"
+        ],
+        "reviews": [],
+        "expected_verdict": "reject",
+        "expected_reasons_any": [
+          "WRONG_SOURCE_IMAGE"
+        ],
+        "matched": true
+      }
+    ],
+    "matched": 24,
+    "total": 24
+  },
+  "synthetic_profile": {
+    "verdict": "accept",
+    "reasons": [],
+    "reviews": [],
+    "matched": true
+  },
+  "green": true
+}

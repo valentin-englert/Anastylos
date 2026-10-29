@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["REFLECTION_DET_MINUS_ONE"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "T_board_camera", "matrix", 0], "value": -1}], "name": "reflection-det-minus-one"}

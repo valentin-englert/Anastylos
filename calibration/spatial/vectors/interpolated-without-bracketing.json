@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["BRACKETING_COUNT"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "solve_source"], "value": "timestamp_interpolated"}], "name": "interpolated-without-bracketing"}

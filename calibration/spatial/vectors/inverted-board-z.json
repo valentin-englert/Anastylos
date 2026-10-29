@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["INVERTED_BOARD_Z"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["pose", "T_board_camera", "matrix", 11], "value": 400}], "name": "inverted-board-z"}

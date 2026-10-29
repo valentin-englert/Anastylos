@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["CONTRADICTORY_QUALITY_GATE"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["quality", "motion", "status"], "value": "fail"}], "name": "quality-accepted-failed-gate"}

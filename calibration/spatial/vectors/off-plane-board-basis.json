@@ -1,0 +1,1 @@
+{"expect_reasons_any": ["OFF_PLANE_BOARD_BASIS"], "expect_verdict": "reject", "mutations": [{"op": "set", "path": ["target", "requested_roi", "vertices_mm", 0, 2], "value": 5}], "name": "off-plane-board-basis"}

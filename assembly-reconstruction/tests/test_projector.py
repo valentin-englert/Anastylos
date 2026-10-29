@@ -170,6 +170,24 @@ class ProjectorContract(unittest.TestCase):
 
 
 class ProjectorEdgeCases(unittest.TestCase):
+    def test_operator_declared_events_are_accepted_and_not_projected(self):
+        declared = [
+            {"type": "phase", "id": "phase-0001", "session": "s", "label": "P1", "starts_after": None},
+            {"type": "declared_removal", "id": "dec-0001", "session": "s", "operator_label": "back shell",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "storage_link", "id": "store-0001", "session": "s", "target_id": "dec-0001",
+             "location": "OUT-B", "basis": {"kind": "human", "confirmed_by": "owner"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "memory.jsonl"
+            log.write_text((FIX / "memory.jsonl").read_text(encoding="utf-8").rstrip("\n") + "\n"
+                           + "".join(json.dumps(event) + "\n" for event in declared), encoding="utf-8")
+            with_declared = _fixture_state(memory_path=str(log))
+        plain = _fixture_state()
+        validate_state(with_declared)
+        self.assertEqual(with_declared["status"], plain["status"])
+        self.assertEqual(len(with_declared["components"]), len(plain["components"]))
+
     def test_missing_log_is_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:
             state = build_state(str(Path(tmp) / "absent.jsonl"))

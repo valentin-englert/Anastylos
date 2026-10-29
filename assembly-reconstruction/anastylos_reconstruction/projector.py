@@ -88,6 +88,11 @@ def _read_json(path: Path):
         return None
 
 
+# Operator-declared events (phase, declared_removal, storage_link, compatible_group) are valid
+# memory but carry no geometry; the projection reads only observations and tray links.
+MEMORY_EVENT_TYPES = ("observation", "tray_link", "declared_removal", "storage_link", "compatible_group", "phase")
+
+
 def load_log(memory_path: Path) -> tuple[list[dict] | None, str | None]:
     """Parse the JSONL log. Malformed lines abort the whole read."""
     try:
@@ -104,10 +109,10 @@ def load_log(memory_path: Path) -> tuple[list[dict] | None, str | None]:
             return None, f"line {lineno}: invalid JSON ({exc})"
         if (
             not isinstance(event, dict)
-            or event.get("type") not in ("observation", "tray_link")
+            or event.get("type") not in MEMORY_EVENT_TYPES
             or not event.get("id")
         ):
-            return None, f"line {lineno}: not an observation or tray_link event"
+            return None, f"line {lineno}: not a known assembly-memory event"
         events.append(event)
     seen: set[str] = set()
     for event in events:

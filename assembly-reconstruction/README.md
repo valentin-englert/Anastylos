@@ -105,7 +105,7 @@ the existing confirmation channels.
 python -m unittest discover -s tests -v
 ```
 
-53 tests: projector contract (order, verbatim geometry, unknown
+54 tests: projector contract (order, verbatim geometry, unknown
 identity, tray bases, verbatim relationships, provenance hashes,
 determinism, read-only inputs), provenance verification
 (match/mismatch/missing/malformed hashes, tampered-byte rejection),

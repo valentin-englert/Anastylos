@@ -1,0 +1,227 @@
+{
+  "schema": "anastylos-session-package@1",
+  "parts": [
+    {
+      "observation": "obs-0001",
+      "removal_index": 1,
+      "identity": "unknown: evidence of a removal, not a verified part",
+      "source": {
+        "site": "W-YELLOW",
+        "label_basis": "operator inventory label",
+        "rect_mm": [
+          249.5,
+          125.9,
+          13.0,
+          13.0
+        ],
+        "centroid_mm": [
+          256.06,
+          132.75
+        ],
+        "bbox_mm": [
+          250.25,
+          126.5,
+          12.25,
+          15.25
+        ],
+        "evidence_pair": "E-0017_W-YELLOW",
+        "evidence_result_sha256": "78504b272875fdf1820cd50de665029af1b59f1cd6681e6edd1a2e040b6f9172"
+      },
+      "stored_in": {
+        "cell": "cell-6",
+        "tray_link": "link-0001",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "PROTO-01-NOUV E2: custody proposal L-0001; deposit pair E-0018_cell-6 R2; confirmed from witness video and cell photo"
+      },
+      "custody_history": [
+        {
+          "proposal": "L-0001",
+          "status": "candidate_temporal_exclusive",
+          "deposit_event": "E-0018",
+          "removal_site": "W-YELLOW"
+        }
+      ]
+    },
+    {
+      "observation": "obs-0002",
+      "removal_index": 2,
+      "identity": "unknown: evidence of a removal, not a verified part",
+      "source": {
+        "site": "W-BLUE",
+        "label_basis": "operator inventory label",
+        "rect_mm": [
+          249.6,
+          147.1,
+          13.0,
+          13.0
+        ],
+        "centroid_mm": [
+          256.14,
+          153.87
+        ],
+        "bbox_mm": [
+          250.25,
+          146.5,
+          12.5,
+          13.75
+        ],
+        "evidence_pair": "E-0020_W-BLUE",
+        "evidence_result_sha256": "88454c0ad749f765b37a049b4a7e9d388f38ca98f4b34ea16524f53fe5cb0357"
+      },
+      "stored_in": {
+        "cell": "cell-1",
+        "tray_link": "link-0002",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "PROTO-01-NOUV E2: custody proposal L-0002; deposit pair E-0019_cell-1 R3; confirmed from witness video and cell photo"
+      },
+      "custody_history": [
+        {
+          "proposal": "L-0002",
+          "status": "candidate_temporal_exclusive",
+          "deposit_event": "E-0019",
+          "removal_site": "W-BLUE"
+        }
+      ]
+    },
+    {
+      "observation": "obs-0003",
+      "removal_index": 3,
+      "identity": "unknown: evidence of a removal, not a verified part",
+      "source": {
+        "site": "W-GREEN",
+        "label_basis": "operator inventory label",
+        "rect_mm": [
+          236.1,
+          136.5,
+          13.0,
+          13.0
+        ],
+        "centroid_mm": [
+          241.73,
+          144.14
+        ],
+        "bbox_mm": [
+          236.5,
+          138.25,
+          10.0,
+          11.25
+        ],
+        "evidence_pair": "E-0021_W-GREEN",
+        "evidence_result_sha256": "5e7e8d4a65cf6e9d857878524178dcecff96cff1e79685c31749c84cc305efb2"
+      },
+      "stored_in": {
+        "cell": "cell-9",
+        "tray_link": "link-0003",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "PROTO-01-NOUV E2: custody proposal L-0003 put it in cell 5, control C4 moved it to cell 9 (deposit pair E-0024_cell-9 R1, L-0004 unattributed); current location confirmed from witness video and cell photo"
+      },
+      "custody_history": [
+        {
+          "proposal": "L-0004",
+          "status": "unattributed",
+          "deposit_event": "E-0024",
+          "removal_site": null
+        }
+      ]
+    },
+    {
+      "observation": "obs-0004",
+      "removal_index": 4,
+      "identity": "unknown: evidence of a removal, not a verified part",
+      "source": {
+        "site": "W-RED",
+        "label_basis": "operator inventory label",
+        "rect_mm": [
+          263.1,
+          136.6,
+          13.0,
+          13.0
+        ],
+        "centroid_mm": [
+          268.64,
+          144.22
+        ],
+        "bbox_mm": [
+          261.75,
+          139.5,
+          12.25,
+          10.0
+        ],
+        "evidence_pair": "E-0025_W-RED",
+        "evidence_result_sha256": "f68c86f2febe9d0af0df0017eeb0be0d1a4161835d2e5ebcafa7e0d5577e340b"
+      },
+      "stored_in": {
+        "cell": "cell-4",
+        "tray_link": "link-0004",
+        "basis": "human",
+        "confirmed_by": "valentin-englert (owner)",
+        "note": "PROTO-01-NOUV E2: custody proposal L-0005; deposit pair E-0026_cell-4 R1; confirmed from witness video and cell photo"
+      },
+      "custody_history": [
+        {
+          "proposal": "L-0005",
+          "status": "candidate_temporal_exclusive",
+          "deposit_event": "E-0026",
+          "removal_site": "W-RED"
+        }
+      ]
+    }
+  ],
+  "install_order": {
+    "basis": "reverse observed removal order (no confirmed dependencies)",
+    "steps": [
+      {
+        "step": 1,
+        "observation": "obs-0004",
+        "from": "cell-4",
+        "to": "W-RED"
+      },
+      {
+        "step": 2,
+        "observation": "obs-0003",
+        "from": "cell-9",
+        "to": "W-GREEN"
+      },
+      {
+        "step": 3,
+        "observation": "obs-0002",
+        "from": "cell-1",
+        "to": "W-BLUE"
+      },
+      {
+        "step": 4,
+        "observation": "obs-0001",
+        "from": "cell-6",
+        "to": "W-YELLOW"
+      }
+    ]
+  },
+  "dependencies": {
+    "confirmed": [],
+    "note": "none recorded in this session"
+  },
+  "unknowns": [
+    "No mechanical dependency between parts was observed or confirmed; install order is only the reverse of the observed removal order.",
+    "Part identity was never verified; a part is followed by temporal custody and operator confirmation.",
+    "Anything removed outside the watched sites and cells is not in this session.",
+    "Reassembly progress is known only from return checks below or from what the operator says in the chat."
+  ],
+  "inputs": {
+    "memory": {
+      "path": "C:\\ANASTYLOS\\data\\proto-01\\E2\\memory\\memory.jsonl",
+      "sha256": "867fe05d4fc3e302fa1d12e7414e5066cc64b4087a023689d35437a500b0568a"
+    },
+    "inventory": {
+      "path": "C:\\ANASTYLOS\\data\\proto-01\\E2\\E2.inventory.json",
+      "sha256": "b66e1e0881e67438f19e082d5e4207d41a3e9ec8939cdd2a6394e1ab4c14ed1a"
+    },
+    "custody": {
+      "path": "C:\\ANASTYLOS\\data\\proto-01\\E2\\run1\\custody.json",
+      "sha256": "72c9d64077cc729882cc9294eb1794e555c0029bb352794bad1a2b2ad90976ed"
+    },
+    "returns": null
+  }
+}

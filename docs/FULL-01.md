@@ -318,3 +318,18 @@ Next for P1-type cases: a source whose geometry covers several candidate
 sources (here two holes) should be reported as `coarse` and never stated
 as a specific hole; screw holes themselves are not observable from
 overhead (pre-flight B), so screws stay an operator-declared case.
+
+## 14. Screws as an interchangeable group (owner statement, 2026-10-29)
+
+The owner states that the five back-shell screws are identical. Per
+`PROTO-01-NOUV.md` §6 the word "mechanically interchangeable" needs a
+caliper measurement (length, head Ø, thread Ø within 0.2 mm); until that
+is recorded, the group is **operator-declared identical, not measured**.
+
+Consequence for memory and guidance: the screws are one compatible group
+— five parts in cell 1 that belong to the five holes H1–H5, without
+per-screw identity or per-hole assignment. Reassembly guidance says "any
+screw from cell 1 into any of H1–H5" and names the basis (operator
+statement, measurement pending). Hole-level attribution is then not needed
+for reassembly; it would only matter for non-identical screws, where
+tool-contact evidence plus a cell counter would be the next step.

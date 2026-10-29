@@ -143,3 +143,51 @@ because 28–35 removals are pending at each deposit.
    frozen configuration for any next test.
 7. Positive: all four face-button sources and all tray deposits of
    cell-sized parts were observed in a full disassembly.
+
+## 9. OUT-x and the open candidates of P3 (2026-10-29) — development data
+
+**OUT-x (linker 1.2)**, branch `feat/custody-v1.3` commit `886de0ba`,
+56/56 tests (10 new: missing declaration, named closure marked
+`operator_assisted`, unnamed declaration closes nothing, named source
+without evidence rejected, wrong site rejected, declaration before the
+removal rejected, duplicate closure rejected, overlapping removals stay
+ambiguous, contradiction with an automatic link becomes a conflict, a
+declaration after the deposit does not shape it). Input
+`custody-declared-deposits@1`, generic (`location` is free text; nothing
+about SNES parts or OUT-A…F in code). Counts separate `automatic_links`
+from `operator_assisted_links`; declarations never raise the automatic
+count.
+
+**What the 28–35 open candidates of P3 are** (event groups of the
+pass-2 variant with ring rule, read against overhead frames by the
+Technical Lead):
+
+| Window | Site events | Physical action |
+|---|---|---|
+| 14–21 s (+1 late) | 8 | face-button membrane lifted off (one removal) |
+| 22 s | 1 | transient 8 mm² change |
+| 24–28 s | 11 | D-pad membrane lifted off (one removal) |
+| 40–44 s | 9 | D-pad removed — the same sites as its membrane, changing a second time (stacked parts) |
+| 51–55 s | 2 | green button |
+| 59–63 s | 2 | blue button |
+| 66–75 s | 3 | yellow and red buttons (one fragment extra) |
+| 78–81 s | 3 | Start/Select rubber |
+
+About **8 real removals produced 39 site events**: 30 are fragments of
+the same removal or second changes of the same site (stacked parts), 1 is
+transient. The deposits in cells 3–7 therefore see 27–35 pending removals.
+
+**OUT-x on P3 with a draft declaration** (written by the Technical Lead
+from the video, *not operator-confirmed*,
+`P3\outx-draft\declared-deposits.DRAFT.json`): face-button membrane and
+Start/Select declared outside, each naming its largest fragment. Both
+declarations close their removal, but each closes one fragment only;
+27–34 removals stay pending and all 6 deposits stay `ambiguous`
+(0 automatic, 0 assisted links).
+
+Conclusion: OUT-x works as bookkeeping, but on FULL-01 the remaining
+ambiguity comes from fragmentation of large removals and from stacked
+parts, not from missing declarations. Next (separate from OUT-x): group
+site changes that occur in the same observed interval and touch each
+other into one removal event, and model a site that changes twice as two
+layered removals.

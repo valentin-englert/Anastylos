@@ -1,0 +1,46 @@
+PyYAML==6.0.3 :: MIT
+aiohappyeyeballs==2.7.1 :: PSF-2.0
+aiohttp==3.14.5 :: Apache-2.0 AND MIT
+aiosignal==1.4.0 :: Apache 2.0
+attrs==26.1.0 :: MIT
+cadquery-ocp-proxy==7.9.3.1.1 :: Apache-2.0
+cadquery-ocp==7.9.3.1.1 :: Apache-2.0
+cadquery==2.8.0 :: Apache Public License 2.0
+casadi==3.8.2 :: GNU Lesser General Public License v3 or later (LGPLv3+)
+contourpy==1.4.0 :: BSD-3-Clause
+cycler==0.12.1 :: Copyright (c) 2015, matplotlib project
+ezdxf==1.4.5 :: UNKNOWN
+fonttools==4.68.0 :: MIT
+frozenlist==1.8.0 :: Apache-2.0
+idna==3.20 :: BSD-3-Clause
+kiwisolver==1.5.1 :: =========================
+llvmlite==0.50.0 :: BSD-2-Clause AND Apache-2.0 WITH LLVM-exception
+matplotlib==3.11.2 :: License agreement for matplotlib versions 1.3.0 and later
+more-itertools==11.2.1 :: MIT
+msgpack==1.2.4 :: Apache-2.0
+multidict==7.2.1 :: Apache-2.0
+multimethod==1.12 :: Copyright 2022 Aric Coady
+nlopt==2.11.0 :: MIT
+numba==0.68.1 :: BSD
+numpy==2.5.4 :: BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0
+packaging==26.3 :: Apache-2.0 OR BSD-2-Clause
+pillow==13.0.0 :: MIT-CMU
+pip==26.2.2 :: MIT
+propcache==0.5.4 :: Apache-2.0
+pyparsing==3.3.3 :: MIT
+python-dateutil==3.0.0 :: Dual License
+runtype==0.5.3 :: MIT
+scipy==1.18.1 :: Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.
+six==1.17.0 :: MIT
+trame-client==4.1.4 :: MIT
+trame-common==1.2.9 :: UNKNOWN
+trame-components==2.5.0 :: Apache License 2.0
+trame-server==4.1.0 :: Apache License 2.0
+trame-vtk==2.11.17 :: BSD License
+trame-vuetify==3.3.0 :: MIT
+trame==4.0.0 :: Apache License 2.0
+typing_extensions==4.16.0 :: PSF-2.0
+tzdata==2026.6 :: Apache-2.0
+vtk==9.6.2 :: BSD
+wslink==2.6.0 :: UNKNOWN
+yarl==1.25.1 :: Apache-2.0

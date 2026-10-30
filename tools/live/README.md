@@ -1,11 +1,21 @@
 # tools/live — LIVE-CORE (Lane A)
 
-Deterministic coordinator for live clarification questions (current CONTRACT `anastylos-live-contract@0.2`, A2).
+Deterministic coordinator for live clarification questions (current CONTRACT `anastylos-live-contract@0.3`, A2).
 Stdlib only. Files: `states.py` (§3.3 state machine, op_key), `questions.py` (questions.json + revisions),
-`templates.py` (L0 wording ported from `seed/h3r0.py`, rubric R1–R7), `interpret.py` (operator input → answers.py
-answer, read-back), `gate.py` (L1 gates, schema subset validator), `journal.py` (`anastylos-live-journal@1`,
-fsync per line), `lock.py` (OS byte-range lock per memory dir), `memory_writer.py` (intent, steps, recovery, census),
-`coordinator.py` (orchestrator + demo CLI).
+`templates.py` (German L0 wording ported from `seed/h3r0.py`, rubric R1–R7), `interpret.py` (German operator input →
+answers.py answer, read-back), `english.py` (English L0 wording, interpretation, read-back, rubric R1–R8),
+`languages.py` (session language: `en` product, `de` historical regression), `gate.py` (L1 gates, schema subset
+validator), `journal.py` (`anastylos-live-journal@1`, fsync per line), `lock.py` (OS byte-range lock per memory dir),
+`memory_writer.py` (intent, steps, recovery, census), `coordinator.py` (orchestrator + demo CLI).
+
+Language: `Coordinator(..., language="en")` is the default; the German path is unchanged and used by the historical
+FULL-01 tests (`tests/support.py` passes `language="de"`). English R2 checks the operator's own phase words, R8
+rejects German function words outside quoted operator labels; over-long spoken options go to the screen.
+Journal (CONTRACT §3.4, 0.2 fields): `t_wall` on every record; `question_state` carries `question_id`, `state` and
+the static fields, ASKED/ANSWERED/CONFIRMED their fields; `CONFIRMED` is journaled before the intent (a confirmation
+without intent is reopened as a read-back after a restart); one `memory_result` with `status: ok` and all
+`written_ids` per commit, step records carry `status: step`. Prefetched L1 wording (`prefetch_wording`) is a
+`provider_call` with a `prefetch` verdict, used only for the same op_key and unchanged L0 facts.
 
     python tools/live/coordinator.py demo --out C:\ANASTYLOS\data\live-dev\A\<run>
     cd tools/live && python -m unittest discover -s tests

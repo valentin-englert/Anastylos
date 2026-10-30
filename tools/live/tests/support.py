@@ -37,7 +37,8 @@ def workspace(tmp: Path) -> dict:
 
 
 def open_coordinator(ws: dict, **kwargs) -> Coordinator:
-    return Coordinator(ws["run_dir"], ws["memory_dir"], ws["runs"], PHASE_WORDS, OPERATOR, **kwargs).open()
+    # the historical FULL-01 regression runs in German, as recorded (seed/h3r0.py); English has its own tests
+    return Coordinator(ws["run_dir"], ws["memory_dir"], ws["runs"], PHASE_WORDS, OPERATOR, **{"language": "de", **kwargs}).open()
 
 
 def crash_at(point: str, nth: int = 1):

@@ -218,7 +218,7 @@ def _combine(short: list[list[tuple[str, float]]]) -> list[dict]:
     for combo in product(*short):
         colors = [color for color, _ in combo]
         for candidate in decode(colors, len(colors)):
-            scores = [dict(combo).get(color, 0.0) for color in colors]
+            scores = [score for _, score in combo]
             mean = math.prod(scores) ** (1.0 / len(scores)) if all(s > 0 for s in scores) else 0.0
             key = (tuple(candidate["sequence"]), candidate["orientation"])
             if key not in found or mean > found[key]["score"]:

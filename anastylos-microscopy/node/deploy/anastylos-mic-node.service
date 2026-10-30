@@ -1,0 +1,36 @@
+[Unit]
+Description=ANASTYLOS microscope preview and evidence appliance
+After=multi-user.target systemd-udev-settle.service
+Wants=systemd-udev-settle.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=anastylos
+Group=anastylos
+SupplementaryGroups=video render
+WorkingDirectory=/opt/anastylos-microscope/current
+Environment=PYTHONPATH=/opt/anastylos-microscope/current/node/src:/opt/anastylos-microscope/current/src
+Environment=ANASTYLOS_MIC_NODE_SOCKET=/run/anastylos-mic-node/control.sock
+Environment=ANASTYLOS_MIC_NODE_STATUS=/run/anastylos-mic-node/status.json
+Environment=ANASTYLOS_MIC_NODE_LOGO=/opt/anastylos-microscope/current/node/assets/anastylos_logo.png
+ExecStart=/usr/bin/python3 -m anastylos_mic_node appliance
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+UMask=0077
+RuntimeDirectory=anastylos-mic-node
+RuntimeDirectoryMode=0750
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+PrivateTmp=yes
+ReadWritePaths=/run/anastylos-mic-node
+
+[Install]
+WantedBy=multi-user.target

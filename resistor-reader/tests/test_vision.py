@@ -18,10 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from anastylos_resistor.synthetic import render
-from anastylos_resistor.vision import analyze, annotate
+from anastylos_resistor.vision import _combine, analyze, annotate
 
 
 class VisionTest(unittest.TestCase):
+    def test_repeated_band_colors_keep_each_bands_score(self):
+        options = [[("red", 0.1)], [("red", 0.9)], [("black", 0.9)],
+                   [("brown", 0.9)], [("brown", 0.9)]]
+        candidates = _combine(options)
+        forward = next(item for item in candidates if item["orientation"] == "forward")
+        self.assertEqual(forward["resistance_ohms"], 2200.0)
+        self.assertEqual(forward["score"], round((0.1 * 0.9 ** 4) ** (1 / 5), 3))
+
     def test_four_band_nominal(self):
         result = analyze(render(["yellow", "violet", "red", "gold"]))
         self.assertEqual(result["status"], "ok")

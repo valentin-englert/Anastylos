@@ -1,47 +1,57 @@
 # Hardware compatibility
 
-**Status: no hardware was used or validated in this release.** All images in
-this package are synthetic renders, explicitly labelled. No physical gate is
-marked PASS by this work.
+**Status: limited Raspberry Pi display/camera smoke passed; the appliance
+service and evidence handoff are not yet physically validated.**
 
-## Intended chain
+## Target chain
 
-| Element | Role | Source of facts |
+| Element | Intended role | Verified characteristics |
 |---|---|---|
-| MUSTOOL 24MP HDMI microscope camera | optics + sensor; settings only on the device / IR remote | BlobCam `docs/hardware.md` @ e180aac2 |
-| UGREEN 25854 HDMI-to-USB capture (`2b89:5854 MACROSILICON`) | UVC capture, MJPEG 1920x1080 listed | same |
-| Raspberry Pi 3B+ (BlobCam) | **future** capture source only; writes files + manifest | same |
-| Windows PC | runs the Core and the Anastylos readers | this package |
-| MSI GTX 970 board | intended first real inspection target | not yet photographed |
+| MUSTOOL trinocular microscope with HDMI camera | optical source | Live feed was visible at the HDMI monitor during the bounded preview smoke; optical profile and microscope calibration remain unverified |
+| UGREEN 25854 HDMI-to-USB adapter | video capture bridge | USB `2b89:5854`; `/dev/video0` reports capture capability; MJPEG 1360×768@30 and 1920×1080@30 advertised |
+| Raspberry Pi 3B+ with Raspberry Pi OS/Linux | runs the capture/preview node | Pi 3B+ Rev 1.3, Raspberry Pi OS 13, armv7l; GStreamer 1.26.2. Appliance packages/service not installed |
+| Windows PC | runs the Microscopy Core and ANASTYLOS readers | Existing consumer; real-session handoff remains pending |
+| MSI GTX 970 board | intended first real inspection target | Not photographed with this node |
 
-The Core never opens a camera device, never talks to the Pi, never installs
-or modifies BlobCam. Any capture tool that produces JPEG/PNG files plus a
-`capture-manifest.json` can feed it.
+## MIC-NODE appliance smoke (2026-10-30)
 
-## What the Core assumes about images
+| Check | Result |
+|---|---|
+| HDMI hotplug and EDID | PASS after the operator replaced a defective HDMI cable; DRM connector `HDMI-A-1` connected, EDID 256 bytes, modes reported |
+| KMS test pattern | PASS; bounded SMPTE pipeline using `kmssink`, connector 35, plane 86 and `force-modesetting=true` completed |
+| Direct live camera preview | PASS while running for two bounded manual GStreamer runs; the operator confirmed the MUSTOOL feed was visible. The processes ended afterward, so preview is not currently persistent. |
+| Preview stability / Pi load | not tested beyond the short smoke |
+| Shared evidence + preview service | not tested; PyGObject/GStreamer Python bindings are absent and provisioning has not been approved/run |
+| Automatic boot, branded startup, restart and reconnect | not tested |
+| Physical cold boot | not tested |
+
+The Core consumes a capture directory and manifest. The appliance service will
+enumerate capture-capable V4L2 devices by USB identity and advertised MJPEG
+formats; it will not assume a fixed device path. It does not change camera
+controls. See
+[`node/README.md`](node/README.md).
+
+## Core image assumptions
 
 * JPEG or PNG, complete files (JPEG EOI / PNG IEND checked), max 512 MiB and 120 MP.
 * EXIF orientation is recorded, never applied; manifest orientation is
   metadata only.
 * Calibration is valid only for the exact resolution it declares and must
   carry provenance; otherwise all geometry stays in pixels.
-* The micro-05x FOV (~10 x 6 mm) quoted in BlobCam docs is marked there as
-  "re-measure before trusting"; the Core ships no calibration for it.
+* No calibration or optical profile is inferred from camera or lens labels.
 
 ## Physical gates (operator-owned)
 
-BlobCam's own gate table (G-001..G-004 PASS; G-005 READY_FOR_PHYSICAL_TEST;
-G-006..G-012 not started) belongs to BlobCam and was only read, not changed.
-Gates for this Core, all **NOT PASSED / not started**:
-
 | Gate | Check | Status |
 |---|---|---|
-| MC-HW-01 | Core + readers run on the Windows PC, both test suites green | **PASS** — v0.1.2 QA on HEAD `f98badb3`; ten reader code hashes match the pin |
+| MC-HW-01 | Core + readers run on the Windows PC, both test suites green | **Historical PASS** — v0.1.2 QA on HEAD `f98badb3`; ten reader code hashes match the pin |
 | MC-HW-02 | Tesseract installed on the PC; `readers` shows OCR available | not started |
 | MC-HW-03 | Real MUSTOOL frame of the GTX 970 inspected; originals byte-identical (sha256) | not started |
 | MC-HW-04 | Stage-micrometer calibration measured per profile/zoom/resolution | not started |
 | MC-HW-05 | Capture-node manifest from a real session accepted with zero hash mismatches | not started |
 | MC-HW-06 | Real GTX 970 dev/held-out evaluation, ground truth by operator | not started |
 
+The display smoke does not change MC-HW-03 or MC-HW-05. Both require a real
+microscope capture, byte-preservation evidence and a Windows Core handoff.
 A gate may be set PASS only with operator evidence (photos, hashes, command
 output) recorded alongside it.

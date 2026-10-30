@@ -3,8 +3,9 @@
 > v0.1.2 integrates the Windows-verified v0.1.1 reliability patch and tightens
 > resistor uncertainty when one decoded band is materially channel-clipped.
 > The reader evidence and candidate remain preserved; only the Core verdict may
-> become `ambiguous`. See CHANGELOG.md and the QA report in the working tree at
-> `qa-output/run-v012/QA_REPORT.md`.
+> become `ambiguous`. See CHANGELOG.md for the Core release history. The
+> Raspberry Pi node and its current hardware status are documented separately
+> in [`node/README.md`](node/README.md) and `HARDWARE_COMPATIBILITY.md`.
 
 An offline, file-based orchestration layer around the **existing** ANASTYLOS
 recognition readers. One inspection contract, one CLI, evidence-preserving
@@ -17,9 +18,10 @@ none of their algorithms or thresholds were rewritten or tuned.
 > matches the hash pinned for that revision (`matches_pinned_revision`). A
 > different checkout still runs but is flagged in every record.
 
-What it is **not**: not a camera driver, not a Raspberry Pi service, not
-BlobCam, not a parts database. It never writes Assembly Memory, never controls
-hardware, never downloads models and never calls a network service.
+The Core is not a camera driver or a parts database. It never writes Assembly
+Memory, downloads models or calls a network service. The separate, file-based
+Raspberry Pi capture utility is documented in [`node/README.md`](node/README.md);
+it emits the existing capture-manifest contract consumed by this Core.
 
 ## Wrapped readers (10)
 

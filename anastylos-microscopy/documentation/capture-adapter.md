@@ -40,7 +40,6 @@ Core behaviour (`inspect --manifest`):
 * orientation is recorded and never applied to pixels;
 * the manifest calibration applies unless `--calibration` overrides it.
 
-A capture node (e.g. a future exporter on the Pi 3B+) only needs to write
-files; it needs no Core code and the Core needs none of its code. Nothing in
-this document changes BlobCam; generating such a manifest there would be a
-separate, reviewed change in that project.
+A capture node on the Pi writes plain files (no links, no hard links) and a
+manifest; it is a separate implementation from the Core and uses this
+manifest as its handoff contract.

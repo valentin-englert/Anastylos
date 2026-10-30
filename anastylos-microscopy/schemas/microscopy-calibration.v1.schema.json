@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "anastylos-microscopy-calibration/1",
   "title": "ANASTYLOS Microscopy calibration evidence v1",
-  "description": "Operator-measured scale for ONE optical configuration at ONE capture resolution (e.g. stage micrometer photographed at the same zoom). Exactly one scale form is enough; if several are given they must agree within 1%. The historical BlobCam '~10 x 6 mm at 0.5x' note is not calibration evidence.",
+  "description": "Operator-measured scale for ONE optical configuration at ONE capture resolution (e.g. stage micrometer photographed at the same zoom). Exactly one scale form is enough; if several are given they must agree within 1%. No metric calibration or field of view is assumed without actual operator measurement.",
   "type": "object",
   "required": ["schema", "provenance", "image_resolution"],
   "properties": {

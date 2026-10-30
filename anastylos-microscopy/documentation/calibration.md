@@ -23,7 +23,7 @@ Rules enforced by `calibration.resolve` (no mm output unless all hold):
 
 An invalid calibration is recorded with its reasons and the inspection
 proceeds in pixels. The Core never derives mm from pixel sizes, sensor specs
-or the BlobCam FOV estimate.
+or an unmeasured field-of-view estimate.
 
 ## Per-reader spellings (preserved, not normalised in the readers)
 

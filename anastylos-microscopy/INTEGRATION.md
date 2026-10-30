@@ -3,7 +3,7 @@
 ## Position in the system
 
 ```
-[MUSTOOL microscope] --HDMI--> [UGREEN 25854] --USB--> [capture node: e.g. Pi 3B+ / BlobCam / any tool]
+[MUSTOOL microscope] --HDMI--> [UGREEN 25854] --USB--> [ANASTYLOS file-based node on Pi 3B+]
                                                               |
                                           frames + capture-manifest.json (files, copied/shared)
                                                               v
@@ -105,9 +105,20 @@ mismatches, per frame, and continues with the rest. Each accepted frame is
 read once; the same bytes are hashed, decoded and preserved (v0.1.1, QA-02).
 A capture node should therefore write plain files (no links, no hard links)
 inside the session folder. See
-`documentation/capture-adapter.md`. This is an independent reimplementation of
-generic concepts; no BlobCam code, package or deploy script is used, and
-BlobCam is not a runtime dependency.
+`documentation/capture-adapter.md`.
+
+The Pi appliance in `node/` has one supervised GStreamer owner for the V4L2
+device. Its `tee` sends the compressed MJPEG buffer unchanged to an appsink for
+capture and a separate decoded branch to KMS for display. The `capture` CLI
+requests a fresh frame from that owner over a local Unix socket; it never opens
+the camera while the preview service is active. HDMI branding and status are
+display-only. If the display branch fails, the service retries it while the
+capture branch remains available where possible. The runtime state is
+available through `anastylos-mic-node status` and the service status file.
+
+The owner-authorized pipeline and deployment adaptation is disclosed in
+[`node/SOURCE_ISOLATION.md`](node/SOURCE_ISOLATION.md). The implementation
+keeps the existing capture manifest, reader adapters and evidence contracts.
 
 ## Upstream revisions
 
@@ -115,9 +126,13 @@ BlobCam is not a runtime dependency.
 |---|---|---|
 | valentin-englert/Anastylos | `a172fbb9e127e7a3a93b128516b6592bfbbc81ef` | runtime (ANASTYLOS_ROOT); reader code hashes pinned in `src/anastylos_microscopy/pinned_reader_hashes.json` |
 | valentin-englert/Anastylos | `f98badb38515cbc415a8da466189218fc84d8794` | revision of the independent Windows QA of v0.1.0 (context only; not the pin) |
-| valentin-englert/blobcam | `e180aac2480a2c038de5ee61b66702210633af87` | read-only concept reference; no code, not a dependency |
 
 ## Remaining integration steps (not done in v0.1.2)
+
+The 2026-10-30 hardware smoke subsequently confirmed a short direct preview on
+the Pi after replacing a defective HDMI cable. The shared appliance service is
+not yet installed; its package installation and service activation still
+require the owner's confirmation.
 
 1. The current Windows HEAD `f98badb3` is not the exact reader pin
    `a172fbb9`; all ten reader code hashes match. Repeat against an exact pin
@@ -128,8 +143,8 @@ BlobCam is not a runtime dependency.
    harness fingerprint, then evaluate held-out once.
 4. Measure a stage-micrometer calibration per optical profile/zoom/resolution
    and store it as `anastylos-microscopy-calibration/1`.
-5. Write a small exporter on the capture node that emits
-   `capture-manifest.json` (a separate, reviewed change in that project).
+5. Run MC-HW-03 and MC-HW-05 with a real microscope frame and retain the
+   operator evidence described in `node/README.md`.
 6. Decide, with the operator, an import path from confirmed review records
    into Assembly Memory (out of scope here; the Core never writes it).
 7. Optionally upstream the adapter layer into Anastylos once reviewed.

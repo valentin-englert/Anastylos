@@ -159,11 +159,15 @@ unless noted) and match the current tree's test methods exactly.
 | `calibration/spatial/` | spatial evidence validator and dataset builder | `validate.py` | locally integrated via `integration/spatial-capture-v1` at `bcea6310` | synthetic checks; physical metric calibration pending |
 | `assembly-reconstruction/cad/` | isolated trusted CAD worker | `cadwork.py` | locally integrated; existing isolated runtime only | licensing/redistribution owner reviews and real-image/FreeCAD gates remain open |
 | `assembly-reconstruction/mesh/` | silhouette-constrained reconstruction experiment | `anastylos_mesh.cli` | locally integrated, synthetic only | known Case A z-floor failure retained; no real reconstruction claim |
-| `anastylos-microscopy/` | offline file orchestration over ten unchanged readers; separate operator reviews | `python -m anastylos_microscopy` | implemented, synthetic validation only | 83 run: 76 pass, 7 platform skips; 543 reader tests pass; historical held-out retained-candidate precision 39.5%, no automatic identification claim |
+| `anastylos-microscopy/` | Offline orchestration over ten readers; separate operator reviews; Pi capture/preview node and experimental live resistor analysis on Windows | Core CLI; node CLI in `node/README.md` | Pi 3B+ appliance provisioned; HDMI branding, SSH frame transport, concurrent capture, live reader text, motion response and camera/worker reconnect were physically observed. The operator reported an incorrect candidate for a 3.3 kΩ resistor and `unknown` for a 1 kΩ scene; the resistor mode assumes the part type and is not a general detector. Recognition accuracy remains unverified. | Microscopy suite: 120 tests, 1 failure and 9 skips; the resistor reader's changed code does not match the Core's pinned revision. Reader regression: 543 passes historically. Held-out resistor candidate precision 39.5% historically. See node README for live limits and evidence. |
 | `tools/snes01-benchmark/` | standalone research preparation, correspondence experiments and gated API runners | see module README | implemented research tooling; no product runtime connection | 84 offline tests pass; historical scientific outcomes were not rerun |
 
-Hardware-validated: none. Every vision claim above rests on synthetic
-fixtures; see each module README for its stated validation scope.
+Hardware evidence is bounded: the Pi node has displayed live HDMI preview,
+recovered from a camera disconnect, software reboot and physical cold boot,
+and produced a byte/hash-verified real capture accepted by the Windows
+manifest validator. Metric calibration, recognizer accuracy, long-duration
+stability and GTX 970 inspection remain unvalidated. Synthetic evaluation is
+not hardware validation; see each module README for its validation scope.
 
 ## Stable data interfaces
 

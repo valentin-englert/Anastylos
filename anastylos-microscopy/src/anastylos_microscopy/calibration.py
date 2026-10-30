@@ -3,8 +3,7 @@
 Rules (see documentation/CALIBRATION.md):
 
 * Millimetres only with explicit, operator-supplied calibration evidence.
-  There is no default scale, and the historical BlobCam "~10 x 6 mm FOV at
-  0.5x" note is never used.
+  No default scale or field of view is assumed.
 * A calibration is bound to an image resolution; a mismatch rejects it.
 * Both reader spellings carry one physical meaning (image pixels per mm)
   but are NOT interchangeable inside the readers, so this adapter emits the

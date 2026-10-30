@@ -1,7 +1,9 @@
 # Limitations (v0.1.2)
 
-1. **No hardware validation.** No real microscope image was processed. No
-   GTX 970 accuracy is known. All bundled images are synthetic and labelled.
+1. **No real-image inspection validation.** The Core has not processed a real
+   microscope capture. A short live preview was visible on the Pi HDMI output,
+   but no frame was saved, handed to the Windows Core or evaluated. No GTX 970
+   accuracy is known. All bundled images are synthetic and labelled.
 2. **OCR unavailable on the development box.** smd, pcb_ocr and markings were
    exercised only with a deterministic stub engine; with no Tesseract they
    report `unavailable` (never a guess). Real OCR quality on microscope
@@ -69,5 +71,14 @@
    size-keyed stub OCR used in tests, held-out item `mic01-103` scores
    `false_confident` because the stub returns "472" for every 360 px-wide
    panel. It is a property of the test double, not of a real engine.
-14. **Out of scope:** camera control, Raspberry Pi deployment, BlobCam
-   changes, Assembly Memory writes, tray-counter, missing-parts, AI models.
+14. **Pi appliance service is not provisioned.** A short manual GStreamer
+   preview from the MUSTOOL through the UGREEN adapter was visible on the Pi's
+   HDMI monitor. The preview process ended; no service is installed, no
+   evidence frame has been captured through the node, and preview/capture
+   coexistence, automatic boot, reconnect and long-duration operation remain
+   untested. Physical gates MC-HW-03 and MC-HW-05 remain pending. The node
+   requires an externally installed `v4l2-ctl`, an already-active MJPG
+   format, and the Pi OS GStreamer/PyGObject packages; it does not configure
+   camera controls or infer calibration.
+15. **Out of scope:** camera control, Raspberry Pi deployment, Assembly Memory
+   writes, tray-counter, missing-parts, AI models.

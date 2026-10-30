@@ -211,7 +211,8 @@ class ScriptedOperator:
 
     def reply(self, stage: str, question_id: str, text: str, prompt: dict) -> dict:
         replies = self.script.get(question_id, {}).get(stage) or []
-        reply = replies.pop(0) if replies else ("I don't know" if stage == "answer" else "no")
+        default = {"answer": "I don't know", "confirm": "no", "assemble": "stop"}[stage]  # a script never loops
+        reply = replies.pop(0) if replies else default
         self.transcript.append(f"> {reply}")
         return reply if isinstance(reply, dict) else {"text": reply}
 

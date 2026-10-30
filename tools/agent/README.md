@@ -42,11 +42,29 @@ only proposes (and is never on the path between a question and the operator's an
   never calls a model.
 - `status` reports `complete: false` with reasons while a phase failed or questions are open.
 
+## Declarations, guide and reassembly (M2)
+
+- `declare` is the operator's own statement, not a P0 question: an extra part (`--phase --label --to [--from]
+  [--at]`, validated by `answers.plan` like an `EXTRA` answer) or interchangeable parts (`--group <ids>`). English
+  read-back, explicit yes, then the live core's write-ahead writer (`MemoryWriter`, used unchanged) under the
+  session lock; journal `declare/journal.jsonl`. A newer declaration makes an unconfirmed one stale; an identical
+  committed declaration is refused; a crash at any write point recovers to exactly one record.
+- `guide build` runs `tools/guide/package.py` and appends the package SHA-256 and the memory SHA-256 to
+  `guide/builds.jsonl`. Answers and reassembly progress name that hash; a package whose bytes differ from the last
+  build record is refused (“changed after it was built”), and answers cached for another hash are not reused.
+- `guide ask` answers from claims only: L0 maps `where is <cell/id/label>`, `where does <x> go`,
+  `what comes before <x>` to claims; with `--muse`, other questions get model claims within 60 s (else the
+  English refusal). Every claim is checked by `tools/guide/claims.py`; text is rendered by `guide_render.py`
+  (operator labels and places quoted verbatim, automatic parts “assigned by the system ..., not observed”).
+- `assemble` shows the install steps of the package one at a time (each from verified claims; a group step says
+  that no part is matched to a particular place). `done` advances, `stop` pauses, `skip` is refused, other text is
+  a guide question. `assemble --returns <returns.json>` applies a `tools/reassembly/returns.py` check: a mismatch
+  reopens its step, an ambiguous or unattributed return changes nothing.
+
 ## Status (M1, 2026-10-30)
 
-Implemented: `new`, `phase`, `prepare`, `ask`, `status`. Next per roadmap: M2 guide package with precomputed Muse
-claims verified by `tools/guide/claims.py` (needs an English rendering), `declare` for unprompted statements
-(the FULL-01 `EXTRA` rows), reassembly steps with `tools/reassembly/returns.py`; M3 session page and report.
+Implemented (M2): `new`, `phase`, `prepare`, `ask`, `declare`, `guide build|ask`, `assemble`, `status`.
+Next per roadmap: M3 session page and report, real recording.
 
 M1 validation (development data, no hardware claim): 30 tests (`tests/test_agent.py`, `tests/test_questions.py`):
 the twelve regular FULL-01 questions answered in English reproduce `answers.apply` event for event; a crash at

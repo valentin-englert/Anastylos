@@ -95,7 +95,7 @@ class SessionState:
         if self.run_dir(tag).exists():
             raise SessionError(f"{self.run_dir(tag)} exists although the session does not list {tag}")
         if not label.strip():
-            raise SessionError("the phase needs the operator's words for it (e.g. 'beim Öffnen des Gehäuses')")
+            raise SessionError("the phase needs the operator's words for it (e.g. 'while opening the housing')")
         entry = {"tag": tag, "label": label, "video": str(video), "video_sha256": video_sha256,
                  "run_dir": str(self.run_dir(tag)), "status": "running", "started": t_wall(), "finished": None,
                  "counts": None, "error": None}

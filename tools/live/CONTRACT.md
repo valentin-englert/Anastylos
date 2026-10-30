@@ -180,6 +180,15 @@ own files; the seeds stay unchanged as provenance.
     `session_start.language` (`en` product, `de` historical); `question_state.from`; `memory_result.status`
     `step` for per-step records beside the one `ok` record per commit; `provider_call.prefetch`
     (`facts_sha256`, `verdict`, `text`) for wording computed ahead of the question.
+  - Ownership exception (owner approval 2026-10-30, one time only): the M1 live-core changes in lane A's files
+    (`cc012808`) were made by the TL because lane A's worktree had been removed in the repository cleanup. The
+    ownership table in §1 stays binding; from M2 on the TL uses lane A and lane B modules by import only.
+  - M2 (2026-10-30): no contract change. `basis_word` keeps its internal GUIDE_RULES values; English is
+    presentation only (`tools/agent/guide_render.py`). `GUIDE_RULES.md`, `claims.py`, `package.py` and the live
+    core are used unchanged. Declarations journal under `<session>/declare/` reuses `anastylos-live-journal@1`
+    records (`question_state` with `question_id` = `D-nn`); guide builds, answers and reassembly progress are
+    agent records (`anastylos-agent-guide-build@1`, `-guide-answer@1`, `-assembly@1`), each bound to the
+    package SHA-256.
   - Operator language: English is the product language (owner directive 2026-10-30). The guide claims enum above
     is still the German GUIDE_RULES wording; an English rendering of verified claims is M2 work and needs a
     contract change together with `GUIDE_RULES.md` (not edited here).

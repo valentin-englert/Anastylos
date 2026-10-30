@@ -175,3 +175,11 @@ own files; the seeds stay unchanged as provenance.
     `tools/agent/`); a free guide question gets at most 60 s, then the L0 text is used.
   - Real L2 arm result (PREREG v2): rejected, L2 0.752 vs P0 0.803 resolved per interruption; the product
     uses P0 for action selection (`tools/live/integration/README.md`).
+  - M1 (2026-10-30): the coordinator now writes the 0.2 journal fields (checked by
+    `tools/live/integration/journal_check.py`). Additions within 0.3, all optional for readers:
+    `session_start.language` (`en` product, `de` historical); `question_state.from`; `memory_result.status`
+    `step` for per-step records beside the one `ok` record per commit; `provider_call.prefetch`
+    (`facts_sha256`, `verdict`, `text`) for wording computed ahead of the question.
+  - Operator language: English is the product language (owner directive 2026-10-30). The guide claims enum above
+    is still the German GUIDE_RULES wording; an English rendering of verified claims is M2 work and needs a
+    contract change together with `GUIDE_RULES.md` (not edited here).

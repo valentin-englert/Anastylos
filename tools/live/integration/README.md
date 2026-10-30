@@ -17,3 +17,23 @@ and D (l2sim) together; no lane imports this folder.
 
 Limits: synthetic and FULL-01 development data only; no real operator, no hardware. l2sim's `session` module
 shadows `tools/session/session.py`, so l2sim code runs in its own process next to the coordinator.
+
+## Real L2 arm (L2-AGENT-02, `l2sim/PREREG.md` v2 `74605b32`) — 2026-10-29
+
+Run `C:\ANASTYLOS\data\live-dev\TL\2026-10-29-L2-primary` (`results.json` `fc677d4c…`, `calls.jsonl` `3ad8c579…`),
+`integration.wiring:meta_proposer`, seeds 0–2, cap 910, code `ebf7f46a`, `l2sim` tree clean. Compared with
+`compare.py` against lane D's P0 (`2935bcbf…`) and PR (`9a946a2f…`) runs under the same PREREG hash.
+
+| Arm | resolved / interruption | integrity | invalid-action rate |
+|---|---|---|---|
+| P0 | 0.803 (163/203) | 0 | 0 % |
+| PR | 0.362 (123/340) | 0 | 0 % |
+| L2 | 0.752 (158/210) | 0 | 0 % |
+
+Paired L2 vs P0: 0 wins, 30 ties, 9 losses; L2 vs PR: 38 wins, 1 loss. Complete, provider fallback rate 0 (5 timeouts
+retried). 588 proposer calls, 311 answered from the request-hash cache, 277 paid; 0.40 M input / 0.68 M output tokens;
+latency median 21.7 s, p95 64 s, max 114 s.
+
+Verdict per PREREG §7: **rejected** (criterion 1 fails: L2 does not beat P0). L2 stays research; the product
+orchestrator uses P0 for action selection. Simulator, oracle and cost model are lane D's preregistered assumptions,
+not measurements of a real operator.

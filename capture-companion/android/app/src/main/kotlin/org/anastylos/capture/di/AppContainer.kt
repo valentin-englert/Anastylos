@@ -29,7 +29,10 @@ import org.anastylos.capture.data.DataStoreGuidedPrefs
 import org.anastylos.capture.data.GuidedAssociationRepository
 import org.anastylos.capture.data.GuidedPrefs
 import org.anastylos.capture.data.SamplingPrefs
+import org.anastylos.capture.guidance.OpenCvArucoBackend
 import org.anastylos.capture.guidance.OpenCvPoseEstimator
+import org.anastylos.capture.guidance.TimingAccumulator
+import org.anastylos.capture.guidance.TimingArucoBackend
 import org.anastylos.capture.guidance.PoseEstimator
 import org.anastylos.capture.ui.guided.GuidanceViewModel
 import org.anastylos.capture.data.files.EvidenceFileStore
@@ -98,7 +101,10 @@ class AppContainer(context: Context) {
     }
 
     private val guidedPrefs: GuidedPrefs by lazy { DataStoreGuidedPrefs(appContext) }
-    private val poseEstimator: PoseEstimator by lazy { OpenCvPoseEstimator() }
+    private val guideTiming = TimingAccumulator()
+    private val poseEstimator: PoseEstimator by lazy {
+        OpenCvPoseEstimator(TimingArucoBackend(OpenCvArucoBackend(), guideTiming))
+    }
 
     @Suppress("UNCHECKED_CAST")
     fun guidedViewModelFactory(): ViewModelProvider.Factory =
@@ -114,6 +120,7 @@ class AppContainer(context: Context) {
                             DefaultCameraProviderSource(appContext),
                             poseEstimator,
                             { java.time.Instant.now() },
+                            timing = guideTiming,
                         ).also { it.attachPreview(preview) }
                     },
                     prefs = guidedPrefs,
@@ -145,6 +152,7 @@ class AppContainer(context: Context) {
                         )
                     },
                     associations = repository as GuidedAssociationRepository,
+                    timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,
                 ) as T
         }

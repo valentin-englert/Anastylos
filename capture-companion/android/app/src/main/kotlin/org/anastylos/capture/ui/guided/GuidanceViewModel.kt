@@ -2,6 +2,7 @@ package org.anastylos.capture.ui.guided
 
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
@@ -60,6 +61,8 @@ import org.anastylos.capture.sync.RemoteSessionState
 import org.anastylos.capture.sync.SpatialSidecar
 import org.anastylos.capture.sync.tlsForPairing
 import org.anastylos.capture.guidance.BoardGeometry
+import org.anastylos.capture.guidance.DIAG_LOG_TAG
+import org.anastylos.capture.guidance.TimingAccumulator
 import org.anastylos.capture.guidance.CameraPoseB
 import org.anastylos.capture.guidance.CueAxis
 import org.anastylos.capture.guidance.DwellAccumulator
@@ -218,6 +221,7 @@ class GuidanceViewModel(
     private val associations: GuidedAssociationRepository? = null,
     private val appVersion: String = "0.1.0",
     private val uuid: () -> String = { UUID.randomUUID().toString() },
+    private val timing: TimingAccumulator = TimingAccumulator(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
@@ -239,6 +243,7 @@ class GuidanceViewModel(
     private var lastCornersNs: Long? = null
     private var lastEstimate: PoseEstimator.Estimate? = null
     private var lastMotion: Pair<Double, Double>? = null
+    private var lastUiEstimateNs: Long? = null
     private var lastStillCallbackNs: Long? = null
     private var remote: GuidedRemote? = null
     private var remoteCollectJob: Job? = null
@@ -423,8 +428,16 @@ class GuidanceViewModel(
                 store.settings(id, profile).collect { stored ->
                     val caps = capsFor(id)
                     val clean = sanitizeSettings(stored, caps)
+                    val sizeChanged = clean.analysisSize != _state.value.settings.analysisSize ||
+                        clean.stillSize != _state.value.settings.stillSize
                     _state.update { it.copy(settings = clean) }
-                    applyToCamera(clean, caps)
+                    camera?.requestedStillSize = clean.stillSize
+                    // GUIDE-01 Phase C: the first bind runs on default
+                    // settings (stored settings arrive async after it);
+                    // a stored size mismatch must rebind like a manual
+                    // size change, never linger on the wrong stream.
+                    if (sizeChanged && _state.value.cameraBound) rebindCamera()
+                    else applyToCamera(clean, caps)
                 }
             } catch (_: Exception) {
             }
@@ -1156,6 +1169,7 @@ class GuidanceViewModel(
         }
         val nowNs = nanoClock()
         val ageMs = (nowNs - estimate.monotonicNs) / 1_000_000L
+        recordUiTiming(nowNs, ageMs)
         val (phone, wireReason) = mapWireRegistration(estimate.status)
         val poseEvent = when (estimate.status) {
             WireRegistration.VALID -> WirePoseEvent.PosesValid
@@ -1257,6 +1271,14 @@ class GuidanceViewModel(
             RequestState.HOLD_STILL -> if (!aligned) onRequestEvent(RequestEvent.GateFailed)
             else -> Unit
         }
+    }
+
+    /** GUIDE-01 diagnostics: throttled UI-side age/gap summary, else null. */
+    private fun recordUiTiming(nowNs: Long, ageMs: Long) {
+        val gapMs = lastUiEstimateNs?.let { (nowNs - it) / 1_000_000.0 } ?: 0.0
+        lastUiEstimateNs = nowNs
+        val summary = timing.recordUi(ageMs, gapMs)
+        if (summary != null) Log.i(DIAG_LOG_TAG, "guided $summary")
     }
 
     private fun motionStats(estimate: PoseEstimator.Estimate): Pair<Double, Double>? {

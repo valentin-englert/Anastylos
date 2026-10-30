@@ -1039,6 +1039,32 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun storedAnalysisSizeMismatchRebindsAfterColdStart() = runTest {
+        val caps = fullCaps().copy(yuvSizes = listOf(1920 to 1080, 1280 to 720, 960 to 720))
+        val store = FakeSettingsStore()
+        store.update("0", DEFAULT_PROFILE, CameraSettings(analysisSize = 1920 to 1080))
+        val vm = cameraVm(FakeCameraPrefs(), store)
+        camera.cameras = listOf(cappedCam("0", caps))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(camera.bindCalls).isEqualTo(2)
+        assertThat(camera.lastBindSize).isEqualTo(1920 to 1080)
+        assertThat(vm.state.value.settings.analysisSize).isEqualTo(1920 to 1080)
+    }
+
+    @Test
+    fun storedMatchingSizeBindsOnce() = runTest {
+        val vm = cameraVm(FakeCameraPrefs(), FakeSettingsStore())
+        camera.cameras = listOf(cappedCam("0", fullCaps()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(camera.bindCalls).isEqualTo(1)
+        assertThat(camera.lastBindSize).isEqualTo(1280 to 720)
+    }
+
+    @Test
     fun appliedSampleSurfacesAsLine() = runTest {
         val vm = cameraVm(FakeCameraPrefs())
         vm.attachCamera(owner(), null)

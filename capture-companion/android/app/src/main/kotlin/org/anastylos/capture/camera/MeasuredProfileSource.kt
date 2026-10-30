@@ -22,18 +22,27 @@ interface MeasuredProfileSource {
     ): PoseEstimator.Intrinsics?
 }
 
-/** Reads `cal01-profile.json` once from APK assets; null-safe. */
+/**
+ * Reads measured profiles from APK assets; null-safe. Exact-geometry
+ * asset first (`measured-profile-<WxH>.json`), then the legacy
+ * `cal01-profile.json` single asset. Every candidate still passes
+ * [CalibrationProfile.isCompatible], so a wrong-geometry asset can
+ * never validate a metric pose.
+ */
 class AssetMeasuredProfileSource(context: Context) : MeasuredProfileSource {
     private val appContext = context.applicationContext
 
-    private val document: CalibrationProfile.Document? by lazy {
-        try {
-            appContext.assets.open("cal01-profile.json").use { stream ->
-                CalibrationProfile.parse(stream.bufferedReader().readText())
+    private val cache = mutableMapOf<String, CalibrationProfile.Document?>()
+
+    private fun documentFor(name: String): CalibrationProfile.Document? = synchronized(cache) {
+        cache.getOrPut(name) {
+            try {
+                appContext.assets.open(name).use { stream ->
+                    CalibrationProfile.parse(stream.bufferedReader().readText())
+                }
+            } catch (_: Exception) {
+                null
             }
-        } catch (e: Exception) {
-            android.util.Log.w("AnastylosCam", "measured profile asset unreadable", e)
-            null
         }
     }
 
@@ -46,15 +55,22 @@ class AssetMeasuredProfileSource(context: Context) : MeasuredProfileSource {
         focusDiopters: Float,
     ): PoseEstimator.Intrinsics? {
         return try {
-            val doc = document ?: return null
-            if (!CalibrationProfile.isCompatible(
-                    doc, cameraId, analysisWidth, analysisHeight,
-                    linearZoom, focusMode, focusDiopters,
-                )
-            ) {
-                return null
+            val candidates = listOf(
+                "measured-profile-${analysisWidth}x${analysisHeight}.json",
+                "cal01-profile.json",
+            )
+            for (name in candidates) {
+                val doc = documentFor(name) ?: continue
+                if (!CalibrationProfile.isCompatible(
+                        doc, cameraId, analysisWidth, analysisHeight,
+                        linearZoom, focusMode, focusDiopters,
+                    )
+                ) {
+                    continue
+                }
+                return CalibrationProfile.toIntrinsics(doc)
             }
-            CalibrationProfile.toIntrinsics(doc)
+            null
         } catch (_: Exception) {
             null
         }

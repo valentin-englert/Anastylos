@@ -24,7 +24,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+import org.anastylos.capture.guidance.DIAG_LOG_TAG
 import org.anastylos.capture.guidance.PoseEstimator
+import org.anastylos.capture.guidance.TimingAccumulator
 import org.anastylos.capture.guidance.YuvFrame
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -55,6 +57,7 @@ class GuidedCameraSource(
     private val inventory: CameraInventorySource = CameraXInventorySource(),
     private val settingsApplier: SettingsApplier = CameraXSettingsApplier(),
     private val measuredProfiles: MeasuredProfileSource = AssetMeasuredProfileSource(context),
+    private val timing: TimingAccumulator = TimingAccumulator(),
 ) : GuidedCamera {
     data class GuidedStill(
         val bytes: ByteArray,
@@ -176,6 +179,8 @@ class GuidedCameraSource(
     private var board: PoseEstimator.BoardSpec? = null
     private var intrinsics: PoseEstimator.Intrinsics? = null
     private var lastEstimateNs: Long? = null
+    private var lastFrameArrivedNs: Long? = null
+    private var lastFrameSensorTs: Long? = null
     @Volatile private var geometry: GuidedCamera.StreamGeometry? = null
     @Volatile private var lastAnalysisRotation: Int = 0
 
@@ -315,6 +320,34 @@ class GuidedCameraSource(
 
     override fun streamGeometry(): GuidedCamera.StreamGeometry? = geometry
 
+    /** GUIDE-01 diagnostics: throttled per-frame cost + quality summary, else null. */
+    private fun recordFrameTiming(
+        arrivedNs: Long,
+        gapMs: Double,
+        copyStartNs: Long,
+        copyEndNs: Long,
+        width: Int,
+        height: Int,
+        sensorTs: Long,
+        estimate: PoseEstimator.Estimate,
+    ) {
+        val nowNs = System.nanoTime()
+        val tsGapMs = lastFrameSensorTs?.let { (sensorTs - it) / 1_000_000.0 } ?: 0.0
+        lastFrameSensorTs = sensorTs
+        val summary = timing.recordFrame(
+            copyMs = (copyEndNs - copyStartNs) / 1_000_000.0,
+            totalMs = (nowNs - arrivedNs) / 1_000_000.0,
+            gapMs = gapMs,
+            tsGapMs = tsGapMs,
+            width = width,
+            height = height,
+            darkFraction = estimate.frameQuality?.darkFraction,
+            saturatedFraction = estimate.frameQuality?.saturatedFraction,
+            sharpness = estimate.frameQuality?.sharpness,
+        )
+        if (summary != null) Log.i(DIAG_LOG_TAG, "guided $summary")
+    }
+
     private fun readGeometry(
         preview: Preview,
         analysis: ImageAnalysis,
@@ -339,6 +372,9 @@ class GuidedCameraSource(
 
     @androidx.camera.camera2.interop.ExperimentalCamera2Interop
     private fun analyzeFrame(image: ImageProxy) {
+        val arrivedNs = System.nanoTime()
+        val gapMs = lastFrameArrivedNs?.let { (arrivedNs - it) / 1_000_000.0 } ?: 0.0
+        lastFrameArrivedNs = arrivedNs
         try {
             val frameRotation = try {
                 image.imageInfo.rotationDegrees
@@ -355,6 +391,7 @@ class GuidedCameraSource(
             val width = image.width
             val height = image.height
             val rowStride = plane.rowStride
+            val copyStartNs = System.nanoTime()
             val src = ByteArray(plane.buffer.remaining())
             plane.buffer.get(src)
             val tight = try {
@@ -362,6 +399,7 @@ class GuidedCameraSource(
             } catch (_: IllegalArgumentException) {
                 return
             }
+            val copyEndNs = System.nanoTime()
             val active = board ?: return
             val timestampNs = image.imageInfo.timestamp
             val input = PoseEstimator.Input(
@@ -382,6 +420,7 @@ class GuidedCameraSource(
                 return
             }
             lastEstimateNs = estimate.monotonicNs
+            recordFrameTiming(arrivedNs, gapMs, copyStartNs, copyEndNs, width, height, timestampNs, estimate)
             _estimates.tryEmit(estimate)
         } finally {
             try {

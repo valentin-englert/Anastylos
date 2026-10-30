@@ -103,6 +103,15 @@ class CameraSettingsTest {
     }
 
     @Test
+    fun offeredStillSizeSurvivesSanitize() {
+        val caps = fullCaps().copy(jpegSizes = listOf(1920 to 1080, 1280 to 720))
+        val kept = sanitizeSettings(CameraSettings(stillSize = 1280 to 720), caps)
+        assertThat(kept.stillSize).isEqualTo(1280 to 720)
+        val dropped = sanitizeSettings(CameraSettings(stillSize = 640 to 480), caps)
+        assertThat(dropped.stillSize).isNull()
+    }
+
+    @Test
     fun malformedPayloadDecodesNull() {
         assertThat(parseSettings(null)).isNull()
         assertThat(parseSettings("")).isNull()

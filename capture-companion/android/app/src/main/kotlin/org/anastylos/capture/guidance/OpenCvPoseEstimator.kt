@@ -273,8 +273,23 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
         return detectors.getOrPut(dictionary) {
             ensureLoaded()
             val dictionaryMat = Objdetect.getPredefinedDictionary(dictionary)
-            ArucoDetector(dictionaryMat, DetectorParameters())
+            ArucoDetector(dictionaryMat, tunedParameters())
         }
+    }
+
+    /**
+     * GUIDE-01 detector tuning (device-measured): reject small quad
+     * candidates early. CAL-01 markers are 42 mm at ~40 cm working
+     * distance: ~147 px side, ~586 px perimeter, rate ~0.3 against
+     * the 1920 px analysis width — 3x above the 0.1 floor, which
+     * still detects the same markers past 1 m. Pruning below 0.1
+     * only drops candidates far outside the calibrated operating
+     * range; detection parity is verified on-device (marker counts).
+     */
+    private fun tunedParameters(): DetectorParameters {
+        val params = DetectorParameters()
+        params.set_minMarkerPerimeterRate(0.1)
+        return params
     }
 
     override fun detect(

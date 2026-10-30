@@ -96,12 +96,13 @@ fun CameraSettingsPanel(
                     onClick = { onUpdate { it.copy(stillSize = null) } },
                     label = { Text("Max") },
                 )
-                val hd = 1920 to 1080
-                if (hd in caps.jpegSizes) {
+                val options = listOf(1920 to 1080, 1280 to 720, 960 to 720, 640 to 480)
+                    .filter { it in caps.jpegSizes }
+                options.forEach { size ->
                     FilterChip(
-                        selected = settings.stillSize == hd,
-                        onClick = { onUpdate { it.copy(stillSize = hd) } },
-                        label = { Text("1920×1080") },
+                        selected = settings.stillSize == size,
+                        onClick = { onUpdate { it.copy(stillSize = size) } },
+                        label = { Text("${size.first}×${size.second}") },
                     )
                 }
             }

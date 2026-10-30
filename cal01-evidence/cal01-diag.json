@@ -1,0 +1,322 @@
+{
+  "script_sha256": "07b085e3125912bf22cf227f7a57836ea8e1774b9edc57b6337f3587dfa94a58",
+  "thresholds": "min_fit_views=15;min_heldout=5;min_charuco=10;min_aruco=3;split=index_mod3;square_scale=1.0;joint=charuco+surface_a3",
+  "threshold_config_sha256": "a8b3340cdf16c552394b158a424d32176ab2a507ab12dcac9543f8c507e4af5f",
+  "opencv": "4.14.0",
+  "square_scale": 1.0,
+  "scale_source": "operator Mahr/Talmeter; CAL01F40 40cm MF; A3 diagonal 481.0",
+  "image_size": [
+    1920,
+    1080
+  ],
+  "usable_views": 35,
+  "fit_views": 24,
+  "heldout_views": 11,
+  "opencv_fit_rms": 0.49194818844860666,
+  "dropped": [
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b08-9a587924-e506-418d-93f1-fe3e05db8869.jpg",
+      "board": "charuco",
+      "reason": "corners-0"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b10-b040d826-07a1-42c8-8e41-f633ea4ca4f7.jpg",
+      "board": "charuco",
+      "reason": "corners-0"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b14-f04fac94-8c8a-4e91-8cee-dce4b991602e.jpg",
+      "board": "charuco",
+      "reason": "no-markers"
+    }
+  ],
+  "K": [
+    1395.7842470796602,
+    0.0,
+    956.2682518290496,
+    0.0,
+    1396.3228859937608,
+    556.837829357126,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion": [
+    0.149879253726445,
+    -0.4239353536525823,
+    -6.498412856325962e-05,
+    0.0009434574073421483,
+    0.380328091940372
+  ],
+  "fit_rms_overall": 0.4944704225242426,
+  "held_out_rms_px": 0.5814981915121659,
+  "edge_coverage": 0.7496644335844926,
+  "views": [
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a00-18baea17-cdd1-452c-8a36-b7436633752f.jpg",
+      "board": "charuco",
+      "sha256": "0a82d964de855e829e4b1d4c27b7c5498d31dbdbc30bcf72c4b2943095f2906a",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a01-2dd60d66-5e9c-407c-9939-4c655e65db0f.jpg",
+      "board": "charuco",
+      "sha256": "9c50edd56ef9b1f2118ab969685f0cdde4472828fb76ab3203d8cf63481c2f7d",
+      "points": 18,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a02-33383a87-8d05-408d-98c6-4234eea56491.jpg",
+      "board": "charuco",
+      "sha256": "e285a446367a5ff88a58eee91c99e0462213f24ceb8e8c36ce3ed5d7edb00161",
+      "points": 18,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a03-3a1b70af-9447-49d6-9d00-beedc238acd7.jpg",
+      "board": "charuco",
+      "sha256": "28fc6ac28c9cc88d9584a74049753f983e4476f49e658872c611fe9d17477122",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a04-3c0a4790-d40e-431e-8e05-30542fdcb9cb.jpg",
+      "board": "charuco",
+      "sha256": "300971ee684e48fabecda0b595301c8bf9644321fdf7571d5a44959d3af65c80",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a05-3c0a5e6f-669c-4d84-ada3-0bd2080f5fb7.jpg",
+      "board": "charuco",
+      "sha256": "ab9786a7b7407fa53cc8b552bf7b4d7f8aca95660bd19bdc082fc6254153d793",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a06-460c06f0-738e-4d84-8021-49d64a4eb923.jpg",
+      "board": "charuco",
+      "sha256": "d3d39cee6a94a21fbce1dbc2d9bc064e323cc6471e484f4703c78ce7ce29d1cf",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a07-68c76b65-95f0-4cf1-a607-e68ca2b79d9c.jpg",
+      "board": "charuco",
+      "sha256": "e95db0ae8e963a214f636c498a1a9d64bde7e812c306fa6d3ac529e520f391ed",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a08-721ba1f6-2af4-449c-8174-39ada4869a21.jpg",
+      "board": "charuco",
+      "sha256": "bd226c115abd5f1d3240f5c5b77f0af1a00b75387b1e5a7e59d1d259779211e9",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a09-7bf74ca7-7440-4a12-966a-90c304db0ccc.jpg",
+      "board": "charuco",
+      "sha256": "1165feb4611eec977487681478b8efdbb72cce0f62fa33d61c4c49c761a4ff1a",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a10-a40325ce-35f4-47b8-8481-c97c5963ef87.jpg",
+      "board": "charuco",
+      "sha256": "883c9177f6977c23e17d81ca87178d3effce21db7127019ffbcae5e15efed2e5",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a11-d8687b99-5dac-4760-9574-120a50449991.jpg",
+      "board": "charuco",
+      "sha256": "7af6a03bc046b2ae003db13866eeb1b9b19c932983a107b0a99d49e832844562",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a12-ded2ce82-43f1-4d5a-9c7c-dbac2b4ee5e1.jpg",
+      "board": "charuco",
+      "sha256": "cd1339feec81c0710dd37d5b7713e70e1c63fbec7a74a2fcd503bcd2772ccc39",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a13-dfd13931-aeb1-49a0-86e9-7118da89ed2e.jpg",
+      "board": "charuco",
+      "sha256": "98d29b3d42fd59873bb40bbd18c22443a426d9e44de273d8d4521301efaad5b3",
+      "points": 22,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40a\\a14-f788f611-4364-4dcf-985e-c2fbbd108506.jpg",
+      "board": "charuco",
+      "sha256": "afaa66dce2763a08e2d63e8b75dc1e93c9a1647b4f47675c708cb1575cae8518",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b00-1c352e1d-e211-4a2d-8090-3cd693e8d59d.jpg",
+      "board": "charuco",
+      "sha256": "16dd376df0d345afcebbcd593cb620658f05f895068425c15a9a6ad2bda8d435",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b01-2a437531-63e1-4c2b-be53-82cb276f329d.jpg",
+      "board": "charuco",
+      "sha256": "3af08065e1b41a5b3c1cfdc32966dda9dd3f9ffe33f27f029e07eca0c89c1fc0",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b02-2dbb27f3-2157-4822-8329-b4dd06c2be41.jpg",
+      "board": "charuco",
+      "sha256": "8665018711677ad5915d426fef06c98b79aede535fed6a78cfb157e4de3d2665",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b03-2e8835da-1fc3-4bfb-ae35-4a0b3d708aad.jpg",
+      "board": "charuco",
+      "sha256": "f36dfa6ec6badb39a8690ab3c370443dc3b8e668a8205bb18b084f4c72ac03a8",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b04-39a32faf-9acd-4021-b2ae-cdad0f19584a.jpg",
+      "board": "charuco",
+      "sha256": "5544d6d64e9cfb484dd3e5f044190189142e4aeda463c847ae734cf5f727a2e6",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b05-3eeed53a-1084-48b6-9477-6b96e4e666b6.jpg",
+      "board": "charuco",
+      "sha256": "c75c26b039944d280586ddca1d3b516361b4444338d2cef5dfda20501734c06f",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b06-520f327f-d6e4-4828-8890-9a2eee82980e.jpg",
+      "board": "charuco",
+      "sha256": "b53b2c1defec007c5579a2acdb8418ee62206cb20f6c49c4788374df256c7dba",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b07-631c56d7-8cbf-40a2-b5b8-2d578ff4b15b.jpg",
+      "board": "charuco",
+      "sha256": "0310e13519c283473f4f183146d65de79ceaf9b035424568d41cc33a1a341a3e",
+      "points": 18,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b08-9a587924-e506-418d-93f1-fe3e05db8869.jpg",
+      "board": "charuco",
+      "sha256": null,
+      "points": null,
+      "set": "dropped"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b09-ad8e833e-ab4a-445f-9c5e-12e6e2fc2a48.jpg",
+      "board": "charuco",
+      "sha256": "526fb5ab588170eb90974a8ca86801a72df0eae6b4994aa029ec2c2a2e2cad22",
+      "points": 18,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b10-b040d826-07a1-42c8-8e41-f633ea4ca4f7.jpg",
+      "board": "charuco",
+      "sha256": null,
+      "points": null,
+      "set": "dropped"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b11-b53b44d3-dfae-41af-87b5-c6c5f43ccb84.jpg",
+      "board": "charuco",
+      "sha256": "e9fbe20ce4e034f343d4e9b25cee4d03be4ade0fa02d73592864154ae46dd398",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b12-dfd9148e-7086-417a-84ed-4976dc02050a.jpg",
+      "board": "charuco",
+      "sha256": "d44ac7acc052a72a3b0ecb028e6b8dad9dc1a5efa5e52e47a75cf101b0866249",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b13-ed907010-87f9-48bf-8896-f6bf49a7beb7.jpg",
+      "board": "charuco",
+      "sha256": "b22965d62326dcd1969b9f1dd75b541356d6564176d27ad017f59933cccb3e40",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\calib40b\\b14-f04fac94-8c8a-4e91-8cee-dce4b991602e.jpg",
+      "board": "charuco",
+      "sha256": null,
+      "points": null,
+      "set": "dropped"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y00-03b3ad6b-7408-4c90-8ac4-a27ce17b955e.jpg",
+      "board": "aruco",
+      "sha256": "7bde28c1d5f7324e61743a1fd416c212c2372fee827791779283a907d522c8d2",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y01-070e1d3e-03c9-4b16-b89a-e74708346902.jpg",
+      "board": "aruco",
+      "sha256": "e94abe2fbc75ebc672be235a83b0a4419768348637cd50b0280db98baa42f4e6",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y02-157b61dc-0039-4ec3-8320-79fcf84e5a08.jpg",
+      "board": "aruco",
+      "sha256": "9f98e9d33ffd3fb2ae89e2de849e299955e7718ccf91de9cce6fe939ba83bdb8",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y03-6d4a44c9-c8ba-4ee3-9ac5-c685c3732f0d.jpg",
+      "board": "aruco",
+      "sha256": "6a71e47ec731822a4c82a105bb147304b2a8c8d2d1bd0140d693505b53923ecf",
+      "points": 28,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y04-8ed0f91f-2445-4e57-88c9-546476ad6a05.jpg",
+      "board": "aruco",
+      "sha256": "6771902f6aa16683302b7e1f6241ab00277bba0acab00e7c807e728c315ec2ff",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y05-cd0813d5-76c4-46d4-83d4-4408c7e82fbf.jpg",
+      "board": "aruco",
+      "sha256": "90618d348f3636242f717d30c274b999a4e9c166e14372186e05d82c8c2e0dbc",
+      "points": 28,
+      "set": "heldout"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y06-f271c706-56f8-4627-8538-ade3ab7f48d9.jpg",
+      "board": "aruco",
+      "sha256": "bc4cbc19bd8cd1251eac0b46e07b131c4ddc6d5a15819fc79411b2dd48eadd3e",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "..\\cal01-evidence\\valid40\\y07-f45b3e5e-4f16-428b-9120-4334f7baeb72.jpg",
+      "board": "aruco",
+      "sha256": "d0541383dee59bdfa704988e296741d1a27323a97b86e70bcb4d0205ea3bc545",
+      "points": 12,
+      "set": "fit"
+    }
+  ]
+}

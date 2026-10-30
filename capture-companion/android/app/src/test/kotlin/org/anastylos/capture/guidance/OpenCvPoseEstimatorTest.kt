@@ -284,4 +284,39 @@ class OpenCvPoseEstimatorTest {
             assertThat(e.message).contains("OpenCV native init failed")
         }
     }
+
+    @Test
+    fun uncalibratedProfileNeverValidates() {
+        // Numerically sane factory intrinsics that WOULD validate (oracle
+        // detections + solution) must degrade when the profile reads
+        // uncalibrated: detection without a metric pose (CAL-01).
+        val backend = FakeBackend(oracleDetections(), oracleSolution())
+        val factory = intrinsics().copy(profileId = "factory-0-640x480-z0-uncalibrated")
+        val estimate = OpenCvPoseEstimator(backend).estimate(input(), factory, a3Board())
+        assertThat(estimate.status).isEqualTo(WireRegistration.DEGRADED)
+        assertThat(estimate.tBC).isNull()
+        assertThat(estimate.markerIdsSeen).containsExactly(10, 11, 12, 13, 14).inOrder()
+    }
+
+    @Test
+    fun uncalibratedProfileSkipsSolver() {
+        // The solver must not even run: a throwing backend still yields
+        // DEGRADED (not LOST), proving the fail-closed short-circuit.
+        val backend = FakeBackend(oracleDetections(), oracleSolution(), solveThrows = true)
+        val factory = intrinsics().copy(profileId = "factory-0-640x480-z0-uncalibrated")
+        val estimate = OpenCvPoseEstimator(backend).estimate(input(), factory, a3Board())
+        assertThat(estimate.status).isEqualTo(WireRegistration.DEGRADED)
+        assertThat(estimate.tBC).isNull()
+    }
+
+    @Test
+    fun measuredProfileValidates() {
+        // Same oracle path with a measured profile ID validates: the gate
+        // keys on the uncalibrated marker, not on intrinsics provenance.
+        val backend = FakeBackend(oracleDetections(), oracleSolution())
+        val measured = intrinsics().copy(profileId = "measured:00000000-0000-4000-8000-000000000000")
+        val estimate = OpenCvPoseEstimator(backend).estimate(input(), measured, a3Board())
+        assertThat(estimate.status).isEqualTo(WireRegistration.VALID)
+        assertThat(estimate.tBC).isNotNull()
+    }
 }

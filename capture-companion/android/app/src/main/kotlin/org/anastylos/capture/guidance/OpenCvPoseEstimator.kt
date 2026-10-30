@@ -84,10 +84,16 @@ class OpenCvPoseEstimator(
         val corners = detections.sumOf { it.corners.size }
         val cornersPx = detections.map { PoseEstimator.MarkerCorners(it.id, it.corners) }
         val correspondences = PoseMath.assembleCorrespondences(detections, board)
-        if (correspondences.size < 4 || intrinsics == null) {
+        // CAL-01 fail-closed: an uncalibrated (factory) profile may feed
+        // detection but never a metric pose, even when its numbers look
+        // sane. Only a measured profile reaches the solver.
+        val metricIntrinsics =
+            if (intrinsics != null && intrinsics.profileId.contains("uncalibrated")) null
+            else intrinsics
+        if (correspondences.size < 4 || metricIntrinsics == null) {
             return degraded(input, seen, corners, cornersPx, quality)
         }
-        if (!saneIntrinsics(intrinsics, input)) {
+        if (!saneIntrinsics(metricIntrinsics, input)) {
             return PoseEstimator.Estimate(
                 tBC = null, markerIdsSeen = seen, cornerCount = corners,
                 rmsPx = null, status = WireRegistration.BAD_CALIBRATION,
@@ -99,14 +105,14 @@ class OpenCvPoseEstimator(
             backend.solve(
                 correspondences.map { it.objectMm },
                 correspondences.map { it.imagePx },
-                intrinsics,
+                metricIntrinsics,
             )
         } catch (_: LinkageError) {
             null
         } catch (_: Exception) {
             null
         } ?: return degraded(input, seen, corners, cornersPx, quality)
-        return qualify(input, seen, corners, cornersPx, quality, correspondences, solution, intrinsics)
+        return qualify(input, seen, corners, cornersPx, quality, correspondences, solution, metricIntrinsics)
     }
 
     private fun lost(

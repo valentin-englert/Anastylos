@@ -1,0 +1,102 @@
+{
+  "views": [
+    {
+      "path": "v01-5ac08790-1abd-4d54-9c8c-7ee5e4ee4d56.jpg",
+      "markers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "rms_px": 1.3223171981209931,
+      "tvec": [
+        -178.42918890804705,
+        -92.48196430054298,
+        544.7426115152098
+      ]
+    },
+    {
+      "path": "v02-6f937eee-61c7-4f52-ac00-c1263bf6df83.jpg",
+      "markers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "rms_px": 2.3474735324648117,
+      "tvec": [
+        -191.51972698136558,
+        -99.96429385414379,
+        453.86528926353907
+      ]
+    },
+    {
+      "path": "v04-bfc0c86b-5af6-42e1-8eee-fd39b6738dd5.jpg",
+      "markers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "rms_px": 4.394016151130997,
+      "tvec": [
+        -171.54108275592276,
+        -122.60524768201003,
+        441.3155583042463
+      ]
+    },
+    {
+      "path": "v05-f52e4325-2ad1-4e68-ba19-f1dd9919b95a.jpg",
+      "markers": [
+        11,
+        12,
+        15,
+        16
+      ],
+      "rms_px": 1.8051943747304813,
+      "tvec": [
+        -182.09564565819772,
+        -145.2282723402557,
+        299.9340806622891
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "path": "v00-01dc7d8d-47eb-41fb-8834-3b0570320126.jpg",
+      "markers": [
+        16
+      ],
+      "reason": "below-min-markers"
+    },
+    {
+      "path": "v03-8a1dce3c-d45a-479f-aeaa-5965d6883188.jpg",
+      "markers": [
+        16
+      ],
+      "reason": "below-min-markers"
+    }
+  ],
+  "pooled_rms_px": 2.7306253599234376,
+  "rms_ok": false,
+  "scale_ok": true,
+  "validator": {
+    "verdict": "needs_review",
+    "reasons": [],
+    "reviews": [
+      "MAX_VIEW_RMS_OVER_GATE",
+      "HELD_OUT_RMS_OVER_GATE"
+    ],
+    "notes": []
+  },
+  "metric_validity": "unknown"
+}

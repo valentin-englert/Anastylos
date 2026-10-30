@@ -37,6 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import org.anastylos.capture.camera.CameraStillSource
+import org.anastylos.capture.camera.StillCamera
+import org.anastylos.capture.camera.UsableCamera
+import org.anastylos.capture.camera.CameraCapabilities
+import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.SETTING_PROFILES
+import org.anastylos.capture.ui.camera.CameraSettingsPanel
+import org.anastylos.capture.ui.camera.CameraPicker
 
 /**
  * Slice A session screen: functional, honest, and deliberately plain.
@@ -81,6 +88,11 @@ fun SessionScreen(viewModel: SessionViewModel, onConnect: () -> Unit, onGuided: 
                 onCapture = { viewModel.startSampling(it) },
                 sampling = state.sampling,
                 onStop = { viewModel.stopSampling() },
+                selectedCameraId = state.selectedCameraId,
+                onCamerasListed = viewModel::onCamerasListed,
+                settings = state.settings,
+                caps = viewModel.capsFor(state.effectiveCameraId),
+                onSettingsApplied = viewModel::onSettingsApplied,
             )
         }
 
@@ -93,6 +105,25 @@ fun SessionScreen(viewModel: SessionViewModel, onConnect: () -> Unit, onGuided: 
             onCreate = { viewModel.createSession(it) },
             onSelect = { viewModel.selectSession(it) },
             onInterval = { viewModel.setInterval(it) },
+        )
+
+        CameraPicker(
+            cameras = state.availableCameras,
+            effectiveId = state.effectiveCameraId,
+            note = state.cameraNote,
+            onSelect = { viewModel.selectCamera(it) },
+        )
+
+        CameraSettingsPanel(
+            settings = state.settings,
+            caps = viewModel.capsFor(state.effectiveCameraId),
+            profiles = SETTING_PROFILES,
+            activeProfile = state.activeProfile,
+            appliedLine = null,
+            settingsNote = state.settingsNote,
+            analysisSelectable = false,
+            onUpdate = viewModel::updateSettings,
+            onProfile = { viewModel.selectProfile(it) },
         )
 
         SamplingStatus(state)
@@ -127,18 +158,42 @@ private fun CameraPreview(
     onCapture: (suspend () -> org.anastylos.capture.camera.CapturedStill) -> Unit,
     sampling: Boolean,
     onStop: () -> Unit,
+    selectedCameraId: String?,
+    onCamerasListed: (List<UsableCamera>, String?, String?) -> Unit,
+    settings: CameraSettings,
+    caps: CameraCapabilities,
+    onSettingsApplied: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context) }
-    val source = remember { CameraStillSource(context, lifecycle, previewView) }
+    val source: StillCamera = remember { CameraStillSource(context, lifecycle, previewView) }
     var bound by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(selectedCameraId, settings.stillSize) {
+        source.requestedCameraId = selectedCameraId
+        source.requestedStillSize = settings.stillSize
         bound = try {
             source.bindAsync()
         } catch (_: Exception) {
             false
+        }
+        onCamerasListed(source.availableCameras(), source.effectiveCameraId, source.cameraNote)
+    }
+
+    LaunchedEffect(settings, bound, caps) {
+        if (bound) {
+            val ok = try {
+                source.applySettings(settings, caps)
+            } catch (_: Exception) {
+                false
+            }
+            val stillOk = try {
+                source.refreshStillOptions()
+            } catch (_: Exception) {
+                false
+            }
+            onSettingsApplied(ok && stillOk)
         }
     }
     DisposableEffect(Unit) {

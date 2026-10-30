@@ -50,6 +50,9 @@ import org.anastylos.capture.guidance.PhoneRotation
 import org.anastylos.capture.guidance.RegistrationState
 import org.anastylos.capture.guidance.RequestState
 import org.anastylos.capture.guidance.SessionState
+import org.anastylos.capture.ui.camera.CameraPicker
+import org.anastylos.capture.camera.SETTING_PROFILES
+import org.anastylos.capture.ui.camera.CameraSettingsPanel
 
 /**
  * Operational Guided Capture screen: live preview with detection
@@ -137,6 +140,23 @@ fun GuidedCaptureScreen(
         CueList(state)
         StateGrid(state)
         TargetPicker(state, viewModel)
+        CameraPicker(
+            cameras = state.availableCameras,
+            effectiveId = state.effectiveCameraId,
+            note = state.cameraNote,
+            onSelect = { viewModel.selectCamera(it) },
+        )
+        CameraSettingsPanel(
+            settings = state.settings,
+            caps = viewModel.capsFor(state.effectiveCameraId),
+            profiles = SETTING_PROFILES,
+            activeProfile = state.activeProfile,
+            appliedLine = state.appliedLine,
+            settingsNote = state.settingsNote,
+            analysisSelectable = true,
+            onUpdate = viewModel::updateSettings,
+            onProfile = { viewModel.selectProfile(it) },
+        )
         ControlRow(state, viewModel)
         QualityRow(state, viewModel)
         RemoteSection(state, viewModel)

@@ -29,6 +29,15 @@ import org.anastylos.capture.camera.CapturedStill
 import org.anastylos.capture.camera.FrameSampler
 import org.anastylos.capture.camera.SamplerEvent
 import org.anastylos.capture.camera.GuidedCamera
+import org.anastylos.capture.camera.UsableCamera
+import org.anastylos.capture.camera.AppliedSettings
+import org.anastylos.capture.camera.CameraCapabilities
+import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.DEFAULT_PROFILE
+import org.anastylos.capture.camera.formatApplied
+import org.anastylos.capture.camera.sanitizeSettings
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
 import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.GuidedAssociation
 import org.anastylos.capture.data.GuidedAssociationRepository
@@ -173,6 +182,14 @@ data class GuidanceUiState(
     val reservingAttempt: Boolean = false,
     val delivery: GuidedAssociation? = null,
     val deliveryNote: String? = null,
+    val availableCameras: List<UsableCamera> = emptyList(),
+    val selectedCameraId: String? = null,
+    val effectiveCameraId: String? = null,
+    val cameraNote: String? = null,
+    val settings: CameraSettings = CameraSettings(),
+    val activeProfile: String = DEFAULT_PROFILE,
+    val appliedLine: String? = null,
+    val settingsNote: String? = null,
 )
 
 /**
@@ -191,6 +208,8 @@ class GuidanceViewModel(
     private val sampler: FrameSampler,
     private val cameraFactory: (LifecycleOwner, PreviewView?) -> GuidedCamera,
     private val prefs: GuidedPrefs,
+    private val cameraPrefs: CameraPrefs? = null,
+    private val settingsStore: CameraSettingsStore? = null,
     private val nanoClock: () -> Long,
     private val utcClock: () -> Instant,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -204,6 +223,10 @@ class GuidanceViewModel(
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
 
     private var camera: GuidedCamera? = null
+    private var cameraOwner: LifecycleOwner? = null
+    private var cameraPreview: PreviewView? = null
+    private var settingsJob: Job? = null
+    private var lastAppliedSeen: AppliedSettings? = null
     private var estimatesJob: Job? = null
     private val dwell = DwellAccumulator()
     private val speeds = SpeedTracker()
@@ -235,6 +258,14 @@ class GuidanceViewModel(
                 _state.update { it.copy(sharpnessReference = reference) }
             }
         }
+        viewModelScope.launch {
+            try {
+                cameraPrefs?.selectedCameraId?.collect { id ->
+                    _state.update { it.copy(selectedCameraId = id) }
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun setPermissionGranted(granted: Boolean) {
@@ -252,6 +283,17 @@ class GuidanceViewModel(
         if (!foreground) onSessionEvent(SessionEvent.Backgrounded)
     }
 
+    init {
+        viewModelScope.launch {
+            try {
+                settingsStore?.activeProfile?.collect { name ->
+                    _state.update { it.copy(activeProfile = name) }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     fun attachCamera(owner: LifecycleOwner, preview: PreviewView?) {
         if (camera != null) {
             camera?.attachPreview(preview)
@@ -259,9 +301,14 @@ class GuidanceViewModel(
         }
         val source = cameraFactory(owner, preview)
         camera = source
+        cameraOwner = owner
+        cameraPreview = preview
+        source.requestedCameraId = _state.value.selectedCameraId
+        source.requestedStillSize = _state.value.settings.stillSize
         viewModelScope.launch {
             val bound = try {
-                source.bindAsync()
+                val size = _state.value.settings.analysisSize
+                source.bindAsync(size.first, size.second)
             } catch (_: Exception) {
                 false
             }
@@ -287,11 +334,18 @@ class GuidanceViewModel(
                     uncalibrated = intrinsics == null ||
                         intrinsics.profileId.contains("uncalibrated"),
                     overlayGeometry = geometry,
+                    availableCameras = source.availableCameras(),
+                    effectiveCameraId = source.effectiveCameraId,
+                    cameraNote = source.cameraNote,
                 )
             }
+            observeSettings()
             estimatesJob?.cancel()
             estimatesJob = viewModelScope.launch {
-                source.estimates.collect { estimate -> onEstimate(estimate) }
+                source.estimates.collect { estimate ->
+                    pollApplied(source)
+                    onEstimate(estimate)
+                }
             }
         }
     }
@@ -316,6 +370,148 @@ class GuidanceViewModel(
         lastCorners = emptyMap()
         lastCornersNs = null
         _state.update { it.copy(boardId = boardId, dwell = DwellState.Idle, cues = emptyList()) }
+    }
+
+    /**
+     * Operator camera switch: persists the ID, then rebinds on a
+     * new sensor. The rebind invalidates everything downstream —
+     * fresh intrinsics/profile, no pose or motion reuse — and the
+     * session disarms via detach (rearm required), matching the
+     * rotation-crop safety rule.
+     */
+    fun selectCamera(id: String) {
+        if (id == _state.value.selectedCameraId) return
+        _state.update { it.copy(selectedCameraId = id) }
+        viewModelScope.launch {
+            try {
+                cameraPrefs?.setSelectedCameraId(id)
+            } catch (_: Exception) {
+                _state.update { it.copy(cameraNote = "could not save the camera selection") }
+            }
+        }
+        if (!_state.value.cameraBound) return
+        rebindCamera()
+    }
+
+    private fun rebindCamera() {
+        dwell.reset()
+        speeds.reset()
+        lastCorners = emptyMap()
+        lastCornersNs = null
+        lastEstimate = null
+        lastMotion = null
+        lastAppliedSeen = null
+        _state.update { it.copy(appliedLine = null) }
+        val owner = cameraOwner
+        val preview = cameraPreview
+        detachCamera()
+        if (owner != null) attachCamera(owner, preview)
+    }
+
+    fun capsFor(id: String?): CameraCapabilities {
+        return _state.value.availableCameras.firstOrNull { it.id == id }?.capabilities
+            ?: CameraCapabilities()
+    }
+
+    private fun observeSettings() {
+        settingsJob?.cancel()
+        val id = _state.value.effectiveCameraId ?: return
+        val profile = _state.value.activeProfile
+        val store = settingsStore ?: return
+        settingsJob = viewModelScope.launch {
+            try {
+                store.settings(id, profile).collect { stored ->
+                    val caps = capsFor(id)
+                    val clean = sanitizeSettings(stored, caps)
+                    _state.update { it.copy(settings = clean) }
+                    applyToCamera(clean, caps)
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun applyToCamera(settings: CameraSettings, caps: CameraCapabilities) {
+        val source = camera ?: return
+        if (!_state.value.cameraBound) return
+        val ok = try {
+            source.applySettings(settings, caps)
+        } catch (_: Exception) {
+            false
+        }
+        val label = try {
+            source.currentIntrinsics()?.profileId
+        } catch (_: Exception) {
+            _state.value.intrinsicsLabel
+        }
+        _state.update {
+            it.copy(
+                settingsNote = if (ok) null else "settings not applied",
+                intrinsicsLabel = label,
+                uncalibrated = label == null || label.contains("uncalibrated"),
+            )
+        }
+        viewModelScope.launch {
+            val stillOk = try {
+                source.refreshStillOptions()
+            } catch (_: Exception) {
+                false
+            }
+            if (!stillOk) {
+                _state.update {
+                    if (it.settingsNote == null) {
+                        it.copy(settingsNote = "still capture options not refreshed")
+                    } else {
+                        it
+                    }
+                }
+            }
+        }
+    }
+
+    private fun pollApplied(source: GuidedCamera) {
+        val applied = try {
+            source.lastApplied
+        } catch (_: Exception) {
+            null
+        }
+        if (applied != null && applied != lastAppliedSeen) {
+            lastAppliedSeen = applied
+            _state.update { it.copy(appliedLine = formatApplied(applied)) }
+        }
+    }
+
+    fun updateSettings(transform: (CameraSettings) -> CameraSettings) {
+        val id = _state.value.effectiveCameraId
+        val caps = capsFor(id)
+        val next = sanitizeSettings(transform(_state.value.settings), caps)
+        val sizeChanged = next.analysisSize != _state.value.settings.analysisSize ||
+            next.stillSize != _state.value.settings.stillSize
+        _state.update { it.copy(settings = next) }
+        if (id != null) {
+            val profile = _state.value.activeProfile
+            viewModelScope.launch {
+                try {
+                    settingsStore?.update(id, profile, next)
+                } catch (_: Exception) {
+                    _state.update { it.copy(settingsNote = "could not save settings") }
+                }
+            }
+        }
+        if (sizeChanged && _state.value.cameraBound) rebindCamera()
+        else applyToCamera(next, caps)
+    }
+
+    fun selectProfile(name: String) {
+        if (name == _state.value.activeProfile) return
+        _state.update { it.copy(activeProfile = name) }
+        viewModelScope.launch {
+            try {
+                settingsStore?.setActiveProfile(name)
+            } catch (_: Exception) {
+            }
+        }
+        observeSettings()
     }
 
     fun selectTarget(target: TargetViewpoint?) {

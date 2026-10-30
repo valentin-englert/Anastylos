@@ -9,6 +9,10 @@ import androidx.lifecycle.ViewModelProvider
 import java.io.File
 import org.anastylos.capture.BuildConfig
 import org.anastylos.capture.camera.FrameSampler
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.DataStoreCameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
+import org.anastylos.capture.data.DataStoreCameraSettingsStore
 import org.anastylos.capture.data.DataStoreSamplingPrefs
 import org.anastylos.capture.data.EvidenceFileStorePort
 import org.anastylos.capture.data.EvidenceRepository
@@ -77,6 +81,14 @@ class AppContainer(context: Context) {
         DataStoreSamplingPrefs(appContext)
     }
 
+    val cameraPrefs: CameraPrefs by lazy {
+        DataStoreCameraPrefs(appContext)
+    }
+
+    val settingsStore: CameraSettingsStore by lazy {
+        DataStoreCameraSettingsStore(appContext)
+    }
+
     val qrPairClient: QrPairClient by lazy {
         HttpQrPairClient(
             transportFactory = { payload ->
@@ -105,6 +117,8 @@ class AppContainer(context: Context) {
                         ).also { it.attachPreview(preview) }
                     },
                     prefs = guidedPrefs,
+                    cameraPrefs = cameraPrefs,
+                    settingsStore = settingsStore,
                     // Camera sensor timestamps live in the elapsedRealtimeNanos
                     // domain (CLOCK_BOOTTIME); System.nanoTime() excludes
                     // suspend time, which produced negative pose ages on
@@ -149,6 +163,8 @@ class AppContainer(context: Context) {
                     sampler = container.sampler,
                     pairingStore = container.pairingStore,
                     prefs = container.samplingPrefs,
+                    cameraPrefs = container.cameraPrefs,
+                    settingsStore = container.settingsStore,
                     appVersion = BuildConfig.VERSION_NAME,
                     transportFactory = { baseUrl, tls -> HttpsTransport(baseUrl, tls) },
                 ) as T

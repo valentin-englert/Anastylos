@@ -1,0 +1,277 @@
+{
+  "script_sha256": "2dface22295c7e56e3465e7c2803ccdf8fc44354475afdc4cd8a248ee7c4120c",
+  "thresholds": "min_fit_views=15;min_heldout=5;min_corners=10;split=index_mod3;square_scale=1.0;fix_k3=True",
+  "threshold_config_sha256": "b164efcad19bad2869a2253894168d589d3e398d8ddc8daa3e4321855299f383",
+  "opencv": "4.14.0",
+  "square_scale": 1.0,
+  "scale_source": "operator Mahr/Talmeter, see cal01-profile",
+  "image_size": [
+    1920,
+    1080
+  ],
+  "usable_views": 34,
+  "fit_views": 23,
+  "heldout_views": 11,
+  "dropped": [],
+  "K": [
+    1370.667569037325,
+    0.0,
+    948.3764085918667,
+    0.0,
+    1369.1171151986296,
+    541.9719601941362,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion": [
+    0.237207040093843,
+    -0.7753272550183762,
+    0.0010562817315245396,
+    -0.0009472127449009127,
+    0.0
+  ],
+  "fit_rms_overall": 0.41528051767259533,
+  "held_out_rms_px": 0.5434110391557033,
+  "edge_coverage": 0.32684254357396775,
+  "views": [
+    {
+      "path": "00-078d45a6-eeb5-44d7-9f43-3e7aa28a6816.jpg",
+      "sha256": "e9f25d1c92afdeff62aebc5c7bd3f6781e8d66e7603af816cc324df9a1ff9b5f",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "01-2447c3d0-1c91-49bc-a4b4-176ae88e7f5e.jpg",
+      "sha256": "6f9e46df645a2d3db1671dec465b5936fa993e62d4b181403e484136931e49f9",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "02-24c9e694-12c4-407b-873c-945acd2bd1c2.jpg",
+      "sha256": "c5f58c7e2d76ca4c514363b2b141706a0f9a2f38ed3d388bd3ed1e6d0a31fa24",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "03-27fa5017-f779-43e9-838f-9842aa70f3f2.jpg",
+      "sha256": "757e6986c86f891ec190fbc001ea1fce89eca99ebc3975d107e45622afcd201b",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "04-2dee9132-552d-45d9-b69d-f3c1fb70543a.jpg",
+      "sha256": "4212cbb40e7f8828c8303100fe8852001b892302667f1710ea2d85bb76c18d2b",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "05-2fb361a0-414c-4d90-b1c0-cf33d7863165.jpg",
+      "sha256": "af2a7e67209fddc6c883d0cffe5a63deafe58808802570422f84b7863f15c750",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "06-3fa95ec7-4447-46bf-9e75-93a68a2096e5.jpg",
+      "sha256": "1fab9e40d0e5feefed84bf7f246eb1085191ddbb0633766e738be8a8af67bbc1",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "07-48c54b7e-5dd6-46dd-963e-b78ca05ff581.jpg",
+      "sha256": "e02fa4fad1453c6c89661f7ac8f31fb4747d1466106e5817dbab97fbf25b1c33",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "08-4ab13342-4d6d-425d-a316-a888a954db15.jpg",
+      "sha256": "8266e9e8c8d0b62500bbee178d7a4f23333c7c57bc4642c7c41d3db3227797d2",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "09-517429ee-1ffd-4b0d-ad81-b8006e5b9f0a.jpg",
+      "sha256": "8e3b2dc5c081a27afb69677f99b07cf86401be33ed1840b29a41894eec5e9bea",
+      "corners": 22,
+      "markers": 16,
+      "set": "fit"
+    },
+    {
+      "path": "10-5a6e812e-a2bb-4c8b-9f75-57827ed5af95.jpg",
+      "sha256": "0d31c7479236d2f2bcbf03882e6d5ab065fe13333525c084ccea3a80714e6c6f",
+      "corners": 22,
+      "markers": 16,
+      "set": "fit"
+    },
+    {
+      "path": "11-66b97e59-2d2c-4f95-a3a2-772966a4230e.jpg",
+      "sha256": "eeb7f208e0a2f337ce47aad0d6dba352e3a105687cc2a811c4173aa52dfcf1d5",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "12-75054434-65b1-4239-ab20-b9c49ad38aab.jpg",
+      "sha256": "24bb9357029cd1d452a1dac432781a829bfc41f90604a0ddd06156ea28dc75e1",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "13-77d94d4d-dc01-47d5-8e28-c51533766103.jpg",
+      "sha256": "b966cdf88e18937ed36835d192086ee7e71e7a9de2996e65d9380aaccc058687",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "14-815fd269-e030-43aa-aed2-8d9dfc7836e0.jpg",
+      "sha256": "72a4a51d0e24f088c3dd2104b73e1cd61f7c6d42e0b2523942e7a9f43cdae1e8",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "15-819d39a9-f06b-414e-8d64-297edcbc0b63.jpg",
+      "sha256": "a7bd133d33b5f332e2c250923c81e78305902243da215b7b0339004f8f4e9fbe",
+      "corners": 20,
+      "markers": 15,
+      "set": "fit"
+    },
+    {
+      "path": "16-876a2f5c-8861-41b3-bfde-397d6227f934.jpg",
+      "sha256": "05ad55bb3706eb360c3103032efb72ded0e98b17465e6017c0035f500cc636ac",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "17-8be74caf-2f5d-42f6-a934-95d5297e8f36.jpg",
+      "sha256": "cfa6bc570ddb755434563ae4eba45bafb44e7e400a021b70e2cceeb94b7c9a98",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "18-8c5c4b64-159d-4c40-bd65-f65771f11928.jpg",
+      "sha256": "48dc37378bec15677a3b56be4ccde17b707cab66d67b2b6131efe5485482a61a",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "19-9173ffe9-3d6b-4e7c-88a0-a87b73c0f0d3.jpg",
+      "sha256": "b91ee41e182cc4303d39b42f3fb0d5eedd3a00867a7e30e495241321f2dd8829",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "20-91c48e35-5470-48ac-ac97-5c73bd64d8f2.jpg",
+      "sha256": "daf9156bc2b5737b9b91d4f14312a8ebf3b91a69f6e1aeda60ed16220b12a5cd",
+      "corners": 22,
+      "markers": 16,
+      "set": "heldout"
+    },
+    {
+      "path": "21-931212b6-628a-483c-a661-9ab4d2b865ed.jpg",
+      "sha256": "44db2890a562f1fcc687480fc1f18d981fe8dbf85ba5fce2ab7f04018d731e54",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "22-a0ed85de-69cc-4527-8838-de7e6e0a142e.jpg",
+      "sha256": "b335924449e2a1c26610c27a3b480e6b64e68ad9c13f3ddfb597de814da6a058",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "23-a3d035ad-915e-4446-ab17-afc2ab7212a8.jpg",
+      "sha256": "f449371c6f5664ea149deecc054301292b7ab412daab6d4a27457b9bb297ae2d",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "24-b36239d2-a087-4c2e-8def-e0f9971310bd.jpg",
+      "sha256": "1b18718b21cb645a69097f7d34d62f5cc1ef38dae795c4ec73e314b60a75ab3c",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "25-bc8b9210-5a53-4552-9408-6a18d32d905d.jpg",
+      "sha256": "6649bdf134adbba418b48c83a12893b2a916b7c9a2f10425bf90022f2d671bd6",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "26-c93fdc53-4923-44df-8da0-ada53d00c3ed.jpg",
+      "sha256": "c1383000398d0872f54eb9060cf202e07293cb522bb6da0637220a7ec007c270",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "27-d46c89fc-7663-484c-a66a-2767ab0a7b0b.jpg",
+      "sha256": "8153922e6f62569838d5da4b0ec6acf5ae4a6d103c00f4680a62a5ec34251093",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "28-e574e191-9dd4-474c-8f3b-9815256ff4d1.jpg",
+      "sha256": "3feff74905142ce4156097adefe0a3a8aa7173058180f59b52f75516266a54da",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "29-e80c769b-d055-47e0-b91e-69ab7151ccc3.jpg",
+      "sha256": "b0aae9971b5584bb653a780701f9800858f8f29e32b87cb61f8f1194307ad5f3",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "30-ef5a071a-60e6-413a-8cd3-de94b8a71f18.jpg",
+      "sha256": "0f889310e3c9762773a838a11694db1c5fab661b6b9a162e8262493df5b84b02",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "31-f0408cab-caf7-4acc-8bae-99d73862bb66.jpg",
+      "sha256": "6af78edbedf9fb072c973152bf909cd2267b9698caefe4d7578fc9df93955e1e",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    },
+    {
+      "path": "32-f6d93f01-b601-47b5-8e7d-1076be89bf3a.jpg",
+      "sha256": "4951eceea818a081defa04f0b6a424cef19b4ae7c6f04d6cfd21ba3e3aea63b6",
+      "corners": 24,
+      "markers": 17,
+      "set": "heldout"
+    },
+    {
+      "path": "33-fa442a82-0aa3-4653-9f58-868d428bbeb2.jpg",
+      "sha256": "1aad94de5dd49a16aaa7448c38339d552fbf1bf9db7fc40f6acc9a78546a50a2",
+      "corners": 24,
+      "markers": 17,
+      "set": "fit"
+    }
+  ]
+}

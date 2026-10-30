@@ -31,5 +31,5 @@ Implemented: `new`, `phase`, `status`. Next per roadmap: M1 question loop throug
 (P0 order, read-back, controlled write); M2 guide package with precomputed Muse claims verified by
 `tools/guide/claims.py`, reassembly steps with `tools/reassembly/returns.py`; M3 session page and report.
 Validation: 12 unit tests with a fake runner, plus one development dry run on the FULL-01 P3 video (93 s):
-`C:\ANASTYLOS\datagent\dryrun-m0-P3`, 4 min 07 s (2.65× video length), counts 7 parts / 2 linked / 2 written /
+`C:\ANASTYLOS\data\agent\dryrun-m0-P3`, 4 min 07 s (2.65× video length), counts 7 parts / 2 linked / 2 written /
 6 questions; `parts` and `questions` identical to the active v21 P3 run. Development data; no hardware claim.

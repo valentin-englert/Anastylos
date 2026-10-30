@@ -1,4 +1,4 @@
-# tools/live — lane contract `anastylos-live-contract@0.2`
+# tools/live — lane contract `anastylos-live-contract@0.3`
 
 Owner: Technical Lead (integration branch `integration/live-v1`). Lanes branch from the commit that adds this
 file and change only the paths they own. A change to this file or to `schemas/` is made by the TL on
@@ -12,7 +12,7 @@ persistence. A model proposes; deterministic code accepts, falls back or rejects
 
 | Lane | Branch | Owns (create/edit only these) |
 |---|---|---|
-| TL | `integration/live-v1` | `tools/live/CONTRACT.md`, `tools/live/schemas/`, `tools/live/seed/`, `tools/live/integration/` (vertical slices, adversarial set), `ARCHITECTURE.md`, merges |
+| TL | `integration/live-v1`, `integration/agent-v1` | `tools/live/CONTRACT.md`, `tools/live/schemas/`, `tools/live/seed/`, `tools/live/integration/` (vertical slices, adversarial set), `tools/agent/` (product orchestrator), `ARCHITECTURE.md`, merges |
 | A LIVE-CORE | `feat/live-core` | `tools/live/*.py`, `tools/live/tests/`, `tools/live/README.md` (not the subfolders below) |
 | B GUIDE-CLAIMS | `feat/guide-claims` | `tools/guide/claims.py`, `tools/guide/tests/test_claims.py`, `tools/guide/guide02/` |
 | C META-PROVIDERS | `feat/meta-providers` | `tools/live/providers/` |
@@ -103,7 +103,8 @@ for one answer at a time) or the `assembly-memory/memory.py` CLI as subprocess. 
 ### 3.6 Guide claims (`anastylos-guide-claims@1`, `schemas/task.guide_claims.json`)
 
 Claims, not prose: `relation` ∈ `stored_in`, `removed_from`, `install_before`, `basis`, `dependency`,
-`unknown`; `subject`, `object` (package ids); `basis_word` from GUIDE_RULES. Speech is rendered from verified
+`unknown`; `subject`, `object` (package ids); `basis_word` is one of the five GUIDE_RULES words (enum since 0.3,
+the same tuple as `claims.BASIS_WORDS`) or null. Speech is rendered from verified
 claims only.
 
 ## 4. Meta Model API (C only; established owner configuration)
@@ -160,3 +161,17 @@ own files; the seeds stay unchanged as provenance.
   - New TL-owned folder `tools/live/integration/` (vertical slices and the cross-lane adversarial set).
   - Lane A owes the 0.2 journal adaptation (`t_wall`, `question_kind`, `ui_event`, `written_ids`,
     `fallback.reason`); until then `docs/LIVE-01.md` scoring of A's journals stays provisional.
+- 0.3 (2026-10-30, TL, on `integration/agent-v1` from `main @ f88456ee`):
+  - `task.guide_claims.json`: `basis_word` enum = the five GUIDE_RULES words + null. Muse used raw package
+    tokens (`operator_declared`) before; with the enum the re-recorded smoke returned `laut Operator` and
+    `umgekehrte Entnahmereihenfolge`. `claims.py` drops the enum for its own check so a wrong word is still
+    classified (certainty, identity, later observation) instead of failing as a bare schema error.
+  - `task.answer_interpretation.json`: intent `not_a_part` (lane A request). The coordinator treats an intent
+    it does not handle as "not understood" and asks again, so the change is fail-safe until A maps it.
+  - C's recorded fixtures for these two tasks re-recorded (4 real calls, `C:\ANASTYLOS\data\live-dev\TL\smoke-contract03-01`);
+    the two unchanged fixtures and their sources are kept byte-identical.
+  - Latency budget: provider timeout stays 120 s (§4). Consumers never wait on a model between a question and
+    the operator's answer: wordings and standard guide answers are computed ahead (product orchestrator,
+    `tools/agent/`); a free guide question gets at most 60 s, then the L0 text is used.
+  - Real L2 arm result (PREREG v2): rejected, L2 0.752 vs P0 0.803 resolved per interruption; the product
+    uses P0 for action selection (`tools/live/integration/README.md`).

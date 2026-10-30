@@ -1,0 +1,250 @@
+{
+  "script_sha256": "07b085e3125912bf22cf227f7a57836ea8e1774b9edc57b6337f3587dfa94a58",
+  "thresholds": "min_fit_views=15;min_heldout=5;min_charuco=10;min_aruco=3;split=index_mod3;square_scale=1.0;joint=charuco+surface_a3",
+  "threshold_config_sha256": "a8b3340cdf16c552394b158a424d32176ab2a507ab12dcac9543f8c507e4af5f",
+  "opencv": "4.14.0",
+  "square_scale": 1.0,
+  "scale_source": "operator Mahr/Talmeter (CAL-01 boards); XCAL M2101K6G 40cm MF",
+  "image_size": [
+    1920,
+    1080
+  ],
+  "usable_views": 30,
+  "fit_views": 20,
+  "heldout_views": 10,
+  "opencv_fit_rms": 1.457738289778788,
+  "dropped": [],
+  "K": [
+    1418.3911318466182,
+    0.0,
+    965.4152652967795,
+    0.0,
+    1419.820774259733,
+    541.39886615119,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion": [
+    -0.006145437208514986,
+    -0.03756239238370003,
+    0.0007499619861579773,
+    0.0016098180503176258,
+    0.06296822753931895
+  ],
+  "fit_rms_overall": 1.4165682375373687,
+  "held_out_rms_px": 1.9316250411299722,
+  "edge_coverage": 0.8199266565718081,
+  "views": [
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152312401Z-1764e3ff-1dea-4469-aae0-b45ccc3a5633.jpg",
+      "board": "aruco",
+      "sha256": "db496f5725f4ee298f25aa26b0d82aae35fc2d588387bd3cd6e349bc771c2805",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152329538Z-fab45a32-8f65-4bec-a343-e64cb97f52af.jpg",
+      "board": "aruco",
+      "sha256": "e1eee52693d7f44d2077ad86bb3bd2ede282b8f28671c2418758ffc1bcb3d4f2",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152341014Z-b7331745-36c7-4a19-8890-e86b21ce95f6.jpg",
+      "board": "aruco",
+      "sha256": "6c89b38dd174d821bb27d04c5ecfd4c1841c48ba0e386ea3516e006f7082eddc",
+      "points": 16,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152352439Z-aef45604-ce4c-451a-945e-6ca329b8ea3a.jpg",
+      "board": "aruco",
+      "sha256": "5e236be5177f26e5716577785d4cf5fc3fd74dfb224c0c3b34f90d1eae08d4d4",
+      "points": 20,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152508006Z-9dcc4abd-b913-44e5-ab2a-23827a00126d.jpg",
+      "board": "aruco",
+      "sha256": "adf3a558e181ed918e0396174e124b33c40cc9797bcac3b94eda4438d92cfc26",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152519438Z-e44e3322-ae9d-4bd3-abfb-4d0d83f46e1f.jpg",
+      "board": "aruco",
+      "sha256": "d1afc7b6e5d48caa309a94e8eb5eb7a35133ca753a5a8396d895ce464f6b42e3",
+      "points": 16,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152658210Z-994e3851-a794-44e6-8d02-8367dfee94b8.jpg",
+      "board": "aruco",
+      "sha256": "ea99876da3c069fbb68f2d99c55081db68333c65258637a193a8e320791e2c6c",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152709647Z-4c423d50-00c0-4ca1-9f73-7b0350a2d2a1.jpg",
+      "board": "aruco",
+      "sha256": "4a837a6bab389cb75052f60c40ecab0fadf07b0ad81c3bc5a96447c394a22a8d",
+      "points": 28,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152726849Z-83beea82-6480-4724-baf7-d5e035492296.jpg",
+      "board": "aruco",
+      "sha256": "53a37869909dfa9f7f75fdd7f6109ebbd5b2d7ae4c44467962565121cc6f5b88",
+      "points": 16,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152738274Z-7ff3b54e-e0cf-4d12-bac9-1e7e643168cd.jpg",
+      "board": "aruco",
+      "sha256": "df9431b60a999ac4848a0eef64639c9e3cf226838fc88d2da802ac1141fabf2a",
+      "points": 16,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152749716Z-c4568b43-37d6-4277-a7ad-567117886090.jpg",
+      "board": "aruco",
+      "sha256": "584411d396f2a6e91b10be6894791e2e249ee22f49f1a5bcc5ecd5fb6225527b",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/a3fit\\2026-10-30T152801112Z-e6317098-6737-4305-bf27-d37fccca8754.jpg",
+      "board": "aruco",
+      "sha256": "4b04dd477a49f5ff42e63180daaf33ad248fdb322d72b4ca6f681c469f36b96d",
+      "points": 16,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151840983Z-f0d1078b-8ad8-4d3f-b23c-2ae95ec9a319.jpg",
+      "board": "charuco",
+      "sha256": "06cda298d37974e60fdb32137aade060de3d9a302111ae210ecc5f954876ea38",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151852615Z-31772fa8-190c-4716-bcde-7fb79c53e168.jpg",
+      "board": "charuco",
+      "sha256": "39d3c67517891f0c15cd1d5e82eb8bde8eac43a0eff44d07c8d562b9d593db6a",
+      "points": 18,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151858385Z-f3c399aa-73fc-4863-b8a2-309cb815e7b2.jpg",
+      "board": "charuco",
+      "sha256": "6f12cfcc9524266a907a8a91155758c656c85988f4a15a3bb55a962233922dcd",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151904083Z-304d6382-f48b-4e47-84a5-3a908606dd07.jpg",
+      "board": "charuco",
+      "sha256": "459d47dc2eff7657ca35bfe9b35841b46b722d7e0cd45c96bf5cb0fb722ea86d",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151909818Z-371a9821-39d9-4938-ad7b-ef6099657136.jpg",
+      "board": "charuco",
+      "sha256": "46ae3f32542bb9a6100c91ceacea671f0fa5960e054d97f8917f3dc321f1092b",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151915588Z-917433a6-c557-441b-a545-b49c1da2621e.jpg",
+      "board": "charuco",
+      "sha256": "1f2091cd5ab96d5690539052ee9c7687030b7aa98c31cabae618765ea66564f9",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151933079Z-3966728b-f6a2-4f4c-8e11-d4419bf8fa34.jpg",
+      "board": "charuco",
+      "sha256": "92376072f6fc81fe4706bcc9f08d94df85044ed6d958978bc92b9922a40867d8",
+      "points": 22,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151938782Z-c501ca09-b600-4bcf-b3c3-a6685e878d85.jpg",
+      "board": "charuco",
+      "sha256": "360dde6f52aa7d3fb114099ad9202d19b13ade55f5f65a3b2f12f4f3cd205d77",
+      "points": 22,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151950245Z-f759b013-280e-4068-9f17-8ad34205ebf0.jpg",
+      "board": "charuco",
+      "sha256": "c09743ad5434bce6d350a61db141423c8657f1323bca7c6bdb3fcfbc511bca57",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T151955949Z-d98ec686-7fc0-4398-9e66-2796f4463405.jpg",
+      "board": "charuco",
+      "sha256": "9bb1b252a2839a680f29684db63471ca2c52ff9243625729607f8fce1a051261",
+      "points": 22,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152036216Z-f49c14cc-cd15-4026-bcfb-6277a9dfd0e2.jpg",
+      "board": "charuco",
+      "sha256": "15f14768426d98beafd63789213c5b007b0431b719ef1d90db708c504775aa7b",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152041913Z-25de3eab-faa2-4ce6-a808-dc42c1267525.jpg",
+      "board": "charuco",
+      "sha256": "3c24712b98ec499cf4c6c87802f98180205775a041c83910cf08e7dd1ce6e0b7",
+      "points": 16,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152047653Z-ddd62e67-fe3a-4002-917c-0507e9a1dc6a.jpg",
+      "board": "charuco",
+      "sha256": "81b39b3330bd60d45ea989f02f285a0dc7ea1f0a81eeb13d92ea526ae07426ed",
+      "points": 18,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152053351Z-a11baad8-a0db-4a66-96ba-fb215bbf8a72.jpg",
+      "board": "charuco",
+      "sha256": "71cb4d507a1339da877293b1444e130526ea4403bb76b5e7865eba5e5230a2a5",
+      "points": 24,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152059120Z-2dbb6618-9eb1-416d-9638-63e041c30738.jpg",
+      "board": "charuco",
+      "sha256": "fa4e4896dc94d9f89853f6b282576ec950857e4e5495d6b5d85026783f9ac23c",
+      "points": 24,
+      "set": "heldout"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152104814Z-b6f6933b-ec62-45b5-a9d2-8f4028e3f946.jpg",
+      "board": "charuco",
+      "sha256": "a324bc9f3ede22531ca3a169bb3b155ecc34f71d9c424dc8f5fd6b86c2fb5945",
+      "points": 11,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152110554Z-5880d2aa-d0be-4019-b6e8-01df0560bd58.jpg",
+      "board": "charuco",
+      "sha256": "12d59da8038298253866f686edccb59261a23dcf41c8a57a4c9665e23f6594a9",
+      "points": 12,
+      "set": "fit"
+    },
+    {
+      "path": "C:/Users/HP/AppData/Local/Temp/claude/C--Users-HP-Documents-Anastylos-integration-spatial/daeb0c5d-90ac-4d50-bbc9-1a4b65d43beb/scratchpad/xcal/sorted/charuco\\2026-10-30T152116249Z-99207463-d1c0-4685-8f1d-b44197363fa0.jpg",
+      "board": "charuco",
+      "sha256": "5bcfe219a7d43a73a61e16a48231b5e87b5aa60c637c98b5296af2f1bf1ba027",
+      "points": 13,
+      "set": "heldout"
+    }
+  ]
+}

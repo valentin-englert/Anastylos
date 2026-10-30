@@ -15,9 +15,14 @@ import org.anastylos.capture.camera.FocusMode
  * [OpenCvPoseEstimator]).
  *
  * The profile is bound to its recording geometry AND optics: camera
- * ID, analysis size, zoom 1x, and manual focus in diopters. A change
+ * ID, pixel grid, zoom 1x, and manual focus in diopters. A change
  * to any of them invalidates the profile instead of silently reusing
- * it (CAL-01).
+ * it (CAL-01). The one admitted pixel-grid change is a uniform
+ * downscale of the same aspect ratio (GUIDE-01): Camera2 crops every
+ * output stream from the same crop region centred to its aspect
+ * ratio and then scales it, so a 1280x720 stream images exactly the
+ * field of the calibrated 1920x1080 grid. The intrinsics are scaled
+ * exactly and the profile ID names the derivation.
  */
 object CalibrationProfile {
     const val SCHEMA = "anastylos-camera-calibration@1"
@@ -71,10 +76,11 @@ object CalibrationProfile {
 
     /**
      * True only for a validated profile whose recording geometry and
-     * optics exactly match the live stream: same camera, same analysis
-     * size, zoom 1x ([linearZoom] 0), and the same manual focus in
-     * diopters. Anything else — including a second calibrated camera —
-     * is a different profile, never a silent reuse.
+     * optics match the live stream: same camera, same analysis size or
+     * an exact same-aspect downscale of it ([gridScale]), zoom 1x
+     * ([linearZoom] 0), and the same manual focus in diopters.
+     * Anything else — including a second calibrated camera — is a
+     * different profile, never a silent reuse.
      */
     fun isCompatible(
         doc: Document,
@@ -84,27 +90,84 @@ object CalibrationProfile {
         linearZoom: Float,
         focusMode: FocusMode,
         focusDiopters: Float,
-    ): Boolean {
-        if (doc.metricValidity != VALIDITY_VALIDATED) return false
-        if (cameraId == null || doc.cameraId != cameraId) return false
-        if (doc.referenceSizePx[0] != analysisWidth) return false
-        if (doc.referenceSizePx[1] != analysisHeight) return false
-        if (doc.zoom != 1.0 || linearZoom != 0f) return false
-        val wantFocus = doc.focusDiopters ?: return false
-        if (focusMode != FocusMode.MANUAL) return false
-        if (kotlin.math.abs(focusDiopters - wantFocus) > FOCUS_TOLERANCE_D) return false
-        return true
+    ): Boolean = mismatch(
+        doc, cameraId, analysisWidth, analysisHeight, linearZoom, focusMode, focusDiopters,
+    ) == null
+
+    /**
+     * The first binding the live configuration violates, as an
+     * operator-readable reason, or null when [isCompatible]. Same
+     * checks in the same order — the single source of the rule.
+     */
+    fun mismatch(
+        doc: Document,
+        cameraId: String?,
+        analysisWidth: Int,
+        analysisHeight: Int,
+        linearZoom: Float,
+        focusMode: FocusMode,
+        focusDiopters: Float,
+    ): String? {
+        if (doc.metricValidity != VALIDITY_VALIDATED) return "profile not validated"
+        if (cameraId == null || doc.cameraId != cameraId) {
+            return "profile is for camera ${doc.cameraId}, live camera is ${cameraId ?: "none"}"
+        }
+        if (gridScale(doc, analysisWidth, analysisHeight) == null) {
+            return "analysis ${analysisWidth}x$analysisHeight is not the calibrated " +
+                "${doc.referenceSizePx[0]}x${doc.referenceSizePx[1]} grid or a same-aspect downscale"
+        }
+        if (doc.zoom != 1.0 || linearZoom != 0f) return "zoom must be 1x"
+        val wantFocus = doc.focusDiopters ?: return "profile has no fixed focus"
+        if (focusMode != FocusMode.MANUAL) {
+            return "focus is $focusMode; profile needs manual ${"%.2f".format(java.util.Locale.US, wantFocus)} D"
+        }
+        if (kotlin.math.abs(focusDiopters - wantFocus) > FOCUS_TOLERANCE_D) {
+            return "focus ${"%.2f".format(java.util.Locale.US, focusDiopters)} D; " +
+                "profile needs ${"%.2f".format(java.util.Locale.US, wantFocus)} D"
+        }
+        return null
     }
 
-    /** Intrinsics in solver pixels; the profile ID never reads uncalibrated. */
-    fun toIntrinsics(doc: Document): PoseEstimator.Intrinsics = PoseEstimator.Intrinsics(
-        fx = doc.k[0],
-        fy = doc.k[4],
-        cx = doc.k[2],
-        cy = doc.k[5],
-        width = doc.referenceSizePx[0],
-        height = doc.referenceSizePx[1],
-        distortion = doc.distortion,
-        profileId = "measured:" + doc.profileId,
-    )
+    /**
+     * Scale from the profile's pixel grid to [width]x[height]: 1.0 for
+     * the recorded size, the exact factor for a same-aspect downscale,
+     * null otherwise (other aspect = other crop; upscale = precision
+     * the calibration never measured).
+     */
+    fun gridScale(doc: Document, width: Int, height: Int): Double? =
+        gridScale(doc.referenceSizePx[0], doc.referenceSizePx[1], width, height)
+
+    /** [gridScale] against a bare reference size. */
+    fun gridScale(refW: Int, refH: Int, width: Int, height: Int): Double? {
+        if (width <= 0 || height <= 0 || width > refW) return null
+        if (width.toLong() * refH != height.toLong() * refW) return null
+        return width.toDouble() / refW
+    }
+
+    /**
+     * Intrinsics in solver pixels for a compatible [width]x[height]
+     * grid (default: the recorded one); the profile ID never reads
+     * uncalibrated. Pixel convention is top-left pixel centre (0, 0),
+     * so principal points scale about the pixel-grid corner
+     * (c' = (c + 0.5) s - 0.5). Distortion acts on normalized
+     * coordinates and is grid-independent.
+     */
+    fun toIntrinsics(
+        doc: Document,
+        width: Int = doc.referenceSizePx[0],
+        height: Int = doc.referenceSizePx[1],
+    ): PoseEstimator.Intrinsics {
+        val s = requireNotNull(gridScale(doc, width, height)) { "incompatible grid ${width}x$height" }
+        val derived = width != doc.referenceSizePx[0]
+        return PoseEstimator.Intrinsics(
+            fx = doc.k[0] * s,
+            fy = doc.k[4] * s,
+            cx = (doc.k[2] + 0.5) * s - 0.5,
+            cy = (doc.k[5] + 0.5) * s - 0.5,
+            width = width,
+            height = height,
+            distortion = doc.distortion,
+            profileId = "measured:" + doc.profileId + if (derived) "@${width}x$height-scaled" else "",
+        )
+    }
 }

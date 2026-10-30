@@ -75,6 +75,23 @@ fun stillOptionsFor(settings: CameraSettings, caps: CameraCapabilities): StillOp
     )
 }
 
+/** Frame rate the tracking stream needs for fresh poses (GUIDE-01). */
+const val TRACKING_FPS = 30
+
+/**
+ * AE target-FPS range for auto exposure on the repeating stream: the
+ * range with the highest lower bound not above [TRACKING_FPS] (ties:
+ * lowest upper bound), or null when none exists. Without it the
+ * SM-A536B AE stretches exposure to ~13 fps in room light; the sensor
+ * timestamp is exposure start, so every frame then arrives ~150 ms
+ * old and no pose can meet the frozen 150 ms freshness gate. A fixed
+ * lower bound makes AE trade gain (noise) for exposure time instead.
+ */
+fun trackingFpsRange(ranges: List<Pair<Int, Int>>): Pair<Int, Int>? =
+    ranges.filter { (lower, upper) -> lower in 1..upper && upper <= TRACKING_FPS }
+        .sortedWith(compareByDescending<Pair<Int, Int>> { it.first }.thenBy { it.second })
+        .firstOrNull()
+
 /** Bakes [StillOptions] into an ImageCapture builder. Returns the builder. */
 @ExperimentalCamera2Interop
 fun applyStillOptions(builder: ImageCapture.Builder, opts: StillOptions): ImageCapture.Builder {
@@ -100,6 +117,11 @@ class CameraXSettingsApplier : SettingsApplier {
                 options.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, settings.iso)
             } else {
                 options.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
+                trackingFpsRange(caps.aeFpsRanges)?.let { (lower, upper) ->
+                    options.setCaptureRequestOption(
+                        CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, android.util.Range(lower, upper),
+                    )
+                }
             if (settings.exposureMode == ExposureMode.AUTO && caps.supportsEv) {
                 options.setCaptureRequestOption(
                     CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.evSteps,
@@ -130,7 +152,8 @@ class CameraXSettingsApplier : SettingsApplier {
                 "apply exp=${settings.exposureMode}@${settings.iso}/" +
                     "${formatExposure(settings.exposureNs)}/ev${settings.evSteps} " +
                     "focus=${settings.focusMode}@${formatFocus(settings.focusDiopters)} " +
-                    "awb=${settings.awbMode} zoom=${settings.linearZoom} torch=$torch",
+                    "awb=${settings.awbMode} zoom=${settings.linearZoom} torch=$torch " +
+                    "fps=${trackingFpsRange(caps.aeFpsRanges)?.takeIf { settings.exposureMode == ExposureMode.AUTO }}",
             )
             true
         } catch (e: Exception) {

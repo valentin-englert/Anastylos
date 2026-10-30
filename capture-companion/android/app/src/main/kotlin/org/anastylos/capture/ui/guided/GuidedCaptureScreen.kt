@@ -47,6 +47,7 @@ import org.anastylos.capture.di.AppContainer
 import org.anastylos.capture.guidance.CueAxis
 import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.PhoneRotation
+import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.RegistrationState
 import org.anastylos.capture.guidance.RequestState
 import org.anastylos.capture.guidance.SessionState
@@ -69,6 +70,12 @@ fun GuidedCaptureScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.state.collectAsState()
+    // Per-pose fields change at the analysis rate; sections that never
+    // read them get an equal-while-unchanged copy so Compose skips them.
+    // GUIDE-01: recomposing the whole screen per pose saturated the
+    // main thread (~70 ms frames) and aged every pose before the gates.
+    val coldKey = state.withoutPoseFields()
+    val cold = remember(coldKey) { coldKey }
     // FIT_CENTER: the overlay maps analysis pixels onto the view
     // analytically (OverlayMapping) — no crop math to get wrong.
     val previewView = remember {
@@ -128,6 +135,12 @@ fun GuidedCaptureScreen(
                     "Poses are coarse; metric evidence is disabled until calibration.",
                 color = MaterialTheme.colorScheme.error,
             )
+            cold.calibrationBlocker?.let { reason ->
+                Text("Calibrated profile not applied: $reason")
+                Button(onClick = { viewModel.applyCalibratedOptics() }) {
+                    Text("Use calibrated optics")
+                }
+            }
         }
         TrackingBanner(state)
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -139,33 +152,50 @@ fun GuidedCaptureScreen(
         }
         CueList(state)
         StateGrid(state)
-        TargetPicker(state, viewModel)
+        TargetPicker(cold, viewModel)
         CameraPicker(
-            cameras = state.availableCameras,
-            effectiveId = state.effectiveCameraId,
-            note = state.cameraNote,
+            cameras = cold.availableCameras,
+            effectiveId = cold.effectiveCameraId,
+            note = cold.cameraNote,
             onSelect = { viewModel.selectCamera(it) },
         )
         CameraSettingsPanel(
-            settings = state.settings,
-            caps = viewModel.capsFor(state.effectiveCameraId),
+            settings = cold.settings,
+            caps = viewModel.capsFor(cold.effectiveCameraId),
             profiles = SETTING_PROFILES,
-            activeProfile = state.activeProfile,
-            appliedLine = state.appliedLine,
-            settingsNote = state.settingsNote,
+            activeProfile = cold.activeProfile,
+            appliedLine = cold.appliedLine,
+            settingsNote = cold.settingsNote,
             analysisSelectable = true,
             onUpdate = viewModel::updateSettings,
             onProfile = { viewModel.selectProfile(it) },
         )
-        ControlRow(state, viewModel)
+        ControlRow(cold, viewModel)
         QualityRow(state, viewModel)
-        RemoteSection(state, viewModel)
-        ResultCard(state, viewModel)
+        RemoteSection(cold, viewModel)
+        ResultCard(cold, viewModel)
         state.cameraError?.let { Text("Camera: $it", color = MaterialTheme.colorScheme.error) }
         state.captureError?.let { Text("Capture: $it", color = MaterialTheme.colorScheme.error) }
         state.sessionReason?.let { Text("Session note: $it") }
     }
 }
+
+/** [GuidanceUiState] with every per-pose field at its default. */
+private fun GuidanceUiState.withoutPoseFields(): GuidanceUiState = copy(
+    registration = RegistrationState.UNREGISTERED,
+    wireReason = null,
+    dwell = org.anastylos.capture.guidance.DwellState.Idle,
+    cues = emptyList(),
+    poseAgeMs = null,
+    rmsPx = null,
+    cornersPx = emptyList(),
+    markersSeen = emptyList(),
+    qualityVerdict = ImageQualityVerdict.Unknown,
+    measuredSharpness = null,
+    orientationOk = false,
+    distanceOk = false,
+    holdReason = null,
+)
 
 @Composable
 private fun TrackingBanner(state: GuidanceUiState) {

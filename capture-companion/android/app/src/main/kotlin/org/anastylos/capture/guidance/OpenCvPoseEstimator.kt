@@ -60,7 +60,7 @@ class OpenCvPoseEstimator(
             "DICT_6X6_250" -> Objdetect.DICT_6X6_250
             else -> null
         }
-        val quality = try {
+        val fullFrameQuality = try {
             if (input.yPlane.size == input.width * input.height) {
                 FrameQuality.measure(input.yPlane, input.width, input.height)
             } else {
@@ -70,16 +70,26 @@ class OpenCvPoseEstimator(
             null
         }
         if (dictionaryId == null || input.yPlane.size != input.width * input.height) {
-            return lost(input, quality)
+            return lost(input, fullFrameQuality)
         }
         val detections = try {
             backend.detect(input.yPlane, input.width, input.height, dictionaryId)
         } catch (_: LinkageError) {
-            return lost(input, quality)
+            return lost(input, fullFrameQuality)
         } catch (_: Exception) {
-            return lost(input, quality)
+            return lost(input, fullFrameQuality)
         }
-        if (detections.isEmpty()) return lost(input, quality)
+        if (detections.isEmpty()) return lost(input, fullFrameQuality)
+        val quality = try {
+            fullFrameQuality?.let {
+                FrameQuality.withBoardExposure(
+                    it, input.yPlane, input.width, input.height,
+                    detections.flatMap { detection -> detection.corners },
+                )
+            }
+        } catch (_: Exception) {
+            fullFrameQuality
+        }
         val seen = detections.map { it.id }
         val corners = detections.sumOf { it.corners.size }
         val cornersPx = detections.map { PoseEstimator.MarkerCorners(it.id, it.corners) }
@@ -286,9 +296,19 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
      * only drops candidates far outside the calibrated operating
      * range; detection parity is verified on-device (marker counts).
      */
+    private companion object {
+        const val ADAPTIVE_WINDOW_PX = 23
+    }
+
     private fun tunedParameters(): DetectorParameters {
         val params = DetectorParameters()
         params.set_minMarkerPerimeterRate(0.1)
+        // One adaptive-threshold pass (window 23 px) instead of the
+        // default three (3/13/23): at the calibrated working distance a
+        // marker module is >= 7 px at 1280 width, so the 3 px window
+        // only adds noise candidates while costing a full pass.
+        params.set_adaptiveThreshWinSizeMin(ADAPTIVE_WINDOW_PX)
+        params.set_adaptiveThreshWinSizeMax(ADAPTIVE_WINDOW_PX)
         return params
     }
 

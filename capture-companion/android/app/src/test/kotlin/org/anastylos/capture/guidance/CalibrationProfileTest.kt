@@ -63,8 +63,10 @@ class CalibrationProfileTest {
         )
         assertThat(check(cameraId = "1")).isFalse()
         assertThat(check(cameraId = null)).isFalse()
-        assertThat(check(width = 1280, height = 720)).isFalse()
         assertThat(check(width = 1920, height = 1200)).isFalse()
+        assertThat(check(width = 1280, height = 960)).isFalse()
+        assertThat(check(width = 3840, height = 2160)).isFalse()
+        assertThat(check(width = 1281, height = 720)).isFalse()
         assertThat(check(zoom = 0.04f)).isFalse()
         assertThat(check(focusMode = FocusMode.AUTO)).isFalse()
         assertThat(check(diopters = 2.0f)).isFalse()
@@ -148,5 +150,62 @@ class CalibrationProfileTest {
         assertThat(i.profileId).startsWith("measured:")
         assertThat(i.profileId).contains(doc.profileId)
         assertThat(i.profileId).doesNotContain("uncalibrated")
+    }
+
+    @Test
+    fun sameAspectDownscaleIsCompatible() {
+        val doc = validDoc()
+        assertThat(
+            CalibrationProfile.isCompatible(doc, "0", 1280, 720, 0f, FocusMode.MANUAL, 2.5f),
+        ).isTrue()
+        assertThat(
+            CalibrationProfile.isCompatible(doc, "0", 960, 540, 0f, FocusMode.MANUAL, 2.5f),
+        ).isTrue()
+        // Optics still bind a scaled grid.
+        assertThat(
+            CalibrationProfile.isCompatible(doc, "0", 1280, 720, 0f, FocusMode.AUTO, 2.5f),
+        ).isFalse()
+        assertThat(
+            CalibrationProfile.isCompatible(doc, "1", 1280, 720, 0f, FocusMode.MANUAL, 2.5f),
+        ).isFalse()
+    }
+
+    @Test
+    fun scaledIntrinsicsUsePixelCentreConvention() {
+        val doc = validDoc()
+        val i = CalibrationProfile.toIntrinsics(doc, 1280, 720)
+        val s = 1280.0 / 1920.0
+        assertThat(i.fx).isWithin(1e-9).of(doc.k[0] * s)
+        assertThat(i.fy).isWithin(1e-9).of(doc.k[4] * s)
+        assertThat(i.cx).isWithin(1e-9).of((doc.k[2] + 0.5) * s - 0.5)
+        assertThat(i.cy).isWithin(1e-9).of((doc.k[5] + 0.5) * s - 0.5)
+        assertThat(i.width).isEqualTo(1280)
+        assertThat(i.height).isEqualTo(720)
+        assertThat(i.distortion).containsExactlyElementsIn(doc.distortion).inOrder()
+        assertThat(i.profileId).isEqualTo("measured:${doc.profileId}@1280x720-scaled")
+        assertThat(i.profileId).doesNotContain("uncalibrated")
+    }
+
+    @Test
+    fun scaledProjectionMatchesRecordedGrid() {
+        // A ray projected with the scaled K lands on the same physical
+        // point of the image: grid corner (-0.5) mapping is preserved.
+        val doc = validDoc()
+        val full = CalibrationProfile.toIntrinsics(doc)
+        val small = CalibrationProfile.toIntrinsics(doc, 1280, 720)
+        val s = 1280.0 / 1920.0
+        val x = 0.21
+        val y = -0.13
+        val uFull = full.fx * x + full.cx
+        val vFull = full.fy * y + full.cy
+        assertThat(small.fx * x + small.cx).isWithin(1e-9).of((uFull + 0.5) * s - 0.5)
+        assertThat(small.fy * y + small.cy).isWithin(1e-9).of((vFull + 0.5) * s - 0.5)
+    }
+
+    @Test
+    fun recordedGridKeepsPlainProfileId() {
+        val doc = validDoc()
+        assertThat(CalibrationProfile.toIntrinsics(doc, 1920, 1080).profileId)
+            .isEqualTo("measured:${doc.profileId}")
     }
 }

@@ -1,0 +1,3 @@
+allprojects {
+    layout.buildDirectory = new File("<scratchpad>/altbuild/" + project.name)
+}

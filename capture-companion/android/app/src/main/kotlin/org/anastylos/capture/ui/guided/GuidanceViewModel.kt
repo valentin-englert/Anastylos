@@ -34,6 +34,9 @@ import org.anastylos.capture.camera.UsableCamera
 import org.anastylos.capture.camera.AppliedSettings
 import org.anastylos.capture.camera.CameraCapabilities
 import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.CalibratedOptics
+import org.anastylos.capture.camera.FocusMode
+import org.anastylos.capture.camera.MeasuredProfileSource
 import org.anastylos.capture.camera.DEFAULT_PROFILE
 import org.anastylos.capture.camera.formatApplied
 import org.anastylos.capture.camera.sanitizeSettings
@@ -61,6 +64,7 @@ import org.anastylos.capture.sync.RemoteSessionState
 import org.anastylos.capture.sync.SpatialSidecar
 import org.anastylos.capture.sync.tlsForPairing
 import org.anastylos.capture.guidance.BoardGeometry
+import org.anastylos.capture.guidance.CalibrationProfile
 import org.anastylos.capture.guidance.DIAG_LOG_TAG
 import org.anastylos.capture.guidance.TimingAccumulator
 import org.anastylos.capture.guidance.CameraPoseB
@@ -193,6 +197,10 @@ data class GuidanceUiState(
     val activeProfile: String = DEFAULT_PROFILE,
     val appliedLine: String? = null,
     val settingsNote: String? = null,
+    /** Why the validated profile does not apply, when one exists for this camera. */
+    val calibrationBlocker: String? = null,
+    /** Recorded optics of this camera's validated profile, if any. */
+    val calibratedOptics: CalibratedOptics? = null,
 )
 
 /**
@@ -221,6 +229,7 @@ class GuidanceViewModel(
     private val associations: GuidedAssociationRepository? = null,
     private val appVersion: String = "0.1.0",
     private val uuid: () -> String = { UUID.randomUUID().toString() },
+    private val measuredProfiles: MeasuredProfileSource? = null,
     private val timing: TimingAccumulator = TimingAccumulator(),
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
@@ -344,6 +353,9 @@ class GuidanceViewModel(
                     cameraNote = source.cameraNote,
                 )
             }
+            _state.update {
+                it.withCalibrationStatus(intrinsics?.profileId)
+            }
             observeSettings()
             estimatesJob?.cancel()
             estimatesJob = viewModelScope.launch {
@@ -462,7 +474,7 @@ class GuidanceViewModel(
                 settingsNote = if (ok) null else "settings not applied",
                 intrinsicsLabel = label,
                 uncalibrated = label == null || label.contains("uncalibrated"),
-            )
+            ).withCalibrationStatus(label)
         }
         viewModelScope.launch {
             val stillOk = try {
@@ -525,6 +537,43 @@ class GuidanceViewModel(
             }
         }
         observeSettings()
+    }
+
+    /**
+     * One-tap reuse of the validated profile: sets exactly the optics
+     * it was recorded with (manual focus, zoom 1x) and a compatible
+     * analysis grid, keeping the current one when it already is.
+     * Validity is still decided by the profile binding afterwards.
+     */
+    fun applyCalibratedOptics() {
+        val optics = _state.value.calibratedOptics ?: return
+        updateSettings { current ->
+            val grid = listOf(current.analysisSize, CameraSettings.DEFAULT_ANALYSIS_SIZE)
+                .firstOrNull { (w, h) ->
+                    CalibrationProfile.gridScale(optics.referenceWidth, optics.referenceHeight, w, h) != null
+                } ?: (optics.referenceWidth to optics.referenceHeight)
+            current.copy(
+                focusMode = FocusMode.MANUAL,
+                focusDiopters = optics.focusDiopters,
+                linearZoom = 0f,
+                analysisSize = grid,
+            )
+        }
+    }
+
+    private fun GuidanceUiState.withCalibrationStatus(label: String?): GuidanceUiState {
+        val profiles = measuredProfiles ?: return this
+        val calibrated = label != null && !label.contains("uncalibrated")
+        val optics = profiles.calibratedOptics(effectiveCameraId)
+        val (w, h) = overlayGeometry?.let { it.analysisWidth to it.analysisHeight } ?: settings.analysisSize
+        val blocker = if (calibrated) {
+            null
+        } else {
+            profiles.mismatch(
+                effectiveCameraId, w, h, settings.linearZoom, settings.focusMode, settings.focusDiopters,
+            )
+        }
+        return copy(calibrationBlocker = blocker, calibratedOptics = optics)
     }
 
     fun selectTarget(target: TargetViewpoint?) {
@@ -1169,7 +1218,7 @@ class GuidanceViewModel(
         }
         val nowNs = nanoClock()
         val ageMs = (nowNs - estimate.monotonicNs) / 1_000_000L
-        recordUiTiming(nowNs, ageMs)
+        recordUiTiming(nowNs, ageMs, estimate)
         val (phone, wireReason) = mapWireRegistration(estimate.status)
         val poseEvent = when (estimate.status) {
             WireRegistration.VALID -> WirePoseEvent.PosesValid
@@ -1274,11 +1323,16 @@ class GuidanceViewModel(
     }
 
     /** GUIDE-01 diagnostics: throttled UI-side age/gap summary, else null. */
-    private fun recordUiTiming(nowNs: Long, ageMs: Long) {
+    private fun recordUiTiming(nowNs: Long, ageMs: Long, estimate: PoseEstimator.Estimate) {
         val gapMs = lastUiEstimateNs?.let { (nowNs - it) / 1_000_000.0 } ?: 0.0
         lastUiEstimateNs = nowNs
-        val summary = timing.recordUi(ageMs, gapMs)
-        if (summary != null) Log.i(DIAG_LOG_TAG, "guided $summary")
+        val summary = timing.recordUi(ageMs, gapMs) ?: return
+        val t = estimate.tBC?.let { translationOfRowMajor(it) }
+        val pose = if (t == null) "pose=none" else
+            "rms=${"%.2f".format(java.util.Locale.US, estimate.rmsPx ?: Double.NaN)} " +
+                "t=${"%.1f,%.1f,%.1f".format(java.util.Locale.US, t.x, t.y, t.z)} status=${estimate.status} " +
+                "profile=${_state.value.intrinsicsLabel}"
+        Log.i(DIAG_LOG_TAG, "guided $summary $pose")
     }
 
     private fun motionStats(estimate: PoseEstimator.Estimate): Pair<Double, Double>? {
@@ -1654,7 +1708,8 @@ class GuidanceViewModel(
             algorithmConfigJson = ALGORITHM_CONFIG_JSON
                 .replace("{dict}", board.dictionary)
                 .replace("{w}", geometry.analysisWidth.toString())
-                .replace("{h}", geometry.analysisHeight.toString()),
+                .replace("{h}", geometry.analysisHeight.toString())
+                .replace("{roi}", quality?.exposureRoi ?: "unmeasured"),
         )
     }
 
@@ -1714,9 +1769,9 @@ private val TERMINAL_REQUESTS = setOf(
 private const val THRESHOLD_CONFIG_JSON =
     """{"profile":"guidance-hypothesis-1","rms_px":1.2,"motion_median_px":0.7,"motion_p90_px":1.5,"sharpness_ratio":0.7,"bad_exposure_frac":0.05,"min_markers":3}"""
 
-/** Canonical solver config; `{dict}`, `{w}`, `{h}` are substituted per capture. */
+/** Canonical solver config; `{dict}`, `{w}`, `{h}`, `{roi}` are substituted per capture. */
 private const val ALGORITHM_CONFIG_JSON =
-    """{"solver":"aruco-solvepnp-iterative","opencv":"4.14.0","dictionary":"{dict}","analysis":"{w}x{h}"}"""
+    """{"solver":"aruco-solvepnp-iterative","opencv":"4.14.0","dictionary":"{dict}","analysis":"{w}x{h}","exposure_roi":"{roi}"}"""
 
 /**
  * Mirrors `CameraSelector.LENS_FACING_EXTERNAL` without referencing

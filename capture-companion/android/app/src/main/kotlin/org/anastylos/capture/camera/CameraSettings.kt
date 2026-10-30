@@ -29,6 +29,8 @@ data class CameraCapabilities(
     val flashAvailable: Boolean = false,
     /** True when REQUEST_AVAILABLE_CAPABILITIES contains MANUAL_SENSOR. */
     val manualSensor: Boolean = false,
+    /** CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES as (lower, upper). */
+    val aeFpsRanges: List<Pair<Int, Int>> = emptyList(),
 ) {
     val supportsManualExposure: Boolean
         // MANUAL_SENSOR is the true gate: AE_OFF alone only locks

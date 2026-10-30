@@ -208,6 +208,9 @@ class CameraXInventorySource : CameraInventorySource {
                 )?.contains(
                     CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR,
                 ) == true,
+                aeFpsRanges = camera2.getCameraCharacteristic(
+                    CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
+                )?.map { it.lower to it.upper } ?: emptyList(),
             )
         } catch (_: Exception) {
             CameraCapabilities()

@@ -1,0 +1,260 @@
+{
+  "schema": "anastylos-camera-calibration@1",
+  "profile_id": "6c8ddabe-3700-44e7-bbc8-f7fccf8f1fe4",
+  "camera_id": "0",
+  "sensor_mode": "0-1920x1080-still-MF40cm-AE-EV0",
+  "reference_image_size_px": [
+    1920,
+    1080
+  ],
+  "reference_pixel_frame_id": "cam0-native-1920x1080",
+  "K": [
+    1418.3911318466182,
+    0.0,
+    965.4152652967795,
+    0.0,
+    1419.820774259733,
+    541.39886615119,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion": [
+    -0.006145437208514986,
+    -0.03756239238370003,
+    0.0007499619861579773,
+    0.0016098180503176258,
+    0.06296822753931895
+  ],
+  "camera_model": "brown_conrady_5",
+  "zoom": 1,
+  "focus_distance_diopters": 2.5,
+  "physical_lens_id": null,
+  "sensor_crop": null,
+  "pixel_convention": "top_left_pixel_center_0_0_x_right_y_down",
+  "board_ref": {
+    "board_frame_id": "joint-charuco-a3",
+    "layout_role": "joint:charuco+surface_a3"
+  },
+  "algorithm": "opencv-joint-calibrate",
+  "algorithm_version": "cv2-4.14.0",
+  "build_sha": "see-diagnostics",
+  "created_at": "2026-10-30T15:30:18.000Z",
+  "source_id": "cc90e65d-3fea-58c4-a0d8-798008e581d8",
+  "evidence_class": "physical",
+  "metric_validity": "unknown",
+  "limitations": [
+    "CAL-01 joint two-board profile. metric_validity stays unknown until the independent scale check passes.",
+    "Independent check NOT passed: rms_ok=False scale_ok=True validator={'verdict': 'needs_review', 'reasons': [], 'reviews': ['MAX_VIEW_RMS_OVER_GATE', 'HELD_OUT_RMS_OVER_GATE'], 'notes': []}."
+  ],
+  "calibration_image_assets": [
+    {
+      "asset_id": "98508ab8-5edc-5c12-8e4a-8cfc10dfcb08",
+      "sha256": "db496f5725f4ee298f25aa26b0d82aae35fc2d588387bd3cd6e349bc771c2805"
+    },
+    {
+      "asset_id": "1b4643f0-3eeb-5f54-a38a-dafa052c2d6e",
+      "sha256": "e1eee52693d7f44d2077ad86bb3bd2ede282b8f28671c2418758ffc1bcb3d4f2"
+    },
+    {
+      "asset_id": "5cfca6aa-fa34-5222-9839-a72abd7d4e85",
+      "sha256": "6c89b38dd174d821bb27d04c5ecfd4c1841c48ba0e386ea3516e006f7082eddc"
+    },
+    {
+      "asset_id": "be5127b2-5fc9-5bae-8688-a44c3a48b80e",
+      "sha256": "5e236be5177f26e5716577785d4cf5fc3fd74dfb224c0c3b34f90d1eae08d4d4"
+    },
+    {
+      "asset_id": "88929fed-44ae-5f87-988c-3aa987ca61bc",
+      "sha256": "adf3a558e181ed918e0396174e124b33c40cc9797bcac3b94eda4438d92cfc26"
+    },
+    {
+      "asset_id": "14fbd3de-316a-53c0-8154-76d0dcf349f7",
+      "sha256": "d1afc7b6e5d48caa309a94e8eb5eb7a35133ca753a5a8396d895ce464f6b42e3"
+    },
+    {
+      "asset_id": "1f7bbe38-cfa0-5fbf-a567-46fce3ec454a",
+      "sha256": "ea99876da3c069fbb68f2d99c55081db68333c65258637a193a8e320791e2c6c"
+    },
+    {
+      "asset_id": "13985515-bff5-52e7-ad92-5efa1f10c018",
+      "sha256": "4a837a6bab389cb75052f60c40ecab0fadf07b0ad81c3bc5a96447c394a22a8d"
+    },
+    {
+      "asset_id": "c4f12fcd-1176-5aef-aa0d-cfb8716f0b5c",
+      "sha256": "53a37869909dfa9f7f75fdd7f6109ebbd5b2d7ae4c44467962565121cc6f5b88"
+    },
+    {
+      "asset_id": "7d251269-92c7-550e-8768-a67895e18c47",
+      "sha256": "df9431b60a999ac4848a0eef64639c9e3cf226838fc88d2da802ac1141fabf2a"
+    },
+    {
+      "asset_id": "9b5ca42a-7212-5a8e-90d8-08951a1132a9",
+      "sha256": "584411d396f2a6e91b10be6894791e2e249ee22f49f1a5bcc5ecd5fb6225527b"
+    },
+    {
+      "asset_id": "86da8a68-ba44-5dc3-b69d-b8eec7c873a9",
+      "sha256": "4b04dd477a49f5ff42e63180daaf33ad248fdb322d72b4ca6f681c469f36b96d"
+    },
+    {
+      "asset_id": "da6afd77-36a5-59c6-9ae2-75f2f601ec10",
+      "sha256": "06cda298d37974e60fdb32137aade060de3d9a302111ae210ecc5f954876ea38"
+    },
+    {
+      "asset_id": "3ff89529-e55a-5c04-bc51-6360917c2e88",
+      "sha256": "39d3c67517891f0c15cd1d5e82eb8bde8eac43a0eff44d07c8d562b9d593db6a"
+    },
+    {
+      "asset_id": "728a5aa2-5fd3-54d7-9656-cd85aa923dee",
+      "sha256": "6f12cfcc9524266a907a8a91155758c656c85988f4a15a3bb55a962233922dcd"
+    },
+    {
+      "asset_id": "32c9dac8-0294-5b78-9d97-4a5e5c70b3ef",
+      "sha256": "459d47dc2eff7657ca35bfe9b35841b46b722d7e0cd45c96bf5cb0fb722ea86d"
+    },
+    {
+      "asset_id": "3be80803-e7c5-5860-bd15-8190f2cf192a",
+      "sha256": "46ae3f32542bb9a6100c91ceacea671f0fa5960e054d97f8917f3dc321f1092b"
+    },
+    {
+      "asset_id": "bca50155-b676-5a78-9d7f-dd596aa59417",
+      "sha256": "1f2091cd5ab96d5690539052ee9c7687030b7aa98c31cabae618765ea66564f9"
+    },
+    {
+      "asset_id": "8b40b241-4998-5fef-8f48-6c02e8c16fc4",
+      "sha256": "92376072f6fc81fe4706bcc9f08d94df85044ed6d958978bc92b9922a40867d8"
+    },
+    {
+      "asset_id": "8878386f-87b4-573f-a03e-39e14a90dc27",
+      "sha256": "360dde6f52aa7d3fb114099ad9202d19b13ade55f5f65a3b2f12f4f3cd205d77"
+    },
+    {
+      "asset_id": "e4474efe-5a34-531c-8879-a8d6c2ef9050",
+      "sha256": "c09743ad5434bce6d350a61db141423c8657f1323bca7c6bdb3fcfbc511bca57"
+    },
+    {
+      "asset_id": "5cc4df4c-f45e-5452-a0e2-909024489a8b",
+      "sha256": "9bb1b252a2839a680f29684db63471ca2c52ff9243625729607f8fce1a051261"
+    },
+    {
+      "asset_id": "b1290891-2948-5196-802d-ed2cce9c3e44",
+      "sha256": "15f14768426d98beafd63789213c5b007b0431b719ef1d90db708c504775aa7b"
+    },
+    {
+      "asset_id": "93969e08-20de-5808-8083-23b00b0e5ad0",
+      "sha256": "3c24712b98ec499cf4c6c87802f98180205775a041c83910cf08e7dd1ce6e0b7"
+    },
+    {
+      "asset_id": "8836fa49-2123-5d23-a825-c1979fc3a916",
+      "sha256": "81b39b3330bd60d45ea989f02f285a0dc7ea1f0a81eeb13d92ea526ae07426ed"
+    },
+    {
+      "asset_id": "246d870a-12d1-5573-b5a8-e388da23fc99",
+      "sha256": "71cb4d507a1339da877293b1444e130526ea4403bb76b5e7865eba5e5230a2a5"
+    },
+    {
+      "asset_id": "1b8e616c-e817-581c-8c52-026668937871",
+      "sha256": "fa4e4896dc94d9f89853f6b282576ec950857e4e5495d6b5d85026783f9ac23c"
+    },
+    {
+      "asset_id": "3bc4050a-20f4-51a7-9ac0-e158cbe3d844",
+      "sha256": "a324bc9f3ede22531ca3a169bb3b155ecc34f71d9c424dc8f5fd6b86c2fb5945"
+    },
+    {
+      "asset_id": "3a86fba2-24bf-5f4b-800c-6900296ab120",
+      "sha256": "12d59da8038298253866f686edccb59261a23dcf41c8a57a4c9665e23f6594a9"
+    },
+    {
+      "asset_id": "03f47f74-e10f-5355-8281-93d564c7970d",
+      "sha256": "5bcfe219a7d43a73a61e16a48231b5e87b5aa60c637c98b5296af2f1bf1ba027"
+    }
+  ],
+  "validation": {
+    "calibration_view_ids": [
+      "98508ab8-5edc-5c12-8e4a-8cfc10dfcb08",
+      "1b4643f0-3eeb-5f54-a38a-dafa052c2d6e",
+      "be5127b2-5fc9-5bae-8688-a44c3a48b80e",
+      "88929fed-44ae-5f87-988c-3aa987ca61bc",
+      "1f7bbe38-cfa0-5fbf-a567-46fce3ec454a",
+      "13985515-bff5-52e7-ad92-5efa1f10c018",
+      "7d251269-92c7-550e-8768-a67895e18c47",
+      "9b5ca42a-7212-5a8e-90d8-08951a1132a9",
+      "da6afd77-36a5-59c6-9ae2-75f2f601ec10",
+      "3ff89529-e55a-5c04-bc51-6360917c2e88",
+      "32c9dac8-0294-5b78-9d97-4a5e5c70b3ef",
+      "3be80803-e7c5-5860-bd15-8190f2cf192a",
+      "8b40b241-4998-5fef-8f48-6c02e8c16fc4",
+      "8878386f-87b4-573f-a03e-39e14a90dc27",
+      "5cc4df4c-f45e-5452-a0e2-909024489a8b",
+      "b1290891-2948-5196-802d-ed2cce9c3e44",
+      "8836fa49-2123-5d23-a825-c1979fc3a916",
+      "246d870a-12d1-5573-b5a8-e388da23fc99",
+      "3bc4050a-20f4-51a7-9ac0-e158cbe3d844",
+      "3a86fba2-24bf-5f4b-800c-6900296ab120",
+      "5cfca6aa-fa34-5222-9839-a72abd7d4e85",
+      "14fbd3de-316a-53c0-8154-76d0dcf349f7",
+      "c4f12fcd-1176-5aef-aa0d-cfb8716f0b5c",
+      "86da8a68-ba44-5dc3-b69d-b8eec7c873a9",
+      "728a5aa2-5fd3-54d7-9656-cd85aa923dee",
+      "bca50155-b676-5a78-9d7f-dd596aa59417",
+      "e4474efe-5a34-531c-8879-a8d6c2ef9050",
+      "93969e08-20de-5808-8083-23b00b0e5ad0",
+      "1b8e616c-e817-581c-8c52-026668937871",
+      "03f47f74-e10f-5355-8281-93d564c7970d"
+    ],
+    "held_out_view_ids": [
+      "5cfca6aa-fa34-5222-9839-a72abd7d4e85",
+      "14fbd3de-316a-53c0-8154-76d0dcf349f7",
+      "c4f12fcd-1176-5aef-aa0d-cfb8716f0b5c",
+      "86da8a68-ba44-5dc3-b69d-b8eec7c873a9",
+      "728a5aa2-5fd3-54d7-9656-cd85aa923dee",
+      "bca50155-b676-5a78-9d7f-dd596aa59417",
+      "e4474efe-5a34-531c-8879-a8d6c2ef9050",
+      "93969e08-20de-5808-8083-23b00b0e5ad0",
+      "1b8e616c-e817-581c-8c52-026668937871",
+      "03f47f74-e10f-5355-8281-93d564c7970d"
+    ],
+    "held_out_rms_px": 1.9316250411299722,
+    "per_view_rms_px": {
+      "98508ab8-5edc-5c12-8e4a-8cfc10dfcb08": 1.6979161372876104,
+      "1b4643f0-3eeb-5f54-a38a-dafa052c2d6e": 1.1671936815321484,
+      "be5127b2-5fc9-5bae-8688-a44c3a48b80e": 3.5151772729089106,
+      "88929fed-44ae-5f87-988c-3aa987ca61bc": 1.230571898176928,
+      "1f7bbe38-cfa0-5fbf-a567-46fce3ec454a": 0.7413911743182975,
+      "13985515-bff5-52e7-ad92-5efa1f10c018": 2.976321823945326,
+      "7d251269-92c7-550e-8768-a67895e18c47": 2.4369112736150704,
+      "9b5ca42a-7212-5a8e-90d8-08951a1132a9": 2.103740867071542,
+      "da6afd77-36a5-59c6-9ae2-75f2f601ec10": 0.3824042108651107,
+      "3ff89529-e55a-5c04-bc51-6360917c2e88": 0.5005948743463192,
+      "32c9dac8-0294-5b78-9d97-4a5e5c70b3ef": 0.3853577344107979,
+      "3be80803-e7c5-5860-bd15-8190f2cf192a": 0.429040617871044,
+      "8b40b241-4998-5fef-8f48-6c02e8c16fc4": 0.440561593945335,
+      "8878386f-87b4-573f-a03e-39e14a90dc27": 0.6071698216214537,
+      "5cc4df4c-f45e-5452-a0e2-909024489a8b": 0.37555686820781664,
+      "b1290891-2948-5196-802d-ed2cce9c3e44": 0.46052692649870614,
+      "8836fa49-2123-5d23-a825-c1979fc3a916": 0.4054851146761748,
+      "246d870a-12d1-5573-b5a8-e388da23fc99": 0.3701463428160732,
+      "3bc4050a-20f4-51a7-9ac0-e158cbe3d844": 0.353008332166879,
+      "3a86fba2-24bf-5f4b-800c-6900296ab120": 0.41657444731404003,
+      "5cfca6aa-fa34-5222-9839-a72abd7d4e85": 3.2518994701946853,
+      "14fbd3de-316a-53c0-8154-76d0dcf349f7": 3.716862320145132,
+      "c4f12fcd-1176-5aef-aa0d-cfb8716f0b5c": 1.5361534985718674,
+      "86da8a68-ba44-5dc3-b69d-b8eec7c873a9": 3.0398610048048806,
+      "728a5aa2-5fd3-54d7-9656-cd85aa923dee": 0.5190519490358586,
+      "bca50155-b676-5a78-9d7f-dd596aa59417": 0.6157593493786916,
+      "e4474efe-5a34-531c-8879-a8d6c2ef9050": 0.39229163536457295,
+      "93969e08-20de-5808-8083-23b00b0e5ad0": 0.449363280688349,
+      "1b8e616c-e817-581c-8c52-026668937871": 0.4515329987279438,
+      "03f47f74-e10f-5355-8281-93d564c7970d": 0.3362115227578661
+    },
+    "edge_coverage": 0.8199266565718081,
+    "independent_scale_check_mm": {
+      "nominal_mm": 480.98,
+      "measured_mm": 481.0,
+      "uncertainty_mm": 0.2,
+      "what": "surface_a3 diagonal marker10-outer-TL to marker12-outer-BR (CAL-01 Talmeter)"
+    },
+    "residual_map_ref": null,
+    "threshold_config_sha256": "a8b3340cdf16c552394b158a424d32176ab2a507ab12dcac9543f8c507e4af5f"
+  }
+}

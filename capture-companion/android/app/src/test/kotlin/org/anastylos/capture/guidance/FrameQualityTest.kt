@@ -61,4 +61,67 @@ class FrameQualityTest {
         } catch (_: IllegalArgumentException) {
         }
     }
+
+    /** 20x20 frame: black border (bench), white-ish board in the centre square 5..14. */
+    private fun benchAndBoard(): ByteArray = ByteArray(20 * 20) { index ->
+        val u = index % 20
+        val v = index / 20
+        if (u in 5..14 && v in 5..14) 200.toByte() else 0
+    }
+
+    private val boardCorners = listOf(
+        listOf(5.0, 5.0), listOf(15.0, 5.0), listOf(15.0, 15.0), listOf(5.0, 15.0),
+    )
+
+    @Test
+    fun boardExposureIgnoresBlackBench() {
+        val frame = benchAndBoard()
+        val full = FrameQuality.measure(frame, 20, 20)
+        assertThat(full.darkFraction).isWithin(1e-12).of(0.75)
+        val roi = FrameQuality.withBoardExposure(full, frame, 20, 20, boardCorners)
+        assertThat(roi.exposureRoi).isEqualTo(FrameQuality.ROI_MARKER_HULL)
+        assertThat(roi.darkFraction).isEqualTo(0.0)
+        assertThat(roi.saturatedFraction).isEqualTo(0.0)
+        assertThat(roi.fullFrameDarkFraction).isWithin(1e-12).of(0.75)
+        assertThat(roi.sharpness).isEqualTo(full.sharpness)
+    }
+
+    @Test
+    fun boardExposureStillRejectsDarkBoard() {
+        val frame = ByteArray(20 * 20) // everything black, board included
+        val full = FrameQuality.measure(frame, 20, 20)
+        val roi = FrameQuality.withBoardExposure(full, frame, 20, 20, boardCorners)
+        assertThat(roi.darkFraction).isEqualTo(1.0)
+    }
+
+    @Test
+    fun boardExposureCountsSaturationInsideHull() {
+        val frame = ByteArray(20 * 20) { index ->
+            val u = index % 20
+            val v = index / 20
+            if (u in 5..14 && v in 5..14) -1 else 0
+        }
+        val roi = FrameQuality.withBoardExposure(
+            FrameQuality.measure(frame, 20, 20), frame, 20, 20, boardCorners,
+        )
+        assertThat(roi.saturatedFraction).isEqualTo(1.0)
+        assertThat(roi.darkFraction).isEqualTo(0.0)
+    }
+
+    @Test
+    fun degenerateHullKeepsFullFrameMeasurement() {
+        val frame = benchAndBoard()
+        val full = FrameQuality.measure(frame, 20, 20)
+        val collinear = listOf(listOf(1.0, 1.0), listOf(5.0, 5.0), listOf(9.0, 9.0))
+        assertThat(FrameQuality.withBoardExposure(full, frame, 20, 20, collinear)).isEqualTo(full)
+        assertThat(FrameQuality.withBoardExposure(full, frame, 20, 20, emptyList())).isEqualTo(full)
+    }
+
+    @Test
+    fun hullOutsideFrameKeepsFullFrameMeasurement() {
+        val frame = benchAndBoard()
+        val full = FrameQuality.measure(frame, 20, 20)
+        val offFrame = listOf(listOf(40.0, 40.0), listOf(60.0, 40.0), listOf(50.0, 60.0))
+        assertThat(FrameQuality.withBoardExposure(full, frame, 20, 20, offFrame)).isEqualTo(full)
+    }
 }

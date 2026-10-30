@@ -93,14 +93,34 @@ class GuidedCameraSource(
 
     override var requestedStillSize: Pair<Int, Int>? = null
 
-    // CAMERA-02 API verdict: no public CameraX 1.6.2 path to
-    // per-frame CaptureResult exists (CameraCaptureResultImageInfo
-    // and ImageInfo.getTagBundle are both same-library
-    // RestrictedApi), so this stays null and the UI reports
-    // requested settings plus "Applied: n/a".
+    // Latest repeating-request result (preview + analysis), via the
+    // public Camera2Interop session callback (GUIDE-01). Not tied to a
+    // specific analysis frame: it reports what the HAL currently
+    // applies, which is what requested-vs-applied needs.
     @Volatile
     override var lastApplied: AppliedSettings? = null
         private set
+
+    @Volatile private var lastFrameDurationNs: Long? = null
+
+    private val appliedCallback = object : android.hardware.camera2.CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: android.hardware.camera2.CameraCaptureSession,
+            request: android.hardware.camera2.CaptureRequest,
+            result: android.hardware.camera2.TotalCaptureResult,
+        ) {
+            lastApplied = AppliedSettings(
+                exposureNs = result.get(android.hardware.camera2.CaptureResult.SENSOR_EXPOSURE_TIME),
+                iso = result.get(android.hardware.camera2.CaptureResult.SENSOR_SENSITIVITY),
+                focusDiopters = result.get(android.hardware.camera2.CaptureResult.LENS_FOCUS_DISTANCE),
+                aeMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_MODE),
+                afMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AF_MODE),
+                awbMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE),
+                evSteps = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_EXPOSURE_COMPENSATION),
+            )
+            lastFrameDurationNs = result.get(android.hardware.camera2.CaptureResult.SENSOR_FRAME_DURATION)
+        }
+    }
 
     private var boundCamera: Camera? = null
     private var lastAnalysisSize: Pair<Int, Int> = 1280 to 720
@@ -269,11 +289,13 @@ class GuidedCameraSource(
                 .build()
         val preview = Preview.Builder().setResolutionSelector(resolutionSelector).build()
         previewView?.let { preview.setSurfaceProvider(it.surfaceProvider) }
-        val analysis = ImageAnalysis.Builder()
+        val analysisBuilder = ImageAnalysis.Builder()
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(resolutionSelector)
-            .build()
+        androidx.camera.camera2.interop.Camera2Interop.Extender(analysisBuilder)
+            .setSessionCaptureCallback(appliedCallback)
+        val analysis = analysisBuilder.build()
         val capture = buildCapture(
             stillOptionsFor(lastStillSettings, lastStillCaps),
         )
@@ -323,6 +345,7 @@ class GuidedCameraSource(
     /** GUIDE-01 diagnostics: throttled per-frame cost + quality summary, else null. */
     private fun recordFrameTiming(
         arrivedNs: Long,
+        sensorToArrivalMs: Double,
         gapMs: Double,
         copyStartNs: Long,
         copyEndNs: Long,
@@ -344,6 +367,13 @@ class GuidedCameraSource(
             darkFraction = estimate.frameQuality?.darkFraction,
             saturatedFraction = estimate.frameQuality?.saturatedFraction,
             sharpness = estimate.frameQuality?.sharpness,
+            sensorToArrivalMs = sensorToArrivalMs,
+            exposureRoi = estimate.frameQuality?.exposureRoi,
+            fullFrameDarkFraction = estimate.frameQuality?.fullFrameDarkFraction,
+            fullFrameSaturatedFraction = estimate.frameQuality?.fullFrameSaturatedFraction,
+            sensorToEmitMs = (android.os.SystemClock.elapsedRealtimeNanos() - sensorTs) / 1_000_000.0,
+            exposureMs = lastApplied?.exposureNs?.let { it / 1_000_000.0 },
+            frameDurationMs = lastFrameDurationNs?.let { it / 1_000_000.0 },
         )
         if (summary != null) Log.i(DIAG_LOG_TAG, "guided $summary")
     }
@@ -373,6 +403,8 @@ class GuidedCameraSource(
     @androidx.camera.camera2.interop.ExperimentalCamera2Interop
     private fun analyzeFrame(image: ImageProxy) {
         val arrivedNs = System.nanoTime()
+        // Sensor timestamps are CLOCK_BOOTTIME (REALTIME source, HARDWARE-03).
+        val arrivedBootNs = android.os.SystemClock.elapsedRealtimeNanos()
         val gapMs = lastFrameArrivedNs?.let { (arrivedNs - it) / 1_000_000.0 } ?: 0.0
         lastFrameArrivedNs = arrivedNs
         try {
@@ -420,7 +452,10 @@ class GuidedCameraSource(
                 return
             }
             lastEstimateNs = estimate.monotonicNs
-            recordFrameTiming(arrivedNs, gapMs, copyStartNs, copyEndNs, width, height, timestampNs, estimate)
+            recordFrameTiming(
+                arrivedNs, (arrivedBootNs - timestampNs) / 1_000_000.0, gapMs,
+                copyStartNs, copyEndNs, width, height, timestampNs, estimate,
+            )
             _estimates.tryEmit(estimate)
         } finally {
             try {

@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import java.io.File
 import org.anastylos.capture.BuildConfig
+import org.anastylos.capture.camera.AssetMeasuredProfileSource
+import org.anastylos.capture.camera.MeasuredProfileSource
 import org.anastylos.capture.camera.FrameSampler
 import org.anastylos.capture.data.CameraPrefs
 import org.anastylos.capture.data.DataStoreCameraPrefs
@@ -102,6 +104,7 @@ class AppContainer(context: Context) {
 
     private val guidedPrefs: GuidedPrefs by lazy { DataStoreGuidedPrefs(appContext) }
     private val guideTiming = TimingAccumulator()
+    private val measuredProfiles: MeasuredProfileSource by lazy { AssetMeasuredProfileSource(appContext) }
     private val poseEstimator: PoseEstimator by lazy {
         OpenCvPoseEstimator(TimingArucoBackend(OpenCvArucoBackend(), guideTiming))
     }
@@ -120,6 +123,7 @@ class AppContainer(context: Context) {
                             DefaultCameraProviderSource(appContext),
                             poseEstimator,
                             { java.time.Instant.now() },
+                            measuredProfiles = measuredProfiles,
                             timing = guideTiming,
                         ).also { it.attachPreview(preview) }
                     },
@@ -152,6 +156,7 @@ class AppContainer(context: Context) {
                         )
                     },
                     associations = repository as GuidedAssociationRepository,
+                    measuredProfiles = measuredProfiles,
                     timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,
                 ) as T

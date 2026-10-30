@@ -31,12 +31,22 @@ class TimingAccumulator(private val every: Int = 60) {
     private var lastDark = Double.NaN
     private var lastSat = Double.NaN
     private var lastSharp = Double.NaN
+    private var lastRoi = "n/a"
+    private var lastFullDark = Double.NaN
+    private var lastFullSat = Double.NaN
+    private var sumSensorToArrivalMs = 0.0
+    private var maxSensorToArrivalMs = 0.0
+    private var minSensorToArrivalMs = Double.POSITIVE_INFINITY
+    private var sumSensorToEmitMs = 0.0
+    private var lastExposureMs = Double.NaN
+    private var lastFrameDurationMs = Double.NaN
 
     private var uiFrames = 0
     private var sumUiAgeMs = 0.0
     private var maxUiAgeMs = 0.0
     private var sumUiGapMs = 0.0
     private var maxUiGapMs = 0.0
+    private var uiFresh = 0
 
     /** Native detection cost of one call (analyzer thread). */
     @Synchronized
@@ -67,8 +77,24 @@ class TimingAccumulator(private val every: Int = 60) {
         darkFraction: Double?,
         saturatedFraction: Double?,
         sharpness: Double?,
+        sensorToArrivalMs: Double = 0.0,
+        exposureRoi: String? = null,
+        fullFrameDarkFraction: Double? = null,
+        fullFrameSaturatedFraction: Double? = null,
+        sensorToEmitMs: Double = 0.0,
+        exposureMs: Double? = null,
+        frameDurationMs: Double? = null,
     ): String? {
+        if (exposureMs != null) lastExposureMs = exposureMs
+        if (frameDurationMs != null) lastFrameDurationMs = frameDurationMs
         frames++
+        if (sensorToArrivalMs < minSensorToArrivalMs) minSensorToArrivalMs = sensorToArrivalMs
+        sumSensorToEmitMs += sensorToEmitMs
+        sumSensorToArrivalMs += sensorToArrivalMs
+        if (sensorToArrivalMs > maxSensorToArrivalMs) maxSensorToArrivalMs = sensorToArrivalMs
+        if (exposureRoi != null) lastRoi = exposureRoi
+        if (fullFrameDarkFraction != null) lastFullDark = fullFrameDarkFraction
+        if (fullFrameSaturatedFraction != null) lastFullSat = fullFrameSaturatedFraction
         sumTotalMs += totalMs
         if (totalMs > maxTotalMs) maxTotalMs = totalMs
         sumCopyMs += copyMs
@@ -90,7 +116,11 @@ class TimingAccumulator(private val every: Int = 60) {
             "solveAvg=${fmt(solveSumMs / solveCalls.coerceAtLeast(1))} " +
             "gapAvg=${fmt(sumGapMs / n)} gapMax=${fmt(maxGapMs)} " +
             "tsGapAvg=${fmt(sumTsGapMs / n)} tsGapMax=${fmt(maxTsGapMs)} " +
-            "dark=${fmt3(lastDark)} sat=${fmt3(lastSat)} sharp=${fmt(lastSharp)}"
+            "s2aAvg=${fmt(sumSensorToArrivalMs / n)} s2aMin=${fmt(minSensorToArrivalMs)} " +
+            "s2aMax=${fmt(maxSensorToArrivalMs)} s2eAvg=${fmt(sumSensorToEmitMs / n)} " +
+            "exp=${fmt(lastExposureMs)} frameDur=${fmt(lastFrameDurationMs)} " +
+            "dark=${fmt3(lastDark)} sat=${fmt3(lastSat)} roi=$lastRoi " +
+            "fullDark=${fmt3(lastFullDark)} fullSat=${fmt3(lastFullSat)} sharp=${fmt(lastSharp)}"
         resetFrameWindow()
         return line
     }
@@ -103,6 +133,7 @@ class TimingAccumulator(private val every: Int = 60) {
     fun recordUi(ageMs: Long, gapMs: Double): String? {
         uiFrames++
         sumUiAgeMs += ageMs
+        if (ageMs in 0..GuidanceHypothesis1.POSE_AGE_MS) uiFresh++
         if (ageMs > maxUiAgeMs) maxUiAgeMs = ageMs.toDouble()
         sumUiGapMs += gapMs
         if (gapMs > maxUiGapMs) maxUiGapMs = gapMs
@@ -110,8 +141,9 @@ class TimingAccumulator(private val every: Int = 60) {
         val n = uiFrames.toDouble()
         val line = "ui=$uiFrames ageAvg=${fmt(sumUiAgeMs / n)} " +
             "ageMax=${fmt(maxUiAgeMs)} gapAvg=${fmt(sumUiGapMs / n)} " +
-            "gapMax=${fmt(maxUiGapMs)}"
+            "gapMax=${fmt(maxUiGapMs)} fresh=$uiFresh/$uiFrames"
         uiFrames = 0
+        uiFresh = 0
         sumUiAgeMs = 0.0
         maxUiAgeMs = 0.0
         sumUiGapMs = 0.0
@@ -128,6 +160,10 @@ class TimingAccumulator(private val every: Int = 60) {
         maxGapMs = 0.0
         sumTsGapMs = 0.0
         maxTsGapMs = 0.0
+        sumSensorToArrivalMs = 0.0
+        maxSensorToArrivalMs = 0.0
+        minSensorToArrivalMs = Double.POSITIVE_INFINITY
+        sumSensorToEmitMs = 0.0
         detectSumMs = 0.0
         detectCalls = 0
         solveSumMs = 0.0

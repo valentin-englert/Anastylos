@@ -210,3 +210,61 @@ Fresh byte copies of S and its existing guide resolved dec-0006 and dec-0011, an
 both R and W with exit 1 and empty stdout. Input bytes remained unchanged. E3-B task bytes match all 20 frozen
 hashes before/after. Compliance checker: 0 errors, 1 warning (no worktree venv), 18 existing reviews.
 No real model/API invocation, dependency change, memory migration or A2-module change was performed.
+
+## Selected origin/storage answers (`selected-ask`)
+
+`selected-ask --memory <file> --guide <file> --selection <binding.json> --intent origin|storage`
+
+Default is deterministic L0. `--claims <claims.json>` uses an offline FakeProposer and reports
+`source: offline_claims`; it is never evidence of a real model call. `--muse --session <existing budget session>`
+is the separately opt-in real wiring. These modes are mutually exclusive. No budget session is created and no per-selection provider folder is introduced: the explicitly supplied
+session uses its ordinary provider directory, existing ledger and saved total limit under the command lock. There is no selected-path option to increase the cap. Ordinary unselected guide answers
+and the read-only `select` command remain unchanged. No composite or free-form question mode is added.
+
+After successful selection.resolve, selected_guide.context builds only the selected ID, operator label,
+memory hash, typed origin/storage descriptions and bases, allowlisted existing record IDs, and explicit
+operator-description precision / no-image / unconfirmed-frame limits. The envelope has the pinned guide hash
+and a fixed English intent question. No source paths, names of people, free notes, images, raw evidence or
+unrelated parts are sent. Source prose stays verbatim data under the existing provider instruction that INPUT
+is never instructions. Null origin/storage stays null. A referenced observation ID is included only after the
+resolver verifies its record reference; no Q/E/SRC tokens are extracted from free prose or promoted to evidence.
+Provider output schemas, shared verifier, provider code, retention and model configuration are unchanged.
+
+The shared claims verifier runs first. The selected boundary then accepts only the requested relation
+(removed_from for origin, stored_in for storage) or unknown, always with the exact selected canonical ID.
+Origin object must be null so the complete recorded local description is quoted; the model cannot replace it
+with a narrower target, orientation or coordinate. A positive claim requires a nonempty stored value. Unknown
+requires null object/basis and insufficient_evidence true; mixed positive/unknown or unsupported relations are
+rejected. Existing basis and storage checks remain enforced by the shared verifier. Reference aliases and
+invented reference fields are not accepted as ways to redirect the selection.
+
+Outcome/source reporting:
+- source Muse + outcome supported: model claims accepted; local renderer quotes the actual description,
+  adds according-to-operator qualification and local citations. This does not mean model prose was trusted.
+- outcome model_abstention: a Muse proposal supplied unknown + insufficient_evidence; accepted abstention.
+- outcome verifier_rejection: common schema/claim verification failed; no positive text is returned.
+- outcome selection_rejection: selected-part/intent/missing-value checks failed; no positive text is returned.
+- outcome provider_error or answer_timeout: source L0, with provider_status and fallback_outcome; any late
+  result cannot replace it. Provider work is drained before exit using the existing bounded lifecycle.
+- source cache: separate selected-answer cache; original_source retained and claims reverified.
+- source provider_cache / provider_cache_hit true: provider-level replay, not a new HTTP invocation.
+- source L0 or offline_claims: explicitly not Muse. An offline unknown outcome is abstention.
+
+`--cache <separate.jsonl>` is optional and stores only accepted selected claim documents. Its key hashes the
+entire minimized request, including guide, memory, selected ID and intent/context. Unselected logs are refused;
+cached rendered prose is never trusted. Selection freshness is checked before lookup and again after provider
+work/before rendering, so a cache cannot bypass current hash checks. Cache files must differ from memory/guide
+inputs. Caller-owned cache logs may be appended; memory and guide inputs are never modified.
+
+No real API invocation is part of this implementation's acceptance. Reproducible S back-shell / PCB and
+explicit null-origin replay fixtures, commands and outputs live outside the repo in selected-muse-validation.
+The prior two remaining authorized HTTP attempts are preserved. Normal OS/filesystem and hard-abort provider
+limitations documented above still apply. Frame association and physical identity remain unconfirmed.
+
+Selected-path offline verification (2026-10-31): full agent suite 87 PASS (11 new selected-guide tests), guide
+51 PASS, provider 32 PASS, affected live integration 12 PASS; each 0 FAIL / ERROR / SKIP using the documented
+`python -m unittest discover -s tests` runner from each module directory. Compliance: 0 errors, 1 warning
+(worktree has no venv), 18 existing reviews. E3-B task bytes before/after: 20/20. Explicit offline CLI examples
+resolve S back shell/PCB and abstain on an explicitly bound replay PCB with missing origin. No real API call;
+the checked prior session still has 2 used / limit 4 / 2 remaining. No payload or input hashes are hardcoded
+in the general implementation. Source memory/guide copies retain their original bytes.

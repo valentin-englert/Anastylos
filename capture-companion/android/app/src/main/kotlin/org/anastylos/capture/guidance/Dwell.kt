@@ -84,6 +84,22 @@ class DwellAccumulator(
         return state
     }
 
+    /**
+     * Hackathon MVP: a stale publication is not a sample and not
+     * alignment evidence. If it arrives within [maxGapMs] of the
+     * open window, keep that window open so the next fresh sample
+     * is not punished for the skipped frame. A longer hole, or a
+     * clock step backwards, still resets.
+     */
+    fun bridge(tMs: Long) {
+        val last = lastMs ?: return
+        if (tMs < last || tMs - last > maxGapMs) {
+            reset()
+            return
+        }
+        lastMs = tMs
+    }
+
     fun reset() {
         startMs = null
         lastMs = null

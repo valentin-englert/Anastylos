@@ -191,6 +191,7 @@ private fun GuidanceUiState.withoutPoseFields(): GuidanceUiState = copy(
     cornersPx = emptyList(),
     markersSeen = emptyList(),
     qualityVerdict = ImageQualityVerdict.Unknown,
+    motionWarning = false,
     measuredSharpness = null,
     orientationOk = false,
     distanceOk = false,
@@ -282,6 +283,7 @@ private fun StateGrid(state: GuidanceUiState) {
             "\nPose age ${state.poseAgeMs?.let { "${it}ms" } ?: "—"}" +
             " · RMS ${state.rmsPx?.let { "%.2f".format(it) } ?: "—"}px" +
             " · Quality ${state.qualityVerdict}" +
+            (if (state.motionWarning) " · motion warning (not blocking)" else "") +
             (state.holdReason?.let { "\nHold: ${it.code}" } ?: ""),
         style = MaterialTheme.typography.bodyMedium,
     )
@@ -289,7 +291,8 @@ private fun StateGrid(state: GuidanceUiState) {
 
 private fun dwellText(state: GuidanceUiState): String = when (val dwell = state.dwell) {
     is org.anastylos.capture.guidance.DwellState.Idle -> "idle"
-    is org.anastylos.capture.guidance.DwellState.Accumulating -> "holding ${dwell.samples}/12"
+    is org.anastylos.capture.guidance.DwellState.Accumulating ->
+        "holding ${dwell.samples}/${org.anastylos.capture.guidance.HackathonMvp.DWELL_SAMPLES}"
     is org.anastylos.capture.guidance.DwellState.Ready -> "READY"
 }
 

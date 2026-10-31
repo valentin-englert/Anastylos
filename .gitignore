@@ -18,6 +18,10 @@ AGENTS.local.md
 .DS_Store
 Thumbs.db
 
+# JVM crash dumps from local Android builds (do not delete existing logs)
+capture-companion/android/hs_err_pid*.log
+capture-companion/android/replay_pid*.log
+
 # Python
 .venv/
 __pycache__/

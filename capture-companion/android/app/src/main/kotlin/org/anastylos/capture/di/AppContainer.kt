@@ -159,6 +159,7 @@ class AppContainer(context: Context) {
                     measuredProfiles = measuredProfiles,
                     timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,
+                    armDebounceMs = 1200L,
                 ) as T
         }
 

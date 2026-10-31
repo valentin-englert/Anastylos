@@ -128,11 +128,12 @@ class GuidanceViewModelTest {
         override val lastApplied: AppliedSettings? get() = lastAppliedValue
         var lastBindSize: Pair<Int, Int>? = null
 
+        var profileId: String = "measured:test-fixture"
         override fun currentIntrinsics(): PoseEstimator.Intrinsics? = PoseEstimator.Intrinsics(
             fx = 800.0, fy = 800.0, cx = 319.5, cy = 239.5,
             width = 640, height = 480,
             distortion = listOf(0.0, 0.0, 0.0, 0.0, 0.0),
-            profileId = "factory-test-uncalibrated",
+            profileId = profileId,
         )
 
         override fun attachPreview(view: PreviewView?) = Unit
@@ -469,7 +470,7 @@ class GuidanceViewModelTest {
     @Test
     fun trackingLossDuringHoldAbortsWithoutFiring() = runTest(dispatcher) {
         armWithTarget()
-        feedStableDwell(frames = 6)
+        feedStableDwell(frames = 3)
         advanceUntilIdle()
         assertThat(viewModel.state.value.request).isEqualTo(RequestState.HOLD_STILL)
         // Markers vanish mid-hold.
@@ -491,7 +492,7 @@ class GuidanceViewModelTest {
     @Test
     fun cancelDuringDwellHoldsWithoutFiring() = runTest(dispatcher) {
         armWithTarget()
-        feedStableDwell(frames = 6)
+        feedStableDwell(frames = 3)
         advanceUntilIdle()
         viewModel.cancelRequest()
         feedStableDwell(frames = 15)
@@ -1062,6 +1063,80 @@ class GuidanceViewModelTest {
         advanceUntilIdle()
         assertThat(camera.bindCalls).isEqualTo(1)
         assertThat(camera.lastBindSize).isEqualTo(1280 to 720)
+    }
+
+    @Test
+    fun hackathonMotionJitterStillFiresOnce() = runTest(dispatcher) {
+        armWithTarget()
+        repeat(12) { index ->
+            val atNs = (index + 1) * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            val jumped = validEstimate(atNs).let { estimate ->
+                estimate.copy(
+                    cornersPx = estimate.cornersPx.map { marker ->
+                        marker.copy(
+                            corners = marker.corners.map { listOf(it[0] + index * 25.0, it[1]) },
+                        )
+                    },
+                )
+            }
+            camera.estimateFlow.emit(jumped)
+            advanceUntilIdle()
+        }
+        assertThat(viewModel.state.value.motionWarning).isTrue()
+        assertThat(camera.stillsFired).isEqualTo(1)
+    }
+
+    @Test
+    fun hackathonStaleFrameDoesNotWipeDwell() = runTest(dispatcher) {
+        armWithTarget()
+        // Five fresh samples span 320 ms: short of the 500 ms dwell.
+        repeat(5) { index ->
+            val atNs = index * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs))
+            advanceUntilIdle()
+        }
+        assertThat(camera.stillsFired).isEqualTo(0)
+        // Late publication of an in-between frame. It must not count and must not reset.
+        val staleNs = 360L * 1_000_000L
+        nowNs = staleNs + 400_000_000L
+        camera.estimateFlow.emit(validEstimate(staleNs))
+        advanceUntilIdle()
+        assertThat(camera.stillsFired).isEqualTo(0)
+        repeat(8) { index ->
+            val atNs = (400L + index * 80L) * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs))
+            advanceUntilIdle()
+        }
+        assertThat(camera.stillsFired).isEqualTo(1)
+    }
+
+    @Test
+    fun hackathonOffTargetDoesNotFire() = runTest(dispatcher) {
+        armWithTarget()
+        repeat(12) { index ->
+            val atNs = (index + 1) * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs, center = listOf(0.0, 0.0, -200.0)))
+            advanceUntilIdle()
+        }
+        assertThat(camera.stillsFired).isEqualTo(0)
+    }
+
+    @Test
+    fun hackathonUncalibratedProfileDoesNotAutoFire() = runTest(dispatcher) {
+        camera.profileId = "factory-test-uncalibrated"
+        armWithTarget()
+        repeat(12) { index ->
+            val atNs = (index + 1) * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs))
+            advanceUntilIdle()
+        }
+        assertThat(viewModel.state.value.uncalibrated).isTrue()
+        assertThat(camera.stillsFired).isEqualTo(0)
     }
 
     @Test

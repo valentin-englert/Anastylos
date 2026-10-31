@@ -70,6 +70,7 @@ import org.anastylos.capture.guidance.TimingAccumulator
 import org.anastylos.capture.guidance.CameraPoseB
 import org.anastylos.capture.guidance.CueAxis
 import org.anastylos.capture.guidance.DwellAccumulator
+import org.anastylos.capture.guidance.HackathonMvp
 import org.anastylos.capture.guidance.DwellState
 import org.anastylos.capture.guidance.GuidanceHypothesis1
 import org.anastylos.capture.guidance.ImageQualityInput
@@ -167,6 +168,8 @@ data class GuidanceUiState(
     val markersSeen: List<Int> = emptyList(),
     val overlayGeometry: GuidedCamera.StreamGeometry? = null,
     val qualityVerdict: ImageQualityVerdict = ImageQualityVerdict.Unknown,
+    /** Hackathon MVP: pixel-motion rejection alone does not block the shutter. */
+    val motionWarning: Boolean = false,
     val measuredSharpness: Double? = null,
     val sharpnessReference: Double? = null,
     val orientationOk: Boolean = false,
@@ -231,6 +234,9 @@ class GuidanceViewModel(
     private val uuid: () -> String = { UUID.randomUUID().toString() },
     private val measuredProfiles: MeasuredProfileSource? = null,
     private val timing: TimingAccumulator = TimingAccumulator(),
+    /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
+    private val armDebounceMs: Long = 0L,
+    private val armClock: () -> Long = { android.os.SystemClock.elapsedRealtime() },
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
@@ -241,11 +247,20 @@ class GuidanceViewModel(
     private var settingsJob: Job? = null
     private var lastAppliedSeen: AppliedSettings? = null
     private var estimatesJob: Job? = null
-    private val dwell = DwellAccumulator()
+    /** Hackathon MVP dwell (~500 ms). The frozen 1 s / 12-sample profile stays on [DwellAccumulator]. */
+    private val dwell = DwellAccumulator(
+        holdMs = HackathonMvp.DWELL_MS,
+        minSamples = HackathonMvp.DWELL_SAMPLES,
+    )
     private val speeds = SpeedTracker()
     private val shutterMutex = Mutex()
     private var armingToken: String? = null
     private var firedForArming = false
+    private var lastArmRealtimeMs = 0L
+    private var armFrames = 0
+    private var armFresh = 0
+    private var lastDwellSamples = -1
+    private var lastHoldReason: String? = null
     private var captureSequence = 0L
     private var sessionId: String? = null
     private var lastCorners: Map<String, List<Double>> = emptyMap()
@@ -584,31 +599,49 @@ class GuidanceViewModel(
     }
 
     fun arm() {
-        if (_state.value.remoteAttached) {
+        val snap = _state.value
+        if (snap.remoteAttached) {
+            logArm("arm remote session=${snap.session} request=${snap.request} id=${snap.requestId}")
             remoteArmFlow()
             return
         }
         // Fresh session arming from DISARMED.
-        if (_state.value.session == SessionState.DISARMED) {
+        if (snap.session == SessionState.DISARMED) {
             val transition = onSessionEvent(
                 SessionEvent.Arm(
                     grantLive = true,
-                    permissionGranted = _state.value.permissionGranted,
-                    foreground = _state.value.foreground,
+                    permissionGranted = snap.permissionGranted,
+                    foreground = snap.foreground,
                 ),
             )
-            if (!transition.accepted) return
-            startRequest()
-            viewModelScope.launch {
-                ensureSession()
+            if (!transition.accepted) {
+                logArm(
+                    "arm rejected session=${snap.session} fg=${snap.foreground} " +
+                        "perm=${snap.permissionGranted} reason=${transition.reason}",
+                )
+                return
+            }
+            if (startRequest("arm")) {
+                viewModelScope.launch {
+                    ensureSession()
+                }
             }
             return
         }
         // Next request inside a live session: allowed only once the
         // previous request reached a terminal state, with a new token.
-        if (_state.value.session == SessionState.ACTIVE && _state.value.request in TERMINAL_REQUESTS) {
-            startRequest()
+        // ACTIVE+QUEUED is the stuck state after an arm transition that
+        // never started its request. It is not a finished capture.
+        if (snap.session == SessionState.ACTIVE &&
+            (snap.request in TERMINAL_REQUESTS || snap.request == RequestState.QUEUED)
+        ) {
+            startRequest(if (snap.request == RequestState.QUEUED) "arm-queued" else "rearm")
+            return
         }
+        logArm(
+            "arm ignored session=${snap.session} request=${snap.request} id=${snap.requestId} " +
+                "consumed=$firedForArming token=${armingToken?.take(8)} fg=${snap.foreground}",
+        )
     }
 
     private fun remoteArmFlow() {
@@ -693,13 +726,28 @@ class GuidanceViewModel(
         }
     }
 
-    private fun startRequest() {
+    private fun startRequest(source: String): Boolean {
+        val now = armClock()
+        if (armDebounceMs > 0L && lastArmRealtimeMs > 0L && now - lastArmRealtimeMs < armDebounceMs) {
+            logArm(
+                "arm debounced source=$source waited=${now - lastArmRealtimeMs}ms " +
+                    "request=${_state.value.request} id=${_state.value.requestId} consumed=$firedForArming",
+            )
+            return false
+        }
+        lastArmRealtimeMs = now
         // A new arming token starts a new request lifecycle (a fresh
         // reducer): the token binds exactly one request, so a repeat
         // capture after CAPTURED_LOCAL never inherits the previous
         // request's state.
         armingToken = UUID.randomUUID().toString()
         firedForArming = false
+        armFrames = 0
+        armFresh = 0
+        lastDwellSamples = 0
+        // Each arming collects its own 500 ms dwell. A Ready window
+        // from the previous shot must not satisfy the next one.
+        dwell.reset()
         val requestId = "local-${armingToken!!.take(8)}"
         _state.update {
             it.copy(
@@ -708,6 +756,11 @@ class GuidanceViewModel(
             )
         }
         onRequestEvent(RequestEvent.Accept)
+        logArm(
+            "arm start source=$source id=$requestId session=${_state.value.session} " +
+                "request=${_state.value.request} consumed=false fg=${_state.value.foreground}",
+        )
+        return true
     }
 
     fun disarm() {
@@ -1246,8 +1299,9 @@ class GuidanceViewModel(
         } else {
             emptyList()
         }
-        val orientationOk = cues.none { it.axis == CueAxis.YAW || it.axis == CueAxis.PITCH || it.axis == CueAxis.ROLL }
-        val distanceOk = cues.none { it.axis == CueAxis.LATERAL || it.axis == CueAxis.VERTICAL || it.axis == CueAxis.DEPTH }
+        val hasTarget = target != null
+        val orientationOk = hasTarget && cues.none { it.axis == CueAxis.YAW || it.axis == CueAxis.PITCH || it.axis == CueAxis.ROLL }
+        val distanceOk = hasTarget && cues.none { it.axis == CueAxis.LATERAL || it.axis == CueAxis.VERTICAL || it.axis == CueAxis.DEPTH }
         val motion = motionStats(estimate)
         val quality = evaluateImageQuality(
             ImageQualityInput(
@@ -1259,11 +1313,21 @@ class GuidanceViewModel(
                 motionP90Px = motion?.second,
             ),
         )
-        val qualityOk = quality == ImageQualityVerdict.Accepted
+        // Hackathon MVP: ArUco corner jitter is a warning. Exposure and
+        // sharpness still reject. guidance-hypothesis-1 itself is unchanged.
+        val motionWarning = quality is ImageQualityVerdict.Rejected &&
+            quality.reasons.all { it == "motion" }
+        val qualityForGate = quality == ImageQualityVerdict.Accepted || motionWarning
+        val calibrated = !_state.value.uncalibrated
+        val poseFresh = ageMs in 0..GuidanceHypothesis1.POSE_AGE_MS
+        val aligned = orientationOk && distanceOk && qualityForGate && calibrated
         val gatesPass = _state.value.session == SessionState.ACTIVE &&
-            registration == RegistrationState.ACQUIRED &&
-            orientationOk && distanceOk && qualityOk
-        val windowSpeeds = if (pose != null && estimate.tBC != null) {
+            registration == RegistrationState.ACQUIRED && aligned && poseFresh
+        // A stale but still-acquired pose is not evidence either way.
+        val ignoreStale = registration == RegistrationState.ACQUIRED && !poseFresh
+        val windowSpeeds = if (ignoreStale) {
+            null
+        } else if (pose != null && estimate.tBC != null) {
             speeds.observe(
                 estimate.monotonicNs / 1_000_000L,
                 pose.centerMm,
@@ -1273,16 +1337,37 @@ class GuidanceViewModel(
             speeds.reset()
             null
         }
-        val dwellState = dwell.observe(
-            StabilitySample(
-                tMs = estimate.monotonicNs / 1_000_000L,
-                speedMmS = windowSpeeds?.speedMmS ?: Double.MAX_VALUE,
-                angularSpeedDegS = windowSpeeds?.angularSpeedDegS ?: Double.MAX_VALUE,
-                poseAgeMs = ageMs,
-                gatesPass = gatesPass && windowSpeeds != null,
-            ),
+        val beforeDwell = dwell.state
+        val dwellState = if (ignoreStale) {
+            dwell.bridge(estimate.monotonicNs / 1_000_000L)
+            dwell.state
+        } else {
+            dwell.observe(
+                StabilitySample(
+                    tMs = estimate.monotonicNs / 1_000_000L,
+                    speedMmS = windowSpeeds?.speedMmS ?: Double.MAX_VALUE,
+                    angularSpeedDegS = windowSpeeds?.angularSpeedDegS ?: Double.MAX_VALUE,
+                    poseAgeMs = ageMs,
+                    gatesPass = gatesPass && windowSpeeds != null,
+                ),
+            )
+        }
+        if (!ignoreStale) {
+            navigate(registration, cues, aligned && poseFresh)
+        }
+        noteDwell(
+            before = beforeDwell,
+            after = dwellState,
+            ageMs = ageMs,
+            poseFresh = poseFresh,
+            ignoreStale = ignoreStale,
+            calibrated = calibrated,
+            aligned = aligned,
+            registration = registration,
+            quality = quality,
+            speeds = windowSpeeds,
+            cues = cues.size,
         )
-        navigate(registration, cues, orientationOk && distanceOk && qualityOk)
         lastEstimate = estimate
         lastMotion = motion
         _state.update {
@@ -1293,6 +1378,7 @@ class GuidanceViewModel(
                 dwell = dwellState,
                 cues = cues, orientationOk = orientationOk, distanceOk = distanceOk,
                 qualityVerdict = quality,
+                motionWarning = motionWarning,
                 measuredSharpness = estimate.frameQuality?.sharpness,
             )
         }
@@ -1320,6 +1406,80 @@ class GuidanceViewModel(
             RequestState.HOLD_STILL -> if (!aligned) onRequestEvent(RequestEvent.GateFailed)
             else -> Unit
         }
+    }
+
+    private fun noteDwell(
+        before: DwellState,
+        after: DwellState,
+        ageMs: Long,
+        poseFresh: Boolean,
+        ignoreStale: Boolean,
+        calibrated: Boolean,
+        aligned: Boolean,
+        registration: RegistrationState,
+        quality: ImageQualityVerdict,
+        speeds: SpeedTracker.Speeds?,
+        cues: Int,
+    ) {
+        val request = _state.value.request
+        if (request in TERMINAL_REQUESTS || _state.value.session != SessionState.ACTIVE) return
+        armFrames++
+        if (poseFresh) armFresh++
+        val samples = dwellSamples(after)
+        val dropped = dwellSamples(before) > 0 && samples < dwellSamples(before)
+        val reason = dwellBlockReason(
+            ignoreStale, calibrated, aligned, registration, quality, poseFresh, ageMs, speeds, cues,
+        )
+        if (dropped || samples != lastDwellSamples || armFrames % 20 == 0) {
+            lastDwellSamples = samples
+            logArm(
+                "dwell id=${_state.value.requestId} session=${_state.value.session} request=$request " +
+                    "consumed=$firedForArming track=$registration cal=$calibrated align=$aligned " +
+                    "quality=$quality age=${ageMs}ms fresh=$armFresh/$armFrames " +
+                    "dwell=${dwellText(after)} reason=$reason cues=$cues " +
+                    "target=${_state.value.target?.id ?: "none"} board=${_state.value.boardId}",
+            )
+        }
+    }
+
+    private fun dwellBlockReason(
+        ignoreStale: Boolean,
+        calibrated: Boolean,
+        aligned: Boolean,
+        registration: RegistrationState,
+        quality: ImageQualityVerdict,
+        poseFresh: Boolean,
+        ageMs: Long,
+        speeds: SpeedTracker.Speeds?,
+        cues: Int,
+    ): String = when {
+        _state.value.session != SessionState.ACTIVE -> "not_armed"
+        _state.value.target == null -> "no_target"
+        registration != RegistrationState.ACQUIRED -> "tracking_$registration"
+        !calibrated -> "uncalibrated"
+        !aligned && cues > 0 -> "off_target"
+        !aligned -> "quality_$quality"
+        ignoreStale || !poseFresh -> "stale_age_${ageMs}"
+        speeds == null -> "no_speed"
+        speeds.speedMmS >= GuidanceHypothesis1.MAX_SPEED_MM_S -> "speed_${speeds.speedMmS}"
+        speeds.angularSpeedDegS >= GuidanceHypothesis1.MAX_ANGULAR_SPEED_DEG_S -> "angular_${speeds.angularSpeedDegS}"
+        else -> "counting"
+    }
+
+    private fun logArm(message: String) {
+        Log.i(ARM_LOG, message)
+    }
+
+    private fun dwellSamples(state: DwellState): Int = when (state) {
+        DwellState.Idle -> 0
+        is DwellState.Accumulating -> state.samples
+        DwellState.Ready -> HackathonMvp.DWELL_SAMPLES
+    }
+
+    private fun dwellText(state: DwellState): String = when (state) {
+        DwellState.Idle -> "idle"
+        is DwellState.Accumulating -> "${state.samples}/${HackathonMvp.DWELL_SAMPLES} ${state.elapsedMs}ms"
+        DwellState.Ready -> "ready"
     }
 
     /** GUIDE-01 diagnostics: throttled UI-side age/gap summary, else null. */
@@ -1380,7 +1540,8 @@ class GuidanceViewModel(
                 lateMark = snapshot.lateMark, registration = snapshot.registration,
                 poseAgeMs = snapshot.poseAgeMs, dwell = snapshot.dwell,
                 orientationOk = snapshot.orientationOk, distanceOk = snapshot.distanceOk,
-                qualityOk = snapshot.qualityVerdict == ImageQualityVerdict.Accepted,
+                qualityOk = snapshot.qualityVerdict == ImageQualityVerdict.Accepted ||
+                    snapshot.motionWarning,
                 boardId = snapshot.boardId, targetBoardId = snapshot.target?.boardId,
                 profileId = snapshot.intrinsicsLabel,
                 requiredProfileId = null,
@@ -1392,10 +1553,22 @@ class GuidanceViewModel(
         when (decision) {
             is ShutterGate.Decision.Fire -> {
                 _state.update { it.copy(holdReason = null) }
+                logArm(
+                    "shutter requested id=${snapshot.requestId} age=${snapshot.poseAgeMs} " +
+                        "dwell=${dwellText(snapshot.dwell)} consumed=$firedForArming",
+                )
                 fireAutomatic()
             }
             is ShutterGate.Decision.Hold -> {
                 _state.update { it.copy(holdReason = decision.reason) }
+                if (decision.reason.name != lastHoldReason) {
+                    lastHoldReason = decision.reason.name
+                    logArm(
+                        "shutter hold id=${snapshot.requestId} reason=${decision.reason.name} " +
+                            "request=${snapshot.request} session=${snapshot.session} " +
+                            "fg=${snapshot.foreground} age=${snapshot.poseAgeMs} consumed=$firedForArming",
+                    )
+                }
             }
         }
     }
@@ -1424,10 +1597,18 @@ class GuidanceViewModel(
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
                     _state.update { it.copy(shutterBusy = false, captureResult = stored) }
+                    logArm(
+                        "shutter completed id=${_state.value.requestId} request=${_state.value.request} " +
+                            "sha=${stored.sha256.take(16)} image=${stored.imageId} consumed=$firedForArming",
+                    )
                 } catch (e: Exception) {
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyFail)
                     _state.update { it.copy(shutterBusy = false, captureError = e.message ?: "capture failed") }
+                    logArm(
+                        "shutter failed id=${_state.value.requestId} request=${_state.value.request} " +
+                            "error=${e.message} consumed=$firedForArming",
+                    )
                 }
             }
         }
@@ -1757,6 +1938,8 @@ class GuidanceViewModel(
         remote = null
     }
 }
+
+private const val ARM_LOG = "AnastylosArm"
 
 private val TERMINAL_REQUESTS = setOf(
     RequestState.CAPTURED_LOCAL,

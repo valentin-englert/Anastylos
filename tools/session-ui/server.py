@@ -93,6 +93,16 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("Request body must be a JSON object.", 400)
         return body
 
+    def _discard_body(self) -> None:
+        # Closing a socket with unread request data makes Windows send a TCP reset that can reach
+        # the client before the refusal does; drain the body first. A body over MAX_BODY is not
+        # drained, so that connection is closed after the refusal and may still be reset.
+        length = int(self.headers.get("Content-Length") or 0)
+        if length > MAX_BODY:
+            self.close_connection = True
+        elif length:
+            self.rfile.read(length)
+
     def _origin_ok(self) -> bool:
         origin = self.headers.get("Origin")
         if not origin:
@@ -129,6 +139,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 (http.server name)
         if not self._origin_ok():
+            self._discard_body()
             self._send_json({"error": "Foreign browser origin refused."}, 403)
             return
         routes = {"/api/questions/next": self._api_question_next, "/api/questions/answer": self._api_answer,
@@ -138,6 +149,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
+            self._discard_body()
             self._send_json({"error": "Unknown path."}, 404)
             return
         try:

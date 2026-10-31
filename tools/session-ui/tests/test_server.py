@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import email.message
+import io
 import json
 import sys
 import tempfile
@@ -108,3 +110,43 @@ class ServerCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EarlyRefusalBodyTest(unittest.TestCase):
+    """Early POST refusals must read the request body first.
+
+    On Windows, closing a socket with unread request data sends a TCP reset that can reach the
+    client before the refusal: the browser then sees a dropped connection instead of 403/404.
+    """
+
+    def _post(self, path: str, body: bytes, origin: str | None = None):
+        handler = object.__new__(server.Handler)
+        handler.rfile, handler.wfile = io.BytesIO(body), io.BytesIO()
+        handler.headers = email.message.Message()
+        handler.headers["Content-Length"] = str(len(body))
+        if origin:
+            handler.headers["Origin"] = origin
+        handler.path, handler.command, handler.request_version = path, "POST", "HTTP/1.1"
+        handler.requestline, handler.client_address = f"POST {path} HTTP/1.1", ("127.0.0.1", 0)
+        handler.close_connection = False
+        handler.log_message = lambda *args: None
+        handler.do_POST()
+        return handler
+
+    def test_foreign_origin_refusal_drains_the_body(self):
+        body = json.dumps({"session": "p1"}).encode("utf-8")
+        handler = self._post("/api/questions/next", body, origin="https://evil.example")
+        self.assertEqual(handler.wfile.getvalue().split()[1], b"403")
+        self.assertEqual(handler.rfile.tell(), len(body))
+
+    def test_unknown_post_path_drains_the_body(self):
+        body = b'{"session": "p1"}'
+        handler = self._post("/api/no-such-route", body)
+        self.assertEqual(handler.wfile.getvalue().split()[1], b"404")
+        self.assertEqual(handler.rfile.tell(), len(body))
+
+    def test_oversized_body_is_not_drained_and_the_connection_closes(self):
+        body = b"x" * (server.MAX_BODY + 1)
+        handler = self._post("/api/no-such-route", body)
+        self.assertEqual(handler.rfile.tell(), 0)
+        self.assertTrue(handler.close_connection)

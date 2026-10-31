@@ -187,3 +187,41 @@ class SelectedGuideTest(unittest.TestCase):
         self.assertEqual(result["provider_status"], "budget_exhausted")
         self.assertEqual(result["muse_budget"], {"limit": 0, "used": 0, "remaining": 0})
         self.assertEqual(before, state.path.read_bytes())
+
+    def test_storage_value_and_reference_are_separate_and_wrong_targets_rejected(self):
+        resolved = selection.resolve(self.memory, self.package, self.binding)
+        ctx = sg.context(resolved)
+        self.assertEqual(ctx["schema"], "anastylos-selected-part-context@2")
+        self.assertEqual(ctx["storage"]["value"], "outside")
+        self.assertEqual(ctx["storage"]["reference_ids"], ["store-0001"])
+        self.assertNotIn("description", ctx["storage"])
+        self.assertTrue(self.answer(self.propose([self.claim("stored_in", object="outside")]), "storage")["accepted"])
+        for target, subject in [("store-0001", "dec-0001"), ("store-0006", "dec-0001"),
+                                ("invented tray", "dec-0001"), ("outside", "dec-9999")]:
+            with self.subTest(target=target, subject=subject):
+                r = self.answer(self.propose([self.claim("stored_in", subject=subject, object=target)]), "storage")
+                self.assertFalse(r["accepted"])
+        self.events.pop()
+        self.build()
+        unknown = self.answer(self.propose([self.claim("unknown", basis=None)], True), "storage")
+        self.assertEqual(unknown["outcome"], "model_abstention")
+        self.assertFalse(self.answer(self.propose([self.claim("stored_in", object="outside")]), "storage")["accepted"])
+
+    def test_v1_selected_cache_cannot_answer_v2_context(self):
+        import hashlib
+        payload = {"package_sha256": self.binding["guide_sha256"], "operator_question": sg.QUESTIONS["storage"],
+                   "package_excerpt": {"selected_part": sg.context(selection.resolve(self.memory, self.package, self.binding)),
+                                       "allowed_basis_words": list(guide.claims.BASIS_WORDS)}}
+        old = payload["package_excerpt"]["selected_part"]
+        old["schema"] = "anastylos-selected-part-context@1"
+        old["storage"]["description"] = old["storage"].pop("value")
+        old_key = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        cache = self.root / "v1-cache.jsonl"
+        doc = {"schema": guide.claims.CLAIMS_SCHEMA, "claims": [self.claim("stored_in", object="outside")],
+               "insufficient_evidence": False}
+        cache.write_text(json.dumps({"schema": sg.CACHE_SCHEMA, "key": old_key, "document": doc, "source": "Muse"}) + "\n")
+        p = self.propose(doc["claims"])
+        r = self.answer(p, "storage", cache)
+        self.assertEqual(len(p.calls), 1)
+        self.assertNotEqual(r["source"], "cache")
+        self.assertNotEqual(r["context_sha256"], old_key)

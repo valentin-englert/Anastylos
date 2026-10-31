@@ -16,12 +16,12 @@ QUESTIONS = {"origin": "State only the recorded origin of the selected part. Use
 
 def context(resolved: dict) -> dict:
     origin, storage = resolved["original_location"], resolved["stored_location"]
-    return {"schema": "anastylos-selected-part-context@1", "id": resolved["event_id"],
+    return {"schema": "anastylos-selected-part-context@2", "id": resolved["event_id"],
             "memory_sha256": resolved["memory_sha256"], "operator_label": resolved["operator_label"],
             "origin": {"description": origin["value"], "basis": origin["basis"],
                        "reference_ids": [origin["record_id"]] + ([origin["observation_id"]] if origin["observation_id"] else []),
                        "precision": "operator_description_only" if origin["value"] else None},
-            "storage": {"description": storage["value"], "basis": (storage["basis"] or {}).get("kind"),
+            "storage": {"value": storage["value"], "basis": (storage["basis"] or {}).get("kind"),
                         "reference_ids": [storage["record_id"]] if storage["record_id"] else []},
             "image_evidence": "not_supplied", "frame_record_confirmation": "not_established"}
 

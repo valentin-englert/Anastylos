@@ -272,5 +272,21 @@ MetaProposer(Path(sys.argv[2]), 1, transport=ExitTransport(), environ={'MODEL_AP
                          "budget_exhausted")
 
 
+class SelectedStorageInstructionTest(unittest.TestCase):
+    def test_only_selected_v2_gets_exact_value_contract(self):
+        from provider_core import build_request
+        from task_prompts import instructions
+        payload = {"package_sha256": "a" * 64, "operator_question": "storage",
+                   "package_excerpt": {"selected_part": {"schema": "anastylos-selected-part-context@2",
+                                       "id": "dec-0001", "storage": {"value": "outside", "reference_ids": ["store-0001"]}}}}
+        request = build_request("guide_claims", payload)
+        system = request["input"][0]["content"][0]["text"]
+        self.assertIn("storage.value exactly", system)
+        self.assertIn("provenance ONLY", system)
+        self.assertIn("insufficient_evidence true", system)
+        payload["package_excerpt"] = {}
+        self.assertEqual(build_request("guide_claims", payload)["input"][0]["content"][0]["text"], instructions("guide_claims"))
+
+
 if __name__ == "__main__":
     unittest.main()

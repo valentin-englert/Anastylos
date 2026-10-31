@@ -268,3 +268,25 @@ Selected-path offline verification (2026-10-31): full agent suite 87 PASS (11 ne
 resolve S back shell/PCB and abstain on an explicitly bound replay PCB with missing origin. No real API call;
 the checked prior session still has 2 used / limit 4 / 2 remaining. No payload or input hashes are hardcoded
 in the general implementation. Source memory/guide copies retain their original bytes.
+
+### Selected storage contract v2
+
+The selected context is `anastylos-selected-part-context@2`. Its `storage.value` is the exact answer value;
+`storage.reference_ids` contains provenance only. For stored_in, subject is the exact selected event ID and
+object must equal storage.value verbatim, never a store-* reference. Missing storage requires unknown with
+null object/basis and insufficient_evidence true. No wrong model claim is rewritten. The unchanged verifier
+still rejects storage-record IDs as locations. Origin description/basis, hash checks and local rendering remain
+unchanged. The v2 context changes the selected cache key; v1 entries are not reused.
+
+The provider adds fixed system-level guide_claims instructions ONLY for this versioned selected context.
+Ordinary unselected requests retain their original instructions and body shape. No claim/task schema or
+shared verifier is modified. Source strings remain data. Provider request hashes include the specialized
+instructions, so prior provider cache entries cannot satisfy the new request.
+
+Storage-v2 validation (2026-10-31): agent 89, guide 51, provider 33, integration 12 tests PASS; no failures,
+errors or skips. Compliance 0 errors, 1 warning (no worktree venv), 18 existing reviews. E3-B bytes 20/20
+unchanged. One authorized real Muse HTTP attempt on the existing continuation copy, with retries disabled,
+returned the exact stored location and operator basis. Both verifiers accepted; no cache or fallback.
+Evidence STORED-IN-V2-01: model 8.672 s, CLI including drain 8.734 s (excluding interpreter startup/imports).
+The existing total limit remained 4; used increased 3→4, remaining 0. No additional calls are authorized.
+This is a bounded provider demonstration on development data, not physical validation or a confirmed frame link.

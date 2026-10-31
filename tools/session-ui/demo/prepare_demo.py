@@ -2,7 +2,9 @@
 
 - ``demo-open``: phases recorded, twelve questions open, no guide yet.
 - ``demo-complete``: twelve answers committed (scripted, offline), guide built,
-  two explicit selection bindings plus stored-claims fixtures for origin/storage.
+  two explicit selection bindings plus stored-claims fixtures for origin/storage,
+  and three synthetic capture-gap fixtures (fresh, stale, duplicate) with one
+  synthetic PNG evidence candidate.
 
 The session recipe (fixtures, memory baseline, scripted English replies) is the
 M1 recipe from ``tools/agent/tests/test_questions.py`` (``make_session``,
@@ -36,6 +38,7 @@ for _path in (AGENT, LIVE):
         sys.path.insert(0, str(_path))
 
 import ask_loop  # noqa: E402
+import capture_gaps.planner as capture_planner  # noqa: E402  (verify demo gaps, no I/O)
 import guide  # noqa: E402
 import selected_guide  # noqa: E402
 import selection  # noqa: E402
@@ -216,7 +219,76 @@ def build_demo(root: Path) -> dict[str, Path]:
     print(f"guide package {build['package_sha256'][:12]} from memory {build['memory_sha256'][:12]}")
     bindings = write_bindings(state)
     write_stored_claims(state, bindings)
+    write_capture_gaps(state)
     return {"demo-open": demo_open, "demo-complete": demo_complete}
+
+
+def _demo_png() -> bytes:
+    """Deterministic synthetic 1x1 PNG (demo evidence only, not a real capture)."""
+    import struct
+    import zlib
+
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        return struct.pack(">I", len(payload)) + kind + payload + struct.pack(
+            ">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"\x00\x80\x80\x80")) + chunk(b"IEND", b""))
+
+
+def write_capture_gaps(state: SessionState) -> list[Path]:
+    """Synthetic capture-gap fixtures for the demo: fresh, stale and duplicate.
+
+    All bindings are drawn once from the fresh workspace bytes (same revision
+    scheme the UI server derives: ``mem:<12hex>`` over memory, plus memory and
+    guide hashes). The stale gap pins an outdated revision on purpose; the
+    duplicate gap already cites the candidate bytes as a previous image. Each
+    file is evaluated with the planner before it is kept.
+    """
+    memory = state.memory_dir / "memory.jsonl"
+    package_path = guide.guide_dir(state) / "session.json"
+    events = [json.loads(line) for line in memory.read_text(encoding="utf-8").splitlines() if line.strip()]
+    sessions = {event.get("session") for event in events}
+    if len(sessions) != 1:
+        raise SystemExit("Demo memory carries no single session value; cannot bind gaps.")
+    memory_sha, guide_sha = _sha(memory), _sha(package_path)
+    fresh = {"session": next(iter(sessions)), "target": {"kind": "event", "id": "dec-0001"},
+             "revision": "mem:" + memory_sha[:12], "hashes": {"memory": memory_sha, "guide": guide_sha}}
+    evidence = _demo_png()
+    evidence_sha = hashlib.sha256(evidence).hexdigest()
+    gaps = {
+        "gap-rim-outer.json":
+            {"id": "gap-demo-rim-outer", "kind": "outer_boundary", "binding": dict(fresh),
+             "source_image_sha256s": [],
+             "detail": "Demo fixture: the full outer rim of dec-0001 is not confirmed visible."},
+        "gap-rim-stale.json":
+            {"id": "gap-demo-rim-stale", "kind": "outer_boundary",
+             "binding": {**fresh, "revision": "mem:000000000000",
+                         "hashes": {"memory": "0" * 64, "guide": "0" * 64}},
+             "source_image_sha256s": [],
+             "detail": "Demo fixture with an outdated binding: must stay needs_review."},
+        "gap-rim-duplicate.json":
+            {"id": "gap-demo-rim-duplicate", "kind": "missing_side", "binding": dict(fresh),
+             "source_image_sha256s": [evidence_sha],
+             "detail": "Demo fixture: the candidate bytes are already a previous image."},
+    }
+    gaps_dir = state.root / "capture_gaps" / "gaps"
+    gaps_dir.mkdir(parents=True, exist_ok=True)
+    evidence_dir = state.root / "capture_gaps" / "evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "candidate-rim-1.png").write_bytes(evidence)
+    written = []
+    for name, gap in gaps.items():
+        result = capture_planner.evaluate({"schema": "anastylos-capture-gap-input@1", "gap": gap,
+                                           "current_binding": dict(fresh)})
+        expected = "needs_review" if name == "gap-rim-stale.json" else "open"
+        if result["status"] != expected:
+            raise SystemExit(f"Demo gap {name} evaluates to {result['status']}, expected {expected}.")
+        path = gaps_dir / name
+        path.write_text(json.dumps(gap, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        print(f"capture gap {name}: {result['status']} ({result['reason']})")
+        written.append(path)
+    return written
 
 
 def main(argv: list[str] | None = None) -> int:

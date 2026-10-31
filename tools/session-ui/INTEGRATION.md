@@ -31,23 +31,31 @@ No second implementation of guide, selection, budget, verifier or progress
 logic exists in this module. No `select`/`selected-ask` contract is widened:
 bindings are explicit files, labels are never searched, hashes never repaired.
 
-## Seams for the parallel deliveries (not available, not depended upon)
+## Integrated deliveries (main consolidation)
 
-- **Capture-gap planner** (other agent): when it exists, it reads the same
-  contracts the UI already surfaces read-only — `runs/*/questions.json` plus
-  the coordinator journal states (`GET /api/questions` shape:
-  `{questions: [{id, kind, phase, cell, state}]}`). No UI change is needed for a
-  planner that only reads; a planner that writes plans would add one new
-  read-only endpoint serving its own files, following the `selections/`
-  allowlist pattern (`resolve_named`, no browser paths).
-- **HTML session report** (other agent): consumes the versioned JSON the UI
-  serves — `GET /api/status` (`anastylos-agent-session@1` summary),
-  `GET /api/guide` (package hash, parts, verified steps), `GET /api/assembly`
-  (progress log view). If the report is written into the session folder by its
-  owner, the UI can link it without trusting it (same text-only rendering rule).
+- **Session report** (`tools/agent/report.py`, merged): the UI calls
+  `report.export(session_dir, <session>/report.html)` unchanged and serves the
+  file back for open/download. Freshness is checked inside `export`
+  (fail-closed); the target is fixed server-side. No second report
+  implementation exists.
+- **Capture-gap planner** (`tools/agent/capture_gaps/planner.py`, merged): the
+  UI evaluates prepared `capture_gaps/gaps/*.json` files with
+  `planner.evaluate`, deriving `current_binding` fresh from the actual memory
+  and guide bytes on every call; evidence hashes come from actual file bytes.
+  Prepared evidence inherits its gap's prepared binding; staleness is detected
+  against the current binding, never repaired.
 
-Both are named in the page footer as not part of this build. No uncommitted
-file of either delivery is imported, and no finished function is assumed.
+## Missing interface: technical review producer
+
+A gap closes only with an explicit `technical_review` (accepted, reviewer,
+recorded_at, gap/evidence/image binding) plus an explicit operator
+confirmation echoing the exact content criterion. No component in this repo
+produces the technical review — there is no automated image analysis, and the
+Android ShutterGate checks (pose/dwell/quality) prove neither rim visibility
+nor part identity and are not wired here. Until a contracted, tested producer
+exists, the UI offers no review submission: closure is locked by absence, and
+gaps stay `open`/`needs_review`. No sham check was built. `request_view`
+remains disabled; no camera call and no automatic memory confirmation exist.
 
 ## Requested connection that was NOT needed
 

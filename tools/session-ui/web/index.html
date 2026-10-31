@@ -157,10 +157,48 @@
     </div>
     <p class="error" id="assembly-error" role="alert" hidden></p>
   </section>
+
+  <section aria-labelledby="report-heading">
+    <h2 id="report-heading">Session report</h2>
+    <p class="hint">Standalone HTML file from the recorded session: no scripts, no network, no model calls. A stale guide refuses the export — rebuild it first.</p>
+    <form id="export-form"><button type="submit" id="export-button">Export report</button></form>
+    <p class="state" id="report-state" role="status"></p>
+    <div id="report-body" hidden>
+      <p class="provenance" id="report-meta"></p>
+      <p><a id="report-open" href="#" target="_blank" rel="noopener">Open report in browser</a>
+        · <a id="report-download" href="#">Download report</a></p>
+    </div>
+    <p class="error" id="report-error" role="alert" hidden></p>
+  </section>
+
+  <section aria-labelledby="gaps-heading">
+    <h2 id="gaps-heading">Capture needs</h2>
+    <p class="hint">Explicitly prepared gaps of this session: what is missing, the English instruction, and the success criteria. Demo gaps are synthetic fixtures. No image analysis and no camera control happen here.</p>
+    <p class="state" id="gaps-state" role="status"></p>
+    <div id="gaps-body" hidden>
+      <p class="provenance" id="gaps-closure"></p>
+      <div id="gaps-list"></div>
+      <h3>Prepared evidence</h3>
+      <ul id="evidence-list"></ul>
+      <form id="evaluate-form">
+        <label for="gap-picker">Gap</label>
+        <select id="gap-picker" name="gap"></select>
+        <label for="evidence-picker">Evidence candidate (optional)</label>
+        <select id="evidence-picker" name="candidate"></select>
+        <button type="submit" id="evaluate-button">Evaluate with planner</button>
+      </form>
+      <div id="gap-result" hidden>
+        <p><span class="badge" id="gap-status"></span></p>
+        <p class="answer-text" id="gap-reason"></p>
+        <p class="provenance" id="gap-detail"></p>
+      </div>
+    </div>
+    <p class="error" id="gaps-error" role="alert" hidden></p>
+  </section>
 </main>
 
 <footer>
-  <p>Capture-gap planner and HTML session report are not part of this build; their narrow seams are documented in INTEGRATION.md. All guide, operator and model text on this page is rendered as text.</p>
+  <p>Report export and capture needs reuse the product modules; closure of a capture need requires reviews this build cannot produce (see INTEGRATION.md). All guide, operator and model text on this page is rendered as text.</p>
 </footer>
 
 <script src="app.js"></script>

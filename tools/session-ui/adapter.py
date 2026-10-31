@@ -17,6 +17,13 @@ Every behavior below is owned elsewhere and reused unchanged:
   ``tools/agent/selected_guide.py``. Bindings come from explicit files; nothing here searches
   labels or recomputes hashes. Stored-claims replay uses ``tools/live/providers/fake.py``
   exactly like the CLI ``--claims`` path and is reported as ``offline_claims``, never Muse.
+- session report: ``tools/agent/report.py::export`` (fail-closed freshness check inside;
+  only the server-fixed ``report.html`` is written, session inputs are never touched).
+- capture needs: ``tools/agent/capture_gaps/planner.py::evaluate`` (pure, no I/O).
+  Gap files and evidence bytes are server-side prepared data; the current binding is
+  derived fresh from the actual session bytes on every evaluation. There is no
+  technical image check in this build, so closure stays locked: no endpoint submits
+  reviews and none is synthesized.
 
 No function here reimplements guide, selection, budget, verifier or progress logic.
 No HTTP call is possible: no provider module is imported besides the offline fake.
@@ -24,6 +31,7 @@ No HTTP call is possible: no provider module is imported besides the offline fak
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -39,7 +47,9 @@ for _path in (AGENT, LIVE):
 import anastylos  # noqa: E402  (product orchestrator, reused unchanged)
 import ask_loop  # noqa: E402
 import assemble  # noqa: E402
+import capture_gaps.planner as capture_planner  # noqa: E402  (pure evaluator, no I/O)
 import guide  # noqa: E402
+import report  # noqa: E402  (standalone HTML export, fail-closed)
 import selected_guide  # noqa: E402
 import selection  # noqa: E402
 import states as st  # noqa: E402  (tools/live)
@@ -49,6 +59,11 @@ from state import SessionError, SessionState  # noqa: E402
 SELECTIONS_DIR = "selections"
 STORED_CLAIMS_DIR = "selected_claims"
 SELECTED_CACHE_NAME = "selected_answers.jsonl"
+REPORT_NAME = "report.html"
+GAPS_DIR = "capture_gaps"
+GAPS_SUBDIR = "gaps"
+EVIDENCE_SUBDIR = "evidence"
+EVIDENCE_SUFFIXES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
 
 
 def check_workspace_root(root: Path) -> Path:
@@ -438,3 +453,171 @@ def assembly_done(root: Path, session_id: str, step: int) -> dict:
         raise AdapterError("The assembly step must be a number.", 400)
     _stopped(assemble.mark_done, state, step)
     return assembly_view(root, session_id)
+
+
+# ------------------------------------------------------------------ session report
+
+def report_export(root: Path, session_id: str) -> dict:
+    """Export the standalone HTML report; freshness is checked inside ``report.export``.
+
+    The target is fixed server-side (``report.html`` in the session folder); a stale
+    or tampered guide refuses the export and writes nothing. Absolute server paths
+    never reach the browser.
+    """
+    session_dir = resolve_session(root, session_id)
+    try:
+        result = report.export(session_dir, session_dir / REPORT_NAME)
+    except (report.ReportError, SessionError) as exc:
+        raise AdapterError(str(exc), 409) from exc
+    return {"file": REPORT_NAME, "report_sha256": result["report_sha256"],
+            "guide": result["guide"], "parts": result["parts"],
+            "install_steps": result["install_steps"], "open_questions": result["open_questions"],
+            "left_unresolved": result["left_unresolved"], "assembly": result["assembly"]}
+
+
+def report_status(root: Path, session_id: str) -> dict:
+    """Whether a report was exported (read-only; the file itself stays server-side)."""
+    path = resolve_session(root, session_id) / REPORT_NAME
+    if not path.is_file():
+        return {"exists": False}
+    data = path.read_bytes()
+    return {"exists": True, "file": REPORT_NAME, "bytes": len(data),
+            "report_sha256": hashlib.sha256(data).hexdigest()}
+
+
+def report_bytes(root: Path, session_id: str) -> bytes:
+    path = resolve_session(root, session_id) / REPORT_NAME
+    if not path.is_file():
+        raise AdapterError("No report was exported for this session yet.", 404)
+    return path.read_bytes()
+
+
+# ------------------------------------------------------------------ capture needs
+
+def _read_gap(session_dir: Path, name: str) -> dict:
+    if not name or name in (".", "..") or "/" in name or "\\" in name or not name.endswith(".json"):
+        raise AdapterError(f"Unknown capture gap {name!r}.", 404)
+    candidate = (session_dir / GAPS_DIR / GAPS_SUBDIR / name).resolve()
+    if candidate.parent != (session_dir / GAPS_DIR / GAPS_SUBDIR).resolve() or not candidate.is_file():
+        raise AdapterError(f"Unknown capture gap {name!r}.", 404)
+    try:
+        gap = json.loads(candidate.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise AdapterError(f"Capture gap {name} cannot be read as UTF-8 JSON.", 409) from exc
+    if not isinstance(gap, dict):
+        raise AdapterError(f"Capture gap {name} is not a JSON object.", 409)
+    return gap
+
+
+def _fresh_binding(state: SessionState, target: dict) -> dict:
+    """The current binding, derived from the actual session bytes (never from the browser)."""
+    memory = state.memory_dir / "memory.jsonl"
+    if not memory.is_file():
+        raise AdapterError("This session has no memory yet; no capture need can be bound.", 409)
+    try:
+        memory_bytes = memory.read_bytes()
+        sessions = {json.loads(line).get("session") for line in memory_bytes.decode("utf-8").splitlines()
+                    if line.strip()}
+    except (OSError, ValueError) as exc:
+        raise AdapterError("The session memory cannot be read; no capture need can be bound.", 409) from exc
+    if len(sessions) != 1 or not next(iter(sessions)):
+        raise AdapterError("The session memory carries no single session value; no capture need can be bound.", 409)
+    memory_sha = hashlib.sha256(memory_bytes).hexdigest()
+    hashes = {"memory": memory_sha}
+    package = guide.guide_dir(state) / "session.json"
+    if package.is_file():
+        hashes["guide"] = hashlib.sha256(package.read_bytes()).hexdigest()
+    return {"session": next(iter(sessions)), "target": target, "revision": "mem:" + memory_sha[:12],
+            "hashes": hashes}
+
+
+def _evidence_files(session_dir: Path) -> list[dict]:
+    folder = session_dir / GAPS_DIR / EVIDENCE_SUBDIR
+    if not folder.is_dir():
+        return []
+    out = []
+    for path in sorted(folder.iterdir()):
+        if path.suffix.lower() not in EVIDENCE_SUFFIXES or not path.is_file():
+            continue
+        data = path.read_bytes()
+        out.append({"file": path.name, "bytes": len(data),
+                    "image_sha256": hashlib.sha256(data).hexdigest()})
+    return out
+
+
+def _evaluate_gap(state: SessionState, gap: dict, candidate_file: str | None) -> dict:
+    """One planner evaluation; image hashes always come from actual evidence bytes."""
+    target = gap.get("binding", {}).get("target") if isinstance(gap.get("binding"), dict) else None
+    if not isinstance(target, dict):
+        raise AdapterError("Capture gap has no explicit binding target.", 409)
+    document: dict = {"schema": "anastylos-capture-gap-input@1", "gap": gap,
+                      "current_binding": _fresh_binding(state, target)}
+    if candidate_file:
+        if "/" in candidate_file or "\\" in candidate_file or candidate_file in (".", ".."):
+            raise AdapterError(f"Unknown evidence {candidate_file!r}.", 404)
+        path = (state.root / GAPS_DIR / EVIDENCE_SUBDIR / candidate_file).resolve()
+        if path.parent != (state.root / GAPS_DIR / EVIDENCE_SUBDIR).resolve() or not path.is_file() \
+                or path.suffix.lower() not in EVIDENCE_SUFFIXES:
+            raise AdapterError(f"Unknown evidence {candidate_file!r}.", 404)
+        image_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        # Prepared evidence belongs to its prepared gap revision; staleness is detected
+        # against the freshly derived current binding, never repaired.
+        document["candidate"] = {"evidence_id": path.name, "image_sha256": image_sha,
+                                 "binding": gap["binding"]}
+    try:
+        return capture_planner.evaluate(document)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise AdapterError(f"Capture gap cannot be evaluated: {exc}", 409) from exc
+
+
+def gaps_view(root: Path, session_id: str) -> dict:
+    """Prepared gaps with their planner state plus prepared evidence (read-only)."""
+    state = _load_state(root, session_id)
+    folder = state.root / GAPS_DIR / GAPS_SUBDIR
+    gaps = []
+    if folder.is_dir():
+        for path in sorted(folder.glob("*.json")):
+            try:
+                gap = _read_gap(state.root, path.name)
+                evaluation = _evaluate_gap(state, gap, None)
+            except AdapterError as exc:
+                gaps.append({"file": path.name, "error": str(exc)})
+                continue
+            gaps.append({"file": path.name, "gap_id": evaluation["gap_id"], "kind": evaluation["kind"],
+                         "detail": evaluation["detail"],
+                         "missing_information": evaluation["missing_information"],
+                         "instruction": evaluation["instruction"],
+                         "technical_criteria": evaluation["technical_criteria"],
+                         "content_criterion": evaluation["content_criterion"],
+                         "status": evaluation["status"], "reason": evaluation["reason"]})
+    return {"gaps": gaps, "evidence": _evidence_files(state.root),
+            "closure": "locked: this build has no technical image check, so no review can be "
+                      "submitted and gaps stay open or needs_review"}
+
+
+def gaps_evaluate(root: Path, session_id: str, gap_file: str, candidate_file: str | None) -> dict:
+    """Evaluate one prepared gap, optionally with one prepared evidence candidate.
+
+    Pure planner evaluation: nothing is written. Closure requires explicit
+    technical and operator reviews, which this build cannot produce (see
+    ``gaps_view`` closure note); the planner result says what is missing.
+    """
+    state = _load_state(root, session_id)
+    if not gap_file:
+        raise AdapterError("The gap parameter is required.", 400)
+    gap = _read_gap(state.root, gap_file)
+    return _evaluate_gap(state, gap, candidate_file or None)
+
+
+def evidence_bytes(root: Path, session_id: str, name: str) -> tuple[bytes, str]:
+    """Prepared evidence bytes for display (no analysis is performed or claimed)."""
+    if not name or name in (".", "..") or "/" in name or "\\" in name:
+        raise AdapterError(f"Unknown evidence {name!r}.", 404)
+    session_dir = resolve_session(root, session_id)
+    path = (session_dir / GAPS_DIR / EVIDENCE_SUBDIR / name).resolve()
+    if path.parent != (session_dir / GAPS_DIR / EVIDENCE_SUBDIR).resolve() or not path.is_file():
+        raise AdapterError(f"Unknown evidence {name!r}.", 404)
+    content_type = EVIDENCE_SUFFIXES.get(path.suffix.lower())
+    if content_type is None:
+        raise AdapterError(f"Unknown evidence {name!r}.", 404)
+    return path.read_bytes(), content_type

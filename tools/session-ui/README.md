@@ -57,6 +57,13 @@ This build is offline by construction:
   selection — no label search, no hash repair.
 - Reassembly: current step from verified claims, confirm-only progression,
   progress across restarts, superseded-package notice.
+- Session report: one click exports the standalone HTML (`report.export`,
+  reused unchanged) to the server-fixed `report.html`, then opens or downloads
+  it. A stale guide refuses the export; session inputs are never modified.
+- Capture needs: prepared gaps show missing information, the English
+  instruction, technical criteria and the success criterion; prepared evidence
+  is hash-verified from its bytes and evaluated with the planner. Closure is
+  locked (see Limits).
 
 Mutating actions are serialized per session; while a request is in flight its
 button is disabled, and a repeated POST is a no-op on the new state (never a
@@ -65,10 +72,13 @@ duplicate write). Every section has loading, empty, error and stale states.
 ## API (JSON, localhost only)
 
 Reads: `GET /api/sessions /api/status /api/questions /api/guide
-/api/selections /api/assembly` (query: `?session=<id>`).
+/api/selections /api/assembly /api/gaps` (query: `?session=<id>`); file reads
+`GET /api/report` (`&download=1` for attachment) and `GET /api/gaps/evidence`
+(`&file=<name>`).
 Writes (POST, foreign `Origin` refused with 403): `/api/questions/next`,
 `/api/questions/answer`, `/api/questions/confirm`, `/api/guide/build`,
-`/api/guide/ask`, `/api/select`, `/api/selected-ask`, `/api/assembly/done`.
+`/api/guide/ask`, `/api/select`, `/api/selected-ask`, `/api/assembly/done`,
+`/api/report/export`, `/api/gaps/evaluate`.
 
 Ids are plain names resolved inside the workspace root; paths from the browser
 are rejected. The server refuses non-loopback `--host` values.
@@ -99,8 +109,11 @@ still-stale binding).
 
 - Sessions must already exist (`new`/`phase` stay CLI-only); declarations
   (`declare`) and return checks (`assemble --returns`) stay CLI-only too.
-- Capture-gap planner and HTML session report are separate, not-yet-available
-  deliveries: this build depends on neither. Their narrow seams are documented
-  in `INTEGRATION.md`, and the page footer names the gap honestly.
+- Capture-need closure is locked: closing a gap needs an explicit technical
+  review (image readability, framing, quality) plus an explicit operator
+  confirmation, and no technical image check exists in this repo to produce
+  the former — the UI submits no reviews and synthesizes none. Gaps stay
+  `open` or `needs_review` with the planner's reason. No image analysis, no
+  camera control, no `request_view` is wired; see `INTEGRATION.md`.
 - Guide/selection/assembly answers are only as good as the session evidence;
   a selection is not a frame→record confirmation or assembly approval.

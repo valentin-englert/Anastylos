@@ -150,13 +150,13 @@ async function openSession() {
   for (const id of ["prompt-card", "confirm-card", "guide-body", "resolution",
                     "assembly-body", "guide-answer", "selected-answer"]) $(id).hidden = true;
   if (!(await loadStatus())) return;
-  await Promise.all([loadQuestions(true), loadGuide(), loadSelections(), loadAssembly()]);
+  await Promise.all([loadQuestions(true), loadGuide(), loadSelections(), loadAssembly(), loadGaps()]);
 }
 
 async function refreshAfterMutation() {
   /* Question and assembly answers change counts, states and freshness. */
   await loadStatus();
-  await Promise.all([loadQuestions(true), loadGuide(), loadAssembly()]);
+  await Promise.all([loadQuestions(true), loadGuide(), loadAssembly(), loadGaps()]);
 }
 
 /* ------------------------------------------------------------------ questions */
@@ -544,6 +544,157 @@ async function confirmStep(button) {
   }
 }
 
+/* ------------------------------------------------------------------ report */
+
+function reportLinks() {
+  const base = `/api/report?session=${encodeURIComponent(state.session)}`;
+  $("report-open").href = base;
+  $("report-download").href = `${base}&download=1`;
+}
+
+function showReportMeta(meta) {
+  $("report-body").hidden = false;
+  const assembly = meta.assembly
+    ? `${meta.assembly.steps_done}/${meta.assembly.steps_total} steps done` : "no assembly plan";
+  setText("report-meta",
+    `${meta.file} — sha ${meta.report_sha256.slice(0, 12)}, guide ${meta.guide}, ` +
+    `${meta.parts} parts, ${meta.open_questions.length} open / ` +
+    `${meta.left_unresolved.length} unresolved questions, ${assembly}.`);
+  reportLinks();
+}
+
+async function exportReport(button) {
+  showError("report-error", "");
+  $("report-body").hidden = true;
+  setText("report-state", "Exporting the report …");
+  try {
+    showReportMeta(await post("/api/report/export", { session: state.session }, button));
+    setText("report-state", "");
+  } catch (error) {
+    setText("report-state", "");
+    showError("report-error", error.message);
+  }
+}
+
+/* ------------------------------------------------------------------ capture needs */
+
+function gapTone(status) {
+  return status === "closed" ? "good" : status === "needs_review" ? "warn" : "";
+}
+
+async function loadGaps() {
+  if (!state.session) return;
+  setText("gaps-state", "Loading capture needs …");
+  showError("gaps-error", "");
+  $("gap-result").hidden = true;
+  try {
+    const view = await call(`/api/gaps?session=${encodeURIComponent(state.session)}`);
+    if (!view.gaps.length) {
+      $("gaps-body").hidden = true;
+      setText("gaps-state", "No prepared capture needs in this session.");
+      return;
+    }
+    $("gaps-body").hidden = false;
+    setText("gaps-closure", view.closure);
+    const list = $("gaps-list");
+    list.replaceChildren();
+    const picker = $("gap-picker");
+    picker.replaceChildren();
+    for (const gap of view.gaps) {
+      const card = document.createElement("div");
+      card.className = "gap-card";
+      if (gap.error) {
+        const para = document.createElement("p");
+        para.className = "error";
+        para.textContent = `${gap.file}: ${gap.error}`;
+        card.append(para);
+      } else {
+        const title = document.createElement("p");
+        const badge = document.createElement("span");
+        badge.className = `badge ${gapTone(gap.status)}`;
+        badge.textContent = gap.status;
+        title.append(badge);
+        const name = document.createElement("span");
+        name.textContent = ` ${gap.gap_id} (${gap.kind})`;
+        title.append(name);
+        card.append(title);
+        for (const [label, value] of [["Missing", gap.missing_information],
+                                      ["Detail", gap.detail], ["Instruction", gap.instruction],
+                                      ["Success", gap.content_criterion],
+                                      ["State", gap.reason]]) {
+          const para = document.createElement("p");
+          para.textContent = `${label}: ${Array.isArray(value) ? value.join(" ") : value}`;
+          card.append(para);
+        }
+        const option = document.createElement("option");
+        option.value = gap.file;
+        option.textContent = `${gap.gap_id} (${gap.status})`;
+        picker.append(option);
+      }
+      list.append(card);
+    }
+    const evidence = $("evidence-list");
+    evidence.replaceChildren();
+    const candidates = $("evidence-picker");
+    candidates.replaceChildren();
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "No candidate (gap state only)";
+    candidates.append(none);
+    for (const item of view.evidence) {
+      const row = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = `/api/gaps/evidence?session=${encodeURIComponent(state.session)}` +
+        `&file=${encodeURIComponent(item.file)}`;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = item.file;
+      row.append(link);
+      const meta = document.createElement("span");
+      meta.textContent = ` — ${item.bytes} bytes, sha ${item.image_sha256.slice(0, 12)}`;
+      row.append(meta);
+      evidence.append(row);
+      const option = document.createElement("option");
+      option.value = item.file;
+      option.textContent = item.file;
+      candidates.append(option);
+    }
+    if (!view.evidence.length) {
+      const row = document.createElement("li");
+      row.textContent = "No prepared evidence in this session.";
+      evidence.append(row);
+    }
+    setText("gaps-state", "");
+  } catch (error) {
+    $("gaps-body").hidden = true;
+    setText("gaps-state", "");
+    showError("gaps-error", error.message);
+  }
+}
+
+async function evaluateGap(button) {
+  showError("gaps-error", "");
+  $("gap-result").hidden = true;
+  const gap = $("gap-picker").value;
+  if (!gap) return;
+  try {
+    const result = await post("/api/gaps/evaluate",
+      { session: state.session, gap, candidate: $("evidence-picker").value || null }, button);
+    $("gap-result").hidden = false;
+    const badge = $("gap-status");
+    badge.textContent = result.status;
+    badge.className = `badge ${gapTone(result.status)}`;
+    setText("gap-reason", result.reason);
+    setText("gap-detail",
+      `Gap ${result.gap_id} (${result.kind}) — ` +
+      (result.candidate ? `candidate ${result.candidate.evidence_id}. ` : "no candidate. ") +
+      "Closure needs an explicit technical review and an explicit operator " +
+      "confirmation; neither is collected in this build.");
+  } catch (error) {
+    showError("gaps-error", error.message);
+  }
+}
+
 /* ------------------------------------------------------------------ wiring */
 
 $("session-form").addEventListener("submit", (event) => { event.preventDefault(); openSession(); });
@@ -565,5 +716,7 @@ $("claims-form").addEventListener("submit", (event) => {
   selectedAsk(intent, file, $("claims-button"));
 });
 $("done-form").addEventListener("submit", (event) => { event.preventDefault(); confirmStep($("done-button")); });
+$("export-form").addEventListener("submit", (event) => { event.preventDefault(); exportReport($("export-button")); });
+$("evaluate-form").addEventListener("submit", (event) => { event.preventDefault(); evaluateGap($("evaluate-button")); });
 
 loadSessions();

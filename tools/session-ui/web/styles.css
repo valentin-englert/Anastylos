@@ -116,6 +116,13 @@ th { background: var(--wash); }
   border-radius: 4px;
 }
 
+.gap-card {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+.gap-card p { margin: 0.25rem 0; }
+
 footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
 
 @media (prefers-reduced-motion: reduce) {

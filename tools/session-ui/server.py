@@ -67,6 +67,16 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_bytes(self, body: bytes, content_type: str, download_name: str | None = None) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        if download_name:
+            self.send_header("Content-Disposition", f'attachment; filename="{download_name}"')
+        self.end_headers()
+        self.wfile.write(body)
+
     def _query(self) -> dict[str, str]:
         return dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(self.path).query, keep_blank_values=True))
 
@@ -102,6 +112,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/sessions": self._api_sessions, "/api/status": self._api_status,
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
+            "/api/report": self._api_report, "/api/gaps": self._api_gaps,
+            "/api/gaps/evidence": self._api_evidence,
         }
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -122,7 +134,8 @@ class Handler(BaseHTTPRequestHandler):
         routes = {"/api/questions/next": self._api_question_next, "/api/questions/answer": self._api_answer,
                   "/api/questions/confirm": self._api_confirm, "/api/guide/build": self._api_guide_build,
                   "/api/guide/ask": self._api_guide_ask, "/api/select": self._api_select,
-                  "/api/selected-ask": self._api_selected_ask, "/api/assembly/done": self._api_assembly_done}
+                  "/api/selected-ask": self._api_selected_ask, "/api/assembly/done": self._api_assembly_done,
+                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._send_json({"error": "Unknown path."}, 404)
@@ -231,6 +244,40 @@ class Handler(BaseHTTPRequestHandler):
         if not session_id or body.get("step") is None:
             raise AdapterError("The session and step parameters are required.", 400)
         self._mutate(session_id, lambda: adapter.assembly_done(Handler.workspace_root, session_id, body["step"]))
+
+    def _api_report_export(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: adapter.report_export(Handler.workspace_root, session_id))
+
+    def _api_report(self) -> None:
+        query = self._query()
+        session_id = self._session_param(query)
+        download = query.get("download") == "1"
+        self._send_bytes(adapter.report_bytes(Handler.workspace_root, session_id),
+                         "text/html; charset=utf-8", f"{session_id}-report.html" if download else None)
+
+    def _api_gaps(self) -> None:
+        session_id = self._session_param(self._query())
+        self._send_json(adapter.gaps_view(Handler.workspace_root, session_id))
+
+    def _api_gaps_evaluate(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: adapter.gaps_evaluate(
+            Handler.workspace_root, session_id, body.get("gap", ""), body.get("candidate")))
+
+    def _api_evidence(self) -> None:
+        query = self._query()
+        session_id, name = self._session_param(query), query.get("file", "")
+        if not name:
+            raise AdapterError("The file parameter is missing.", 400)
+        body, content_type = adapter.evidence_bytes(Handler.workspace_root, session_id, name)
+        self._send_bytes(body, content_type)
 
 
 def serve(workspace_root: Path, host: str = "127.0.0.1", port: int = 8071) -> ThreadingHTTPServer:

@@ -47,9 +47,13 @@ import org.anastylos.capture.di.AppContainer
 import org.anastylos.capture.guidance.CueAxis
 import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.PhoneRotation
+import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.RegistrationState
 import org.anastylos.capture.guidance.RequestState
 import org.anastylos.capture.guidance.SessionState
+import org.anastylos.capture.ui.camera.CameraPicker
+import org.anastylos.capture.camera.SETTING_PROFILES
+import org.anastylos.capture.ui.camera.CameraSettingsPanel
 
 /**
  * Operational Guided Capture screen: live preview with detection
@@ -66,6 +70,12 @@ fun GuidedCaptureScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.state.collectAsState()
+    // Per-pose fields change at the analysis rate; sections that never
+    // read them get an equal-while-unchanged copy so Compose skips them.
+    // GUIDE-01: recomposing the whole screen per pose saturated the
+    // main thread (~70 ms frames) and aged every pose before the gates.
+    val coldKey = state.withoutPoseFields()
+    val cold = remember(coldKey) { coldKey }
     // FIT_CENTER: the overlay maps analysis pixels onto the view
     // analytically (OverlayMapping) — no crop math to get wrong.
     val previewView = remember {
@@ -125,6 +135,12 @@ fun GuidedCaptureScreen(
                     "Poses are coarse; metric evidence is disabled until calibration.",
                 color = MaterialTheme.colorScheme.error,
             )
+            cold.calibrationBlocker?.let { reason ->
+                Text("Calibrated profile not applied: $reason")
+                Button(onClick = { viewModel.applyCalibratedOptics() }) {
+                    Text("Use calibrated optics")
+                }
+            }
         }
         TrackingBanner(state)
         Box(modifier = Modifier.fillMaxWidth()) {
@@ -136,16 +152,51 @@ fun GuidedCaptureScreen(
         }
         CueList(state)
         StateGrid(state)
-        TargetPicker(state, viewModel)
-        ControlRow(state, viewModel)
+        TargetPicker(cold, viewModel)
+        CameraPicker(
+            cameras = cold.availableCameras,
+            effectiveId = cold.effectiveCameraId,
+            note = cold.cameraNote,
+            onSelect = { viewModel.selectCamera(it) },
+        )
+        CameraSettingsPanel(
+            settings = cold.settings,
+            caps = viewModel.capsFor(cold.effectiveCameraId),
+            profiles = SETTING_PROFILES,
+            activeProfile = cold.activeProfile,
+            appliedLine = cold.appliedLine,
+            settingsNote = cold.settingsNote,
+            analysisSelectable = true,
+            onUpdate = viewModel::updateSettings,
+            onProfile = { viewModel.selectProfile(it) },
+        )
+        ControlRow(cold, viewModel)
         QualityRow(state, viewModel)
-        RemoteSection(state, viewModel)
-        ResultCard(state, viewModel)
+        RemoteSection(cold, viewModel)
+        ResultCard(cold, viewModel)
         state.cameraError?.let { Text("Camera: $it", color = MaterialTheme.colorScheme.error) }
         state.captureError?.let { Text("Capture: $it", color = MaterialTheme.colorScheme.error) }
         state.sessionReason?.let { Text("Session note: $it") }
     }
 }
+
+/** [GuidanceUiState] with every per-pose field at its default. */
+private fun GuidanceUiState.withoutPoseFields(): GuidanceUiState = copy(
+    registration = RegistrationState.UNREGISTERED,
+    wireReason = null,
+    dwell = org.anastylos.capture.guidance.DwellState.Idle,
+    cues = emptyList(),
+    poseAgeMs = null,
+    rmsPx = null,
+    cornersPx = emptyList(),
+    markersSeen = emptyList(),
+    qualityVerdict = ImageQualityVerdict.Unknown,
+    motionWarning = false,
+    measuredSharpness = null,
+    orientationOk = false,
+    distanceOk = false,
+    holdReason = null,
+)
 
 @Composable
 private fun TrackingBanner(state: GuidanceUiState) {
@@ -232,6 +283,7 @@ private fun StateGrid(state: GuidanceUiState) {
             "\nPose age ${state.poseAgeMs?.let { "${it}ms" } ?: "—"}" +
             " · RMS ${state.rmsPx?.let { "%.2f".format(it) } ?: "—"}px" +
             " · Quality ${state.qualityVerdict}" +
+            (if (state.motionWarning) " · motion warning (not blocking)" else "") +
             (state.holdReason?.let { "\nHold: ${it.code}" } ?: ""),
         style = MaterialTheme.typography.bodyMedium,
     )
@@ -239,7 +291,8 @@ private fun StateGrid(state: GuidanceUiState) {
 
 private fun dwellText(state: GuidanceUiState): String = when (val dwell = state.dwell) {
     is org.anastylos.capture.guidance.DwellState.Idle -> "idle"
-    is org.anastylos.capture.guidance.DwellState.Accumulating -> "holding ${dwell.samples}/12"
+    is org.anastylos.capture.guidance.DwellState.Accumulating ->
+        "holding ${dwell.samples}/${org.anastylos.capture.guidance.HackathonMvp.DWELL_SAMPLES}"
     is org.anastylos.capture.guidance.DwellState.Ready -> "READY"
 }
 

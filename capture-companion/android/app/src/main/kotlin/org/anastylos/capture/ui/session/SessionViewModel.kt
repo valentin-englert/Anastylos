@@ -17,7 +17,14 @@ import org.anastylos.capture.camera.CapturedStill
 import org.anastylos.capture.camera.FrameSampler
 import org.anastylos.capture.camera.SamplerEvent
 import org.anastylos.capture.camera.SamplingConfig
+import org.anastylos.capture.camera.UsableCamera
+import org.anastylos.capture.camera.CameraCapabilities
+import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.DEFAULT_PROFILE
+import org.anastylos.capture.camera.sanitizeSettings
 import org.anastylos.capture.camera.launchSampling
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
 import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.SamplingPrefs
 import org.anastylos.capture.data.files.EvidenceFileStore
@@ -53,6 +60,13 @@ data class SessionUiState(
     val uploading: Boolean = false,
     val lastUpload: String? = null,
     val error: String? = null,
+    val availableCameras: List<UsableCamera> = emptyList(),
+    val selectedCameraId: String? = null,
+    val effectiveCameraId: String? = null,
+    val cameraNote: String? = null,
+    val settings: CameraSettings = CameraSettings(),
+    val activeProfile: String = DEFAULT_PROFILE,
+    val settingsNote: String? = null,
 )
 
 /**
@@ -67,6 +81,8 @@ class SessionViewModel(
     private val sampler: FrameSampler,
     private val pairingStore: PairingStore,
     private val prefs: SamplingPrefs,
+    private val cameraPrefs: CameraPrefs? = null,
+    private val settingsStore: CameraSettingsStore? = null,
     private val appVersion: String,
     private val transportFactory: (baseUrl: String, tls: PinnedTls?) -> HttpTransport,
     private val peekCertificates: suspend (host: String, port: Int) -> Array<X509Certificate> =
@@ -89,6 +105,14 @@ class SessionViewModel(
                 _state.update { it.copy(intervalSeconds = seconds) }
             }
         }
+        viewModelScope.launch {
+            try {
+                cameraPrefs?.selectedCameraId?.collect { id ->
+                    _state.update { it.copy(selectedCameraId = id) }
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun createSession(name: String) {
@@ -106,6 +130,86 @@ class SessionViewModel(
     fun selectSession(id: String) {
         _state.update { it.copy(activeSessionId = id, lastUpload = null) }
         refreshCounts(id)
+    }
+
+    init {
+        viewModelScope.launch {
+            try {
+                settingsStore?.activeProfile?.collect { name ->
+                    _state.update { it.copy(activeProfile = name) }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun onCamerasListed(cameras: List<UsableCamera>, effectiveId: String?, note: String?) {
+        _state.update {
+            it.copy(availableCameras = cameras, effectiveCameraId = effectiveId, cameraNote = note)
+        }
+        observeSettings()
+    }
+
+    fun selectCamera(id: String) {
+        _state.update { it.copy(selectedCameraId = id) }
+        viewModelScope.launch {
+            try {
+                cameraPrefs?.setSelectedCameraId(id)
+            } catch (_: Exception) {
+                _state.update { it.copy(error = "could not save the camera selection") }
+            }
+        }
+    }
+
+    fun capsFor(id: String?): CameraCapabilities {
+        return _state.value.availableCameras.firstOrNull { it.id == id }?.capabilities
+            ?: CameraCapabilities()
+    }
+
+    fun onSettingsApplied(ok: Boolean) {
+        _state.update { it.copy(settingsNote = if (ok) null else "settings not applied") }
+    }
+
+    private fun observeSettings() {
+        val id = _state.value.effectiveCameraId ?: return
+        val profile = _state.value.activeProfile
+        val store = settingsStore ?: return
+        viewModelScope.launch {
+            try {
+                store.settings(id, profile).collect { stored ->
+                    _state.update { it.copy(settings = sanitizeSettings(stored, capsFor(id))) }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun updateSettings(transform: (CameraSettings) -> CameraSettings) {
+        val id = _state.value.effectiveCameraId
+        val next = sanitizeSettings(transform(_state.value.settings), capsFor(id))
+        _state.update { it.copy(settings = next) }
+        if (id != null) {
+            val profile = _state.value.activeProfile
+            viewModelScope.launch {
+                try {
+                    settingsStore?.update(id, profile, next)
+                } catch (_: Exception) {
+                    _state.update { it.copy(settingsNote = "could not save settings") }
+                }
+            }
+        }
+    }
+
+    fun selectProfile(name: String) {
+        if (name == _state.value.activeProfile) return
+        _state.update { it.copy(activeProfile = name) }
+        viewModelScope.launch {
+            try {
+                settingsStore?.setActiveProfile(name)
+            } catch (_: Exception) {
+            }
+        }
+        observeSettings()
     }
 
     fun setInterval(seconds: Int) {

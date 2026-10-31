@@ -17,17 +17,27 @@ import org.anastylos.capture.guidance.PoseEstimator
  */
 object Camera2Intrinsics {
     @ExperimentalCamera2Interop
-    fun forAnalysisStream(camera: Camera, analysisWidth: Int, analysisHeight: Int): PoseEstimator.Intrinsics? {
+    fun forAnalysisStream(
+        camera: Camera,
+        analysisWidth: Int,
+        analysisHeight: Int,
+        linearZoom: Float = 0f,
+    ): PoseEstimator.Intrinsics? {
         if (analysisWidth <= 0 || analysisHeight <= 0) return null
         return try {
-            read(camera, analysisWidth, analysisHeight)
+            read(camera, analysisWidth, analysisHeight, linearZoom)
         } catch (_: Exception) {
             null
         }
     }
 
     @ExperimentalCamera2Interop
-    private fun read(camera: Camera, analysisWidth: Int, analysisHeight: Int): PoseEstimator.Intrinsics? {
+    private fun read(
+        camera: Camera,
+        analysisWidth: Int,
+        analysisHeight: Int,
+        linearZoom: Float,
+    ): PoseEstimator.Intrinsics? {
         val info = Camera2CameraInfo.from(camera.cameraInfo)
         val focalMm = info.getCameraCharacteristic(
             CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS,
@@ -54,7 +64,11 @@ object Camera2Intrinsics {
             width = analysisWidth,
             height = analysisHeight,
             distortion = listOf(0.0, 0.0, 0.0, 0.0, 0.0),
-            profileId = "factory-${info.cameraId}-uncalibrated",
+            // The profile key embeds the full recording geometry: a new
+            // camera, size, or zoom is a NEW profile, never a silent reuse.
+            // fx stays sensor-level (uncalibrated coarse guidance only).
+            profileId = "factory-${info.cameraId}-${analysisWidth}x${analysisHeight}-" +
+                "z${(linearZoom.coerceIn(0f, 1f) * 100).toInt()}-uncalibrated",
         )
     }
 }

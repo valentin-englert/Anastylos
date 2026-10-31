@@ -60,7 +60,7 @@ class OpenCvPoseEstimator(
             "DICT_6X6_250" -> Objdetect.DICT_6X6_250
             else -> null
         }
-        val quality = try {
+        val fullFrameQuality = try {
             if (input.yPlane.size == input.width * input.height) {
                 FrameQuality.measure(input.yPlane, input.width, input.height)
             } else {
@@ -70,24 +70,40 @@ class OpenCvPoseEstimator(
             null
         }
         if (dictionaryId == null || input.yPlane.size != input.width * input.height) {
-            return lost(input, quality)
+            return lost(input, fullFrameQuality)
         }
         val detections = try {
             backend.detect(input.yPlane, input.width, input.height, dictionaryId)
         } catch (_: LinkageError) {
-            return lost(input, quality)
+            return lost(input, fullFrameQuality)
         } catch (_: Exception) {
-            return lost(input, quality)
+            return lost(input, fullFrameQuality)
         }
-        if (detections.isEmpty()) return lost(input, quality)
+        if (detections.isEmpty()) return lost(input, fullFrameQuality)
+        val quality = try {
+            fullFrameQuality?.let {
+                FrameQuality.withBoardExposure(
+                    it, input.yPlane, input.width, input.height,
+                    detections.flatMap { detection -> detection.corners },
+                )
+            }
+        } catch (_: Exception) {
+            fullFrameQuality
+        }
         val seen = detections.map { it.id }
         val corners = detections.sumOf { it.corners.size }
         val cornersPx = detections.map { PoseEstimator.MarkerCorners(it.id, it.corners) }
         val correspondences = PoseMath.assembleCorrespondences(detections, board)
-        if (correspondences.size < 4 || intrinsics == null) {
+        // CAL-01 fail-closed: an uncalibrated (factory) profile may feed
+        // detection but never a metric pose, even when its numbers look
+        // sane. Only a measured profile reaches the solver.
+        val metricIntrinsics =
+            if (intrinsics != null && intrinsics.profileId.contains("uncalibrated")) null
+            else intrinsics
+        if (correspondences.size < 4 || metricIntrinsics == null) {
             return degraded(input, seen, corners, cornersPx, quality)
         }
-        if (!saneIntrinsics(intrinsics, input)) {
+        if (!saneIntrinsics(metricIntrinsics, input)) {
             return PoseEstimator.Estimate(
                 tBC = null, markerIdsSeen = seen, cornerCount = corners,
                 rmsPx = null, status = WireRegistration.BAD_CALIBRATION,
@@ -99,14 +115,14 @@ class OpenCvPoseEstimator(
             backend.solve(
                 correspondences.map { it.objectMm },
                 correspondences.map { it.imagePx },
-                intrinsics,
+                metricIntrinsics,
             )
         } catch (_: LinkageError) {
             null
         } catch (_: Exception) {
             null
         } ?: return degraded(input, seen, corners, cornersPx, quality)
-        return qualify(input, seen, corners, cornersPx, quality, correspondences, solution, intrinsics)
+        return qualify(input, seen, corners, cornersPx, quality, correspondences, solution, metricIntrinsics)
     }
 
     private fun lost(
@@ -267,8 +283,33 @@ class OpenCvArucoBackend : OpenCvPoseEstimator.ArucoBackend {
         return detectors.getOrPut(dictionary) {
             ensureLoaded()
             val dictionaryMat = Objdetect.getPredefinedDictionary(dictionary)
-            ArucoDetector(dictionaryMat, DetectorParameters())
+            ArucoDetector(dictionaryMat, tunedParameters())
         }
+    }
+
+    /**
+     * GUIDE-01 detector tuning (device-measured): reject small quad
+     * candidates early. CAL-01 markers are 42 mm at ~40 cm working
+     * distance: ~147 px side, ~586 px perimeter, rate ~0.3 against
+     * the 1920 px analysis width — 3x above the 0.1 floor, which
+     * still detects the same markers past 1 m. Pruning below 0.1
+     * only drops candidates far outside the calibrated operating
+     * range; detection parity is verified on-device (marker counts).
+     */
+    private companion object {
+        const val ADAPTIVE_WINDOW_PX = 23
+    }
+
+    private fun tunedParameters(): DetectorParameters {
+        val params = DetectorParameters()
+        params.set_minMarkerPerimeterRate(0.1)
+        // One adaptive-threshold pass (window 23 px) instead of the
+        // default three (3/13/23): at the calibrated working distance a
+        // marker module is >= 7 px at 1280 width, so the 3 px window
+        // only adds noise candidates while costing a full pass.
+        params.set_adaptiveThreshWinSizeMin(ADAPTIVE_WINDOW_PX)
+        params.set_adaptiveThreshWinSizeMax(ADAPTIVE_WINDOW_PX)
+        return params
     }
 
     override fun detect(

@@ -2,6 +2,7 @@ package org.anastylos.capture.ui.guided
 
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
@@ -29,6 +30,18 @@ import org.anastylos.capture.camera.CapturedStill
 import org.anastylos.capture.camera.FrameSampler
 import org.anastylos.capture.camera.SamplerEvent
 import org.anastylos.capture.camera.GuidedCamera
+import org.anastylos.capture.camera.UsableCamera
+import org.anastylos.capture.camera.AppliedSettings
+import org.anastylos.capture.camera.CameraCapabilities
+import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.CalibratedOptics
+import org.anastylos.capture.camera.FocusMode
+import org.anastylos.capture.camera.MeasuredProfileSource
+import org.anastylos.capture.camera.DEFAULT_PROFILE
+import org.anastylos.capture.camera.formatApplied
+import org.anastylos.capture.camera.sanitizeSettings
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
 import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.GuidedAssociation
 import org.anastylos.capture.data.GuidedAssociationRepository
@@ -51,9 +64,13 @@ import org.anastylos.capture.sync.RemoteSessionState
 import org.anastylos.capture.sync.SpatialSidecar
 import org.anastylos.capture.sync.tlsForPairing
 import org.anastylos.capture.guidance.BoardGeometry
+import org.anastylos.capture.guidance.CalibrationProfile
+import org.anastylos.capture.guidance.DIAG_LOG_TAG
+import org.anastylos.capture.guidance.TimingAccumulator
 import org.anastylos.capture.guidance.CameraPoseB
 import org.anastylos.capture.guidance.CueAxis
 import org.anastylos.capture.guidance.DwellAccumulator
+import org.anastylos.capture.guidance.HackathonMvp
 import org.anastylos.capture.guidance.DwellState
 import org.anastylos.capture.guidance.GuidanceHypothesis1
 import org.anastylos.capture.guidance.ImageQualityInput
@@ -151,6 +168,8 @@ data class GuidanceUiState(
     val markersSeen: List<Int> = emptyList(),
     val overlayGeometry: GuidedCamera.StreamGeometry? = null,
     val qualityVerdict: ImageQualityVerdict = ImageQualityVerdict.Unknown,
+    /** Hackathon MVP: pixel-motion rejection alone does not block the shutter. */
+    val motionWarning: Boolean = false,
     val measuredSharpness: Double? = null,
     val sharpnessReference: Double? = null,
     val orientationOk: Boolean = false,
@@ -173,6 +192,18 @@ data class GuidanceUiState(
     val reservingAttempt: Boolean = false,
     val delivery: GuidedAssociation? = null,
     val deliveryNote: String? = null,
+    val availableCameras: List<UsableCamera> = emptyList(),
+    val selectedCameraId: String? = null,
+    val effectiveCameraId: String? = null,
+    val cameraNote: String? = null,
+    val settings: CameraSettings = CameraSettings(),
+    val activeProfile: String = DEFAULT_PROFILE,
+    val appliedLine: String? = null,
+    val settingsNote: String? = null,
+    /** Why the validated profile does not apply, when one exists for this camera. */
+    val calibrationBlocker: String? = null,
+    /** Recorded optics of this camera's validated profile, if any. */
+    val calibratedOptics: CalibratedOptics? = null,
 )
 
 /**
@@ -191,6 +222,8 @@ class GuidanceViewModel(
     private val sampler: FrameSampler,
     private val cameraFactory: (LifecycleOwner, PreviewView?) -> GuidedCamera,
     private val prefs: GuidedPrefs,
+    private val cameraPrefs: CameraPrefs? = null,
+    private val settingsStore: CameraSettingsStore? = null,
     private val nanoClock: () -> Long,
     private val utcClock: () -> Instant,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -199,23 +232,42 @@ class GuidanceViewModel(
     private val associations: GuidedAssociationRepository? = null,
     private val appVersion: String = "0.1.0",
     private val uuid: () -> String = { UUID.randomUUID().toString() },
+    private val measuredProfiles: MeasuredProfileSource? = null,
+    private val timing: TimingAccumulator = TimingAccumulator(),
+    /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
+    private val armDebounceMs: Long = 0L,
+    private val armClock: () -> Long = { android.os.SystemClock.elapsedRealtime() },
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
 
     private var camera: GuidedCamera? = null
+    private var cameraOwner: LifecycleOwner? = null
+    private var cameraPreview: PreviewView? = null
+    private var settingsJob: Job? = null
+    private var lastAppliedSeen: AppliedSettings? = null
     private var estimatesJob: Job? = null
-    private val dwell = DwellAccumulator()
+    /** Hackathon MVP dwell (~500 ms). The frozen 1 s / 12-sample profile stays on [DwellAccumulator]. */
+    private val dwell = DwellAccumulator(
+        holdMs = HackathonMvp.DWELL_MS,
+        minSamples = HackathonMvp.DWELL_SAMPLES,
+    )
     private val speeds = SpeedTracker()
     private val shutterMutex = Mutex()
     private var armingToken: String? = null
     private var firedForArming = false
+    private var lastArmRealtimeMs = 0L
+    private var armFrames = 0
+    private var armFresh = 0
+    private var lastDwellSamples = -1
+    private var lastHoldReason: String? = null
     private var captureSequence = 0L
     private var sessionId: String? = null
     private var lastCorners: Map<String, List<Double>> = emptyMap()
     private var lastCornersNs: Long? = null
     private var lastEstimate: PoseEstimator.Estimate? = null
     private var lastMotion: Pair<Double, Double>? = null
+    private var lastUiEstimateNs: Long? = null
     private var lastStillCallbackNs: Long? = null
     private var remote: GuidedRemote? = null
     private var remoteCollectJob: Job? = null
@@ -235,6 +287,14 @@ class GuidanceViewModel(
                 _state.update { it.copy(sharpnessReference = reference) }
             }
         }
+        viewModelScope.launch {
+            try {
+                cameraPrefs?.selectedCameraId?.collect { id ->
+                    _state.update { it.copy(selectedCameraId = id) }
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun setPermissionGranted(granted: Boolean) {
@@ -252,6 +312,17 @@ class GuidanceViewModel(
         if (!foreground) onSessionEvent(SessionEvent.Backgrounded)
     }
 
+    init {
+        viewModelScope.launch {
+            try {
+                settingsStore?.activeProfile?.collect { name ->
+                    _state.update { it.copy(activeProfile = name) }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     fun attachCamera(owner: LifecycleOwner, preview: PreviewView?) {
         if (camera != null) {
             camera?.attachPreview(preview)
@@ -259,9 +330,14 @@ class GuidanceViewModel(
         }
         val source = cameraFactory(owner, preview)
         camera = source
+        cameraOwner = owner
+        cameraPreview = preview
+        source.requestedCameraId = _state.value.selectedCameraId
+        source.requestedStillSize = _state.value.settings.stillSize
         viewModelScope.launch {
             val bound = try {
-                source.bindAsync()
+                val size = _state.value.settings.analysisSize
+                source.bindAsync(size.first, size.second)
             } catch (_: Exception) {
                 false
             }
@@ -287,11 +363,21 @@ class GuidanceViewModel(
                     uncalibrated = intrinsics == null ||
                         intrinsics.profileId.contains("uncalibrated"),
                     overlayGeometry = geometry,
+                    availableCameras = source.availableCameras(),
+                    effectiveCameraId = source.effectiveCameraId,
+                    cameraNote = source.cameraNote,
                 )
             }
+            _state.update {
+                it.withCalibrationStatus(intrinsics?.profileId)
+            }
+            observeSettings()
             estimatesJob?.cancel()
             estimatesJob = viewModelScope.launch {
-                source.estimates.collect { estimate -> onEstimate(estimate) }
+                source.estimates.collect { estimate ->
+                    pollApplied(source)
+                    onEstimate(estimate)
+                }
             }
         }
     }
@@ -318,6 +404,193 @@ class GuidanceViewModel(
         _state.update { it.copy(boardId = boardId, dwell = DwellState.Idle, cues = emptyList()) }
     }
 
+    /**
+     * Operator camera switch: persists the ID, then rebinds on a
+     * new sensor. The rebind invalidates everything downstream —
+     * fresh intrinsics/profile, no pose or motion reuse — and the
+     * session disarms via detach (rearm required), matching the
+     * rotation-crop safety rule.
+     */
+    fun selectCamera(id: String) {
+        if (id == _state.value.selectedCameraId) return
+        _state.update { it.copy(selectedCameraId = id) }
+        viewModelScope.launch {
+            try {
+                cameraPrefs?.setSelectedCameraId(id)
+            } catch (_: Exception) {
+                _state.update { it.copy(cameraNote = "could not save the camera selection") }
+            }
+        }
+        if (!_state.value.cameraBound) return
+        rebindCamera()
+    }
+
+    private fun rebindCamera() {
+        dwell.reset()
+        speeds.reset()
+        lastCorners = emptyMap()
+        lastCornersNs = null
+        lastEstimate = null
+        lastMotion = null
+        lastAppliedSeen = null
+        _state.update { it.copy(appliedLine = null) }
+        val owner = cameraOwner
+        val preview = cameraPreview
+        detachCamera()
+        if (owner != null) attachCamera(owner, preview)
+    }
+
+    fun capsFor(id: String?): CameraCapabilities {
+        return _state.value.availableCameras.firstOrNull { it.id == id }?.capabilities
+            ?: CameraCapabilities()
+    }
+
+    private fun observeSettings() {
+        settingsJob?.cancel()
+        val id = _state.value.effectiveCameraId ?: return
+        val profile = _state.value.activeProfile
+        val store = settingsStore ?: return
+        settingsJob = viewModelScope.launch {
+            try {
+                store.settings(id, profile).collect { stored ->
+                    val caps = capsFor(id)
+                    val clean = sanitizeSettings(stored, caps)
+                    val sizeChanged = clean.analysisSize != _state.value.settings.analysisSize ||
+                        clean.stillSize != _state.value.settings.stillSize
+                    _state.update { it.copy(settings = clean) }
+                    camera?.requestedStillSize = clean.stillSize
+                    // GUIDE-01 Phase C: the first bind runs on default
+                    // settings (stored settings arrive async after it);
+                    // a stored size mismatch must rebind like a manual
+                    // size change, never linger on the wrong stream.
+                    if (sizeChanged && _state.value.cameraBound) rebindCamera()
+                    else applyToCamera(clean, caps)
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun applyToCamera(settings: CameraSettings, caps: CameraCapabilities) {
+        val source = camera ?: return
+        if (!_state.value.cameraBound) return
+        val ok = try {
+            source.applySettings(settings, caps)
+        } catch (_: Exception) {
+            false
+        }
+        val label = try {
+            source.currentIntrinsics()?.profileId
+        } catch (_: Exception) {
+            _state.value.intrinsicsLabel
+        }
+        _state.update {
+            it.copy(
+                settingsNote = if (ok) null else "settings not applied",
+                intrinsicsLabel = label,
+                uncalibrated = label == null || label.contains("uncalibrated"),
+            ).withCalibrationStatus(label)
+        }
+        viewModelScope.launch {
+            val stillOk = try {
+                source.refreshStillOptions()
+            } catch (_: Exception) {
+                false
+            }
+            if (!stillOk) {
+                _state.update {
+                    if (it.settingsNote == null) {
+                        it.copy(settingsNote = "still capture options not refreshed")
+                    } else {
+                        it
+                    }
+                }
+            }
+        }
+    }
+
+    private fun pollApplied(source: GuidedCamera) {
+        val applied = try {
+            source.lastApplied
+        } catch (_: Exception) {
+            null
+        }
+        if (applied != null && applied != lastAppliedSeen) {
+            lastAppliedSeen = applied
+            _state.update { it.copy(appliedLine = formatApplied(applied)) }
+        }
+    }
+
+    fun updateSettings(transform: (CameraSettings) -> CameraSettings) {
+        val id = _state.value.effectiveCameraId
+        val caps = capsFor(id)
+        val next = sanitizeSettings(transform(_state.value.settings), caps)
+        val sizeChanged = next.analysisSize != _state.value.settings.analysisSize ||
+            next.stillSize != _state.value.settings.stillSize
+        _state.update { it.copy(settings = next) }
+        if (id != null) {
+            val profile = _state.value.activeProfile
+            viewModelScope.launch {
+                try {
+                    settingsStore?.update(id, profile, next)
+                } catch (_: Exception) {
+                    _state.update { it.copy(settingsNote = "could not save settings") }
+                }
+            }
+        }
+        if (sizeChanged && _state.value.cameraBound) rebindCamera()
+        else applyToCamera(next, caps)
+    }
+
+    fun selectProfile(name: String) {
+        if (name == _state.value.activeProfile) return
+        _state.update { it.copy(activeProfile = name) }
+        viewModelScope.launch {
+            try {
+                settingsStore?.setActiveProfile(name)
+            } catch (_: Exception) {
+            }
+        }
+        observeSettings()
+    }
+
+    /**
+     * One-tap reuse of the validated profile: sets exactly the optics
+     * it was recorded with (manual focus, zoom 1x) and a compatible
+     * analysis grid, keeping the current one when it already is.
+     * Validity is still decided by the profile binding afterwards.
+     */
+    fun applyCalibratedOptics() {
+        val optics = _state.value.calibratedOptics ?: return
+        updateSettings { current ->
+            val grid = listOf(current.analysisSize, CameraSettings.DEFAULT_ANALYSIS_SIZE)
+                .firstOrNull { (w, h) ->
+                    CalibrationProfile.gridScale(optics.referenceWidth, optics.referenceHeight, w, h) != null
+                } ?: (optics.referenceWidth to optics.referenceHeight)
+            current.copy(
+                focusMode = FocusMode.MANUAL,
+                focusDiopters = optics.focusDiopters,
+                linearZoom = 0f,
+                analysisSize = grid,
+            )
+        }
+    }
+
+    private fun GuidanceUiState.withCalibrationStatus(label: String?): GuidanceUiState {
+        val profiles = measuredProfiles ?: return this
+        val calibrated = label != null && !label.contains("uncalibrated")
+        val optics = profiles.calibratedOptics(effectiveCameraId)
+        val (w, h) = overlayGeometry?.let { it.analysisWidth to it.analysisHeight } ?: settings.analysisSize
+        val blocker = if (calibrated) {
+            null
+        } else {
+            profiles.mismatch(
+                effectiveCameraId, w, h, settings.linearZoom, settings.focusMode, settings.focusDiopters,
+            )
+        }
+        return copy(calibrationBlocker = blocker, calibratedOptics = optics)
+    }
+
     fun selectTarget(target: TargetViewpoint?) {
         if (target != null && target.boardId != _state.value.boardId) {
             selectBoard(target.boardId)
@@ -326,31 +599,49 @@ class GuidanceViewModel(
     }
 
     fun arm() {
-        if (_state.value.remoteAttached) {
+        val snap = _state.value
+        if (snap.remoteAttached) {
+            logArm("arm remote session=${snap.session} request=${snap.request} id=${snap.requestId}")
             remoteArmFlow()
             return
         }
         // Fresh session arming from DISARMED.
-        if (_state.value.session == SessionState.DISARMED) {
+        if (snap.session == SessionState.DISARMED) {
             val transition = onSessionEvent(
                 SessionEvent.Arm(
                     grantLive = true,
-                    permissionGranted = _state.value.permissionGranted,
-                    foreground = _state.value.foreground,
+                    permissionGranted = snap.permissionGranted,
+                    foreground = snap.foreground,
                 ),
             )
-            if (!transition.accepted) return
-            startRequest()
-            viewModelScope.launch {
-                ensureSession()
+            if (!transition.accepted) {
+                logArm(
+                    "arm rejected session=${snap.session} fg=${snap.foreground} " +
+                        "perm=${snap.permissionGranted} reason=${transition.reason}",
+                )
+                return
+            }
+            if (startRequest("arm")) {
+                viewModelScope.launch {
+                    ensureSession()
+                }
             }
             return
         }
         // Next request inside a live session: allowed only once the
         // previous request reached a terminal state, with a new token.
-        if (_state.value.session == SessionState.ACTIVE && _state.value.request in TERMINAL_REQUESTS) {
-            startRequest()
+        // ACTIVE+QUEUED is the stuck state after an arm transition that
+        // never started its request. It is not a finished capture.
+        if (snap.session == SessionState.ACTIVE &&
+            (snap.request in TERMINAL_REQUESTS || snap.request == RequestState.QUEUED)
+        ) {
+            startRequest(if (snap.request == RequestState.QUEUED) "arm-queued" else "rearm")
+            return
         }
+        logArm(
+            "arm ignored session=${snap.session} request=${snap.request} id=${snap.requestId} " +
+                "consumed=$firedForArming token=${armingToken?.take(8)} fg=${snap.foreground}",
+        )
     }
 
     private fun remoteArmFlow() {
@@ -435,13 +726,28 @@ class GuidanceViewModel(
         }
     }
 
-    private fun startRequest() {
+    private fun startRequest(source: String): Boolean {
+        val now = armClock()
+        if (armDebounceMs > 0L && lastArmRealtimeMs > 0L && now - lastArmRealtimeMs < armDebounceMs) {
+            logArm(
+                "arm debounced source=$source waited=${now - lastArmRealtimeMs}ms " +
+                    "request=${_state.value.request} id=${_state.value.requestId} consumed=$firedForArming",
+            )
+            return false
+        }
+        lastArmRealtimeMs = now
         // A new arming token starts a new request lifecycle (a fresh
         // reducer): the token binds exactly one request, so a repeat
         // capture after CAPTURED_LOCAL never inherits the previous
         // request's state.
         armingToken = UUID.randomUUID().toString()
         firedForArming = false
+        armFrames = 0
+        armFresh = 0
+        lastDwellSamples = 0
+        // Each arming collects its own 500 ms dwell. A Ready window
+        // from the previous shot must not satisfy the next one.
+        dwell.reset()
         val requestId = "local-${armingToken!!.take(8)}"
         _state.update {
             it.copy(
@@ -450,6 +756,11 @@ class GuidanceViewModel(
             )
         }
         onRequestEvent(RequestEvent.Accept)
+        logArm(
+            "arm start source=$source id=$requestId session=${_state.value.session} " +
+                "request=${_state.value.request} consumed=false fg=${_state.value.foreground}",
+        )
+        return true
     }
 
     fun disarm() {
@@ -960,6 +1271,7 @@ class GuidanceViewModel(
         }
         val nowNs = nanoClock()
         val ageMs = (nowNs - estimate.monotonicNs) / 1_000_000L
+        recordUiTiming(nowNs, ageMs, estimate)
         val (phone, wireReason) = mapWireRegistration(estimate.status)
         val poseEvent = when (estimate.status) {
             WireRegistration.VALID -> WirePoseEvent.PosesValid
@@ -987,8 +1299,9 @@ class GuidanceViewModel(
         } else {
             emptyList()
         }
-        val orientationOk = cues.none { it.axis == CueAxis.YAW || it.axis == CueAxis.PITCH || it.axis == CueAxis.ROLL }
-        val distanceOk = cues.none { it.axis == CueAxis.LATERAL || it.axis == CueAxis.VERTICAL || it.axis == CueAxis.DEPTH }
+        val hasTarget = target != null
+        val orientationOk = hasTarget && cues.none { it.axis == CueAxis.YAW || it.axis == CueAxis.PITCH || it.axis == CueAxis.ROLL }
+        val distanceOk = hasTarget && cues.none { it.axis == CueAxis.LATERAL || it.axis == CueAxis.VERTICAL || it.axis == CueAxis.DEPTH }
         val motion = motionStats(estimate)
         val quality = evaluateImageQuality(
             ImageQualityInput(
@@ -1000,11 +1313,21 @@ class GuidanceViewModel(
                 motionP90Px = motion?.second,
             ),
         )
-        val qualityOk = quality == ImageQualityVerdict.Accepted
+        // Hackathon MVP: ArUco corner jitter is a warning. Exposure and
+        // sharpness still reject. guidance-hypothesis-1 itself is unchanged.
+        val motionWarning = quality is ImageQualityVerdict.Rejected &&
+            quality.reasons.all { it == "motion" }
+        val qualityForGate = quality == ImageQualityVerdict.Accepted || motionWarning
+        val calibrated = !_state.value.uncalibrated
+        val poseFresh = ageMs in 0..GuidanceHypothesis1.POSE_AGE_MS
+        val aligned = orientationOk && distanceOk && qualityForGate && calibrated
         val gatesPass = _state.value.session == SessionState.ACTIVE &&
-            registration == RegistrationState.ACQUIRED &&
-            orientationOk && distanceOk && qualityOk
-        val windowSpeeds = if (pose != null && estimate.tBC != null) {
+            registration == RegistrationState.ACQUIRED && aligned && poseFresh
+        // A stale but still-acquired pose is not evidence either way.
+        val ignoreStale = registration == RegistrationState.ACQUIRED && !poseFresh
+        val windowSpeeds = if (ignoreStale) {
+            null
+        } else if (pose != null && estimate.tBC != null) {
             speeds.observe(
                 estimate.monotonicNs / 1_000_000L,
                 pose.centerMm,
@@ -1014,16 +1337,37 @@ class GuidanceViewModel(
             speeds.reset()
             null
         }
-        val dwellState = dwell.observe(
-            StabilitySample(
-                tMs = estimate.monotonicNs / 1_000_000L,
-                speedMmS = windowSpeeds?.speedMmS ?: Double.MAX_VALUE,
-                angularSpeedDegS = windowSpeeds?.angularSpeedDegS ?: Double.MAX_VALUE,
-                poseAgeMs = ageMs,
-                gatesPass = gatesPass && windowSpeeds != null,
-            ),
+        val beforeDwell = dwell.state
+        val dwellState = if (ignoreStale) {
+            dwell.bridge(estimate.monotonicNs / 1_000_000L)
+            dwell.state
+        } else {
+            dwell.observe(
+                StabilitySample(
+                    tMs = estimate.monotonicNs / 1_000_000L,
+                    speedMmS = windowSpeeds?.speedMmS ?: Double.MAX_VALUE,
+                    angularSpeedDegS = windowSpeeds?.angularSpeedDegS ?: Double.MAX_VALUE,
+                    poseAgeMs = ageMs,
+                    gatesPass = gatesPass && windowSpeeds != null,
+                ),
+            )
+        }
+        if (!ignoreStale) {
+            navigate(registration, cues, aligned && poseFresh)
+        }
+        noteDwell(
+            before = beforeDwell,
+            after = dwellState,
+            ageMs = ageMs,
+            poseFresh = poseFresh,
+            ignoreStale = ignoreStale,
+            calibrated = calibrated,
+            aligned = aligned,
+            registration = registration,
+            quality = quality,
+            speeds = windowSpeeds,
+            cues = cues.size,
         )
-        navigate(registration, cues, orientationOk && distanceOk && qualityOk)
         lastEstimate = estimate
         lastMotion = motion
         _state.update {
@@ -1034,6 +1378,7 @@ class GuidanceViewModel(
                 dwell = dwellState,
                 cues = cues, orientationOk = orientationOk, distanceOk = distanceOk,
                 qualityVerdict = quality,
+                motionWarning = motionWarning,
                 measuredSharpness = estimate.frameQuality?.sharpness,
             )
         }
@@ -1061,6 +1406,93 @@ class GuidanceViewModel(
             RequestState.HOLD_STILL -> if (!aligned) onRequestEvent(RequestEvent.GateFailed)
             else -> Unit
         }
+    }
+
+    private fun noteDwell(
+        before: DwellState,
+        after: DwellState,
+        ageMs: Long,
+        poseFresh: Boolean,
+        ignoreStale: Boolean,
+        calibrated: Boolean,
+        aligned: Boolean,
+        registration: RegistrationState,
+        quality: ImageQualityVerdict,
+        speeds: SpeedTracker.Speeds?,
+        cues: Int,
+    ) {
+        val request = _state.value.request
+        if (request in TERMINAL_REQUESTS || _state.value.session != SessionState.ACTIVE) return
+        armFrames++
+        if (poseFresh) armFresh++
+        val samples = dwellSamples(after)
+        val dropped = dwellSamples(before) > 0 && samples < dwellSamples(before)
+        val reason = dwellBlockReason(
+            ignoreStale, calibrated, aligned, registration, quality, poseFresh, ageMs, speeds, cues,
+        )
+        if (dropped || samples != lastDwellSamples || armFrames % 20 == 0) {
+            lastDwellSamples = samples
+            logArm(
+                "dwell id=${_state.value.requestId} session=${_state.value.session} request=$request " +
+                    "consumed=$firedForArming track=$registration cal=$calibrated align=$aligned " +
+                    "quality=$quality age=${ageMs}ms fresh=$armFresh/$armFrames " +
+                    "dwell=${dwellText(after)} reason=$reason cues=$cues " +
+                    "target=${_state.value.target?.id ?: "none"} board=${_state.value.boardId}",
+            )
+        }
+    }
+
+    private fun dwellBlockReason(
+        ignoreStale: Boolean,
+        calibrated: Boolean,
+        aligned: Boolean,
+        registration: RegistrationState,
+        quality: ImageQualityVerdict,
+        poseFresh: Boolean,
+        ageMs: Long,
+        speeds: SpeedTracker.Speeds?,
+        cues: Int,
+    ): String = when {
+        _state.value.session != SessionState.ACTIVE -> "not_armed"
+        _state.value.target == null -> "no_target"
+        registration != RegistrationState.ACQUIRED -> "tracking_$registration"
+        !calibrated -> "uncalibrated"
+        !aligned && cues > 0 -> "off_target"
+        !aligned -> "quality_$quality"
+        ignoreStale || !poseFresh -> "stale_age_${ageMs}"
+        speeds == null -> "no_speed"
+        speeds.speedMmS >= GuidanceHypothesis1.MAX_SPEED_MM_S -> "speed_${speeds.speedMmS}"
+        speeds.angularSpeedDegS >= GuidanceHypothesis1.MAX_ANGULAR_SPEED_DEG_S -> "angular_${speeds.angularSpeedDegS}"
+        else -> "counting"
+    }
+
+    private fun logArm(message: String) {
+        Log.i(ARM_LOG, message)
+    }
+
+    private fun dwellSamples(state: DwellState): Int = when (state) {
+        DwellState.Idle -> 0
+        is DwellState.Accumulating -> state.samples
+        DwellState.Ready -> HackathonMvp.DWELL_SAMPLES
+    }
+
+    private fun dwellText(state: DwellState): String = when (state) {
+        DwellState.Idle -> "idle"
+        is DwellState.Accumulating -> "${state.samples}/${HackathonMvp.DWELL_SAMPLES} ${state.elapsedMs}ms"
+        DwellState.Ready -> "ready"
+    }
+
+    /** GUIDE-01 diagnostics: throttled UI-side age/gap summary, else null. */
+    private fun recordUiTiming(nowNs: Long, ageMs: Long, estimate: PoseEstimator.Estimate) {
+        val gapMs = lastUiEstimateNs?.let { (nowNs - it) / 1_000_000.0 } ?: 0.0
+        lastUiEstimateNs = nowNs
+        val summary = timing.recordUi(ageMs, gapMs) ?: return
+        val t = estimate.tBC?.let { translationOfRowMajor(it) }
+        val pose = if (t == null) "pose=none" else
+            "rms=${"%.2f".format(java.util.Locale.US, estimate.rmsPx ?: Double.NaN)} " +
+                "t=${"%.1f,%.1f,%.1f".format(java.util.Locale.US, t.x, t.y, t.z)} status=${estimate.status} " +
+                "profile=${_state.value.intrinsicsLabel}"
+        Log.i(DIAG_LOG_TAG, "guided $summary $pose")
     }
 
     private fun motionStats(estimate: PoseEstimator.Estimate): Pair<Double, Double>? {
@@ -1108,7 +1540,8 @@ class GuidanceViewModel(
                 lateMark = snapshot.lateMark, registration = snapshot.registration,
                 poseAgeMs = snapshot.poseAgeMs, dwell = snapshot.dwell,
                 orientationOk = snapshot.orientationOk, distanceOk = snapshot.distanceOk,
-                qualityOk = snapshot.qualityVerdict == ImageQualityVerdict.Accepted,
+                qualityOk = snapshot.qualityVerdict == ImageQualityVerdict.Accepted ||
+                    snapshot.motionWarning,
                 boardId = snapshot.boardId, targetBoardId = snapshot.target?.boardId,
                 profileId = snapshot.intrinsicsLabel,
                 requiredProfileId = null,
@@ -1120,10 +1553,22 @@ class GuidanceViewModel(
         when (decision) {
             is ShutterGate.Decision.Fire -> {
                 _state.update { it.copy(holdReason = null) }
+                logArm(
+                    "shutter requested id=${snapshot.requestId} age=${snapshot.poseAgeMs} " +
+                        "dwell=${dwellText(snapshot.dwell)} consumed=$firedForArming",
+                )
                 fireAutomatic()
             }
             is ShutterGate.Decision.Hold -> {
                 _state.update { it.copy(holdReason = decision.reason) }
+                if (decision.reason.name != lastHoldReason) {
+                    lastHoldReason = decision.reason.name
+                    logArm(
+                        "shutter hold id=${snapshot.requestId} reason=${decision.reason.name} " +
+                            "request=${snapshot.request} session=${snapshot.session} " +
+                            "fg=${snapshot.foreground} age=${snapshot.poseAgeMs} consumed=$firedForArming",
+                    )
+                }
             }
         }
     }
@@ -1152,10 +1597,18 @@ class GuidanceViewModel(
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
                     _state.update { it.copy(shutterBusy = false, captureResult = stored) }
+                    logArm(
+                        "shutter completed id=${_state.value.requestId} request=${_state.value.request} " +
+                            "sha=${stored.sha256.take(16)} image=${stored.imageId} consumed=$firedForArming",
+                    )
                 } catch (e: Exception) {
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyFail)
                     _state.update { it.copy(shutterBusy = false, captureError = e.message ?: "capture failed") }
+                    logArm(
+                        "shutter failed id=${_state.value.requestId} request=${_state.value.request} " +
+                            "error=${e.message} consumed=$firedForArming",
+                    )
                 }
             }
         }
@@ -1436,7 +1889,8 @@ class GuidanceViewModel(
             algorithmConfigJson = ALGORITHM_CONFIG_JSON
                 .replace("{dict}", board.dictionary)
                 .replace("{w}", geometry.analysisWidth.toString())
-                .replace("{h}", geometry.analysisHeight.toString()),
+                .replace("{h}", geometry.analysisHeight.toString())
+                .replace("{roi}", quality?.exposureRoi ?: "unmeasured"),
         )
     }
 
@@ -1485,6 +1939,8 @@ class GuidanceViewModel(
     }
 }
 
+private const val ARM_LOG = "AnastylosArm"
+
 private val TERMINAL_REQUESTS = setOf(
     RequestState.CAPTURED_LOCAL,
     RequestState.CANCELLED,
@@ -1496,9 +1952,9 @@ private val TERMINAL_REQUESTS = setOf(
 private const val THRESHOLD_CONFIG_JSON =
     """{"profile":"guidance-hypothesis-1","rms_px":1.2,"motion_median_px":0.7,"motion_p90_px":1.5,"sharpness_ratio":0.7,"bad_exposure_frac":0.05,"min_markers":3}"""
 
-/** Canonical solver config; `{dict}`, `{w}`, `{h}` are substituted per capture. */
+/** Canonical solver config; `{dict}`, `{w}`, `{h}`, `{roi}` are substituted per capture. */
 private const val ALGORITHM_CONFIG_JSON =
-    """{"solver":"aruco-solvepnp-iterative","opencv":"4.14.0","dictionary":"{dict}","analysis":"{w}x{h}"}"""
+    """{"solver":"aruco-solvepnp-iterative","opencv":"4.14.0","dictionary":"{dict}","analysis":"{w}x{h}","exposure_roi":"{roi}"}"""
 
 /**
  * Mirrors `CameraSelector.LENS_FACING_EXTERNAL` without referencing

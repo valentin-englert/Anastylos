@@ -1,0 +1,14 @@
+10-30 16:06:23.329 19645 19645 I AnastylosCam: apply exp=AUTO@400/1/50/ev0 focus=AUTO@∞ awb=AUTO zoom=0.0 torch=false fps=(30, 30)
+10-30 16:06:23.329 19645 19645 I AnastylosCam: guided still opts refreshed mode=0 ae=1 iso=null exp=null af=4 awb=1 ev=0
+10-30 16:06:27.392 19645 20490 I AnastylosDiag: guided frames=60 1280x720 totalAvg=39.3 totalMax=137.1 copyAvg=1.6 detectAvg=21.2 solveAvg=0.0 gapAvg=51.2 gapMax=137.7 tsGapAvg=50.6 tsGapMax=133.3 s2aAvg=62.4 s2aMin=44.1 s2aMax=103.2 s2eAvg=101.7 exp=10.0 frameDur=33.3 dark=0.009 sat=0.000 roi=marker-hull fullDark=0.005 fullSat=0.000 sharp=494.9
+10-30 16:06:27.501 19645 19645 I AnastylosDiag: guided ui=60 ageAvg=114.9 ageMax=186.0 gapAvg=51.4 gapMax=77.2
+10-30 16:06:30.312 19645 20490 I AnastylosDiag: guided frames=60 1280x720 totalAvg=38.3 totalMax=56.4 copyAvg=1.7 detectAvg=21.0 solveAvg=0.0 gapAvg=48.6 gapMax=90.9 tsGapAvg=48.9 tsGapMax=100.0 s2aAvg=60.8 s2aMin=43.6 s2aMax=77.1 s2eAvg=99.1 exp=10.0 frameDur=33.3 dark=0.004 sat=0.001 roi=marker-hull fullDark=0.002 fullSat=0.001 sharp=630.8
+10-30 16:06:30.639 19645 19645 I AnastylosDiag: guided ui=60 ageAvg=109.2 ageMax=154.0 gapAvg=52.3 gapMax=99.6
+10-30 16:06:33.035 19645 20490 I AnastylosDiag: guided frames=60 1280x720 totalAvg=29.2 totalMax=56.0 copyAvg=1.7 detectAvg=15.2 solveAvg=0.0 gapAvg=45.9 gapMax=101.6 tsGapAvg=45.8 tsGapMax=100.0 s2aAvg=71.1 s2aMin=45.3 s2aMax=110.9 s2eAvg=100.4 exp=30.0 frameDur=33.3 dark=0.000 sat=0.000 roi=full-frame fullDark=0.000 fullSat=0.000 sharp=16.0
+10-30 16:06:33.402 19645 19645 I AnastylosDiag: guided ui=60 ageAvg=112.6 ageMax=189.0 gapAvg=46.1 gapMax=87.3
+10-30 16:06:35.860 19645 20490 I AnastylosDiag: guided frames=60 1280x720 totalAvg=26.9 totalMax=58.3 copyAvg=1.5 detectAvg=13.5 solveAvg=0.0 gapAvg=46.9 gapMax=92.4 tsGapAvg=47.0 tsGapMax=100.0 s2aAvg=65.0 s2aMin=43.3 s2aMax=90.5 s2eAvg=91.9 exp=10.0 frameDur=33.3 dark=0.003 sat=0.001 roi=marker-hull fullDark=0.004 fullSat=0.001 sharp=542.0
+10-30 16:06:36.213 19645 19645 I AnastylosDiag: guided ui=60 ageAvg=101.0 ageMax=134.0 gapAvg=46.9 gapMax=84.7
+10-30 16:06:38.619 19645 20490 I AnastylosDiag: guided frames=60 1280x720 totalAvg=30.4 totalMax=56.2 copyAvg=1.6 detectAvg=16.4 solveAvg=0.0 gapAvg=46.1 gapMax=75.8 tsGapAvg=46.1 tsGapMax=66.7 s2aAvg=59.4 s2aMin=41.9 s2aMax=83.6 s2eAvg=89.8 exp=10.0 frameDur=33.3 dark=0.004 sat=0.002 roi=marker-hull fullDark=0.005 fullSat=0.001 sharp=561.3
+10-30 16:06:39.051 19645 19645 I AnastylosDiag: guided ui=60 ageAvg=102.1 ageMax=137.0 gapAvg=47.3 gapMax=85.9
+
+[exited with code 0]

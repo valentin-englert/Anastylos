@@ -1,0 +1,298 @@
+{
+  "schema": "anastylos-camera-calibration@1",
+  "profile_id": "6cdc2f2a-13ef-4ef1-9b09-a74e6daba19f",
+  "camera_id": "0",
+  "sensor_mode": "0-1920x1080-still-MF40cm-AE-EV0",
+  "reference_image_size_px": [
+    1920,
+    1080
+  ],
+  "reference_pixel_frame_id": "cam0-native-1920x1080",
+  "K": [
+    1422.7826359836142,
+    0.0,
+    969.511173475095,
+    0.0,
+    1422.7662853163768,
+    535.3175296990967,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "distortion": [
+    -0.02938731058219963,
+    0.10039502416920511,
+    0.00018977214705457715,
+    0.0007486468330481381,
+    -0.13627281156201765
+  ],
+  "camera_model": "brown_conrady_5",
+  "zoom": 1,
+  "focus_distance_diopters": 2.5,
+  "physical_lens_id": null,
+  "sensor_crop": null,
+  "pixel_convention": "top_left_pixel_center_0_0_x_right_y_down",
+  "board_ref": {
+    "board_frame_id": "joint-charuco-a3",
+    "layout_role": "joint:charuco+surface_a3"
+  },
+  "algorithm": "opencv-joint-calibrate",
+  "algorithm_version": "cv2-4.14.0",
+  "build_sha": "see-diagnostics",
+  "created_at": "2026-10-31T00:01:32.000Z",
+  "source_id": "cc90e65d-3fea-58c4-a0d8-798008e581d8",
+  "evidence_class": "physical",
+  "metric_validity": "unknown",
+  "limitations": [
+    "CAL-01 joint two-board profile. metric_validity stays unknown until the independent scale check passes."
+  ],
+  "calibration_image_assets": [
+    {
+      "asset_id": "77a6fd95-8ff1-5a73-ad00-fd300f4a09bd",
+      "sha256": "708098b0c934ae6a9cd570f8a5d1bce85ddea9cd8e1b9a3f7a74a5dd0d55bb6a"
+    },
+    {
+      "asset_id": "762ef933-8a06-5b10-aa32-afea06f9d82f",
+      "sha256": "70ba9181a17aa0bce6a313bcfba4702449b36a96fddecdd035626fc4ce07049e"
+    },
+    {
+      "asset_id": "413d2a34-ebfe-561a-9f2b-551652a119ec",
+      "sha256": "4531fe689d86596cfb01c7753d2e2b703e3c591cf9a8e5db6df4c41f6cebca75"
+    },
+    {
+      "asset_id": "ffa4fceb-1b14-5d3b-8993-95e120ee4b59",
+      "sha256": "947bddbbddd5e06c2f9b0cf5001e3f5445684c5b0a316cac78ce3d1555151163"
+    },
+    {
+      "asset_id": "8531bc3c-2eb3-5f40-801c-d8902a1cb711",
+      "sha256": "3f7ac3567a44582709b33f648b32dec1a9c477c30914d50f1c792db841e05149"
+    },
+    {
+      "asset_id": "67c15ad5-3fc8-59e4-a5c3-71b8a291609f",
+      "sha256": "10f05b95f43c6c79f8f4e4de73167eeafa04e058d26de0386d68f9a9e6a3bf36"
+    },
+    {
+      "asset_id": "6d81752f-d43c-5e3e-8938-b7cee9b23be7",
+      "sha256": "d8fbf2184bd97b751b90391407342eb0fe0990df5aabd8e6b88dd16082ba8238"
+    },
+    {
+      "asset_id": "8d3c4f10-eee3-5072-a706-e555765b7bcb",
+      "sha256": "a3107c5ed7f9e23f1a84a2802b928c715edc7dccc3bf65881aa34cb4b8498ba6"
+    },
+    {
+      "asset_id": "48a64b54-d18b-5bce-8f04-8096f70a6a7f",
+      "sha256": "7186ffa33ee5aeab7e41645f2de832c1cc0522e509e7c1925f6cac11381dd7e8"
+    },
+    {
+      "asset_id": "da6afd77-36a5-59c6-9ae2-75f2f601ec10",
+      "sha256": "06cda298d37974e60fdb32137aade060de3d9a302111ae210ecc5f954876ea38"
+    },
+    {
+      "asset_id": "3ff89529-e55a-5c04-bc51-6360917c2e88",
+      "sha256": "39d3c67517891f0c15cd1d5e82eb8bde8eac43a0eff44d07c8d562b9d593db6a"
+    },
+    {
+      "asset_id": "728a5aa2-5fd3-54d7-9656-cd85aa923dee",
+      "sha256": "6f12cfcc9524266a907a8a91155758c656c85988f4a15a3bb55a962233922dcd"
+    },
+    {
+      "asset_id": "32c9dac8-0294-5b78-9d97-4a5e5c70b3ef",
+      "sha256": "459d47dc2eff7657ca35bfe9b35841b46b722d7e0cd45c96bf5cb0fb722ea86d"
+    },
+    {
+      "asset_id": "3be80803-e7c5-5860-bd15-8190f2cf192a",
+      "sha256": "46ae3f32542bb9a6100c91ceacea671f0fa5960e054d97f8917f3dc321f1092b"
+    },
+    {
+      "asset_id": "bca50155-b676-5a78-9d7f-dd596aa59417",
+      "sha256": "1f2091cd5ab96d5690539052ee9c7687030b7aa98c31cabae618765ea66564f9"
+    },
+    {
+      "asset_id": "8b40b241-4998-5fef-8f48-6c02e8c16fc4",
+      "sha256": "92376072f6fc81fe4706bcc9f08d94df85044ed6d958978bc92b9922a40867d8"
+    },
+    {
+      "asset_id": "8878386f-87b4-573f-a03e-39e14a90dc27",
+      "sha256": "360dde6f52aa7d3fb114099ad9202d19b13ade55f5f65a3b2f12f4f3cd205d77"
+    },
+    {
+      "asset_id": "e4474efe-5a34-531c-8879-a8d6c2ef9050",
+      "sha256": "c09743ad5434bce6d350a61db141423c8657f1323bca7c6bdb3fcfbc511bca57"
+    },
+    {
+      "asset_id": "5cc4df4c-f45e-5452-a0e2-909024489a8b",
+      "sha256": "9bb1b252a2839a680f29684db63471ca2c52ff9243625729607f8fce1a051261"
+    },
+    {
+      "asset_id": "b1290891-2948-5196-802d-ed2cce9c3e44",
+      "sha256": "15f14768426d98beafd63789213c5b007b0431b719ef1d90db708c504775aa7b"
+    },
+    {
+      "asset_id": "93969e08-20de-5808-8083-23b00b0e5ad0",
+      "sha256": "3c24712b98ec499cf4c6c87802f98180205775a041c83910cf08e7dd1ce6e0b7"
+    },
+    {
+      "asset_id": "8836fa49-2123-5d23-a825-c1979fc3a916",
+      "sha256": "81b39b3330bd60d45ea989f02f285a0dc7ea1f0a81eeb13d92ea526ae07426ed"
+    },
+    {
+      "asset_id": "246d870a-12d1-5573-b5a8-e388da23fc99",
+      "sha256": "71cb4d507a1339da877293b1444e130526ea4403bb76b5e7865eba5e5230a2a5"
+    },
+    {
+      "asset_id": "1b8e616c-e817-581c-8c52-026668937871",
+      "sha256": "fa4e4896dc94d9f89853f6b282576ec950857e4e5495d6b5d85026783f9ac23c"
+    },
+    {
+      "asset_id": "3bc4050a-20f4-51a7-9ac0-e158cbe3d844",
+      "sha256": "a324bc9f3ede22531ca3a169bb3b155ecc34f71d9c424dc8f5fd6b86c2fb5945"
+    },
+    {
+      "asset_id": "3a86fba2-24bf-5f4b-800c-6900296ab120",
+      "sha256": "12d59da8038298253866f686edccb59261a23dcf41c8a57a4c9665e23f6594a9"
+    },
+    {
+      "asset_id": "03f47f74-e10f-5355-8281-93d564c7970d",
+      "sha256": "5bcfe219a7d43a73a61e16a48231b5e87b5aa60c637c98b5296af2f1bf1ba027"
+    },
+    {
+      "asset_id": "438751e3-57a3-5cca-8676-c453087a820b",
+      "sha256": "5bdd0ed84d2e1241182737bb603e104fcb018fd966803d229e7cf09bc44bd144"
+    },
+    {
+      "asset_id": "c7f41a31-5b9a-5c7e-bbe9-0786726363d0",
+      "sha256": "bd75af7395edf76069053a6b4d497adfc961d807f4403db6abfb68c15bd5e0c1"
+    },
+    {
+      "asset_id": "f08b46c9-21a2-5d0f-9d57-a1623093f5d7",
+      "sha256": "ea65f66085f83a15548a1e4f1b5dc66481b0128dccc8be2337aa995bd416cb04"
+    },
+    {
+      "asset_id": "f563dfaf-5496-5095-b451-2adbcefe68e9",
+      "sha256": "5b7d5f38933c607348e17e743e34ad8869653cedc79ea05a0a3539013ecd41ea"
+    },
+    {
+      "asset_id": "ed2da603-f5f4-59fb-9242-09f5c878590d",
+      "sha256": "a531eae196f23164f644dc40f5a8330c58651bf844ea81e56a7b84ca77ecd50f"
+    },
+    {
+      "asset_id": "559f9a76-a7e8-5d4f-812b-b3e6702bc485",
+      "sha256": "0e549873d31ee32f84bf64427243cf7523fb856e84c1b6afa5b24c7068f03348"
+    },
+    {
+      "asset_id": "25835f88-63ae-5cbf-8499-d46ce032f62f",
+      "sha256": "68efdca9c2fe35379a281cbb9e0d006463b233b8a1a161db9878f6fc5ae3fb67"
+    },
+    {
+      "asset_id": "37984084-5630-57fd-99ab-38332cc67b45",
+      "sha256": "b1322a85c76bbc9d33ab12d4fb2b12dd8e8f9f04d95b80b57371b508e3379e76"
+    },
+    {
+      "asset_id": "e3add8fe-1413-5742-871e-8624a637610e",
+      "sha256": "24de44a7dbc023f1afe3e808c66034f2481e75ee51a4b9b093b7725a9f57d96d"
+    },
+    {
+      "asset_id": "1209cc76-d8a0-5c28-bd51-b517fdac4f41",
+      "sha256": "731b3cb0c6ac347bccf3c7eb3988b47c61ab76d354aafb1a356c86d5cc8075c8"
+    }
+  ],
+  "validation": {
+    "calibration_view_ids": [
+      "77a6fd95-8ff1-5a73-ad00-fd300f4a09bd",
+      "762ef933-8a06-5b10-aa32-afea06f9d82f",
+      "ffa4fceb-1b14-5d3b-8993-95e120ee4b59",
+      "8531bc3c-2eb3-5f40-801c-d8902a1cb711",
+      "6d81752f-d43c-5e3e-8938-b7cee9b23be7",
+      "8d3c4f10-eee3-5072-a706-e555765b7bcb",
+      "da6afd77-36a5-59c6-9ae2-75f2f601ec10",
+      "3ff89529-e55a-5c04-bc51-6360917c2e88",
+      "32c9dac8-0294-5b78-9d97-4a5e5c70b3ef",
+      "3be80803-e7c5-5860-bd15-8190f2cf192a",
+      "8b40b241-4998-5fef-8f48-6c02e8c16fc4",
+      "8878386f-87b4-573f-a03e-39e14a90dc27",
+      "5cc4df4c-f45e-5452-a0e2-909024489a8b",
+      "b1290891-2948-5196-802d-ed2cce9c3e44",
+      "8836fa49-2123-5d23-a825-c1979fc3a916",
+      "246d870a-12d1-5573-b5a8-e388da23fc99",
+      "3bc4050a-20f4-51a7-9ac0-e158cbe3d844",
+      "3a86fba2-24bf-5f4b-800c-6900296ab120",
+      "438751e3-57a3-5cca-8676-c453087a820b",
+      "c7f41a31-5b9a-5c7e-bbe9-0786726363d0",
+      "f563dfaf-5496-5095-b451-2adbcefe68e9",
+      "ed2da603-f5f4-59fb-9242-09f5c878590d",
+      "25835f88-63ae-5cbf-8499-d46ce032f62f",
+      "37984084-5630-57fd-99ab-38332cc67b45",
+      "1209cc76-d8a0-5c28-bd51-b517fdac4f41",
+      "413d2a34-ebfe-561a-9f2b-551652a119ec",
+      "67c15ad5-3fc8-59e4-a5c3-71b8a291609f",
+      "48a64b54-d18b-5bce-8f04-8096f70a6a7f",
+      "728a5aa2-5fd3-54d7-9656-cd85aa923dee",
+      "bca50155-b676-5a78-9d7f-dd596aa59417",
+      "e4474efe-5a34-531c-8879-a8d6c2ef9050",
+      "93969e08-20de-5808-8083-23b00b0e5ad0",
+      "1b8e616c-e817-581c-8c52-026668937871",
+      "03f47f74-e10f-5355-8281-93d564c7970d",
+      "f08b46c9-21a2-5d0f-9d57-a1623093f5d7",
+      "559f9a76-a7e8-5d4f-812b-b3e6702bc485",
+      "e3add8fe-1413-5742-871e-8624a637610e"
+    ],
+    "held_out_view_ids": [
+      "413d2a34-ebfe-561a-9f2b-551652a119ec",
+      "67c15ad5-3fc8-59e4-a5c3-71b8a291609f",
+      "48a64b54-d18b-5bce-8f04-8096f70a6a7f",
+      "728a5aa2-5fd3-54d7-9656-cd85aa923dee",
+      "bca50155-b676-5a78-9d7f-dd596aa59417",
+      "e4474efe-5a34-531c-8879-a8d6c2ef9050",
+      "93969e08-20de-5808-8083-23b00b0e5ad0",
+      "1b8e616c-e817-581c-8c52-026668937871",
+      "03f47f74-e10f-5355-8281-93d564c7970d",
+      "f08b46c9-21a2-5d0f-9d57-a1623093f5d7",
+      "559f9a76-a7e8-5d4f-812b-b3e6702bc485",
+      "e3add8fe-1413-5742-871e-8624a637610e"
+    ],
+    "held_out_rms_px": 0.7755857245443678,
+    "per_view_rms_px": {
+      "77a6fd95-8ff1-5a73-ad00-fd300f4a09bd": 1.1722043314741155,
+      "762ef933-8a06-5b10-aa32-afea06f9d82f": 1.0218966475775255,
+      "ffa4fceb-1b14-5d3b-8993-95e120ee4b59": 1.054169626905499,
+      "8531bc3c-2eb3-5f40-801c-d8902a1cb711": 0.9432713783249204,
+      "6d81752f-d43c-5e3e-8938-b7cee9b23be7": 1.3923962207005272,
+      "8d3c4f10-eee3-5072-a706-e555765b7bcb": 1.4633928529768927,
+      "da6afd77-36a5-59c6-9ae2-75f2f601ec10": 0.38667516615611464,
+      "3ff89529-e55a-5c04-bc51-6360917c2e88": 0.43390728919708094,
+      "32c9dac8-0294-5b78-9d97-4a5e5c70b3ef": 0.3870602543277807,
+      "3be80803-e7c5-5860-bd15-8190f2cf192a": 0.5352204791546159,
+      "8b40b241-4998-5fef-8f48-6c02e8c16fc4": 0.41201962219313565,
+      "8878386f-87b4-573f-a03e-39e14a90dc27": 0.7203836406370738,
+      "5cc4df4c-f45e-5452-a0e2-909024489a8b": 0.45332190130806693,
+      "b1290891-2948-5196-802d-ed2cce9c3e44": 0.5472336912651377,
+      "8836fa49-2123-5d23-a825-c1979fc3a916": 0.3956673813833639,
+      "246d870a-12d1-5573-b5a8-e388da23fc99": 0.37967976148656446,
+      "3bc4050a-20f4-51a7-9ac0-e158cbe3d844": 0.32811219375360656,
+      "3a86fba2-24bf-5f4b-800c-6900296ab120": 0.4596904360359384,
+      "438751e3-57a3-5cca-8676-c453087a820b": 0.4270802987046581,
+      "c7f41a31-5b9a-5c7e-bbe9-0786726363d0": 0.2849743236871744,
+      "f563dfaf-5496-5095-b451-2adbcefe68e9": 0.44807405990678695,
+      "ed2da603-f5f4-59fb-9242-09f5c878590d": 0.4039501623415774,
+      "25835f88-63ae-5cbf-8499-d46ce032f62f": 0.40994912212345525,
+      "37984084-5630-57fd-99ab-38332cc67b45": 0.2652637312664173,
+      "1209cc76-d8a0-5c28-bd51-b517fdac4f41": 0.3729849752508273,
+      "413d2a34-ebfe-561a-9f2b-551652a119ec": 1.0956229413722811,
+      "67c15ad5-3fc8-59e4-a5c3-71b8a291609f": 1.0127003777467605,
+      "48a64b54-d18b-5bce-8f04-8096f70a6a7f": 1.7856692048255414,
+      "728a5aa2-5fd3-54d7-9656-cd85aa923dee": 0.5616856392591343,
+      "bca50155-b676-5a78-9d7f-dd596aa59417": 0.5615711382793703,
+      "e4474efe-5a34-531c-8879-a8d6c2ef9050": 0.36482933110073934,
+      "93969e08-20de-5808-8083-23b00b0e5ad0": 0.4875372768894263,
+      "1b8e616c-e817-581c-8c52-026668937871": 0.5039207358008917,
+      "03f47f74-e10f-5355-8281-93d564c7970d": 0.33177759942844604,
+      "f08b46c9-21a2-5d0f-9d57-a1623093f5d7": 0.3865218233133833,
+      "559f9a76-a7e8-5d4f-812b-b3e6702bc485": 0.4220087673008391,
+      "e3add8fe-1413-5742-871e-8624a637610e": 0.332691236248857
+    },
+    "edge_coverage": 0.8679615154028986,
+    "independent_scale_check_mm": null,
+    "residual_map_ref": null,
+    "threshold_config_sha256": "a8b3340cdf16c552394b158a424d32176ab2a507ab12dcac9543f8c507e4af5f"
+  }
+}

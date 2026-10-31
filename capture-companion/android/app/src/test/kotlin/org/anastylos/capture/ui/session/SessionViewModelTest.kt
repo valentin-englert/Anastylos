@@ -4,6 +4,7 @@ import com.google.common.truth.Truth.assertThat
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -14,6 +15,12 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.anastylos.capture.camera.CapturedStill
 import org.anastylos.capture.camera.FrameSampler
+import org.anastylos.capture.camera.UsableCamera
+import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.DEFAULT_PROFILE
+import org.anastylos.capture.camera.ExposureMode
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
 import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.SamplingPrefs
 import org.anastylos.capture.data.files.EvidenceFileStore
@@ -145,6 +152,30 @@ class SessionViewModelTest {
         }
     }
 
+    private class FakeCameraPrefs : CameraPrefs {
+        private val flow = MutableStateFlow<String?>(null)
+        override val selectedCameraId: Flow<String?> = flow
+        val saved = mutableListOf<String>()
+        override suspend fun setSelectedCameraId(id: String) {
+            saved += id
+            flow.value = id
+        }
+    }
+
+    private class FakeSettingsStore : CameraSettingsStore {
+        private val flows = mutableMapOf<String, MutableStateFlow<CameraSettings>>()
+        private val profileFlow = MutableStateFlow(DEFAULT_PROFILE)
+        val updates = mutableListOf<Triple<String, String, CameraSettings>>()
+        override fun settings(cameraId: String, profile: String): Flow<CameraSettings> =
+            flows.getOrPut("$cameraId/$profile") { MutableStateFlow(CameraSettings()) }
+        override suspend fun update(cameraId: String, profile: String, value: CameraSettings) {
+            updates += Triple(cameraId, profile, value)
+            flows.getOrPut("$cameraId/$profile") { MutableStateFlow(value) }.value = value
+        }
+        override val activeProfile: Flow<String> = profileFlow
+        override suspend fun setActiveProfile(profile: String) { profileFlow.value = profile }
+    }
+
     private class FakeTransport(
         private val handler: (HttpRequest) -> HttpResponse,
     ) : HttpTransport {
@@ -166,6 +197,8 @@ class SessionViewModelTest {
         peek: suspend (String, Int) -> Array<java.security.cert.X509Certificate> =
             { _, _ -> arrayOf(workstationCert.value) },
         tlsSeen: MutableList<Pair<String, PinnedTls?>>? = null,
+        cameraPrefs: CameraPrefs? = null,
+        settingsStore: CameraSettingsStore? = null,
     ): Triple<SessionViewModel, FakeTransport, EphemeralPairingStore> {
         // One scheduler for everything: Main, client IO, file IO, sampler.
         // No real-dispatcher hop remains, so virtual time is exact.
@@ -180,6 +213,8 @@ class SessionViewModelTest {
             sampler = FrameSampler(repo, files, ioDispatcher = testDispatcher),
             pairingStore = pairingStore,
             prefs = FakePrefs(),
+            cameraPrefs = cameraPrefs,
+            settingsStore = settingsStore,
             appVersion = "0.1.0",
             transportFactory = { baseUrl, tls -> tlsSeen?.add(baseUrl to tls); transport },
             peekCertificates = peek,
@@ -431,5 +466,52 @@ class SessionViewModelTest {
         vm.setInterval(0)
         advanceTimeBy(100)
         assertThat(vm.state.value.error).contains("1..300")
+    }
+
+    @Test
+    fun selectCameraPersistsSelection() = runTest {
+        val prefs = FakeCameraPrefs()
+        val (vm, _, _) = viewModel(FakeRepository(), cameraPrefs = prefs)
+        vm.selectCamera("2")
+        advanceTimeBy(100)
+        assertThat(prefs.saved).containsExactly("2")
+        assertThat(vm.state.value.selectedCameraId).isEqualTo("2")
+    }
+
+    @Test
+    fun cameraInventorySurfacesInState() = runTest {
+        val (vm, _, _) = viewModel(FakeRepository())
+        vm.onCamerasListed(
+            listOf(UsableCamera("0", "Back 0", 1, 5.2f, null, null, true, "LIMITED")),
+            "0", null,
+        )
+        assertThat(vm.state.value.availableCameras).hasSize(1)
+        assertThat(vm.state.value.effectiveCameraId).isEqualTo("0")
+        assertThat(vm.state.value.cameraNote).isNull()
+    }
+
+    @Test
+    fun updateSettingsPersistsSanitized() = runTest {
+        val store = FakeSettingsStore()
+        val (vm, _, _) = viewModel(FakeRepository(), settingsStore = store)
+        val cam = UsableCamera(
+            "0", "Back 0", 1, null, null, null, false, null,
+            org.anastylos.capture.camera.CameraCapabilities(),
+        )
+        vm.onCamerasListed(listOf(cam), "0", null)
+        vm.updateSettings { it.copy(exposureMode = ExposureMode.MANUAL, torch = true) }
+        advanceTimeBy(100)
+        assertThat(store.updates).hasSize(1)
+        assertThat(store.updates[0].third.exposureMode).isEqualTo(ExposureMode.AUTO)
+        assertThat(store.updates[0].third.torch).isFalse()
+    }
+
+    @Test
+    fun failedApplySurfacesNote() = runTest {
+        val (vm, _, _) = viewModel(FakeRepository())
+        vm.onSettingsApplied(false)
+        assertThat(vm.state.value.settingsNote).isEqualTo("settings not applied")
+        vm.onSettingsApplied(true)
+        assertThat(vm.state.value.settingsNote).isNull()
     }
 }

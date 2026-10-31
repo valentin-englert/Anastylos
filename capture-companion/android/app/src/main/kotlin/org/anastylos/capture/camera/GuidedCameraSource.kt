@@ -1,11 +1,18 @@
 package org.anastylos.capture.camera
 
+import android.util.Size
+import android.util.Log
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -17,7 +24,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+import org.anastylos.capture.guidance.DIAG_LOG_TAG
 import org.anastylos.capture.guidance.PoseEstimator
+import org.anastylos.capture.guidance.TimingAccumulator
 import org.anastylos.capture.guidance.YuvFrame
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -45,6 +54,10 @@ class GuidedCameraSource(
     private val providerSource: CameraProviderSource,
     private val estimator: PoseEstimator,
     private val nowUtc: () -> java.time.Instant,
+    private val inventory: CameraInventorySource = CameraXInventorySource(),
+    private val settingsApplier: SettingsApplier = CameraXSettingsApplier(),
+    private val measuredProfiles: MeasuredProfileSource = AssetMeasuredProfileSource(context),
+    private val timing: TimingAccumulator = TimingAccumulator(),
 ) : GuidedCamera {
     data class GuidedStill(
         val bytes: ByteArray,
@@ -61,10 +74,133 @@ class GuidedCameraSource(
     private var boundAnalysis: ImageAnalysis? = null
     private var previewView: PreviewView? = null
     private var lensFacing: Int = CameraSelector.LENS_FACING_BACK
+
+    /** Operator-requested Camera2 ID (null = safe default). Set before [bindAsync]. */
+    override var requestedCameraId: String? = null
+
+    /** Effective Camera2 ID of the bound camera, null before a bind. */
+    override var effectiveCameraId: String? = null
+        private set
+
+    /** Substitution note when the request fell back, else null. */
+    override var cameraNote: String? = null
+        private set
+
+    private var lastInventory: List<UsableCamera> = emptyList()
+
+    /** Live inventory from the last bind (empty before first bind). */
+    override fun availableCameras(): List<UsableCamera> = lastInventory
+
+    override var requestedStillSize: Pair<Int, Int>? = null
+
+    // Latest repeating-request result (preview + analysis), via the
+    // public Camera2Interop session callback (GUIDE-01). Not tied to a
+    // specific analysis frame: it reports what the HAL currently
+    // applies, which is what requested-vs-applied needs.
+    @Volatile
+    override var lastApplied: AppliedSettings? = null
+        private set
+
+    @Volatile private var lastFrameDurationNs: Long? = null
+
+    private val appliedCallback = object : android.hardware.camera2.CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(
+            session: android.hardware.camera2.CameraCaptureSession,
+            request: android.hardware.camera2.CaptureRequest,
+            result: android.hardware.camera2.TotalCaptureResult,
+        ) {
+            lastApplied = AppliedSettings(
+                exposureNs = result.get(android.hardware.camera2.CaptureResult.SENSOR_EXPOSURE_TIME),
+                iso = result.get(android.hardware.camera2.CaptureResult.SENSOR_SENSITIVITY),
+                focusDiopters = result.get(android.hardware.camera2.CaptureResult.LENS_FOCUS_DISTANCE),
+                aeMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_MODE),
+                afMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AF_MODE),
+                awbMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE),
+                evSteps = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_EXPOSURE_COMPENSATION),
+            )
+            lastFrameDurationNs = result.get(android.hardware.camera2.CaptureResult.SENSOR_FRAME_DURATION)
+        }
+    }
+
+    private var boundCamera: Camera? = null
+    private var lastAnalysisSize: Pair<Int, Int> = 1280 to 720
+    private var currentZoom: Float = 0f
+    private var boundSelector: CameraSelector? = null
+    private var lastStillSettings: CameraSettings = CameraSettings()
+    private var lastStillCaps: CameraCapabilities = CameraCapabilities()
+    private var lastStillOptions: StillOptions? = null
+
+    @ExperimentalCamera2Interop
+    override fun applySettings(settings: CameraSettings, caps: CameraCapabilities): Boolean {
+        val prevFocus = lastStillSettings.focusMode to lastStillSettings.focusDiopters
+        lastStillSettings = settings
+        lastStillCaps = caps
+        val cam = boundCamera ?: return false
+        val ok = settingsApplier.apply(cam, settings, caps)
+        // The measured profile is bound to zoom AND focus: either change
+        // re-keys (a new profile, never a silent reuse).
+        val focusChanged = settings.focusMode != prevFocus.first ||
+            settings.focusDiopters != prevFocus.second
+        if (ok && (settings.linearZoom != currentZoom || focusChanged)) {
+            currentZoom = settings.linearZoom
+            refreshIntrinsics()
+        }
+        return ok
+    }
+
+    /** Re-keys intrinsics after a zoom/focus change (new profile, no silent reuse). */
+    @ExperimentalCamera2Interop
+    private fun refreshIntrinsics() {
+        val cam = boundCamera ?: return
+        intrinsics = resolveIntrinsics(cam, lastAnalysisSize.first, lastAnalysisSize.second)
+        Log.i(CAMERA_LOG_TAG, "guided intrinsics refreshed profile=${intrinsics?.profileId}")
+    }
+
+    /**
+     * Measured profile first, factory fallback: the stored CAL-01
+     * profile wins only when the live camera, analysis size, zoom,
+     * and manual focus all match its recording configuration;
+     * otherwise the uncalibrated factory intrinsics keep detection
+     * running without ever validating a metric pose.
+     */
+    @ExperimentalCamera2Interop
+    private fun resolveIntrinsics(
+        cam: Camera,
+        analysisWidth: Int,
+        analysisHeight: Int,
+    ): PoseEstimator.Intrinsics? {
+        val measured = try {
+            measuredProfiles.forGeometry(
+                effectiveCameraId, analysisWidth, analysisHeight, currentZoom,
+                lastStillSettings.focusMode, lastStillSettings.focusDiopters,
+            )
+        } catch (_: Exception) {
+            null
+        }
+        if (measured != null) {
+            Log.i(CAMERA_LOG_TAG, "guided intrinsics measured profile=${measured.profileId}")
+            return measured
+        }
+        Log.i(
+            CAMERA_LOG_TAG,
+            "guided intrinsics factory fallback " +
+                "camera=$effectiveCameraId analysis=${analysisWidth}x$analysisHeight " +
+                "zoom=$currentZoom focus=${lastStillSettings.focusMode}@${lastStillSettings.focusDiopters}",
+        )
+        return try {
+            Camera2Intrinsics.forAnalysisStream(
+                cam, analysisWidth, analysisHeight, currentZoom,
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
     private var analysisExecutor: java.util.concurrent.ExecutorService? = null
     private var board: PoseEstimator.BoardSpec? = null
     private var intrinsics: PoseEstimator.Intrinsics? = null
     private var lastEstimateNs: Long? = null
+    private var lastFrameArrivedNs: Long? = null
+    private var lastFrameSensorTs: Long? = null
     @Volatile private var geometry: GuidedCamera.StreamGeometry? = null
     @Volatile private var lastAnalysisRotation: Int = 0
 
@@ -103,20 +239,47 @@ class GuidedCameraSource(
         analysisHeight: Int,
     ): Boolean {
         provider = cameraProvider
-        val back = cameraProvider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)
-        val front = cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
-        if (!back && !front) return false
-        lensFacing = when {
-            lensFacing == CameraSelector.LENS_FACING_BACK && back -> lensFacing
-            back -> CameraSelector.LENS_FACING_BACK
-            else -> CameraSelector.LENS_FACING_FRONT
+        val cameras = try {
+            inventory.list(cameraProvider)
+        } catch (_: Exception) {
+            emptyList()
         }
-        val selector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+        lastInventory = cameras
+        val resolution = resolveCamera(requestedCameraId, cameras)
+        if (resolution == null) {
+            effectiveCameraId = null
+            cameraNote = "no usable camera found"
+            return false
+        }
+        val effective = resolution.camera
+        lensFacing = effective.lensFacing
+        effectiveCameraId = effective.id
+        cameraNote = resolution.note
+        Log.i(
+            CAMERA_LOG_TAG,
+            "guided bind requested=${requestedCameraId ?: "<default>"} " +
+                "effective=${effective.id} (${effective.label}) " +
+                "available=[${cameras.joinToString { it.id }}]" +
+                (resolution.note?.let { " note=$it" } ?: ""),
+        )
+        val selector = CameraSelector.Builder()
+            .addCameraFilter { infos ->
+                infos.filter {
+                    try {
+                        Camera2CameraInfo.from(it).cameraId == effective.id
+                    } catch (_: Exception) {
+                        false
+                    }
+                }
+            }
+            .build()
+        boundSelector = selector
         // Preview and analysis request the same resolution so the
         // detection overlay can map analysis pixels onto the FIT_CENTER
         // preview analytically (no restricted transform APIs).
         val resolutionSelector =
             androidx.camera.core.resolutionselector.ResolutionSelector.Builder()
+                .setAspectRatioStrategy(aspectStrategyFor(analysisWidth, analysisHeight))
                 .setResolutionStrategy(
                     androidx.camera.core.resolutionselector.ResolutionStrategy(
                         android.util.Size(analysisWidth, analysisHeight),
@@ -126,16 +289,16 @@ class GuidedCameraSource(
                 .build()
         val preview = Preview.Builder().setResolutionSelector(resolutionSelector).build()
         previewView?.let { preview.setSurfaceProvider(it.surfaceProvider) }
-        val analysis = ImageAnalysis.Builder()
+        val analysisBuilder = ImageAnalysis.Builder()
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setResolutionSelector(resolutionSelector)
-            .build()
-        val capture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
-            .setJpegQuality(95)
-            .setFlashMode(ImageCapture.FLASH_MODE_OFF)
-            .build()
+        androidx.camera.camera2.interop.Camera2Interop.Extender(analysisBuilder)
+            .setSessionCaptureCallback(appliedCallback)
+        val analysis = analysisBuilder.build()
+        val capture = buildCapture(
+            stillOptionsFor(lastStillSettings, lastStillCaps),
+        )
         previewView?.display?.rotation?.let {
             preview.targetRotation = it
             analysis.targetRotation = it
@@ -148,13 +311,26 @@ class GuidedCameraSource(
         return try {
             cameraProvider.unbindAll()
             val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, analysis, capture)
+            boundCamera = camera
             imageCapture = capture
             boundPreview = preview
             boundAnalysis = analysis
-            intrinsics = Camera2Intrinsics.forAnalysisStream(camera, analysisWidth, analysisHeight)
+            lastAnalysisSize = analysisWidth to analysisHeight
+            intrinsics = resolveIntrinsics(camera, analysisWidth, analysisHeight)
             geometry = readGeometry(preview, analysis, analysisWidth, analysisHeight)
+            val geo = geometry
+            Log.i(
+                CAMERA_LOG_TAG,
+                "guided stream camera=${effectiveCameraId} " +
+                    "analysis=${geo?.analysisWidth}x${geo?.analysisHeight} " +
+                    "preview=${geo?.previewWidth}x${geo?.previewHeight} " +
+                    "profile=${intrinsics?.profileId}",
+            )
             true
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            cameraNote = "bind failed for camera " + (effectiveCameraId ?: "?")
+            Log.w(CAMERA_LOG_TAG, "guided bind failed for camera $effectiveCameraId", e)
+            boundCamera = null
             imageCapture = null
             boundPreview = null
             boundAnalysis = null
@@ -165,6 +341,42 @@ class GuidedCameraSource(
     }
 
     override fun streamGeometry(): GuidedCamera.StreamGeometry? = geometry
+
+    /** GUIDE-01 diagnostics: throttled per-frame cost + quality summary, else null. */
+    private fun recordFrameTiming(
+        arrivedNs: Long,
+        sensorToArrivalMs: Double,
+        gapMs: Double,
+        copyStartNs: Long,
+        copyEndNs: Long,
+        width: Int,
+        height: Int,
+        sensorTs: Long,
+        estimate: PoseEstimator.Estimate,
+    ) {
+        val nowNs = System.nanoTime()
+        val tsGapMs = lastFrameSensorTs?.let { (sensorTs - it) / 1_000_000.0 } ?: 0.0
+        lastFrameSensorTs = sensorTs
+        val summary = timing.recordFrame(
+            copyMs = (copyEndNs - copyStartNs) / 1_000_000.0,
+            totalMs = (nowNs - arrivedNs) / 1_000_000.0,
+            gapMs = gapMs,
+            tsGapMs = tsGapMs,
+            width = width,
+            height = height,
+            darkFraction = estimate.frameQuality?.darkFraction,
+            saturatedFraction = estimate.frameQuality?.saturatedFraction,
+            sharpness = estimate.frameQuality?.sharpness,
+            sensorToArrivalMs = sensorToArrivalMs,
+            exposureRoi = estimate.frameQuality?.exposureRoi,
+            fullFrameDarkFraction = estimate.frameQuality?.fullFrameDarkFraction,
+            fullFrameSaturatedFraction = estimate.frameQuality?.fullFrameSaturatedFraction,
+            sensorToEmitMs = (android.os.SystemClock.elapsedRealtimeNanos() - sensorTs) / 1_000_000.0,
+            exposureMs = lastApplied?.exposureNs?.let { it / 1_000_000.0 },
+            frameDurationMs = lastFrameDurationNs?.let { it / 1_000_000.0 },
+        )
+        if (summary != null) Log.i(DIAG_LOG_TAG, "guided $summary")
+    }
 
     private fun readGeometry(
         preview: Preview,
@@ -182,12 +394,19 @@ class GuidedCameraSource(
                 previewWidth = resolvedPreview?.width ?: requestedWidth,
                 previewHeight = resolvedPreview?.height ?: requestedHeight,
                 lensFacing = lensFacing,
+                cameraId = effectiveCameraId ?: "",
             )
         } catch (_: Exception) {
             null
         }
 
+    @androidx.camera.camera2.interop.ExperimentalCamera2Interop
     private fun analyzeFrame(image: ImageProxy) {
+        val arrivedNs = System.nanoTime()
+        // Sensor timestamps are CLOCK_BOOTTIME (REALTIME source, HARDWARE-03).
+        val arrivedBootNs = android.os.SystemClock.elapsedRealtimeNanos()
+        val gapMs = lastFrameArrivedNs?.let { (arrivedNs - it) / 1_000_000.0 } ?: 0.0
+        lastFrameArrivedNs = arrivedNs
         try {
             val frameRotation = try {
                 image.imageInfo.rotationDegrees
@@ -204,6 +423,7 @@ class GuidedCameraSource(
             val width = image.width
             val height = image.height
             val rowStride = plane.rowStride
+            val copyStartNs = System.nanoTime()
             val src = ByteArray(plane.buffer.remaining())
             plane.buffer.get(src)
             val tight = try {
@@ -211,6 +431,7 @@ class GuidedCameraSource(
             } catch (_: IllegalArgumentException) {
                 return
             }
+            val copyEndNs = System.nanoTime()
             val active = board ?: return
             val timestampNs = image.imageInfo.timestamp
             val input = PoseEstimator.Input(
@@ -231,6 +452,10 @@ class GuidedCameraSource(
                 return
             }
             lastEstimateNs = estimate.monotonicNs
+            recordFrameTiming(
+                arrivedNs, (arrivedBootNs - timestampNs) / 1_000_000.0, gapMs,
+                copyStartNs, copyEndNs, width, height, timestampNs, estimate,
+            )
             _estimates.tryEmit(estimate)
         } finally {
             try {
@@ -239,6 +464,80 @@ class GuidedCameraSource(
             }
         }
     }
+
+    @ExperimentalCamera2Interop
+    private fun buildCapture(opts: StillOptions): ImageCapture {
+        val captureBuilder = ImageCapture.Builder()
+            .setCaptureMode(opts.captureMode)
+            .setJpegQuality(95)
+            .setFlashMode(ImageCapture.FLASH_MODE_OFF)
+        applyStillOptions(captureBuilder, opts)
+        requestedStillSize?.let { (w, h) ->
+            captureBuilder.setResolutionSelector(
+                ResolutionSelector.Builder()
+                    .setResolutionStrategy(
+                        ResolutionStrategy(
+                            Size(w, h),
+                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER,
+                        ),
+                    )
+                    .build(),
+            )
+        }
+        return captureBuilder.build()
+    }
+
+    /**
+     * Bakes the latest settings into ImageCapture and
+     * selectively rebinds that use case alone; Preview and
+     * analysis stay attached. Skips the rebind when the still
+     * slice is unchanged. On failure the previous ImageCapture
+     * is restored and false is returned.
+     */
+    @ExperimentalCamera2Interop
+    override suspend fun refreshStillOptions(): Boolean {
+        val opts = stillOptionsFor(lastStillSettings, lastStillCaps)
+        if (opts == lastStillOptions && imageCapture != null) return true
+        return withContext(Dispatchers.Main.immediate) { rebindCapture(opts) }
+    }
+
+    @ExperimentalCamera2Interop
+    private fun rebindCapture(opts: StillOptions): Boolean {
+        val cameraProvider = provider ?: return false
+        val old = imageCapture ?: return false
+        val selector = boundSelector ?: return false
+        return try {
+            val capture = buildCapture(opts)
+            capture.targetRotation = old.targetRotation
+            cameraProvider.unbind(old)
+            boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, capture)
+            imageCapture = capture
+            lastStillOptions = opts
+            val cam = boundCamera
+            if (cam != null) {
+                settingsApplier.apply(cam, lastStillSettings, lastStillCaps)
+            }
+            Log.i(
+                CAMERA_LOG_TAG,
+                "guided still opts refreshed mode=${opts.captureMode} ae=${opts.aeMode} " +
+                    "iso=${opts.iso} exp=${opts.exposureNs} af=${opts.afMode} " +
+                    "awb=${opts.awbMode} ev=${opts.evSteps}",
+            )
+            true
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "guided still options rebind failed, restoring previous", e)
+            try {
+                boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, old)
+                imageCapture = old
+            } catch (_: Exception) {
+                boundCamera = null
+                imageCapture = null
+            }
+            lastStillOptions = null
+            false
+        }
+    }
+
 
     override fun unbind() {
         try {
@@ -257,6 +556,7 @@ class GuidedCameraSource(
         boundPreview = null
         boundAnalysis = null
         intrinsics = null
+        boundCamera = null
         geometry = null
         lastAnalysisRotation = 0
     }

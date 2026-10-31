@@ -1,5 +1,7 @@
 package org.anastylos.capture.ui.guided
 
+import android.hardware.camera2.CameraMetadata
+import androidx.camera.core.CameraSelector
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -9,6 +11,7 @@ import java.io.File
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +26,14 @@ import org.anastylos.capture.camera.CapturedStill
 import org.anastylos.capture.camera.FrameSampler
 import org.anastylos.capture.camera.GuidedCamera
 import org.anastylos.capture.camera.GuidedCameraSource
+import org.anastylos.capture.camera.UsableCamera
+import org.anastylos.capture.camera.AppliedSettings
+import org.anastylos.capture.camera.CameraCapabilities
+import org.anastylos.capture.camera.CameraSettings
+import org.anastylos.capture.camera.DEFAULT_PROFILE
+import org.anastylos.capture.camera.ExposureMode
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
 import org.anastylos.capture.data.EvidenceRepository
 import org.anastylos.capture.data.GuidedPrefs
 import org.anastylos.capture.data.files.EvidenceFileStore
@@ -93,12 +104,36 @@ class GuidanceViewModelTest {
         var lastBoard: PoseEstimator.BoardSpec? = null
         var stillsFired = 0
         var stillBytes = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 0xD9.toByte())
+        override var requestedCameraId: String? = null
+        var cameras: List<UsableCamera> = emptyList()
+        var effectiveId: String? = null
+        var note: String? = null
+        override val effectiveCameraId: String? get() = effectiveId
+        override val cameraNote: String? get() = note
+        override fun availableCameras(): List<UsableCamera> = cameras
+        override var requestedStillSize: Pair<Int, Int>? = null
+        val applied = mutableListOf<Pair<CameraSettings, CameraCapabilities>>()
+        override fun applySettings(settings: CameraSettings, caps: CameraCapabilities): Boolean {
+            applied += settings to caps
+            return applyResult
+        }
+        var applyResult = true
+        var refreshStillCalls = 0
+        var refreshStillResult = true
+        override suspend fun refreshStillOptions(): Boolean {
+            refreshStillCalls++
+            return refreshStillResult
+        }
+        var lastAppliedValue: AppliedSettings? = null
+        override val lastApplied: AppliedSettings? get() = lastAppliedValue
+        var lastBindSize: Pair<Int, Int>? = null
 
+        var profileId: String = "measured:test-fixture"
         override fun currentIntrinsics(): PoseEstimator.Intrinsics? = PoseEstimator.Intrinsics(
             fx = 800.0, fy = 800.0, cx = 319.5, cy = 239.5,
             width = 640, height = 480,
             distortion = listOf(0.0, 0.0, 0.0, 0.0, 0.0),
-            profileId = "factory-test-uncalibrated",
+            profileId = profileId,
         )
 
         override fun attachPreview(view: PreviewView?) = Unit
@@ -110,6 +145,7 @@ class GuidanceViewModelTest {
 
         override suspend fun bindAsync(analysisWidth: Int, analysisHeight: Int): Boolean {
             bindCalls++
+            lastBindSize = analysisWidth to analysisHeight
             bound = true
             return true
         }
@@ -128,6 +164,72 @@ class GuidanceViewModelTest {
             )
         }
     }
+
+    private class FakeCameraPrefs : CameraPrefs {
+        private val flow = MutableStateFlow<String?>(null)
+        override val selectedCameraId: Flow<String?> = flow
+        val saved = mutableListOf<String>()
+        override suspend fun setSelectedCameraId(id: String) {
+            saved += id
+            flow.value = id
+        }
+    }
+
+    private fun cam(id: String) = UsableCamera(
+        id, "Back $id", CameraSelector.LENS_FACING_BACK, 5.2f, null, null, false, "LIMITED",
+    )
+
+    private fun cameraVm(
+        prefs: FakeCameraPrefs,
+        store: FakeSettingsStore = FakeSettingsStore(),
+    ): GuidanceViewModel {
+        val files = EvidenceFileStore(File(temporaryFolder.root, "evidence-cam"), dispatcher)
+        val sampler = FrameSampler(repo, files, { nowUtc }, dispatcher)
+        return GuidanceViewModel(
+            repo = repo, sampler = sampler,
+            cameraFactory = { _, _ -> camera },
+            prefs = FakePrefs(ref = 60.0),
+            nanoClock = { nowNs }, utcClock = { nowUtc },
+            ioDispatcher = dispatcher,
+            cameraPrefs = prefs,
+            settingsStore = store,
+        )
+    }
+
+    private class FakeSettingsStore : CameraSettingsStore {
+        private val flows = mutableMapOf<String, MutableStateFlow<CameraSettings>>()
+        private val profileFlow = MutableStateFlow(DEFAULT_PROFILE)
+        val updates = mutableListOf<Triple<String, String, CameraSettings>>()
+        override fun settings(cameraId: String, profile: String): Flow<CameraSettings> =
+            flows.getOrPut("$cameraId/$profile") { MutableStateFlow(CameraSettings()) }
+        override suspend fun update(cameraId: String, profile: String, value: CameraSettings) {
+            updates += Triple(cameraId, profile, value)
+            flows.getOrPut("$cameraId/$profile") { MutableStateFlow(value) }.value = value
+        }
+        override val activeProfile: Flow<String> = profileFlow
+        override suspend fun setActiveProfile(profile: String) { profileFlow.value = profile }
+    }
+
+    private fun fullCaps() = CameraCapabilities(
+        aeModes = setOf(CameraMetadata.CONTROL_AE_MODE_OFF, CameraMetadata.CONTROL_AE_MODE_ON),
+        isoRange = 50..3200,
+        exposureNsRange = 1_000L..100_000_000L,
+        maxFrameDurationNs = 200_000_000L,
+        evStepsRange = -20..20,
+        evStepSize = 0.1f,
+        afModes = setOf(CameraMetadata.CONTROL_AF_MODE_OFF, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE),
+        minFocusDistance = 10f,
+        awbModes = setOf(1, 2, 3, 5, 6),
+        maxDigitalZoom = 8f,
+        yuvSizes = listOf(1280 to 720, 960 to 720),
+        jpegSizes = listOf(4000 to 3000, 1920 to 1080),
+        flashAvailable = true,
+        manualSensor = true,
+    )
+
+    private fun cappedCam(id: String, caps: CameraCapabilities) = UsableCamera(
+        id, "Back $id", CameraSelector.LENS_FACING_BACK, 5.2f, null, null, true, "LIMITED", caps,
+    )
 
     private class FakeRepo : EvidenceRepository {
         val sessions = mutableMapOf<String, CaptureSession>()
@@ -368,7 +470,7 @@ class GuidanceViewModelTest {
     @Test
     fun trackingLossDuringHoldAbortsWithoutFiring() = runTest(dispatcher) {
         armWithTarget()
-        feedStableDwell(frames = 6)
+        feedStableDwell(frames = 3)
         advanceUntilIdle()
         assertThat(viewModel.state.value.request).isEqualTo(RequestState.HOLD_STILL)
         // Markers vanish mid-hold.
@@ -390,7 +492,7 @@ class GuidanceViewModelTest {
     @Test
     fun cancelDuringDwellHoldsWithoutFiring() = runTest(dispatcher) {
         armWithTarget()
-        feedStableDwell(frames = 6)
+        feedStableDwell(frames = 3)
         advanceUntilIdle()
         viewModel.cancelRequest()
         feedStableDwell(frames = 15)
@@ -827,5 +929,225 @@ class GuidanceViewModelTest {
         advanceUntilIdle()
         assertThat(camera.stillsFired).isEqualTo(1)
         assertThat(remoteViewModel.state.value.captureResult).isNotNull()
+    }
+
+    @Test
+    fun selectCameraPersistsAndRebindsOnNewSensor() = runTest {
+        val prefs = FakeCameraPrefs()
+        val vm = cameraVm(prefs)
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(camera.bindCalls).isEqualTo(1)
+        camera.cameras = listOf(cam("0"), cam("2"))
+        vm.selectCamera("2")
+        advanceUntilIdle()
+        assertThat(prefs.saved).containsExactly("2")
+        assertThat(vm.state.value.selectedCameraId).isEqualTo("2")
+        assertThat(camera.requestedCameraId).isEqualTo("2")
+        assertThat(camera.bindCalls).isEqualTo(2)
+        assertThat(camera.unbindCalls).isEqualTo(1)
+    }
+
+    @Test
+    fun attachSurfacesInventoryAndFallbackNote() = runTest {
+        val prefs = FakeCameraPrefs()
+        val vm = cameraVm(prefs)
+        camera.cameras = listOf(cam("0"))
+        camera.effectiveId = "0"
+        camera.note = "Camera 9 unavailable, using 0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(vm.state.value.availableCameras).hasSize(1)
+        assertThat(vm.state.value.effectiveCameraId).isEqualTo("0")
+        assertThat(vm.state.value.cameraNote).contains("unavailable")
+    }
+
+    @Test
+    fun updateSettingsPersistsAndApplies() = runTest {
+        val store = FakeSettingsStore()
+        val vm = cameraVm(FakeCameraPrefs(), store)
+        camera.cameras = listOf(cappedCam("0", fullCaps()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        camera.applied.clear()
+        vm.updateSettings { it.copy(exposureMode = ExposureMode.MANUAL, iso = 800) }
+        advanceUntilIdle()
+        assertThat(store.updates).hasSize(1)
+        assertThat(store.updates[0].third.iso).isEqualTo(800)
+        // Direct apply plus the store echo both fire with identical values (idempotent).
+        assertThat(camera.applied).isNotEmpty()
+        assertThat(camera.applied.last().first.exposureMode).isEqualTo(ExposureMode.MANUAL)
+        assertThat(camera.applied.last().first.iso).isEqualTo(800)
+        assertThat(vm.state.value.settingsNote).isNull()
+    }
+
+    @Test
+    fun updateSettingsRefreshesStillOptions() = runTest {
+        val vm = cameraVm(FakeCameraPrefs())
+        camera.cameras = listOf(cappedCam("0", fullCaps()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        camera.refreshStillCalls = 0
+        vm.updateSettings { it.copy(iso = 800) }
+        advanceUntilIdle()
+        assertThat(camera.refreshStillCalls).isAtLeast(1)
+    }
+
+    @Test
+    fun stillRefreshFailureSurfacesNote() = runTest {
+        val vm = cameraVm(FakeCameraPrefs())
+        camera.cameras = listOf(cappedCam("0", fullCaps()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        camera.refreshStillResult = false
+        vm.updateSettings { it.copy(iso = 800) }
+        advanceUntilIdle()
+        assertThat(vm.state.value.settingsNote).isEqualTo("still capture options not refreshed")
+    }
+
+    @Test
+    fun unsupportedManualFallsBackToAuto() = runTest {
+        val vm = cameraVm(FakeCameraPrefs())
+        camera.cameras = listOf(cappedCam("0", CameraCapabilities()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        camera.applied.clear()
+        vm.updateSettings {
+            it.copy(exposureMode = ExposureMode.MANUAL, torch = true)
+        }
+        advanceUntilIdle()
+        val applied = camera.applied.last().first
+        assertThat(applied.exposureMode).isEqualTo(ExposureMode.AUTO)
+        assertThat(applied.torch).isFalse()
+    }
+
+    @Test
+    fun analysisSizeChangeRebindsWithNewSize() = runTest {
+        val vm = cameraVm(FakeCameraPrefs())
+        camera.cameras = listOf(cappedCam("0", fullCaps()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(camera.lastBindSize).isEqualTo(1280 to 720)
+        vm.updateSettings { it.copy(analysisSize = 960 to 720) }
+        advanceUntilIdle()
+        assertThat(camera.bindCalls).isEqualTo(2)
+        assertThat(camera.lastBindSize).isEqualTo(960 to 720)
+    }
+
+    @Test
+    fun storedAnalysisSizeMismatchRebindsAfterColdStart() = runTest {
+        val caps = fullCaps().copy(yuvSizes = listOf(1920 to 1080, 1280 to 720, 960 to 720))
+        val store = FakeSettingsStore()
+        store.update("0", DEFAULT_PROFILE, CameraSettings(analysisSize = 1920 to 1080))
+        val vm = cameraVm(FakeCameraPrefs(), store)
+        camera.cameras = listOf(cappedCam("0", caps))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(camera.bindCalls).isEqualTo(2)
+        assertThat(camera.lastBindSize).isEqualTo(1920 to 1080)
+        assertThat(vm.state.value.settings.analysisSize).isEqualTo(1920 to 1080)
+    }
+
+    @Test
+    fun storedMatchingSizeBindsOnce() = runTest {
+        val vm = cameraVm(FakeCameraPrefs(), FakeSettingsStore())
+        camera.cameras = listOf(cappedCam("0", fullCaps()))
+        camera.effectiveId = "0"
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        assertThat(camera.bindCalls).isEqualTo(1)
+        assertThat(camera.lastBindSize).isEqualTo(1280 to 720)
+    }
+
+    @Test
+    fun hackathonMotionJitterStillFiresOnce() = runTest(dispatcher) {
+        armWithTarget()
+        repeat(12) { index ->
+            val atNs = (index + 1) * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            val jumped = validEstimate(atNs).let { estimate ->
+                estimate.copy(
+                    cornersPx = estimate.cornersPx.map { marker ->
+                        marker.copy(
+                            corners = marker.corners.map { listOf(it[0] + index * 25.0, it[1]) },
+                        )
+                    },
+                )
+            }
+            camera.estimateFlow.emit(jumped)
+            advanceUntilIdle()
+        }
+        assertThat(viewModel.state.value.motionWarning).isTrue()
+        assertThat(camera.stillsFired).isEqualTo(1)
+    }
+
+    @Test
+    fun hackathonStaleFrameDoesNotWipeDwell() = runTest(dispatcher) {
+        armWithTarget()
+        // Five fresh samples span 320 ms: short of the 500 ms dwell.
+        repeat(5) { index ->
+            val atNs = index * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs))
+            advanceUntilIdle()
+        }
+        assertThat(camera.stillsFired).isEqualTo(0)
+        // Late publication of an in-between frame. It must not count and must not reset.
+        val staleNs = 360L * 1_000_000L
+        nowNs = staleNs + 400_000_000L
+        camera.estimateFlow.emit(validEstimate(staleNs))
+        advanceUntilIdle()
+        assertThat(camera.stillsFired).isEqualTo(0)
+        repeat(8) { index ->
+            val atNs = (400L + index * 80L) * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs))
+            advanceUntilIdle()
+        }
+        assertThat(camera.stillsFired).isEqualTo(1)
+    }
+
+    @Test
+    fun hackathonOffTargetDoesNotFire() = runTest(dispatcher) {
+        armWithTarget()
+        repeat(12) { index ->
+            val atNs = (index + 1) * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs, center = listOf(0.0, 0.0, -200.0)))
+            advanceUntilIdle()
+        }
+        assertThat(camera.stillsFired).isEqualTo(0)
+    }
+
+    @Test
+    fun hackathonUncalibratedProfileDoesNotAutoFire() = runTest(dispatcher) {
+        camera.profileId = "factory-test-uncalibrated"
+        armWithTarget()
+        repeat(12) { index ->
+            val atNs = (index + 1) * 80L * 1_000_000L
+            nowNs = atNs + 40_000_000L
+            camera.estimateFlow.emit(validEstimate(atNs))
+            advanceUntilIdle()
+        }
+        assertThat(viewModel.state.value.uncalibrated).isTrue()
+        assertThat(camera.stillsFired).isEqualTo(0)
+    }
+
+    @Test
+    fun appliedSampleSurfacesAsLine() = runTest {
+        val vm = cameraVm(FakeCameraPrefs())
+        vm.attachCamera(owner(), null)
+        advanceUntilIdle()
+        camera.lastAppliedValue = AppliedSettings(20_000_000L, 400, null, 1, 4, 1, 0)
+        camera.estimateFlow.emit(validEstimate(feedBaseNs + 100_000_000L))
+        advanceUntilIdle()
+        assertThat(vm.state.value.appliedLine).contains("ISO400")
+        assertThat(vm.state.value.appliedLine).contains("1/50")
     }
 }

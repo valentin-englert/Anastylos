@@ -87,6 +87,30 @@ class DwellTest {
     }
 
     @Test
+    fun bridgedStaleGapDoesNotWipeTheWindow() {
+        val dwell = DwellAccumulator(holdMs = 500L, minSamples = 5)
+        dwell.observe(sample(0L))
+        dwell.observe(sample(80L))
+        dwell.observe(sample(160L))
+        // Two skipped frames would make the next fresh sample 240 ms
+        // after the last counted one, past the 150 ms gap, unless the
+        // stale publications bridge the open window.
+        dwell.bridge(240L)
+        dwell.bridge(320L)
+        val state = dwell.observe(sample(400L))
+        assertThat(state).isEqualTo(DwellState.Accumulating(4, 400))
+    }
+
+    @Test
+    fun bridgeLongerThanTheGapResets() {
+        val dwell = DwellAccumulator()
+        dwell.observe(sample(0L))
+        dwell.observe(sample(80L))
+        dwell.bridge(80L + 200L)
+        assertThat(dwell.state).isEqualTo(DwellState.Idle)
+    }
+
+    @Test
     fun stalePoseResetsToIdle() {
         val dwell = DwellAccumulator()
         for (i in 0..7) {

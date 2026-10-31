@@ -8,7 +8,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import java.io.File
 import org.anastylos.capture.BuildConfig
+import org.anastylos.capture.camera.AssetMeasuredProfileSource
+import org.anastylos.capture.camera.MeasuredProfileSource
 import org.anastylos.capture.camera.FrameSampler
+import org.anastylos.capture.data.CameraPrefs
+import org.anastylos.capture.data.DataStoreCameraPrefs
+import org.anastylos.capture.data.CameraSettingsStore
+import org.anastylos.capture.data.DataStoreCameraSettingsStore
 import org.anastylos.capture.data.DataStoreSamplingPrefs
 import org.anastylos.capture.data.EvidenceFileStorePort
 import org.anastylos.capture.data.EvidenceRepository
@@ -25,7 +31,10 @@ import org.anastylos.capture.data.DataStoreGuidedPrefs
 import org.anastylos.capture.data.GuidedAssociationRepository
 import org.anastylos.capture.data.GuidedPrefs
 import org.anastylos.capture.data.SamplingPrefs
+import org.anastylos.capture.guidance.OpenCvArucoBackend
 import org.anastylos.capture.guidance.OpenCvPoseEstimator
+import org.anastylos.capture.guidance.TimingAccumulator
+import org.anastylos.capture.guidance.TimingArucoBackend
 import org.anastylos.capture.guidance.PoseEstimator
 import org.anastylos.capture.ui.guided.GuidanceViewModel
 import org.anastylos.capture.data.files.EvidenceFileStore
@@ -77,6 +86,14 @@ class AppContainer(context: Context) {
         DataStoreSamplingPrefs(appContext)
     }
 
+    val cameraPrefs: CameraPrefs by lazy {
+        DataStoreCameraPrefs(appContext)
+    }
+
+    val settingsStore: CameraSettingsStore by lazy {
+        DataStoreCameraSettingsStore(appContext)
+    }
+
     val qrPairClient: QrPairClient by lazy {
         HttpQrPairClient(
             transportFactory = { payload ->
@@ -86,7 +103,11 @@ class AppContainer(context: Context) {
     }
 
     private val guidedPrefs: GuidedPrefs by lazy { DataStoreGuidedPrefs(appContext) }
-    private val poseEstimator: PoseEstimator by lazy { OpenCvPoseEstimator() }
+    private val guideTiming = TimingAccumulator()
+    private val measuredProfiles: MeasuredProfileSource by lazy { AssetMeasuredProfileSource(appContext) }
+    private val poseEstimator: PoseEstimator by lazy {
+        OpenCvPoseEstimator(TimingArucoBackend(OpenCvArucoBackend(), guideTiming))
+    }
 
     @Suppress("UNCHECKED_CAST")
     fun guidedViewModelFactory(): ViewModelProvider.Factory =
@@ -102,9 +123,13 @@ class AppContainer(context: Context) {
                             DefaultCameraProviderSource(appContext),
                             poseEstimator,
                             { java.time.Instant.now() },
+                            measuredProfiles = measuredProfiles,
+                            timing = guideTiming,
                         ).also { it.attachPreview(preview) }
                     },
                     prefs = guidedPrefs,
+                    cameraPrefs = cameraPrefs,
+                    settingsStore = settingsStore,
                     // Camera sensor timestamps live in the elapsedRealtimeNanos
                     // domain (CLOCK_BOOTTIME); System.nanoTime() excludes
                     // suspend time, which produced negative pose ages on
@@ -131,7 +156,10 @@ class AppContainer(context: Context) {
                         )
                     },
                     associations = repository as GuidedAssociationRepository,
+                    measuredProfiles = measuredProfiles,
+                    timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,
+                    armDebounceMs = 1200L,
                 ) as T
         }
 
@@ -149,6 +177,8 @@ class AppContainer(context: Context) {
                     sampler = container.sampler,
                     pairingStore = container.pairingStore,
                     prefs = container.samplingPrefs,
+                    cameraPrefs = container.cameraPrefs,
+                    settingsStore = container.settingsStore,
                     appVersion = BuildConfig.VERSION_NAME,
                     transportFactory = { baseUrl, tls -> HttpsTransport(baseUrl, tls) },
                 ) as T

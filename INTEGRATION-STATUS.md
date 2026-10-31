@@ -1,4 +1,58 @@
-# ANASTYLOS Integration Status (canonical baseline)
+# ANASTYLOS Integration Status
+
+## Current status (2026-10-31, main @ `80eb2030`)
+
+On 2026-10-31 the two accepted hackathon MVP lines were integrated
+into local main via a tested staging branch
+(`integration/main-consolidation-20261031`) and fast-forwarded, with no
+rebase, no history rewrite, and no push. Source worktrees were left
+untouched; all other pre-existing worktrees remain intact.
+
+| Item | Commit |
+|---|---|
+| Starting main HEAD | `6ac32a74` |
+| Merge 1 — Android spatial-capture MVP | `6736f3b3` (`integration/spatial-capture-v1`) |
+| Merge 2 — Core ingestion MVP | `80eb2030` (`integration/core-ingest-v1`) |
+| Accepted Android checkpoint (in main) | `b65cc0a0` |
+| Accepted Core checkpoint (in main) | `66580106` |
+| Current main baseline | `80eb2030` |
+
+Both merges were conflict-free except a disjoint-hunk auto-merge of
+`.gitignore`. The Core file set was fully disjoint from the Android
+file set. Both accepted checkpoints are verified ancestors of main.
+
+Verification observed on the tested integration HEAD (identical to
+current main):
+
+| Suite | Result |
+|---|---|
+| Core ingest (`tools/core-ingest`) | 8/8 PASS |
+| Receiver (`capture-companion/receiver`) | 185 pass, 3 skipped (pre-existing env skips) |
+| Capture validator | 22/22 PASS |
+| Assembly Memory | 24/25; 1 `test_integration` loader **error**: `No module named 'cv2'` on system python. Reproduced identically on the pre-merge main baseline — pre-existing environmental gap, not merge-caused |
+| Android unit (`:app:testDebugUnitTest`) | 443/461; **18 failures**, all in `GuidanceViewModelTest` (`SystemClock`/`Log` called without Robolectric shadows). Proven pre-existing at frozen tip `b65cc0a0`: the merged Android tree is byte-identical to the accepted branch and the branch's own 438/438 reports predate the failing tests. Not merge-caused; frozen code was not modified |
+| Android lint / assemble | SUCCESS; lint 0 errors (9 warnings) |
+| Compliance (`tools/compliance/check.py`) | 0 errors (1 warning, 18 open reviews) |
+
+Known limitations on current main: the suites above do not prove a
+complete model-driven physical loop; `integration/agent-v1` (M0–M2
+agent orchestrator) is unmerged on its own branch; physical-demo gates
+beyond GUIDE-03/HARDWARE-03 remain open; the 18 Android and 1
+Assembly-Memory exceptions above are documented and carried, not
+hidden.
+
+## Historical snapshot (2026-10-29 — preserved verbatim below)
+
+> Everything below this line is the October 29 branch-integration
+> report for `integration/spatial-capture-v1`, kept unchanged as a
+> historical record: provenance, commit references, and observed test
+> results are intact and have not been re-baselined. Statements about
+> branch state (e.g. "nothing here is merged to main") were true when
+> written; both MVP lines have since been merged into main as recorded
+> above. Where the October 29 matrix and the October 31 table differ
+> (e.g. Android 380/380 then vs 443/461 with 18 known failures now),
+> the difference reflects later branch development plus the merge —
+> not a reinterpretation of the earlier run.
 
 Date: 2026-10-29.
 Canonical worktree: `C:\Users\HP\Documents\Anastylos-integration-spatial`

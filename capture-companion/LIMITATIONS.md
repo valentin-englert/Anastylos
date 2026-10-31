@@ -70,8 +70,10 @@ slice, not the full native product:
 - **One package per frame, poll-only feed.** Each sampled still is a
   full validate + stage round trip; sustained-rate behavior is
   untested. Core-side discovery is polling
-  (`GET /v1/packages?session_id=`); there is no push channel and no
-  Core ingestion worker consumes the feed yet.
+  (`GET /v1/packages?session_id=`) or co-located read of the Receiver
+  staging directory. A Core Capture Evidence Index worker lives in
+  `tools/core-ingest/` (MVP ingest + lookup; does not write
+  `memory.jsonl`). There is still no push channel.
 - **Ordering and gaps.** Consumers must order by observation
   `captured_at`, never by arrival. There are no gap markers: delayed,
   dropped, or unsent frames all look like absence, and absence must be

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANASTYLOS Session</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>ANASTYLOS Session</h1>
+  <p class="offline-banner" id="offline-banner">Offline demo — deterministic L0 answers and stored claims only. No model calls.</p>
+</header>
+
+<main>
+  <section aria-labelledby="session-heading">
+    <h2 id="session-heading">Session</h2>
+    <form id="session-form">
+      <label for="session-picker">Prepared session</label>
+      <select id="session-picker" name="session"></select>
+      <button type="submit" id="session-open">Open session</button>
+    </form>
+    <p class="state" id="session-state" role="status"></p>
+    <div id="session-status" hidden>
+      <dl class="facts">
+        <div><dt>Object</dt><dd id="fact-object"></dd></div>
+        <div><dt>Operator</dt><dd id="fact-operator"></dd></div>
+        <div><dt>Complete</dt><dd id="fact-complete"></dd></div>
+      </dl>
+      <h3>Phases</h3>
+      <ul id="phase-list"></ul>
+      <h3>Open items</h3>
+      <ul id="incomplete-list"></ul>
+      <h3>Questions by state</h3>
+      <ul id="question-states"></ul>
+      <h3>Memory events</h3>
+      <ul id="memory-events"></ul>
+    </div>
+    <p class="error" id="session-error" role="alert" hidden></p>
+  </section>
+
+  <section aria-labelledby="questions-heading">
+    <h2 id="questions-heading">Open questions</h2>
+    <p class="hint">The existing question round: answer in your own words, then confirm the read-back with yes or no. Nothing is recorded without yes.</p>
+    <table id="question-table" hidden>
+      <thead><tr><th>Question</th><th>Kind</th><th>Phase</th><th>State</th></tr></thead>
+      <tbody id="question-rows"></tbody>
+    </table>
+    <p class="state" id="questions-state" role="status"></p>
+    <form id="next-form">
+      <button type="submit" id="next-button">Next question</button>
+    </form>
+    <div id="prompt-card" hidden>
+      <p class="qid" id="prompt-qid"></p>
+      <p class="prompt-text" id="prompt-text"></p>
+      <ul id="screen-options"></ul>
+      <form id="answer-form">
+        <label for="answer-input">Your answer</label>
+        <input id="answer-input" name="answer" type="text" autocomplete="off" placeholder="e.g. Screw from B, or: skip">
+        <button type="submit" id="answer-button">Send answer</button>
+      </form>
+    </div>
+    <div id="confirm-card" hidden>
+      <p class="qid" id="confirm-qid"></p>
+      <p class="prompt-text" id="confirm-text"></p>
+      <form id="confirm-form">
+        <label for="confirm-input">Yes or no</label>
+        <input id="confirm-input" name="confirm" type="text" autocomplete="off" placeholder="yes">
+        <button type="submit" id="confirm-button">Confirm</button>
+      </form>
+    </div>
+    <p class="notice" id="questions-notice" role="status" hidden></p>
+    <p class="error" id="questions-error" role="alert" hidden></p>
+  </section>
+
+  <section aria-labelledby="guide-heading">
+    <h2 id="guide-heading">Guide and parts</h2>
+    <p class="hint">Answers come from the built package only. If the memory changed since the build, rebuild explicitly.</p>
+    <div class="stale" id="guide-stale" hidden>
+      <p id="guide-stale-text"></p>
+      <form id="build-form"><button type="submit" id="build-button">Rebuild guide</button></form>
+    </div>
+    <p class="state" id="guide-state" role="status"></p>
+    <div id="guide-body" hidden>
+      <form id="ask-form">
+        <label for="ask-input">Ask the guide</label>
+        <input id="ask-input" name="question" type="text" autocomplete="off" placeholder="where is cell 8">
+        <button type="submit" id="ask-button">Ask</button>
+      </form>
+      <div id="guide-answer" hidden>
+        <p><span class="badge" id="guide-source"></span></p>
+        <p class="answer-text" id="guide-text"></p>
+        <p class="provenance" id="guide-provenance"></p>
+      </div>
+      <h3>Parts</h3>
+      <table id="parts-table">
+        <thead><tr><th>Part</th><th>Operator label</th><th>Location</th><th>Step</th><th>Basis</th></tr></thead>
+        <tbody id="parts-rows"></tbody>
+      </table>
+      <h3>Install steps</h3>
+      <ol id="guide-steps"></ol>
+    </div>
+    <p class="error" id="guide-error" role="alert" hidden></p>
+  </section>
+
+  <section aria-labelledby="select-heading">
+    <h2 id="select-heading">Selected part</h2>
+    <p class="hint">Exactly one bound part: the binding file pins the memory, the guide and the event. No label search, no hash repair — a changed file refuses the selection.</p>
+    <form id="select-form">
+      <label for="binding-picker">Binding</label>
+      <select id="binding-picker" name="binding"></select>
+      <button type="submit" id="select-button">Select part</button>
+    </form>
+    <p class="state" id="select-state" role="status"></p>
+    <div id="resolution" hidden>
+      <dl class="facts">
+        <div><dt>Drawing element</dt><dd id="res-drawing"></dd></div>
+        <div><dt>Event</dt><dd id="res-event"></dd></div>
+        <div><dt>Operator label</dt><dd id="res-label"></dd></div>
+      </dl>
+      <h3>Origin</h3>
+      <p class="answer-text" id="res-origin"></p>
+      <h3>Storage</h3>
+      <p class="answer-text" id="res-storage"></p>
+      <p class="provenance" id="res-missing"></p>
+      <div class="button-row">
+        <form id="origin-form"><button type="submit" id="origin-button">Ask origin (L0)</button></form>
+        <form id="storage-form"><button type="submit" id="storage-button">Ask storage (L0)</button></form>
+      </div>
+      <form id="claims-form">
+        <label for="claims-picker">Stored demo claims (offline, not Muse)</label>
+        <select id="claims-picker" name="claims"></select>
+        <button type="submit" id="claims-button">Ask with stored claims</button>
+      </form>
+      <div id="selected-answer" hidden>
+        <p><span class="badge" id="selected-source"></span></p>
+        <p class="answer-text" id="selected-text"></p>
+        <p class="provenance" id="selected-provenance"></p>
+      </div>
+    </div>
+    <p class="error" id="select-error" role="alert" hidden></p>
+  </section>
+
+  <section aria-labelledby="assembly-heading">
+    <h2 id="assembly-heading">Reassembly progress</h2>
+    <p class="hint">One install step at a time, from verified claims. Confirm the current step only; steps cannot be skipped.</p>
+    <p class="state" id="assembly-state" role="status"></p>
+    <div id="assembly-body" hidden>
+      <p id="assembly-progress"></p>
+      <div id="current-step-card" hidden>
+        <p class="prompt-text" id="current-step-text"></p>
+        <form id="done-form"><button type="submit" id="done-button">Confirm step done</button></form>
+      </div>
+      <p class="notice" id="assembly-complete-note" hidden>All steps are done. Reassembly is complete according to the recorded steps.</p>
+      <h3>Steps</h3>
+      <ol id="assembly-steps"></ol>
+    </div>
+    <p class="error" id="assembly-error" role="alert" hidden></p>
+  </section>
+</main>
+
+<footer>
+  <p>Capture-gap planner and HTML session report are not part of this build; their narrow seams are documented in INTEGRATION.md. All guide, operator and model text on this page is rendered as text.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

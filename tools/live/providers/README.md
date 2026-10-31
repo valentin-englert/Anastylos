@@ -74,3 +74,8 @@ to infer whether Meta processed the request. Retention and provider request cont
 
 Verification of this repair: 32 provider tests PASS, 0 FAIL / ERROR / SKIP; controlled fake transports only.
 Do not run older provider writers against a session concurrently with this version.
+
+Selected guide context v2 adds fixed task-specific system instructions clarifying that stored_in.object is
+storage.value, not a provenance ID. Only guide_claims with the exact v2 selected context receives this
+refinement; ordinary requests/recorded fixtures, schemas and verifier semantics are unchanged. Missing
+storage requires unknown/insufficient_evidence. See tools/agent/README.md for the selected boundary.

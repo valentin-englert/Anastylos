@@ -1,6 +1,6 @@
 """Shared, network-free core of the live providers: request body, request hash, response interpretation,
 result and trace records, error sanitizing, and the recorded-fixture format (`meta.py` writes it, `fake.py`
-replays it). Contract: `tools/live/CONTRACT.md` §3.1 and §4.
+replays it). Contract: `tools/live/CONTRACT.md` Â§3.1 and Â§4.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from jsonschema_subset import validate
-from task_prompts import PROMPT_VERSION, instructions
+from task_prompts import PROMPT_VERSION, SELECTED_GUIDE_INSTRUCTIONS, instructions
 
 MODEL = "muse-spark-1.3-contributor"
 EFFORT = "max"
@@ -41,11 +41,15 @@ def build_request(task: str, payload: dict) -> dict:
     problems = validate(payload, spec["input"])
     if problems:
         raise ValueError(f"{task} payload invalid: {problems[:3]}")
+    system_text = instructions(task)
+    selected = payload.get("package_excerpt", {}).get("selected_part") if task == "guide_claims" else None
+    if isinstance(selected, dict) and selected.get("schema") == "anastylos-selected-part-context@2":
+        system_text += "\n\n" + SELECTED_GUIDE_INSTRUCTIONS
     return {
         "model": MODEL,
         "reasoning": {"effort": EFFORT},
         "input": [
-            {"type": "message", "role": "system", "content": [{"type": "input_text", "text": instructions(task)}]},
+            {"type": "message", "role": "system", "content": [{"type": "input_text", "text": system_text}]},
             {"type": "message", "role": "user", "content": [
                 {"type": "input_text", "text": "INPUT JSON:\n" + json.dumps(payload, ensure_ascii=False, sort_keys=True)}]},
         ],

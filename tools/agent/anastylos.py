@@ -31,7 +31,7 @@ from phases import REPO, run_phase, subprocess_runner, vision_python
 from state import SessionError, SessionState
 
 ACTIVE_MEMORY_POINTER = Path(r"C:\ANASTYLOS\data\active-memory.json")
-DEFAULT_MUSE_CALLS = 12  # per `prepare`; the week's budget is 150 calls in total (owner decision E2)
+DEFAULT_MUSE_CALLS = 12  # absolute session HTTP-attempt cap, shared by preparation and guide
 
 
 def _protected_dirs() -> list[Path]:
@@ -72,6 +72,9 @@ def summary(state: SessionState) -> dict:
     still_open = sum(n for s, n in by_state.items() if s in open_states) + max(0, pending - len(asked_ids))
     if still_open:
         incomplete.append(f"{still_open} question(s) still open")
+    unresolved = by_state.get("LEFT_UNRESOLVED", 0)
+    if unresolved:
+        incomplete.append(f"{unresolved} question(s) left unresolved; the question round ended without confirmed answers")
     if not state.doc["phases"]:
         incomplete.append("no phase processed yet")
     declarations = declare_states(state)
@@ -125,12 +128,27 @@ def cmd_prepare(args) -> dict:
     state = SessionState.load(_session_root(args.session))
     if not args.muse:
         return {**summary(state), "prepared": "nothing: questions use the built-in English wording (pass --muse for L1)"}
-    live = Path(__file__).resolve().parents[1] / "live"
-    sys.path.insert(0, str(live / "providers"))
-    from meta import MetaProposer  # wiring only here: the core and the loop never import a provider
-    proposer = MetaProposer(state.root / "provider", max_calls=args.max_calls)
-    verdicts = ask_loop.prefetch(state, proposer, args.max_calls)
-    return {**summary(state), "prepared": verdicts, "muse_calls_used_in_this_session": proposer.calls_used}
+    proposer, limit = session_proposer(state, args.max_calls)
+    verdicts = ask_loop.prefetch(state, proposer, limit)
+    return {**summary(state), "prepared": verdicts, "muse_calls_used_in_this_session": proposer.calls_used,
+            "muse_budget": muse_budget(proposer, limit)}
+
+
+def session_proposer(state: SessionState, requested_limit: int | None):
+    """An explicit limit replaces the session total; omission keeps it, never adds an allowance."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "live" / "providers"))
+    from meta import MetaProposer  # wiring only here
+    limit = requested_limit if requested_limit is not None else state.doc.get("muse_max_calls", DEFAULT_MUSE_CALLS)
+    if limit < 0:
+        raise SessionError("--max-calls must be >= 0 (the total session HTTP-attempt limit).")
+    if state.doc.get("muse_max_calls") != limit:
+        state.doc["muse_max_calls"] = limit
+        state.save()
+    return MetaProposer(state.root / "provider", max_calls=limit), limit
+
+
+def muse_budget(proposer, limit: int) -> dict:
+    return {"limit": limit, "used": proposer.calls_used, "remaining": max(0, limit - proposer.calls_used)}
 
 
 def cmd_ask(args) -> dict:
@@ -178,11 +196,12 @@ def cmd_guide(args) -> dict:
         raise SessionError("guide ask needs --question.")
     proposer = None
     if args.muse:
-        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "live" / "providers"))
-        from meta import MetaProposer  # wiring only here
-        proposer = MetaProposer(state.root / "provider", max_calls=args.max_calls)
+        proposer, limit = session_proposer(state, args.max_calls)
     result = guide.answer(state, args.question, proposer=proposer, timeout_s=args.timeout)
-    return {k: result.get(k) for k in ("question", "text", "source", "accepted", "package_sha256", "findings")}
+    output = {k: result.get(k) for k in ("question", "text", "source", "accepted", "package_sha256", "findings")}
+    if proposer is not None:
+        output["muse_budget"] = muse_budget(proposer, limit)
+    return output
 
 
 def cmd_assemble(args) -> dict:
@@ -202,6 +221,8 @@ def cmd_status(args) -> dict:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    budget_help = ("total session HTTP-attempt limit shared by prepare and guide, including retries; "
+                   "saved across restarts (default: saved limit, initially 12); an explicit value replaces the total")
     sub = parser.add_subparsers(dest="command", required=True)
     new = sub.add_parser("new", help="create a session folder")
     new.add_argument("--session", required=True, type=Path)
@@ -216,7 +237,7 @@ def main(argv=None) -> int:
     prepare = sub.add_parser("prepare", help="optional: prefetch model wording for the open questions")
     prepare.add_argument("--session", required=True, type=Path)
     prepare.add_argument("--muse", action="store_true", help="ask Muse for wording (paid calls, text-only inputs)")
-    prepare.add_argument("--max-calls", type=int, default=DEFAULT_MUSE_CALLS)
+    prepare.add_argument("--max-calls", type=int, help=budget_help)
     ask = sub.add_parser("ask", help="ask the open questions; nothing is recorded without your yes")
     ask.add_argument("--session", required=True, type=Path)
     ask.add_argument("--script", type=Path, help="replies from a JSON file instead of the keyboard (tests, demos)")
@@ -236,7 +257,7 @@ def main(argv=None) -> int:
     gd.add_argument("--question")
     gd.add_argument("--muse", action="store_true", help="let Muse propose claims for other questions (paid call)")
     gd.add_argument("--timeout", type=float, default=guide.MUSE_TIMEOUT_S)
-    gd.add_argument("--max-calls", type=int, default=2)
+    gd.add_argument("--max-calls", type=int, help=budget_help)
     asm = sub.add_parser("assemble", help="guided reassembly, one step at a time")
     asm.add_argument("--session", required=True, type=Path)
     asm.add_argument("--returns", type=Path, help="apply a return check (anastylos-reassembly-returns@1)")

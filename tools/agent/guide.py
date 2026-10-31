@@ -3,7 +3,7 @@
 ``guide build`` runs the existing ``tools/guide/package.py`` (read-only, by subprocess) on the session memory and
 appends a build record to ``guide/builds.jsonl`` (append-only, fsync): the package SHA-256 that every answer
 and cached proposal is bound to (F6), and the memory SHA-256 it was built from. A package whose bytes differ
-from the last recorded build is refused, so a changed package invalidates every earlier answer.
+from the last recorded build is refused. The current memory must match that build before cache or plan use.
 
 Answers are claims (``anastylos-guide-claims@1``) checked by ``tools/guide/claims.py`` against the exact package
 and rendered by ``guide_render.py``. The deterministic path (L0) maps a small set of English questions to claims;
@@ -87,15 +87,20 @@ def recorded_sha256(state: SessionState) -> str | None:
 
 
 def load(state: SessionState):
-    """The verified package (hash equals the last build record), or GuideError with an English reason."""
+    """The intact package from the current memory, or GuideError with an English rebuild instruction."""
     path = guide_dir(state) / "session.json"
     if not path.is_file():
         raise GuideError("There is no guide package yet; run `guide build` first.")
-    package, problem = claims.load_package(path.read_bytes(), recorded_sha256(state))
+    builds = _records(guide_dir(state) / "builds.jsonl")
+    last = builds[-1] if builds else {}
+    package, problem = claims.load_package(path.read_bytes(), last.get("package_sha256"))
     if problem:
         reason = ("it changed after it was built" if "differs from the hash" in problem
                   else "no build record" if "no build hash" in problem else "unsupported package layout")
         raise GuideError(en.UNCHECKABLE.format(reason=reason))
+    memory = state.memory_dir / "memory.jsonl"
+    if not memory.is_file() or _sha(memory) != last.get("memory_sha256"):
+        raise GuideError("The guide is stale because the session memory changed since its build; run `guide build` again.")
     return package, json.loads(path.read_text(encoding="utf-8"))
 
 

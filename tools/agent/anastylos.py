@@ -27,6 +27,7 @@ import ask_loop
 import assemble
 import declare
 import guide
+import selection
 from phases import REPO, run_phase, subprocess_runner, vision_python
 from state import SessionError, SessionState
 
@@ -219,6 +220,14 @@ def cmd_assemble(args) -> dict:
             "steps": len(now["steps"])}
 
 
+def cmd_select(args) -> dict:
+    try:
+        binding = json.loads(args.selection.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise selection.SelectionError("Selection file cannot be read as UTF-8 JSON.") from exc
+    return selection.resolve(args.memory, args.guide, binding)
+
+
 def cmd_status(args) -> dict:
     return summary(SessionState.load(_session_root(args.session)))
 
@@ -266,13 +275,17 @@ def main(argv=None) -> int:
     asm.add_argument("--session", required=True, type=Path)
     asm.add_argument("--returns", type=Path, help="apply a return check (anastylos-reassembly-returns@1)")
     asm.add_argument("--script", type=Path, help="replies from a JSON file instead of the keyboard")
+    select = sub.add_parser("select", help="resolve a hash-bound drawing selection read-only (no agent session required)")
+    select.add_argument("--memory", type=Path, required=True)
+    select.add_argument("--guide", type=Path, required=True)
+    select.add_argument("--selection", type=Path, required=True)
     status = sub.add_parser("status", help="phases, questions, memory events and whether the session is complete")
     status.add_argument("--session", required=True, type=Path)
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):  # operator labels may carry any characters
         sys.stdout.reconfigure(encoding="utf-8")
     handlers = {"new": cmd_new, "phase": cmd_phase, "prepare": cmd_prepare, "ask": cmd_ask, "declare": cmd_declare,
-                "guide": cmd_guide, "assemble": cmd_assemble, "status": cmd_status}
+                "guide": cmd_guide, "assemble": cmd_assemble, "status": cmd_status, "select": cmd_select}
     command_lock = None
     if getattr(args, "muse", False):
         from lock import SessionLock, LockHeld

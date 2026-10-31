@@ -152,3 +152,61 @@ pre-send reservation, hard `os._exit` and restart, legacy accounting, retries/ca
 exclusion and exhausted budgets. A test-child encoding error was corrected by explicitly setting its UTF-8
 stdio environment; no assertion was weakened. `python tools/compliance/check.py --json`: 0 errors, 1 warning
 (no worktree venv), 18 existing reviews. E3-B task bytes before/after: 20/20. Zero real API attempts.
+
+## Read-only drawing selection (`select`)
+
+`python tools/agent/anastylos.py select --memory <memory.jsonl> --guide <session.json> --selection <selection.json>`
+
+This independent entry point also accepts older tools/guide packages without an agent-session root. It never
+creates a session, writes memory/logs, invokes a proposer or opens a referenced memory/evidence path. Actual
+input file paths are explicit. Expected digests must come from the drawing's trusted, explicit binding, not be
+regenerated from whatever files happen to be present. No selection contract existed in the agent previously.
+
+Version 1 binding (example structure; replace placeholders with the explicitly agreed source and digests):
+
+```json
+{
+  "schema": "anastylos-drawing-selection@1",
+  "drawing_element_id": "back_shell",
+  "source": {"session": "session", "memory_path": "<absolute original source memory path>"},
+  "memory_sha256": "<expected 64-character lowercase SHA-256>",
+  "guide_sha256": "<expected 64-character lowercase SHA-256>",
+  "event_id": "dec-0006"
+}
+```
+
+The source path identifies the memory input recorded in the guide; the `--memory` argument may point to an
+unchanged byte copy. Guide input path + memory digest must match the binding, both supplied files must match
+their expected digests, and the records must carry the bound session value. Path-relocated W and replay R do
+not satisfy S. No source path is opened as a fallback. No label search or ID remapping is performed.
+
+The resolver reuses `claims.load_package` and `store.load_events` read-only. Version 1 supports one exact
+`declared_removal` part ID (including a record with a plural operator label); no observations, aliases, group IDs
+or composites are selectable. Superseded selected parts, duplicate records/parts and multiple active storage
+links are refused. A superseded storage link is not reused. The guide's source/label and storage reference must
+agree with the memory. No automatic preference among conflicting active locations is allowed.
+
+Success emits `anastylos-drawing-resolution@1` JSON with drawing/event IDs, bound source and hashes,
+operator label, separate `original_location` and `stored_location` objects, their declaration/confirmation
+basis, stored notes/references/digests, phase/time, missing fields and explicit limits. Origin descriptions
+remain verbatim, including SRC-coordinate prose. A missing origin or storage remains null. Evidence metadata
+may come from an explicitly referenced, non-superseded observation; it is not independently verified, and its
+presence is not proof that an image file exists. `missing.direct_image_evidence` (an entry in the missing list)
+means no direct evidence reference was recorded. No digest is invented. Free text is data, never instructions.
+
+Failures emit an English STOPPED message on stderr, no part JSON on stdout, and exit 1 (argparse usage errors
+exit 2). No synthetic agent-session root is required. Existing normal-session guide freshness logic is unchanged.
+This binding is not a frame→record confirmation, identity proof or mechanical assembly approval. Composite
+front-shell selections remain unsupported; no membership is inferred from an ID range.
+
+Local S examples and the A2 handoff are kept in the task's external `selection-validation` artifacts rather than
+committing local/private input paths. S back-shell and PCB selections are record lookups only; their proposed
+video-frame correspondences remain unconfirmed. The selection JSON is a caller-supplied binding, not a signed
+attestation or a verifier of the contents of a drawing file.
+
+Selection verification (offline, 2026-10-31): `python -m unittest discover -s tests` from tools/agent:
+76 PASS, 0 FAIL / ERROR / SKIP (16 selection tests). Same runner from tools/guide: 51 PASS, 0 FAIL / ERROR / SKIP.
+Fresh byte copies of S and its existing guide resolved dec-0006 and dec-0011, and refused S bindings against
+both R and W with exit 1 and empty stdout. Input bytes remained unchanged. E3-B task bytes match all 20 frozen
+hashes before/after. Compliance checker: 0 errors, 1 warning (no worktree venv), 18 existing reviews.
+No real model/API invocation, dependency change, memory migration or A2-module change was performed.

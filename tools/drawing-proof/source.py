@@ -61,12 +61,20 @@ def read_frame(video: Path, frame_index: int) -> tuple[np.ndarray, float, float]
     return frame, fps, frame_index / fps
 
 
-def rectify(video: Path, frame_index: int, region_mm: tuple[float, float, float, float], px_per_mm: float,
+def rectify(video: Path, frame_index: int | None, region_mm: tuple[float, float, float, float], px_per_mm: float,
             video_sha256: str | None = None) -> tuple[np.ndarray, RectifiedFrame]:
-    """Return the raw frame and the rectified sheet region ``(x, y, w, h)`` in sheet mm."""
+    """Return the raw frame and the rectified sheet region ``(x, y, w, h)`` in sheet mm.
+
+    ``frame_index`` None means ``video`` is a still image (JPEG/PNG) taken on the same sheet.
+    """
     custody, harness, kit, _ = load_custody_config(CUSTODY_CONFIG)
     reader = SheetReader(harness, kit, custody["view"])
-    frame, fps, t_s = read_frame(video, frame_index)
+    if frame_index is None:
+        frame, fps, t_s = cv2.imread(str(video)), None, 0.0
+        if frame is None:
+            raise SystemExit(f"cannot read image {video}")
+    else:
+        frame, fps, t_s = read_frame(video, frame_index)
     report, homography, _corners = reader.register(frame)
     if homography is None:
         raise SystemExit(f"sheet registration failed: {report.get('reasons')}")

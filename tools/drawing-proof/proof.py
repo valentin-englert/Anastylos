@@ -16,6 +16,7 @@ import cv2
 import numpy as np
 
 import draw
+import quality
 import segment
 import source
 
@@ -31,7 +32,7 @@ def build(spec: dict, out: Path) -> dict:
     timings, manual = {}, spec.get("manual", {})
     began = time.perf_counter()
     video = Path(spec["video"])
-    frame, rf = source.rectify(video, spec["frame_index"], tuple(spec["region_mm"]), spec["px_per_mm"], spec.get("video_sha256"))
+    frame, rf = source.rectify(video, spec.get("frame_index"), tuple(spec["region_mm"]), spec["px_per_mm"], spec.get("video_sha256"))
     timings["rectify_s"] = time.perf_counter() - began
     image, ppm = rf.image, rf.px_per_mm
 
@@ -47,6 +48,13 @@ def build(spec: dict, out: Path) -> dict:
     fits = {"threshold_only": segment.edge_fit(image, segment.boundary(seed), **spec["edge_fit"]),
             "final_dense": segment.edge_fit(image, dense, **spec["edge_fit"]),
             "final_simplified": segment.edge_fit(image, outline_px, **spec["edge_fit"])}
+    checked = quality.gate(image, mask, seed, shadow, fits["final_dense"]["share_within_2px"])
+    source_sha = spec.get("video_sha256") or source.sha256_file(video)
+    gap = quality.capture_gap(checked["flags"], spec.get("binding", {"session": "drawing-proof", "target": {"kind": "drawing_element", "id": spec.get("target_id", "part")}, "revision": spec.get("revision", "r1"), "hashes": {}}),
+                              source_sha, f"gap-{spec.get('target_id', 'part')}")
+    if spec.get("reference_mask"):
+        reference = cv2.imread(spec["reference_mask"], cv2.IMREAD_GRAYSCALE) > 0
+        checked["reference"] = quality.reference_comparison(mask, reference, ppm, spec["reference_tolerance_mm"])
 
     t = time.perf_counter()
     regions = [r for r in draw.tone_regions(image, mask, spec["tones"], ppm) if r["tone"] == "light"]
@@ -73,8 +81,11 @@ def build(spec: dict, out: Path) -> dict:
                     "shadow_rejected_mm2": round(float(shadow.sum()) / ppm ** 2, 1), "edge_fit_px": fits},
         "segmentation": [seed_meta, gc_meta], "regions": [{k: v for k, v in g.items() if k != "polygon_mm"} | {"points": len(g["polygon_mm"])} for g in geometry["regions"]],
         "manual_steps": manual, "timings_s": {k: round(v, 2) for k, v in timings.items()},
-        "geometry_classes": spec["geometry_classes"], "unknown": spec["unknown"],
+        "geometry_classes": spec.get("geometry_classes"), "unknown": spec.get("unknown"),
+        "quality": checked, "status": checked["status"],
     }
+    if gap is not None:
+        (out / "capture_gap.json").write_text(json.dumps(gap, indent=1), encoding="utf-8")
     (out / "geometry.json").write_text(json.dumps(geometry), encoding="utf-8")
     (out / "report.json").write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
     return report
@@ -195,7 +206,7 @@ def main() -> None:
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
     report = build(json.loads(args.spec.read_text(encoding="utf-8")), args.out)
-    print(json.dumps({"outline": report["outline"], "timings_s": report["timings_s"]}, indent=1))
+    print(json.dumps({"status": report["status"], "flags": report["quality"]["flags"], "measures": report["quality"]["measures"], "timings_s": report["timings_s"]}, indent=1))
 
 
 if __name__ == "__main__":

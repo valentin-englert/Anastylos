@@ -1,0 +1,569 @@
+/* Session UI: thin client over the local JSON API. Every operator, guide or model
+   string is assigned through textContent only — never interpreted as HTML. */
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+
+const state = { session: null, question: null, binding: null, claims: [] };
+
+function setText(id, value) {
+  $(id).textContent = value === null || value === undefined ? "" : String(value);
+}
+
+function showError(id, message) {
+  const box = $(id);
+  box.textContent = message || "";
+  box.hidden = !message;
+}
+
+async function call(path, options) {
+  const response = await fetch(path, options);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed (${response.status}).`);
+  }
+  return payload;
+}
+
+async function post(path, body, button) {
+  /* Serializes mutating actions per control: while a request is in flight the
+     button is disabled, so a double click cannot start a duplicate operation. */
+  const control = button || null;
+  if (control) control.disabled = true;
+  try {
+    return await call(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(body) });
+  } finally {
+    if (control) control.disabled = false;
+  }
+}
+
+function sourceBadge(source, outcome) {
+  /* Honest origin labels. Muse/L1 can never appear: the server wires no proposer. */
+  const map = {
+    L0: ["L0 deterministic — answered from the package without any model", "good"],
+    cache: ["Stored answer (cache) — a previously accepted answer, no new call", "good"],
+    offline_claims: ["Stored demo claims — offline replay, not Muse", "warn"],
+    provider_cache: ["Provider cache replay — not a new call", "warn"],
+    refusal: ["Refusal — the package does not support an answer", "bad"],
+  };
+  const [label, tone] = map[source] || [`Unexpected source ${source}`, "warn"];
+  const abstentions = { abstention: "the recorded value is missing, so the answer abstains",
+                        model_abstention: "the proposal abstained with insufficient evidence",
+                        verifier_rejection: "the claims check rejected the proposal; no text is returned",
+                        selection_rejection: "the selection check rejected the proposal; no text is returned",
+                        provider_error: "the provider failed; the local fallback stands",
+                        answer_timeout: "the provider timed out; the local fallback stands" };
+  const suffix = outcome && abstentions[outcome] ? ` — ${abstentions[outcome]}` : "";
+  return { label: label + suffix, tone };
+}
+
+function paintBadge(badgeId, source, outcome) {
+  const badge = $(badgeId);
+  const { label, tone } = sourceBadge(source, outcome);
+  badge.textContent = label;
+  badge.className = `badge ${tone}`;
+}
+
+/* ------------------------------------------------------------------ session */
+
+async function loadSessions() {
+  setText("session-state", "Loading sessions …");
+  showError("session-error", "");
+  try {
+    const { sessions } = await call("/api/sessions");
+    const picker = $("session-picker");
+    picker.replaceChildren();
+    for (const entry of sessions) {
+      const option = document.createElement("option");
+      option.value = entry.id;
+      option.textContent = entry.error ? `${entry.id} (${entry.error})`
+        : `${entry.id} — ${entry.object}${entry.complete ? " (complete)" : ""}`;
+      picker.append(option);
+    }
+    if (!sessions.length) {
+      setText("session-state", "No prepared sessions in this workspace.");
+      return;
+    }
+    const deepLink = new URLSearchParams(location.search).get("session");
+    if (deepLink && [...picker.options].some((o) => o.value === deepLink)) {
+      picker.value = deepLink;
+      await openSession();
+    } else {
+      setText("session-state", sessions.length === 1
+        ? "One prepared session. Open it to begin."
+        : `${sessions.length} prepared sessions. Open one to begin.`);
+    }
+  } catch (error) {
+    setText("session-state", "");
+    showError("session-error", error.message);
+  }
+}
+
+function fillList(listId, entries) {
+  const list = $(listId);
+  list.replaceChildren();
+  for (const entry of entries) {
+    const item = document.createElement("li");
+    item.textContent = entry;
+    list.append(item);
+  }
+}
+
+async function loadStatus() {
+  if (!state.session) return false;
+  setText("session-state", "Loading session …");
+  showError("session-error", "");
+  try {
+    const summary = await call(`/api/status?session=${encodeURIComponent(state.session)}`);
+    $("session-status").hidden = false;
+    setText("fact-object", summary.object);
+    setText("fact-operator", summary.operator);
+    setText("fact-complete", summary.complete ? "yes" : "no");
+    fillList("phase-list", summary.phases.map(
+      (p) => `${p.tag} — ${p.label} — ${p.status}${p.counts ? ` (${p.counts.questions} questions)` : ""}`));
+    fillList("incomplete-list", summary.incomplete.length ? summary.incomplete : ["Nothing open."]);
+    const stateEntries = Object.entries(summary.questions).map(([k, v]) => `${k}: ${v}`);
+    fillList("question-states", stateEntries.length ? stateEntries : ["No question states recorded yet."]);
+    const eventEntries = Object.entries(summary.memory_events).map(([k, v]) => `${k}: ${v}`);
+    fillList("memory-events", eventEntries.length ? eventEntries : ["No memory events yet."]);
+    if (summary.guide && summary.guide.usable === false) {
+      setText("session-state", `Guide is not usable: ${summary.guide.reason}`);
+    } else {
+      setText("session-state", "");
+    }
+    return true;
+  } catch (error) {
+    $("session-status").hidden = true;
+    setText("session-state", "");
+    showError("session-error", error.message);
+    return false;
+  }
+}
+
+async function openSession() {
+  const sessionId = $("session-picker").value;
+  if (!sessionId) return;
+  state.session = sessionId;
+  state.question = null;
+  state.binding = null;
+  for (const id of ["prompt-card", "confirm-card", "guide-body", "resolution",
+                    "assembly-body", "guide-answer", "selected-answer"]) $(id).hidden = true;
+  if (!(await loadStatus())) return;
+  await Promise.all([loadQuestions(true), loadGuide(), loadSelections(), loadAssembly()]);
+}
+
+async function refreshAfterMutation() {
+  /* Question and assembly answers change counts, states and freshness. */
+  await loadStatus();
+  await Promise.all([loadQuestions(true), loadGuide(), loadAssembly()]);
+}
+
+/* ------------------------------------------------------------------ questions */
+
+async function loadQuestions(quiet) {
+  if (!state.session) return;
+  if (!quiet) setText("questions-state", "Loading questions …");
+  showError("questions-error", "");
+  try {
+    const { questions } = await call(`/api/questions?session=${encodeURIComponent(state.session)}`);
+    const rows = $("question-rows");
+    rows.replaceChildren();
+    for (const q of questions) {
+      const row = document.createElement("tr");
+      for (const key of ["id", "kind", "phase", "state"]) {
+        const cell = document.createElement("td");
+        cell.textContent = q[key] === null || q[key] === undefined ? "—" : String(q[key]);
+        row.append(cell);
+      }
+      rows.append(row);
+    }
+    $("question-table").hidden = !questions.length;
+    setText("questions-state", questions.length ? "" : "No questions in this session.");
+  } catch (error) {
+    setText("questions-state", "");
+    showError("questions-error", error.message);
+  }
+}
+
+function fillPromptCard(payload) {
+  $("confirm-card").hidden = true;
+  $("prompt-card").hidden = false;
+  setText("prompt-qid", `Question ${payload.question_id} (${payload.wording || "L0"} wording)`);
+  setText("prompt-text", payload.text);
+  const options = $("screen-options");
+  options.replaceChildren();
+  for (const option of payload.screen_options || []) {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = option.token;
+    button.addEventListener("click", () => {
+      $("answer-input").value = "";
+      sendAnswer(null, option.token, button);
+    });
+    item.append(button);
+    const label = document.createElement("span");
+    label.textContent = ` ${option.description || "marked on the screen"}` +
+      (option.claimed_by ? ` (already named for “${option.claimed_by}”)` : "");
+    item.append(label);
+    options.append(item);
+  }
+  state.question = { qid: payload.question_id, stage: "answer" };
+}
+
+function fillConfirmCard(payload) {
+  $("prompt-card").hidden = true;
+  $("confirm-card").hidden = false;
+  setText("confirm-qid", `Read-back for ${payload.question_id}`);
+  setText("confirm-text", payload.read_back);
+  state.question = { qid: payload.question_id, stage: "confirm" };
+}
+
+async function nextQuestion(button) {
+  showError("questions-error", "");
+  $("questions-notice").hidden = true;
+  setText("questions-state", "Asking the next question …");
+  try {
+    const payload = await post("/api/questions/next", { session: state.session }, button);
+    setText("questions-state", "");
+    if (payload.done) {
+      $("prompt-card").hidden = true;
+      $("confirm-card").hidden = true;
+      state.question = null;
+      const notice = $("questions-notice");
+      const unresolved = Object.entries(payload.left_unresolved || {});
+      notice.textContent = unresolved.length
+        ? `The question round ended with ${unresolved.length} unresolved question(s): ` +
+          unresolved.map(([qid, reason]) => `${qid} (${reason})`).join("; ") +
+          ". The session stays incomplete."
+        : "The question round is finished. All questions are committed.";
+      notice.hidden = false;
+    } else if (payload.stage === "confirm") {
+      fillConfirmCard(payload);
+    } else {
+      fillPromptCard(payload);
+    }
+    await refreshAfterMutation();
+  } catch (error) {
+    setText("questions-state", "");
+    showError("questions-error", error.message);
+  }
+}
+
+async function sendAnswer(text, choice, button) {
+  if (!state.question) return;
+  showError("questions-error", "");
+  try {
+    const payload = await post("/api/questions/answer",
+      { session: state.session, question_id: state.question.qid, text, choice }, button);
+    if (payload.stage === "confirm") {
+      fillConfirmCard(payload);
+    } else if (payload.stage === "deferred") {
+      $("prompt-card").hidden = true;
+      state.question = null;
+      const notice = $("questions-notice");
+      notice.textContent = payload.message;
+      notice.hidden = false;
+    } else {
+      setText("prompt-text", payload.message);
+    }
+    $("answer-input").value = "";
+    await refreshAfterMutation();
+  } catch (error) {
+    showError("questions-error", error.message);
+  }
+}
+
+async function sendConfirm(button) {
+  if (!state.question) return;
+  showError("questions-error", "");
+  try {
+    const payload = await post("/api/questions/confirm",
+      { session: state.session, question_id: state.question.qid,
+        text: $("confirm-input").value }, button);
+    if (payload.status === "committed" || payload.status === "already_committed") {
+      $("confirm-card").hidden = true;
+      state.question = null;
+      const notice = $("questions-notice");
+      notice.textContent = "Recorded.";
+      notice.hidden = false;
+    } else if (payload.stage === "answer") {
+      /* The read-back was rejected ("no"): the question is asked again. */
+      await nextQuestion(null);
+      return;
+    } else if (payload.stage === "deferred") {
+      $("confirm-card").hidden = true;
+      state.question = null;
+      const notice = $("questions-notice");
+      notice.textContent = payload.message;
+      notice.hidden = false;
+    } else {
+      setText("confirm-text", payload.read_back);
+    }
+    $("confirm-input").value = "";
+    await refreshAfterMutation();
+  } catch (error) {
+    showError("questions-error", error.message);
+  }
+}
+
+/* ------------------------------------------------------------------ guide */
+
+async function loadGuide() {
+  if (!state.session) return;
+  setText("guide-state", "Loading guide …");
+  showError("guide-error", "");
+  $("guide-stale").hidden = true;
+  try {
+    const view = await call(`/api/guide?session=${encodeURIComponent(state.session)}`);
+    if (!view.usable) {
+      $("guide-body").hidden = true;
+      $("guide-stale").hidden = false;
+      setText("guide-stale-text", view.reason);
+      $("build-button").textContent = view.last_build ? "Rebuild guide" : "Build guide";
+      setText("guide-state", "");
+      return;
+    }
+    $("guide-body").hidden = false;
+    const rows = $("parts-rows");
+    rows.replaceChildren();
+    for (const part of view.parts) {
+      const row = document.createElement("tr");
+      for (const value of [part.id, part.operator_label, part.location, part.step, part.basis]) {
+        const cell = document.createElement("td");
+        cell.textContent = value === null || value === undefined ? "—" : String(value);
+        row.append(cell);
+      }
+      rows.append(row);
+    }
+    const steps = $("guide-steps");
+    steps.replaceChildren();
+    for (const step of view.steps) {
+      const item = document.createElement("li");
+      item.textContent = step.text;
+      steps.append(item);
+    }
+    setText("guide-state", `Package ${view.package_sha256.slice(0, 12)} — ${view.parts.length} parts.`);
+  } catch (error) {
+    $("guide-body").hidden = true;
+    setText("guide-state", "");
+    showError("guide-error", error.message);
+  }
+}
+
+async function buildGuide(button) {
+  showError("guide-error", "");
+  setText("guide-state", "Building the guide package …");
+  try {
+    await post("/api/guide/build", { session: state.session }, button);
+    await refreshAfterMutation();
+  } catch (error) {
+    setText("guide-state", "");
+    showError("guide-error", error.message);
+  }
+}
+
+async function askGuide(button) {
+  showError("guide-error", "");
+  $("guide-answer").hidden = true;
+  try {
+    const payload = await post("/api/guide/ask",
+      { session: state.session, question: $("ask-input").value }, button);
+    $("guide-answer").hidden = false;
+    paintBadge("guide-source", payload.source, null);
+    setText("guide-text", payload.text);
+    setText("guide-provenance",
+      `Package ${(payload.package_sha256 || "").slice(0, 12)} — accepted: ${payload.accepted ? "yes" : "no"}` +
+      (payload.findings && payload.findings.length ? ` — ${payload.findings.join("; ")}` : ""));
+  } catch (error) {
+    showError("guide-error", error.message);
+  }
+}
+
+/* ------------------------------------------------------------------ selection */
+
+async function loadSelections() {
+  if (!state.session) return;
+  setText("select-state", "Loading bindings …");
+  showError("select-error", "");
+  try {
+    const { bindings, stored_claims } = await call(
+      `/api/selections?session=${encodeURIComponent(state.session)}`);
+    const picker = $("binding-picker");
+    picker.replaceChildren();
+    for (const binding of bindings) {
+      const option = document.createElement("option");
+      option.value = binding.file;
+      option.textContent = `${binding.drawing_element_id} → ${binding.event_id}`;
+      picker.append(option);
+    }
+    if (!bindings.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No bindings available.";
+      picker.append(option);
+    }
+    $("select-button").disabled = !bindings.length;
+    state.claims = stored_claims;
+    fillClaimsPicker(null);
+    setText("select-state", bindings.length ? "" : "No selection bindings in this session.");
+  } catch (error) {
+    setText("select-state", "");
+    showError("select-error", error.message);
+  }
+}
+
+function fillClaimsPicker(eventId) {
+  /* Stored claims name their part: only fixtures for the resolved event apply. */
+  const picker = $("claims-picker");
+  picker.replaceChildren();
+  const matching = eventId ? state.claims.filter((f) => f.startsWith(`${eventId}-`)) : state.claims;
+  for (const file of matching) {
+    const option = document.createElement("option");
+    option.value = file;
+    option.textContent = file;
+    picker.append(option);
+  }
+  if (!matching.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = eventId ? `No stored claims for ${eventId}.` : "No stored claims in this session.";
+    picker.append(option);
+  }
+  $("claims-button").disabled = !matching.length;
+}
+
+async function resolveSelection(button) {
+  showError("select-error", "");
+  $("resolution").hidden = true;
+  setText("select-state", "Resolving the bound part …");
+  try {
+    const payload = await post("/api/select",
+      { session: state.session, binding: $("binding-picker").value }, button);
+    state.binding = $("binding-picker").value;
+    fillClaimsPicker(payload.event_id);
+    setText("select-state", "");
+    $("resolution").hidden = false;
+    setText("res-drawing", payload.drawing_element_id);
+    setText("res-event", payload.event_id);
+    setText("res-label", payload.operator_label);
+    const origin = payload.original_location || {};
+    const stored = payload.stored_location || {};
+    setText("res-origin", origin.value === null || origin.value === undefined
+      ? "No origin was recorded for this part."
+      : `${origin.value} (basis: ${origin.basis}, record ${origin.record_id})`);
+    let storageBasis = stored.basis;
+    if (storageBasis && typeof storageBasis === "object") {
+      storageBasis = storageBasis.kind +
+        (storageBasis.confirmed_by ? ` (confirmed by ${storageBasis.confirmed_by})` : "");
+    }
+    setText("res-storage", stored.value === null || stored.value === undefined
+      ? "No storage location was recorded for this part."
+      : `${stored.value} (record ${stored.record_id}, basis ${storageBasis})`);
+    setText("res-missing", (payload.missing && payload.missing.length
+      ? `Missing: ${payload.missing.join(", ")}. ` : "") +
+      "Frame-to-record correspondence is not established by this selection.");
+  } catch (error) {
+    setText("select-state", "");
+    showError("select-error", error.message);
+  }
+}
+
+async function selectedAsk(intent, claimsFile, button) {
+  showError("select-error", "");
+  $("selected-answer").hidden = true;
+  try {
+    const payload = await post("/api/selected-ask",
+      { session: state.session, binding: state.binding, intent, claims: claimsFile || null }, button);
+    $("selected-answer").hidden = false;
+    paintBadge("selected-source", payload.source, payload.outcome);
+    setText("selected-text", payload.text);
+    setText("selected-provenance",
+      `Intent ${payload.intent} — outcome ${payload.outcome}` +
+      (payload.original_source ? ` — originally ${payload.original_source}` : "") +
+      (payload.findings && payload.findings.length ? ` — ${payload.findings.join("; ")}` : ""));
+  } catch (error) {
+    showError("select-error", error.message);
+  }
+}
+
+/* ------------------------------------------------------------------ assembly */
+
+async function loadAssembly() {
+  if (!state.session) return;
+  setText("assembly-state", "Loading assembly progress …");
+  showError("assembly-error", "");
+  try {
+    const view = await call(`/api/assembly?session=${encodeURIComponent(state.session)}`);
+    if (!view.usable) {
+      $("assembly-body").hidden = true;
+      setText("assembly-state", view.reason);
+      return;
+    }
+    $("assembly-body").hidden = false;
+    setText("assembly-progress",
+      `${view.steps_done} of ${view.steps.length} steps done (package ${view.package_sha256.slice(0, 12)}).` +
+      (view.progress_for_other_packages.length
+        ? ` Older progress exists for superseded package(s): ${view.progress_for_other_packages.join(", ")}.` : ""));
+    const current = view.steps.find((s) => s.step === view.current_step);
+    $("current-step-card").hidden = !current;
+    if (current) setText("current-step-text", current.text);
+    $("assembly-complete-note").hidden = !view.complete;
+    const steps = $("assembly-steps");
+    steps.replaceChildren();
+    for (const step of view.steps) {
+      const item = document.createElement("li");
+      const marker = (view.latest[String(step.step)] || {}).event;
+      item.textContent = `${step.text}${marker ? ` [${marker}]` : ""}`;
+      steps.append(item);
+    }
+    setText("assembly-state", "");
+  } catch (error) {
+    $("assembly-body").hidden = true;
+    setText("assembly-state", "");
+    showError("assembly-error", error.message);
+  }
+}
+
+async function confirmStep(button) {
+  showError("assembly-error", "");
+  const current = state.session && $("current-step-text").textContent;
+  if (!current) return;
+  const match = /^Step (\d+) of/.exec(current);
+  if (!match) return;
+  try {
+    await post("/api/assembly/done",
+      { session: state.session, step: Number(match[1]) }, button);
+    await refreshAfterMutation();
+  } catch (error) {
+    /* A serialized second click lands here: the step is no longer current, so
+       nothing was recorded twice. Refresh to show the true progress. */
+    await refreshAfterMutation();
+    showError("assembly-error", error.message);
+  }
+}
+
+/* ------------------------------------------------------------------ wiring */
+
+$("session-form").addEventListener("submit", (event) => { event.preventDefault(); openSession(); });
+$("next-form").addEventListener("submit", (event) => { event.preventDefault(); nextQuestion($("next-button")); });
+$("answer-form").addEventListener("submit", (event) => {
+  event.preventDefault(); sendAnswer($("answer-input").value, null, $("answer-button"));
+});
+$("confirm-form").addEventListener("submit", (event) => { event.preventDefault(); sendConfirm($("confirm-button")); });
+$("build-form").addEventListener("submit", (event) => { event.preventDefault(); buildGuide($("build-button")); });
+$("ask-form").addEventListener("submit", (event) => { event.preventDefault(); askGuide($("ask-button")); });
+$("select-form").addEventListener("submit", (event) => { event.preventDefault(); resolveSelection($("select-button")); });
+$("origin-form").addEventListener("submit", (event) => { event.preventDefault(); selectedAsk("origin", null, $("origin-button")); });
+$("storage-form").addEventListener("submit", (event) => { event.preventDefault(); selectedAsk("storage", null, $("storage-button")); });
+$("claims-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const file = $("claims-picker").value;
+  if (!file) return;
+  const intent = /origin/.test(file) ? "origin" : "storage";
+  selectedAsk(intent, file, $("claims-button"));
+});
+$("done-form").addEventListener("submit", (event) => { event.preventDefault(); confirmStep($("done-button")); });
+
+loadSessions();

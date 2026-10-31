@@ -42,3 +42,19 @@ threshold, and shadowed shell floor is as dark). No outline correction was neede
 - No identity: owner memory S has no single front-shell record; the drawing binds none.
 - Shadow rule thresholds are measured on this frame and lighting; other takes need their own check.
 - Development data, visual check plus edge-fit numbers; no independent ground-truth contour.
+
+## Missing captures for the three-assembly explosion
+
+No FULL-01 frame shows the back shell or the PCB hand-free: fingers cover both short ends of the back shell
+(P2 ≈ 17 s) and both ends of the PCB, with the cable across it (P2 frame 2040, ≈ 68 s); the aftermath photo
+shows only the emptied front shell. Their outlines would have to be invented at the ends, so no explosion is
+drawn yet.
+
+| Capture | Purpose | Success criterion (checked with `proof.py`, no outline correction) |
+|---|---|---|
+| Back shell, exterior up, flat inside the dashed work area, hands out of frame ≥ 2 s, same camera stand | outline of the back shell | outline closed, not touching the region border; ≥ 95 % of the boundary within 0.2 mm of an image edge; no skin-coloured pixels inside the mask |
+| PCB, component side up, cable laid straight away from the board (not across it), hands out ≥ 2 s | PCB outline and cable exit side | same as above for the board; cable outside the board outline |
+| Operator confirmation, once | common view side and layer order | operator confirms: front shell interior up, PCB component side toward the front shell, back shell interior toward the PCB; cable exit on the same edge in all three drawings |
+
+Until confirmed, an explosion layout is a proposal: layer order front shell → PCB → back shell along one
+axis, gaps in paper space only (teardown-skill convention: 8–15 mm, no measured assembly path).

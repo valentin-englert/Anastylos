@@ -21,10 +21,28 @@ import segment
 EDGE_FIT = {"edge_low": 40, "edge_high": 120}
 
 
+def place_mask(raw: np.ndarray, box: dict | None, shape: tuple[int, int]) -> np.ndarray:
+    """SAM image masks are rasters of the returned object box (``records[].box``), not of the whole image."""
+    full = np.zeros(shape, bool)
+    if box is None:
+        return cv2.resize(raw, (shape[1], shape[0]), interpolation=cv2.INTER_NEAREST) > 127
+    left, top, right, bottom = (int(box[k]) for k in ("left", "top", "right", "bottom"))
+    full[top:bottom, left:right] = cv2.resize(raw, (right - left, bottom - top), interpolation=cv2.INTER_NEAREST)[:shape[0] - top, :shape[1] - left] > 127
+    return full
+
+
+def _record_boxes(mask_dir: Path) -> dict[str, dict]:
+    boxes = {}
+    for evidence in mask_dir.parent.glob("evidence.json"):
+        for record in json.loads(evidence.read_text(encoding="utf-8")).get("records", []):
+            boxes[Path(record["mask"]["png"]).name] = record.get("box")
+    return boxes
+
+
 def score(rectified: Path, mask_paths: list[Path], px_per_mm: float, tolerance_mm: float) -> tuple[dict, np.ndarray | None]:
     image = cv2.imread(str(rectified))
-    masks = [cv2.resize(cv2.imread(str(p), cv2.IMREAD_GRAYSCALE), (image.shape[1], image.shape[0]), interpolation=cv2.INTER_NEAREST) > 127
-             for p in mask_paths]
+    boxes = _record_boxes(mask_paths[0].parent) if mask_paths else {}
+    masks = [place_mask(cv2.imread(str(p), cv2.IMREAD_GRAYSCALE), boxes.get(p.name), image.shape[:2]) for p in mask_paths]
     if not masks or max(m.sum() for m in masks) == 0:
         return {"status": "needs_capture_or_review", "flags": ["NO_PART_IN_REGION"], "masks_returned": len(masks)}, None
     mask = segment.fill_holes(segment._largest_component(max(masks, key=lambda m: m.sum())))

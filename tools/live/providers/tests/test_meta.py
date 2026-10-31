@@ -184,5 +184,93 @@ class MetaProposerTest(unittest.TestCase):
             self.assertLessEqual(len((trace["error"] or {}).get("message", "")), 300)
 
 
+class DurableBudgetTest(unittest.TestCase):
+    setUp = MetaProposerTest.setUp
+    tearDown = MetaProposerTest.tearDown
+    proposer = MetaProposerTest.proposer
+    def test_reservation_precedes_transport_and_survives_interruption(self):
+        outer = self
+        class Crash(BaseException):
+            pass
+        class Interrupted:
+            def post(self, *args):
+                rows = (outer.run_dir / "attempts.jsonl").read_text().splitlines()
+                outer.assertEqual(sum(json.loads(r)["attempts"] for r in rows), 1)
+                raise Crash()
+        with self.assertRaises(Crash):
+            self.proposer(Interrupted(), max_calls=1).propose("next_action", SYNTHETIC_PAYLOADS["next_action"], "crash")
+        transport = ScriptedTransport()
+        restarted = self.proposer(transport, max_calls=1)
+        self.assertEqual(restarted.calls_used, 1)
+        self.assertEqual(restarted.propose("next_action", SYNTHETIC_PAYLOADS["next_action"], "restart")["status"],
+                         "budget_exhausted")
+        self.assertEqual(transport.requests, [])
+
+    def test_completed_reservations_not_counted_twice_and_legacy_counts_remain(self):
+        self.run_dir.mkdir()
+        (self.run_dir / "traces.jsonl").write_text(json.dumps({"attempts": 3}) + "\n")
+        transport = ScriptedTransport((429, b"{}"), (200, _ok_body("next_action")))
+        p = self.proposer(transport, max_calls=5)
+        p.propose("next_action", SYNTHETIC_PAYLOADS["next_action"], "new")
+        restarted = self.proposer(ScriptedTransport(), max_calls=5)
+        self.assertEqual(restarted.calls_used, 5)
+        cached = restarted.propose("next_action", SYNTHETIC_PAYLOADS["next_action"], "cache")
+        self.assertTrue(cached["cache_hit"])
+        self.assertEqual(self.proposer(ScriptedTransport(), max_calls=5).calls_used, 5)
+
+    def test_competing_process_is_excluded(self):
+        import subprocess
+        from lock import LockHeld
+        self.run_dir.mkdir()
+        code = ("import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); "
+                "from lock import SessionLock; l=SessionLock(Path(sys.argv[2])); "
+                "l.acquire({'operation':'test'}); print('ready',flush=True); sys.stdin.readline()")
+        child = subprocess.Popen([sys.executable, "-c", code, str(Path(__file__).resolve().parents[2]),
+                                  str(self.run_dir)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        try:
+            self.assertEqual(child.stdout.readline().strip(), "ready")
+            with self.assertRaises(LockHeld):
+                self.proposer(ScriptedTransport()).propose("next_action", SYNTHETIC_PAYLOADS["next_action"], "competing")
+        finally:
+            child.communicate("done\n", timeout=5)
+        self.assertEqual(self.proposer(ScriptedTransport()).calls_used, 0)
+
+    def test_real_transport_process_deadline_without_network(self):
+        import subprocess
+        import time
+        from unittest.mock import patch
+        from meta import UrllibTransport
+        real_run = subprocess.run
+        def slow_worker(*args, **kwargs):
+            return real_run([sys.executable, "-c", "import time; time.sleep(30)"], **kwargs)
+        started = time.monotonic()
+        with patch("meta.subprocess.run", side_effect=slow_worker):
+            with self.assertRaises(TransportTimeout):
+                UrllibTransport().post("unused", {}, b"{}", 0.1)
+        self.assertLess(time.monotonic() - started, 5)
+
+    def test_hard_process_exit_preserves_reserved_attempt(self):
+        import subprocess
+        code = """
+import sys, os
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from meta import MetaProposer
+from smoke import SYNTHETIC_PAYLOADS
+class ExitTransport:
+    def post(self, *args):
+        os._exit(23)
+MetaProposer(Path(sys.argv[2]), 1, transport=ExitTransport(), environ={'MODEL_API_KEY':'fake'}).propose(
+    'next_action', SYNTHETIC_PAYLOADS['next_action'], 'hard-exit')
+"""
+        done = subprocess.run([sys.executable, "-c", code, str(Path(__file__).resolve().parents[1]),
+                               str(self.run_dir)], capture_output=True, timeout=10)
+        self.assertEqual(done.returncode, 23, done.stderr)
+        p = self.proposer(ScriptedTransport(), max_calls=1)
+        self.assertEqual(p.calls_used, 1)
+        self.assertEqual(p.propose("next_action", SYNTHETIC_PAYLOADS["next_action"], "after-exit")["status"],
+                         "budget_exhausted")
+
+
 if __name__ == "__main__":
     unittest.main()

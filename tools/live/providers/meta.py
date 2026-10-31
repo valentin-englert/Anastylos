@@ -3,13 +3,16 @@
 Stdlib `urllib` only. The key is read from `os.environ["MODEL_API_KEY"]` per call, held only for the
 Authorization header, and never printed, logged, cached or written. Per run dir it keeps:
 `cache/<request_sha256>.json` (recorded fixtures; dedup) and `traces.jsonl` (sanitized traces, also the
-ledger of HTTP attempts counted against the caller's call cap).
+completion log). Durable pre-send reservations in `attempts.jsonl` plus legacy traces enforce the call cap.
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import os
+import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -18,6 +21,9 @@ from typing import Callable, Mapping, Protocol
 
 from provider_core import (api_error_from_body, build_request, encode_request, interpret_response, make_error,
                            make_fixture, make_result, make_trace, read_fixture, sha256_hex)
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from lock import SessionLock
 
 ENDPOINT = "https://api.meta.ai/v1/responses"
 KEY_ENV = "MODEL_API_KEY"
@@ -39,7 +45,29 @@ class Transport(Protocol):
     def post(self, url: str, headers: dict, body: bytes, timeout_s: float) -> tuple[int, bytes]: ...
 
 
+MAX_CALL_SECONDS = TIMEOUT_S * (MAX_RETRIES + 1) + sum(BACKOFF_S)
+
+
 class UrllibTransport:
+    def post(self, url: str, headers: dict, body: bytes, timeout_s: float) -> tuple[int, bytes]:
+        request = json.dumps({"url": url, "headers": headers, "body": base64.b64encode(body).decode(),
+                              "timeout_s": timeout_s})
+        try:
+            done = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--http-worker"],
+                                  input=request, capture_output=True, text=True, timeout=timeout_s)
+        except subprocess.TimeoutExpired:
+            raise TransportTimeout("HTTP wall deadline exceeded") from None
+        if done.returncode:
+            raise TransportFailure("HTTP worker failed")
+        result = json.loads(done.stdout)
+        if result.get("error") == "timeout":
+            raise TransportTimeout("HTTP timeout")
+        if result.get("error"):
+            raise TransportFailure("HTTP transport failed")
+        return result["status"], base64.b64decode(result["body"])
+
+
+class _WorkerTransport:
     def post(self, url: str, headers: dict, body: bytes, timeout_s: float) -> tuple[int, bytes]:
         request = urllib.request.Request(url, data=body, method="POST", headers=headers)
         try:
@@ -62,6 +90,8 @@ def _retryable(status: int) -> bool:
 
 
 class MetaProposer:
+    max_call_seconds = MAX_CALL_SECONDS
+
     def __init__(self, run_dir: Path, max_calls: int, *, transport: Transport | None = None,
                  environ: Mapping[str, str] | None = None, sleep: Callable[[float], None] = time.sleep,
                  clock: Callable[[], float] = time.monotonic):
@@ -70,6 +100,7 @@ class MetaProposer:
         self._run_dir = Path(run_dir)
         self._cache_dir = self._run_dir / "cache"
         self._trace_path = self._run_dir / "traces.jsonl"
+        self._reservation_path = self._run_dir / "attempts.jsonl"
         self._max_calls = max_calls
         self._transport = transport or UrllibTransport()
         self._environ = os.environ if environ is None else environ
@@ -83,17 +114,39 @@ class MetaProposer:
 
     def _attempts_already_traced(self) -> int:
         if not self._trace_path.is_file():
-            return 0
+            return self._reserved_attempts()
         with open(self._trace_path, encoding="utf-8") as handle:
-            return sum(json.loads(line)["attempts"] for line in handle if line.strip())
+            legacy = sum(r["attempts"] for line in handle if line.strip()
+                         for r in [json.loads(line)] if not r.get("reserved"))
+        return legacy + self._reserved_attempts()
+
+    def _reserved_attempts(self) -> int:
+        if not self._reservation_path.is_file():
+            return 0
+        return sum(json.loads(line)["attempts"] for line in
+                   self._reservation_path.read_text(encoding="utf-8").splitlines() if line.strip())
 
     def propose(self, task: str, payload: dict, request_id: str) -> dict:
         body = build_request(task, payload)
         raw = encode_request(body)
         digest = sha256_hex(raw)
-        result, attempts, http_status = self._propose(task, body, raw, digest, request_id)
-        self._append_trace(make_trace(result, attempts=attempts, http_status=http_status))
-        return result
+        self._run_dir.mkdir(parents=True, exist_ok=True)
+        lock = SessionLock(self._run_dir)
+        lock.acquire({"operation": "provider"})
+        try:
+            self._calls_used = self._attempts_already_traced()
+            result, attempts, http_status = self._propose(task, body, raw, digest, request_id)
+            self._append_trace({**make_trace(result, attempts=attempts, http_status=http_status), "reserved": True})
+            return result
+        finally:
+            lock.release()
+
+    def _reserve(self, digest: str, request_id: str) -> None:
+        with open(self._reservation_path, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps({"request_sha256": digest, "request_id": request_id, "attempts": 1}) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        self._calls_used += 1
 
     def _propose(self, task, body, raw, digest, request_id) -> tuple[dict, int, int | None]:
         common = {"request_id": request_id, "task": task, "request_sha256": digest}
@@ -116,7 +169,7 @@ class MetaProposer:
                 error = last_error or make_error("call_cap", f"{self._max_calls} calls used")
                 return make_result(**common, status="budget_exhausted", latency_s=self._elapsed(begun, attempts),
                                    error=error), attempts, http_status
-            self._calls_used += 1
+            self._reserve(digest, request_id)
             attempts += 1
             try:
                 http_status, response_raw = self._transport.post(ENDPOINT, headers, raw, TIMEOUT_S)
@@ -161,3 +214,21 @@ class MetaProposer:
             handle.write(json.dumps(trace, ensure_ascii=False) + "\n")
             handle.flush()
             os.fsync(handle.fileno())
+
+
+def _http_worker() -> None:
+    request = json.loads(sys.stdin.read())
+    try:
+        status, body = _WorkerTransport().post(request["url"], request["headers"],
+                                              base64.b64decode(request["body"]), request["timeout_s"])
+        result = {"status": status, "body": base64.b64encode(body).decode()}
+    except TransportTimeout:
+        result = {"error": "timeout"}
+    except TransportFailure:
+        result = {"error": "transport"}
+    print(json.dumps(result))
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["--http-worker"]:
+        _http_worker()

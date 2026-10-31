@@ -19,6 +19,7 @@ import re
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 import guide_render as en
@@ -33,6 +34,9 @@ import claims  # noqa: E402  (lane B verifier, used unchanged)
 PACKAGE_BUILDER = GUIDE_TOOLS / "package.py"
 BUILD_SCHEMA = "anastylos-agent-guide-build@1"
 ANSWER_SCHEMA = "anastylos-agent-guide-answer@1"
+_pending_workers: list[tuple[threading.Thread, float]] = []
+PROVIDER_WORK_SECONDS = 367.0  # 3 * 120 s HTTP wall deadlines + 2 s + 5 s retry backoff
+
 MUSE_TIMEOUT_S = 60.0  # per question (contract 0.3 latency budget); after it the L0 text is used
 HELP = ("I can only answer from this session's package. Ask, for example: “where is cell 8”, "
         "“where does dec-0013 go”, “what comes before dec-0007”.")
@@ -196,16 +200,32 @@ def minimized_package(raw: dict) -> dict:
 
 def _propose_with_timeout(proposer, payload: dict, request_id: str, timeout_s: float) -> dict | None:
     box: dict = {}
+    started = time.monotonic()
 
     def call():
         try:
             box["result"] = proposer.propose("guide_claims", payload, request_id)
         except Exception as exc:  # a provider bug must not take the guide down: L0 stays
             box["error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
-    worker = threading.Thread(target=call, daemon=True)
+        finally:
+            box["finished_at"] = time.monotonic()
+    worker = threading.Thread(target=call, daemon=False)
+    _pending_workers.append((worker, started + getattr(proposer, "max_call_seconds", PROVIDER_WORK_SECONDS) + 5.0))
     worker.start()
     worker.join(timeout_s)
-    return box.get("result") if not worker.is_alive() else None
+    return box.get("result") if box.get("finished_at", float("inf")) <= started + timeout_s else None
+
+
+def wait_for_provider_work() -> None:
+    """Drain late work; never adopt its result after the answer deadline."""
+    for worker, deadline in list(_pending_workers):
+        if worker.is_alive():
+            print("The answer deadline expired. Waiting for provider work to finish; the fallback answer remains unchanged.",
+                  file=sys.stderr, flush=True)
+            worker.join(max(0.0, deadline - time.monotonic()))
+            if worker.is_alive():
+                raise GuideError("Provider exceeded its transport deadline; no further model call is safe.")
+        _pending_workers.remove((worker, deadline))
 
 
 def answer(state: SessionState, question: str, proposer=None, timeout_s: float = MUSE_TIMEOUT_S) -> dict:

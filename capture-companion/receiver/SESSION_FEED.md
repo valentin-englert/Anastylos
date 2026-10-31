@@ -124,13 +124,20 @@ outside the repo for re-runs; it drives the production
 
 ## What remains between staging and live Core analysis
 
-Slice A proves transport. It deliberately does not provide:
+Slice A proves transport. Follow-on MVP ingest (not a push channel):
 
-- **A Core ingestion worker.** Nothing polls this feed yet; no
-  recognizer consumes staged frames during a session.
-- **Push delivery.** Poll-only; no websocket, SSE, or filesystem
-  watcher contract. Poll intervals and catch-up behavior are the
-  worker's design to own.
+- **Core Capture Evidence Index** (`tools/core-ingest/`): discovers
+  staged packages via this feed's fields (co-located `index.json` /
+  `packages/<id>/` on the trusted workstation), re-hashes ZIP and
+  JPEG bytes, and stores durable scene evidence for session/observation
+  lookup. It does **not** append Assembly Memory removal events.
+
+Still deliberately absent:
+
+- **Push delivery / live recognizer loop.** Poll-only; no websocket,
+  SSE, or filesystem watcher. No recognizer consumes staged frames
+  mid-session yet. Poll intervals and catch-up remain the worker's
+  design to own.
 - **Per-observation fetch.** The feed lists packages; observations and
   assets come from the whole report/package. Fine at frame rates, but
   a high-rate worker may want a narrower endpoint (new contract —

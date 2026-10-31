@@ -51,8 +51,8 @@ change-detection/ ── result.json + rectified pairs ──> tray-counter/
                                                   ──> assembly-memory (import)
 readers/ - - planned observations (future; no reader writes to memory yet) - → assembly-memory/
 assembly-memory/ + change-detection/ ──> cable-routing/ (read-only graph)
-capture-companion/ ── validated .zip packages ──> (human review; never
-    auto-imported into Core memory)
+capture-companion/ ── validated .zip packages ──> Receiver staging
+    ──> tools/core-ingest/ (scene evidence index; never auto-writes memory)
 ```
 
 Five subsystems, one evidence philosophy:
@@ -153,6 +153,7 @@ unless noted) and match the current tree's test methods exactly.
 | `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 54 pass; real replay on hardware-02 and PROTO-01-NOUV E2 memory |
 | `custody-ledger/` | video custody: adaptive source discovery, zone observation with colour-free hand mask, temporal/elimination/hand-order linker | `custody.py` | integrated (`eb9744a9`, observer 1.7.0, `custody-config.v15.json`) | 94 pass; development footage only (E2, FULL-01, SNES-01); frozen v1.1/v1.2 stay on their branches for E2R/E3-A |
 | `tools/session/` | one-command phase run (video → custody → numbered parts → evidence → memory → open questions); answer package/apply/remap | `session.py`, `answers.py` | integrated | 23 pass; FULL-01 v20 rebuilt and reproduced |
+| `tools/core-ingest/` | Receiver staged capture packages → Core Capture Evidence Index (hash-verified JPEG store + session/observation lookup; no `memory.jsonl` writes) | `anastylos_core_ingest` | implemented (MVP; `integration/core-ingest-v1`) | focused suite in module `tests/` |
 | `tools/guide/` | guide (Muse) package from memory, rules, grounding and advisory claims checks | `package.py`, `check.py`, `claims.py` | integrated | 51 pass (local consolidation, 2026-10-29) |
 | `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
 | `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | implemented; pinned integration `ebf7f46a`, with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; L2 benefit PENDING_EVIDENCE |

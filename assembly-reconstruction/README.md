@@ -35,6 +35,18 @@ One reproducible command produces both artifacts:
 py -3.12 reconstruct.py build <memory.jsonl> [--results-dir <dir>] [--graph <assembly_graph.json>] [--embed-crops] --out <dir>
 ```
 
+Controller schematic sheet (three main assemblies; assembled inset +
+exploded main view from one package — not a second memory):
+
+```powershell
+py -3.12 reconstruct.py schematic <controller_schematic_package.json> [--explode-factor 1.0] --out <dir>
+```
+
+Writes `controller_schematic.svg`, `controller_schematic_assembled.svg`
+(factor 0), and `controller_schematic_provenance.json`. Schematic paper
+units are not calibrated sheet millimetres. Proposed memory assignments
+stay marked unconfirmed until an operator confirms them.
+
 Output: `<dir>/assembly_state.json` + `<dir>/exploded.svg`, plus a JSON
 summary on stdout with SHA-256 over both files. Exit 2 only when the
 log path itself is missing; corrupt or empty logs still produce an

@@ -10,6 +10,7 @@ from pathlib import Path
 from anastylos_reconstruction.projector import build_state
 from anastylos_reconstruction.render import render_svg
 from anastylos_reconstruction.schema import validate_state
+from anastylos_reconstruction.schematic import write_schematic
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -56,6 +57,17 @@ def cmd_build(args) -> int:
     return 0
 
 
+def cmd_schematic(args) -> int:
+    package = Path(args.package)
+    if not package.is_file():
+        print(f"schematic package not found: {package}")
+        return 2
+    companion = write_schematic(
+        str(package), args.out, explode_factor=args.explode_factor)
+    print(json.dumps(companion, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reconstruct",
@@ -75,6 +87,16 @@ def build_parser() -> argparse.ArgumentParser:
                        help="embed evidence images as data URIs so the SVG "
                             "is self-contained")
     build.set_defaults(func=cmd_build)
+    schematic = sub.add_parser(
+        "schematic",
+        help="render assembled+exploded controller schematic from a "
+             "controller-schematic-v1 package (read-only)")
+    schematic.add_argument("package", help="controller_schematic_package.json")
+    schematic.add_argument("--out", default="schematic_out",
+                           help="output directory")
+    schematic.add_argument("--explode-factor", type=float, default=1.0,
+                           help="1.0=full explode offsets; 0.0=assembled only")
+    schematic.set_defaults(func=cmd_schematic)
     return parser
 
 

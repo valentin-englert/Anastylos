@@ -4,9 +4,11 @@ Total: ≤180 s. Language: English. No offline answer is presented as live model
 performance. Drawing and new UI appear only as explicitly open scenes unless
 their acceptance is cited.
 
-Base: `docs/submission-handoff` @ `b522336d`. Evidence: E2 sealed 4/4,
-GUIDE-03/HARDWARE-03 bounded capture, hash-bound selection, STORED-IN-V2-01
-bounded Muse demo. All else is labeled development/synthetic/open.
+Base: main after the 2026-10-31 consolidation (`b522336d` + report, capture-gap
+planner, session UI, submission docs). Evidence: E2 sealed 4/4, GUIDE-03/
+HARDWARE-03 bounded capture, hash-bound selection, STORED-IN-V2-01 bounded Muse
+demo, offline UI/report/gap acceptance on FULL-01 copies. All else is labeled
+development/synthetic/open.
 
 ## Scene 1 — Problem (0:00–0:25, 25 s)
 
@@ -99,9 +101,14 @@ nothing. State P0 stays active (L2 0.752 < P0 0.803, rejected per PREREG).
 
 Open scenes (explicit): “Technical drawing: open. A2 front shows a partial
 contour gain, not full accuracy; back shell/PCB need hands-free re-capture;
-separate viewports + photo overlay pending. New session UI/report (M3) and the
-capture-gap planner are planned, not demoed. E3-B is preregistered, not
-recorded.”
+separate viewports + photo overlay pending. E3-B is preregistered, not
+recorded. Gap closure needs a technical image check that does not exist.”
+
+Optional M3 beat (offline, ≤30 s, replaces nothing above): open the localhost
+session page on a FULL-01 copy, answer one question, build the guide, resolve
+one bound part, confirm one assembly step, export the report, show one
+synthetic capture gap staying `needs_review`. Label every screen “OFFLINE —
+NOT A LIVE MODEL CALL.”
 
 **Artifacts:** `tools/guide/GUIDE_RULES.md`; `tools/reassembly/returns.py`;
 `tools/live/integration/README.md` (L2 table).

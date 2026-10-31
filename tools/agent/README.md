@@ -290,3 +290,16 @@ returned the exact stored location and operator basis. Both verifiers accepted; 
 Evidence STORED-IN-V2-01: model 8.672 s, CLI including drain 8.734 s (excluding interpreter startup/imports).
 The existing total limit remained 4; used increased 3→4, remaining 0. No additional calls are authorized.
 This is a bounded provider demonstration on development data, not physical validation or a confirmed frame link.
+
+## Report and capture gaps (M3, on main since the 2026-10-31 consolidation)
+
+- Session report (`report.py`, `REPORT.md`): `export(session_dir, out_html)` writes one
+  standalone English HTML file (no scripts, no network, no model calls) and refuses
+  stale/tampered guides without writing anything. CLI: `report_cli.py`.
+- Capture gaps (`capture_gaps/`, `capture_gaps/README.md`): `planner.evaluate(document)`
+  is a pure, read-only proposal over explicitly prepared gaps; it never reads images,
+  writes memory, or dispatches a request. Closure needs explicit technical and
+  operator reviews; `request_view` stays disabled.
+- Both are served by the localhost offline session page (`tools/session-ui/`):
+  one-click report export/open/download and prepared capture needs with planner
+  evaluation. Gap closure is locked there: no technical image check exists.

@@ -30,7 +30,10 @@ keine kalibrierten Konfidenzen ohne Held-out-Takes.
   in `tools/proto-01/e3b_grid_frame.py`. Kein Raw-Byte-PASS, nichts normalisieren.
 - L2 rejected (0,752 < P0 0,803); P0 aktiv. SAM verworfen. CAD/Mesh eingefroren,
   kein reales FULL-01-Modell. A2-Zeichnung separat (`918318e7`), nicht integriert.
-  M3-UI/Report/Gap-Planer geplant (`248f5223` liegt voraus, nicht hier).
+  M3 integriert auf main (31.10.2026): UI/Report/Gap-Planer gemergt, Suiten grün
+  (Agent 119, UI 33, Guide 51, Provider 33, Integration 12), Browserabnahme auf
+  FULL-01-Kopien offline — kein Muse-/Hardwarenachweis; Gap-Schließung gesperrt
+  (keine technische Bildprüfung).
 
 ## Relevante Forschungsquellen (lokal, read-only)
 

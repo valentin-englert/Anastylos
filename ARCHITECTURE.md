@@ -186,8 +186,9 @@ unless noted) and match the current tree's test methods exactly.
 | `tools/core-ingest/` | Receiver staged capture packages → Core Capture Evidence Index (hash-verified JPEG store + session/observation lookup; no `memory.jsonl` writes) | `anastylos_core_ingest` | integrated in main @ `80eb2030` (MVP `66580106`) | 8 pass |
 | `tools/guide/` | guide (Muse) package from memory, rules, grounding and advisory claims checks | `package.py`, `check.py`, `claims.py` | integrated | 51 pass (local consolidation, 2026-10-29) |
 | `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
-| `tools/agent/` | product orchestrator: session file, per-phase processing via the frozen session runner, English P0 question loop, operator declarations, English guide from verified claims bound to the package hash, guided reassembly (M2) | `anastylos.py` | integrated in main (from `integration/agent-v1` @ `ef614e31`); session page and report pending (M3); M0–M2 stabilization integrated locally from `codex/agent-stabilization-m0-m2` @ `b7f2d76b` (2026-10-31; not pushed): unresolved completion, memory-bound guide freshness, shared absolute Muse budget | 57 offline tests; see `tools/agent/README.md`; FULL-01 development data only |
-| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | integrated in main (from `integration/live-v1` @ `ebf7f46a`, contract 0.3 from `integration/agent-v1`), with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; real L2 arm rejected per PREREG (L2 0.752 < P0 0.803 resolved/interruption, `tools/live/integration/README.md`) |
+| `tools/agent/` | product orchestrator: session file, per-phase processing via the frozen session runner, English P0 question loop, operator declarations, English guide from verified claims bound to the package hash, guided reassembly (M2), read-only capture-gap evaluator, standalone HTML session report (M3) | `anastylos.py` | integrated in main (from `integration/agent-v1` @ `ef614e31`); M0–M2 stabilization from `codex/agent-stabilization-m0-m2` @ `b7f2d76b` (2026-10-31): unresolved completion, memory-bound guide freshness, shared absolute Muse budget; M3 (report `7082978d`, capture gaps `248f5223`, UI `2d80d105`) merged 2026-10-31 | 119 pass (2026-10-31, incl. 10 capture-gap + 20 report tests); see `tools/agent/README.md`; FULL-01 development data only |
+| `tools/session-ui/` | slim localhost offline session page: status, P0 question round, guide/parts, bound single-part selection with separate origin/storage, assembly progress, one-click report export, prepared capture needs (closure locked: no technical image check) | `server.py` | integrated in main (from `feat/session-ui-m3` @ `2d80d105`, merged 2026-10-31) | 33 pass (2026-10-31, incl. 13 integration tests); browser acceptance on FULL-01 copies, offline only; no Muse or hardware claim |
+| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | integrated in main (from `integration/live-v1` @ `ebf7f46a`, contract 0.3 from `integration/agent-v1`), with cross-module checks | core 51, providers 33, l2sim 33, eval 38, integration 12 pass (providers/integration rerun 2026-10-31); journal contract 0.2 fields remain inconsistent; real L2 arm rejected per PREREG (L2 0.752 < P0 0.803 resolved/interruption, `tools/live/integration/README.md`) |
 | `calibration/spatial/` | spatial evidence validator and dataset builder | `validate.py` | integrated in main @ `80eb2030` (via `integration/spatial-capture-v1`) | synthetic checks; physical metric calibration pending |
 | `assembly-reconstruction/cad/` | isolated trusted CAD worker | `cadwork.py` | in main; existing isolated runtime only | licensing/redistribution owner reviews and real-image/FreeCAD gates remain open |
 | `assembly-reconstruction/mesh/` | silhouette-constrained reconstruction experiment | `anastylos_mesh.cli` | in main, synthetic only | known Case A z-floor failure retained; no real reconstruction claim |
@@ -562,12 +563,14 @@ What "integrated" concretely means today — and does not:
   answer apply); the read-only consumers of the log are
   `missing-parts` reconcile, the `cable-routing` graph and
   `assembly-reconstruction`.
-- The M0–M2 agent orchestrator (`tools/agent/`) is **not** on main:
-  it lives on branch `integration/agent-v1` (worktree
-  `Anastylos-live-integration`), behind the existing
-  `tools/session/`, `tools/guide/`, `tools/reassembly/`, and
-  `tools/live/` seams. Fixture-tested there; model-driven and
-  physical end-to-end validation pending. No M3 exists anywhere.
+- The M0–M2 agent orchestrator (`tools/agent/`) is on main (consolidated
+  via `b522336d`), behind the existing `tools/session/`, `tools/guide/`,
+  `tools/reassembly/`, and `tools/live/` seams. M3 is on main since the
+  2026-10-31 consolidation (session report, read-only capture-gap evaluator,
+  localhost offline session page; UI report export and capture-needs display
+  wired, gap closure locked for lack of a technical image check). Fixture-
+  and development-data-tested only; model-driven and physical end-to-end
+  validation pending. `new`/`phase`/`declare`/return checks stay CLI-only.
 - `custody-ledger/` (real-video observer, adaptive discovery, linker)
   is in `main` since `eb9744a9` (2026-10-29), byte-identical to
   `feat/custody-v1.3` @ `45d7440d`. Frozen versions stay on their

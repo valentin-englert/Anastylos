@@ -11,6 +11,25 @@ Storage-Vertrag `04a97968`. Forschungsbasis: `89aad323`; Auswertung vom 31.10.20
 Legende: **I** implementiert · **O** offline geprüft · **P** echter Providernachweis ·
 **H** Hardwarebeleg (begrenzt) · **U** unabhängig validiert · **offen**.
 
+## 0. Integrationsnachtrag (main-Konsolidierung 31.10.2026)
+
+Vier Merges mit je zwei Eltern auf `b522336d` (Reihenfolge: Capture-Gap-Planer
+`248f5223`, Session-Bericht `7082978d`, Session-UI `2d80d105`, Doku `d5ffa66b`),
+konfliktfrei (rein additive, disjunkte Pfade), danach ein Integrationscommit
+(Berichtsexport + Aufnahmebedarf in der UI). Verifiziert im integrierten Stand:
+Agent 119, Session-UI 33, Guide 51, Provider 33, Integration 12, Compliance-
+Selbsttests 5 — alle PASS, 0 FAIL/ERROR/SKIP; Compliance 0 Errors, 18 offene
+Reviews; E3-B 20/20 Git-Blobs, 19/20 Raw-Bytes (bekannte CRLF-Abweichung in
+`tools/proto-01/e3b_grid_frame.py`, unverändert erhalten). Browserabnahme 1–9
+auf frischen FULL-01-Kopien (Fragen, Guide, Auswahl, Ursprung/Ablage, Assembly
+inkl. Doppelklick, Berichtsexport + geöffnetes HTML, drei synthetische Lücken
+`open`/`needs_review`, Stale-Darstellung). 0 HTTP-/Modellaufrufe; Gap-
+Schließung gesperrt (keine technische Bildprüfung im Bestand, kein
+`request_view`, keine Kamera-/Memory-Automatik). Die Matrixzeile „Session-UI
+(M3), Session-Report, Capture-Gap-Planer“ unten gilt damit als I + O; alle
+anderen Zeilen bleiben unverändert, insbesondere alle offenen physischen,
+zeichnerischen und unabhängigen Nachweise.
+
 ## 1. Kompakte Capability-/Belegmatrix
 
 | Fähigkeit | Status | Commit / Datenbasis | Grenzen |
@@ -29,7 +48,7 @@ Legende: **I** implementiert · **O** offline geprüft · **P** echter Providern
 | L2 vs. P0 | L2 ohne Vorteil, P0 aktiv | `tools/live/integration/README.md`: L2 0,752 vs. P0 0,803 resolved/Interruption, PREREG-Kriterium 1 verfehlt → rejected; Produkt nutzt P0 | Simulator/Orakel/Kostenmodell sind Annahmen, keine Operatormessung; L2 bleibt Forschung |
 | SAM / modellbasierte Korrespondenz | verworfen | Research-Pass-01: 0 verifizierte Korrespondenzen; SAM-01 4/4 Hände, 0 Teile; DECISION-MEMO Stop-Liste; Review 31.10.2026 bestätigt | Kein neuer Befund widerlegt Laufzeit/Mehrwert; GrabCut-Frontversuch 77,25 s ohne Echtzeitversprechen |
 | Technische Zeichnung / Explosionsskizze (A2) | offen (separater Worktree, nicht integriert) | `feat/explosion-sketch-m1` @ `918318e7`; Paket-SHA `cae31223…` und 3/3 Crop-Hashes belegen Bytes, nicht Geometrie; Front partieller Konturgewinn | Konkrete Fehler s. `CLAUDE-HANDOFF.md`; kein integrierter/getesteter Stand in `b522336d` |
-| Session-UI (M3), Session-Report, Capture-Gap-Planer | geplant | `feat/session-ui-m3` und `feat/session-report` auf `b522336d` (keine Arbeit); `feat/capture-gap-planning` @ `248f5223` ein Commit voraus (nicht in diesem Branch) | Fertigstellung nicht vorwegnehmen; kein Demo-Versprechen |
+| Session-UI (M3), Session-Report, Capture-Gap-Planer | I + O (s. Nachtrag §0) | main-Konsolidierung 31.10.2026: 4 Merges + Integrationscommit; Agent 119, UI 33 (13 Integration), Guide 51, Provider 33, Integration 12 PASS; Browserabnahme 1–9 offline auf FULL-01-Kopien | Offline-Demo auf Entwicklungsdaten, kein Muse-/Hardwarenachweis; Lückenschließung gesperrt (keine technische Bildprüfung); `new`/`phase`/`declare`/Return-Checks bleiben CLI |
 | LIVE-01 (Live- vs. Offline-Fragen) | offen (Entwurf, nicht bindend) | `docs/LIVE-01.md`, Draft 29.10.2026, Lane E, Vertrag 0.1; ändert keine E3-B-Freeze-Dateien | Owner-Entscheidungen §13, Parameter §4, Commit-Ledger §10 fehlen; keine Aufnahme |
 
 Entwicklungsdaten sind keine unabhängige Validierung. FULL-01 (Custody 1.7.0,

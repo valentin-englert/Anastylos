@@ -70,6 +70,14 @@
               "type": [
                 "string",
                 "null"
+              ],
+              "enum": [
+                "vom System zugeordnet",
+                "laut Operator",
+                "laut Operator identisch, nicht vermessen",
+                "umgekehrte Entnahmereihenfolge",
+                "nicht beobachtet",
+                null
               ]
             }
           }

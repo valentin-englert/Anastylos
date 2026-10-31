@@ -25,7 +25,7 @@ from meta import MetaProposer  # noqa: E402
 
 import claims  # noqa: E402
 
-ANSWER = "Schraube aus dem Loch oben links an der Rückplatte"
+ANSWER = "Screw from the top-left hole of the back plate"
 FAKE_KEY = {"MODEL_API_KEY": "test-key-not-real"}
 
 
@@ -72,7 +72,7 @@ def ask_answer_confirm(c: Coordinator) -> tuple[dict, dict, dict | None]:
     qid = c.book.live_order()[0]
     prompt = c.ask(qid)
     reply = c.receive(slices.operator_input(prompt["op_key"], ANSWER))
-    confirm = c.receive(slices.operator_input(prompt["op_key"], "ja")) if reply["status"] == "read_back" else None
+    confirm = c.receive(slices.operator_input(prompt["op_key"], "yes")) if reply["status"] == "read_back" else None
     return prompt, reply, confirm
 
 
@@ -107,7 +107,7 @@ class InvalidToolOutput(unittest.TestCase):
 class Grounding(unittest.TestCase):
     def test_wording_that_adds_a_cell_or_number_is_rejected(self):
         ws = Workspace(self)
-        invented = {"text": "Woher kam das Teil in Zelle 9, das du vor 12 Sekunden abgelegt hast?", "facts_used": []}
+        invented = {"text": "Where did the part you put in cell 9 twelve seconds ago, at 0:12, come from?", "facts_used": []}
         c = ws.open(FakeProposer(script={"question_wording": {"mode": "output", "output": invented}}))
         try:
             prompt = c.ask(c.book.live_order()[0])
@@ -118,13 +118,13 @@ class Grounding(unittest.TestCase):
 
     def test_interpretation_that_invents_a_place_is_not_used(self):
         ws = Workspace(self)
-        invented = {"intent": "describe_place", "choice": None, "place_text": "aus dem Akkufach unten rechts",
-                    "label_text": "Schraube"}
+        invented = {"intent": "describe_place", "choice": None, "place_text": "the battery compartment bottom right",
+                    "label_text": "Screw"}
         c = ws.open(FakeProposer(script={"question_wording": {"mode": "disabled"},
                                          "answer_interpretation": {"mode": "output", "output": invented}}))
         try:
             _, reply, _ = ask_answer_confirm(c)
-            self.assertNotIn("Akkufach", reply["read_back"])
+            self.assertNotIn("battery", reply["read_back"])
             self.assertTrue(any(r.startswith("gate:") for r in fallbacks(c)), fallbacks(c))
         finally:
             c.close()
@@ -172,7 +172,7 @@ class StaleRevision(unittest.TestCase):
             target["deposit_window_s"] = [target["deposit_window_s"][0] + 1.0, target["deposit_window_s"][1] + 1.0]
             questions_path.write_text(json.dumps(doc, ensure_ascii=False), encoding="utf-8")
             self.assertEqual(c.reload_questions(), [qid])
-            stale = c.receive(slices.operator_input(prompt["op_key"], "ja"))
+            stale = c.receive(slices.operator_input(prompt["op_key"], "yes"))
             self.assertEqual(stale["status"], "stale")
             self.assertEqual(ws.memory_lines(), before)
         finally:
@@ -198,7 +198,7 @@ class Retry(unittest.TestCase):
     def test_two_busy_replies_then_ok_is_one_result_with_three_attempts(self):
         with tempfile.TemporaryDirectory() as tmp:
             transport = ScriptedTransport([busy_body(429), busy_body(503),
-                                           ok_body({"text": "Woher kam das Teil?", "facts_used": []})])
+                                           ok_body({"text": "Where did the part come from?", "facts_used": []})])
             p = MetaProposer(Path(tmp), max_calls=5, transport=transport, environ=FAKE_KEY, sleep=lambda s: None)
             payload = {"op_key": "S:Q:1", "kind": "source_of_part", "mode": "open", "facts": {}, "l0_text": "x?"}
             result = p.propose("question_wording", payload, "r1")
@@ -210,7 +210,7 @@ class Retry(unittest.TestCase):
             self.assertTrue(again["cache_hit"])
             self.assertEqual(transport.posts, 3)
 
-    def test_persistent_overload_falls_back_to_l0_and_the_write_still_waits_for_ja(self):
+    def test_persistent_overload_falls_back_to_l0_and_the_write_still_waits_for_yes(self):
         ws = Workspace(self)
         transport = ScriptedTransport([busy_body(429)] * 6)
         p = MetaProposer(ws.root / "provider", max_calls=6, transport=transport, environ=FAKE_KEY, sleep=lambda s: None)
@@ -222,7 +222,7 @@ class Retry(unittest.TestCase):
             self.assertEqual(prompt["wording"], "L0")
             reply = c.receive(slices.operator_input(prompt["op_key"], ANSWER))
             self.assertEqual(len(ws.memory_lines()), before)
-            confirm = c.receive(slices.operator_input(prompt["op_key"], "ja"))
+            confirm = c.receive(slices.operator_input(prompt["op_key"], "yes"))
             self.assertEqual(confirm["status"], "committed")
             self.assertEqual(transport.posts, 6)  # 3 attempts per call, cap 6 respected
             self.assertTrue(all("provider_error" in r or "budget_exhausted" in r for r in fallbacks(c)), fallbacks(c))
@@ -245,7 +245,7 @@ class Crash(unittest.TestCase):
         prompt = c.ask(qid)
         c.receive(slices.operator_input(prompt["op_key"], ANSWER))
         with self.assertRaises(SimulatedCrash):
-            c.receive(slices.operator_input(prompt["op_key"], "ja"))
+            c.receive(slices.operator_input(prompt["op_key"], "yes"))
         c.close()
         reopened = ws.open(FakeProposer(script={"question_wording": {"mode": "timeout"}}))
         try:
@@ -253,7 +253,7 @@ class Crash(unittest.TestCase):
             census = reopened.summary()["census"]
             committed = reopened.committed_answers()
             self.assertEqual([a["question_id"] for a in committed], [qid])
-            again = reopened.receive(slices.operator_input(prompt["op_key"], "ja"))
+            again = reopened.receive(slices.operator_input(prompt["op_key"], "yes"))
             self.assertIn(again["status"], ("duplicate", "ignored"))
             self.assertEqual(census["observations_without_tray_link"], [])
         finally:
@@ -287,7 +287,7 @@ class Corruption(unittest.TestCase):
 
     def test_tampered_provider_cache_is_refused_and_the_coordinator_falls_back(self):
         ws = Workspace(self)
-        transport = ScriptedTransport([ok_body({"text": "Woher kam das Teil?", "facts_used": []})])
+        transport = ScriptedTransport([ok_body({"text": "Where did the part come from?", "facts_used": []})])
         cache = ws.root / "provider"
         p = MetaProposer(cache, max_calls=1, transport=transport, environ=FAKE_KEY, sleep=lambda s: None)
         payload = {"op_key": "S:Q:1", "kind": "source_of_part", "mode": "open", "facts": {}, "l0_text": "x?"}

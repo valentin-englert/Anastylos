@@ -55,6 +55,7 @@
           "describe_place",
           "confirm",
           "reject",
+          "not_a_part",
           "skip",
           "unsure",
           "correction",

@@ -144,8 +144,10 @@ def destination_value(place: str) -> str:
     return f"cell-{int(cell.group(1))}" if cell else place.strip()
 
 
-def to_answer(question: dict, interp: dict, prompt: dict, op_key: str, source: str) -> dict:
-    """The answers.py answer for an interpretation with intent choose / describe_place."""
+def to_answer(question: dict, interp: dict, prompt: dict, op_key: str, source: str, destination=None) -> dict:
+    """The answers.py answer for an interpretation with intent choose / describe_place.
+    ``destination``: the session language's place parser (German ``destination_value`` when omitted)."""
+    destination = destination or destination_value
     answer = {"question": question["id"], "choice": None, "source": None, "destination": None,
               "label": interp.get("label_text"), "identical_to": [], "not_a_part": bool(interp.get("not_a_part")),
               "skip": False, "provenance": f"live op_key={op_key}; operator input {source}"}
@@ -158,7 +160,7 @@ def to_answer(question: dict, interp: dict, prompt: dict, op_key: str, source: s
     elif question["kind"] == "source_of_part":
         answer["source"] = interp["place_text"]
     else:
-        answer["destination"] = destination_value(interp["place_text"])
+        answer["destination"] = destination(interp["place_text"])
     return answer
 
 

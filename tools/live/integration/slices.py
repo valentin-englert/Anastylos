@@ -2,7 +2,7 @@
 
     python tools/live/integration/slices.py --out C:\\ANASTYLOS\\data\\live-dev\\TL\\<run> [--offline]
 
-S1 L0: question -> typed answer -> read-back -> "ja" -> one controlled write (no provider).
+S1 L0: question -> typed answer -> read-back -> "yes" -> one controlled write (no provider).
 S2 L1: Muse wording + interpretation proposals -> gates -> accepted or L0 fallback -> read-back -> write.
 S3 L2: Muse next_action proposals -> l2sim validator -> executed action or P0 fallback.
 S4 guide: Muse guide_claims -> claims.check -> rendered speech (and the same claims against a wrong hash).
@@ -30,7 +30,7 @@ import wiring  # noqa: E402  (sets the providers path)
 from meta import MetaProposer  # noqa: E402
 
 FIXTURE = LIVE / "tests" / "fixtures"
-PHASE_WORDS = FIXTURE / "phase-words.json"
+PHASE_WORDS = FIXTURE / "phase-words.en.json"  # English product language
 PACKAGE = REPO / "tools" / "guide" / "guide02" / "fixtures" / "session.v21.json"
 SLICE_CALL_CAP = 4
 OPERATOR = "operator (TL slice)"
@@ -92,7 +92,7 @@ def question_slice(out: Path, proposer, answer_text: str) -> dict:
         prompt = coordinator.ask(qid)
         reply = coordinator.receive(operator_input(prompt["op_key"], answer_text))
         after_answer = line_count(memory / "memory.jsonl")
-        confirm = coordinator.receive(operator_input(prompt["op_key"], "ja")) if reply["status"] == "read_back" else None
+        confirm = coordinator.receive(operator_input(prompt["op_key"], "yes")) if reply["status"] == "read_back" else None
         after = line_count(memory / "memory.jsonl")
         summary = coordinator.summary()
         return {
@@ -139,7 +139,7 @@ def guide_slice(out: Path, proposer) -> dict:
     import claims
     raw = PACKAGE.read_bytes()
     sha = hashlib.sha256(raw).hexdigest()
-    payload = {"package_sha256": sha, "operator_question": "Wo liegt die erste Schraube aus P1, und was baue ich zuerst ein?",
+    payload = {"package_sha256": sha, "operator_question": "Where is the first screw from P1, and what do I install first?",
                "package_excerpt": minimized_package(json.loads(raw), claims.BASIS_WORDS)}
     result = proposer.propose("guide_claims", payload, "TL-slice-S4:guide_claims:1")
     if result["status"] != "ok":
@@ -164,7 +164,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--offline", action="store_true", help="no key: every provider call is disabled")
-    parser.add_argument("--answer", default="Schraube aus dem Loch oben links an der Rückplatte")
+    parser.add_argument("--answer", default="Screw from the top-left hole of the back plate")
     parser.add_argument("--only", default=",".join(SLICES), help="comma-separated subset of " + ",".join(SLICES))
     args = parser.parse_args(argv)
     out = args.out.resolve()

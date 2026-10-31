@@ -186,7 +186,8 @@ unless noted) and match the current tree's test methods exactly.
 | `tools/core-ingest/` | Receiver staged capture packages → Core Capture Evidence Index (hash-verified JPEG store + session/observation lookup; no `memory.jsonl` writes) | `anastylos_core_ingest` | integrated in main @ `80eb2030` (MVP `66580106`) | 8 pass |
 | `tools/guide/` | guide (Muse) package from memory, rules, grounding and advisory claims checks | `package.py`, `check.py`, `claims.py` | integrated | 51 pass (local consolidation, 2026-10-29) |
 | `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
-| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | integrated in main (from `integration/live-v1` @ `ebf7f46a`), with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; L2 benefit PENDING_EVIDENCE |
+| `tools/agent/` | product orchestrator: session file, per-phase processing via the frozen session runner, English P0 question loop, operator declarations, English guide from verified claims bound to the package hash, guided reassembly (M2) | `anastylos.py` | integrated in main (from `integration/agent-v1` @ `ef614e31`); session page and report pending (M3) | see `tools/agent/README.md`; FULL-01 development data only |
+| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | integrated in main (from `integration/live-v1` @ `ebf7f46a`, contract 0.3 from `integration/agent-v1`), with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; real L2 arm rejected per PREREG (L2 0.752 < P0 0.803 resolved/interruption, `tools/live/integration/README.md`) |
 | `calibration/spatial/` | spatial evidence validator and dataset builder | `validate.py` | integrated in main @ `80eb2030` (via `integration/spatial-capture-v1`) | synthetic checks; physical metric calibration pending |
 | `assembly-reconstruction/cad/` | isolated trusted CAD worker | `cadwork.py` | in main; existing isolated runtime only | licensing/redistribution owner reviews and real-image/FreeCAD gates remain open |
 | `assembly-reconstruction/mesh/` | silhouette-constrained reconstruction experiment | `anastylos_mesh.cli` | in main, synthetic only | known Case A z-floor failure retained; no real reconstruction claim |
@@ -489,7 +490,9 @@ never be set by analysis code:
   `store: true`: the provider may retain and train on inputs and
   outputs. The completed implementation is in main (merged from
   `integration/live-v1` at `ebf7f46a`); integrating it establishes no
-  scientific L2 benefit.
+  scientific L2 benefit, and the preregistered real L2 arm (2026-10-29)
+  was rejected: L2 0.752 vs P0 0.803 resolved parts per interruption, so
+  action selection stays P0.
 - `tools/snes01-benchmark/gate2a_client.py` is preserved standalone
   research tooling using stdlib `urllib`, with credentials supplied at
   execution time through the environment or stdin. Its Gate 2 runners

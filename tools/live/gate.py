@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Protocol
 
-from templates import MACHINE_ID, rubric
+from templates import MACHINE_ID
 
 SCHEMAS = Path(__file__).resolve().parent / "schemas"
 RESULT_SCHEMA = "anastylos-live-provider-result@1"
@@ -93,11 +93,14 @@ def _fact_strings(facts) -> list[str]:
     return [str(facts)] if facts is not None else []
 
 
-def wording_gate(output: dict, prompt: dict) -> tuple[dict | None, str]:
+def wording_gate(output: dict, prompt: dict, lang=None) -> tuple[dict | None, str]:
+    """``lang``: the session's ``languages.Language`` (German, the historical default, when omitted)."""
+    from languages import GERMAN
+    lang = lang or GERMAN
     text, facts = output["text"], prompt["facts"]
     known = " ".join(_fact_strings(facts))
     has_anchor = bool(facts.get("anchor")) and facts["anchor"] in text
-    checks = rubric(text, anchor_possible=prompt["anchor_possible"], has_anchor=has_anchor)
+    checks = lang.rubric(text, prompt["anchor_possible"], has_anchor, facts.get("phase_words"))
     if not checks["pass"]:
         return None, "rubric failed: " + ", ".join(k for k, v in checks.items() if not v and k != "pass")
     new_numbers = sorted(set(_NUMBER.findall(text)) - set(_NUMBER.findall(known)))
@@ -108,7 +111,7 @@ def wording_gate(output: dict, prompt: dict) -> tuple[dict | None, str]:
         return None, f"quoted names not in the facts: {new_labels}"
     if set(output["facts_used"]) - set(facts):
         return None, f"facts_used names unknown facts: {sorted(set(output['facts_used']) - set(facts))}"
-    if prompt["mode"] == "open_with_screen_options" and "Bildschirm" not in text:
+    if prompt["mode"] == "open_with_screen_options" and lang.screen_word not in text:
         return None, "screen options exist but the wording does not point at the screen"
     if prompt["mode"] == "spoken_options" and not all(o in text for o in facts.get("options", [])):
         return None, "a spoken option was dropped or changed"

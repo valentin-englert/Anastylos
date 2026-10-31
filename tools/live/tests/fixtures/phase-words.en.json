@@ -1,0 +1,9 @@
+{
+ "schema": "anastylos-live-phase-words@1",
+ "provenance": "TL-supplied English phase words for FULL-01 (same phases as phase-words.json: back cover screws, opening the housing, front shell parts); product language is English",
+ "phases": {
+  "P1": "while unscrewing the back cover",
+  "P2": "while opening the housing",
+  "P3": "while removing parts from the front shell"
+ }
+}

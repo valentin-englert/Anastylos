@@ -163,7 +163,11 @@ def _has_type(value, expected) -> bool:
 
 
 def claims_schema() -> dict:
-    return json.loads(TASK_SCHEMA_FILE.read_text(encoding="utf-8"))["output"]
+    # The basis_word enum (contract 0.3) constrains the model's output; here the word checks below classify a
+    # wrong word (certainty, identity, later observation) instead of a bare schema error, so the enum is dropped.
+    schema = json.loads(TASK_SCHEMA_FILE.read_text(encoding="utf-8"))["output"]
+    schema["properties"]["claims"]["items"]["properties"]["basis_word"].pop("enum", None)
+    return schema
 
 
 # ---------------------------------------------------------------- package

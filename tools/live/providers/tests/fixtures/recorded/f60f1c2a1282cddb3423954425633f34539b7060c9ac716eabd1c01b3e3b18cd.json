@@ -1,7 +1,7 @@
 {
  "schema": "anastylos-live-provider-fixture@1",
  "task": "answer_interpretation",
- "request_sha256": "ff1ad49bf6c53d06e0c4cf7cfc1d65ba7b364bd0260b7045a10c8aba58149b13",
+ "request_sha256": "f60f1c2a1282cddb3423954425633f34539b7060c9ac716eabd1c01b3e3b18cd",
  "request": {
   "model": "muse-spark-1.3-contributor",
   "reasoning": {
@@ -51,6 +51,7 @@
         "describe_place",
         "confirm",
         "reject",
+        "not_a_part",
         "skip",
         "unsure",
         "correction",
@@ -98,12 +99,6 @@
     "type": "json_schema",
     "name": "anastylos_answer_interpretation",
     "schema": {
-     "required": [
-      "intent",
-      "choice",
-      "place_text",
-      "label_text"
-     ],
      "properties": {
       "choice": {
        "type": [
@@ -117,6 +112,7 @@
         "describe_place",
         "confirm",
         "reject",
+        "not_a_part",
         "skip",
         "unsure",
         "correction",
@@ -139,6 +135,12 @@
        ]
       }
      },
+     "required": [
+      "intent",
+      "choice",
+      "place_text",
+      "label_text"
+     ],
      "type": "object",
      "additionalProperties": false
     },
@@ -148,23 +150,23 @@
   "tools": [],
   "tool_choice": "auto",
   "truncation": "disabled",
-  "id": "resp_6ae38c9a8bbe9e1c92bf427f",
+  "id": "resp_6ae3e0a9a4d9aee668864da7",
   "object": "response",
   "status": "completed",
-  "created_at": 1793297562.0,
-  "completed_at": 1793297562.0,
+  "created_at": 1793319081.0,
+  "completed_at": 1793319081.0,
   "error": null,
   "incomplete_details": null,
   "output": [
    {
     "type": "reasoning",
-    "id": "rs_6ae38c9a8bbe9e1c92bf427f:rs_31e7b39d-de3b-4075-979d-336eb6672284",
+    "id": "rs_6ae3e0a9a4d9aee668864da7:rs_9136b7d5-4017-433b-bf29-0902bdbfc6c1",
     "summary": [],
     "status": "completed"
    },
    {
     "type": "message",
-    "id": "msg_62349dfe-9f6e-4377-9da5-ca0e85f63118",
+    "id": "msg_ecfdf85b-62bc-4ef7-9fac-321201640a14",
     "role": "assistant",
     "content": [
      {
@@ -179,19 +181,19 @@
   ],
   "instructions": null,
   "usage": {
-   "input_tokens": 558,
+   "input_tokens": 562,
    "input_tokens_details": {
     "cached_tokens": 0
    },
-   "output_tokens": 1086,
+   "output_tokens": 1304,
    "output_tokens_details": {
-    "reasoning_tokens": 1056
+    "reasoning_tokens": 1274
    },
-   "total_tokens": 1644
+   "total_tokens": 1866
   },
   "parallel_tool_calls": true,
   "store": true
  },
- "latency_s": 8.344,
- "recorded_at": "2026-10-29T18:12:42Z"
+ "latency_s": 12.281,
+ "recorded_at": "2026-10-30T00:11:22Z"
 }

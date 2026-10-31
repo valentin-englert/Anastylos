@@ -94,12 +94,14 @@ class MemoryWriter:
         """Journal the intent (write-ahead; it also records the operator's confirmation), then run the steps.
         Returns the ``done`` record."""
         planned = [] if "dismissed" in action else list(STEPS)
-        intent = self.journal.append("intent", op_key=op_key, question=question_id, answer=answer, action=action,
+        intent = self.journal.append("intent", op_key=op_key, question_id=question_id, answer=answer, action=action,
                                      planned=planned, **confirmation)
         self.fault("after_intent")
         return self._run(intent, {})
 
     def _run(self, intent: dict, have: dict[str, str]) -> dict:
+        """Steps are journaled one by one (status ``step``); one final ``ok`` result per op_key names every
+        written id, which is the record the evaluation counts as the commit (CONTRACT §3.4, 0.2)."""
         op_key, action = intent["op_key"], intent["action"]
         ids = dict(have)
         for step in intent["planned"]:
@@ -108,9 +110,14 @@ class MemoryWriter:
             event = self.call(self.session_dir, step_argv(step, action, self.declared_by, ids.get("declared_removal")))
             self.fault(f"after_memory:{step}")
             ids[step] = event["id"]
-            self.journal.append("memory_result", op_key=op_key, step=step, event_id=event["id"])
+            self.journal.append("memory_result", op_key=op_key, step=step, event_id=event["id"], status="step",
+                                written_ids=[event["id"]])
             self.fault(f"after_journal:{step}")
-        return self.journal.append("done", op_key=op_key, question=intent["question"], events=ids)
+        if not any(r["op_key"] == op_key and r.get("status") == "ok" for r in self.journal.of_kind("memory_result")):
+            self.journal.append("memory_result", op_key=op_key, status="ok",
+                                written_ids=[ids[s] for s in intent["planned"]])
+            self.fault("after_journal:result")
+        return self.journal.append("done", op_key=op_key, question_id=intent["question_id"], events=ids)
 
     def recover(self, intent: dict) -> dict:
         """Complete an intent that has no ``done``: memory is the truth, the journal only a claim about it."""
@@ -124,12 +131,13 @@ class MemoryWriter:
         if "storage_link" in have and found["storage_link"][0]["target_id"] != have.get("declared_removal"):
             raise RecoveryConflict(f"{op_key}: storage link {have['storage_link']} does not point at this intent's declared removal")
         for result in self.journal.of_kind("memory_result"):
-            if result["op_key"] == op_key and have.get(result["step"]) != result["event_id"]:
+            if result["op_key"] == op_key and "step" in result and have.get(result["step"]) != result["event_id"]:
                 raise RecoveryConflict(f"{op_key}: journal acknowledges {result['event_id']} for {result['step']} "
                                        f"but memory holds {have.get(result['step'])!r}; memory lost or changed an acknowledged event")
         missing = [s for s in intent["planned"] if s not in have]
         self.journal.append("recovery", op_key=op_key, found=have, completing=missing)
         for step, event_id in have.items():
-            if not any(r["op_key"] == op_key and r["step"] == step for r in self.journal.of_kind("memory_result")):
-                self.journal.append("memory_result", op_key=op_key, step=step, event_id=event_id, via="recovery_scan")
+            if not any(r["op_key"] == op_key and r.get("step") == step for r in self.journal.of_kind("memory_result")):
+                self.journal.append("memory_result", op_key=op_key, step=step, event_id=event_id, status="step",
+                                    written_ids=[event_id], via="recovery_scan")
         return self._run(intent, have)

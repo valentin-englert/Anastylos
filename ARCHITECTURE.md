@@ -6,21 +6,29 @@ bare claims: millimetre coordinates cite their calibration, verdicts
 stay `unknown`/`ambiguous` when evidence is weak, and nothing is
 confirmed without explicit operator confirmation.
 
-Real-hardware correspondence validation is limited to PROTO-01-NOUV E2
-(2026-10-28, `docs/PROTO-01-NOUV.md` §10), four correct automatic
-source-to-deposit links on a real controller, given an operator-defined
-site inventory. All other vision results below come from synthetic
-fixtures and unit tests, except the bounded capture validation below.
+Real-hardware validation is bounded and per-capability, never a
+general accuracy claim. Correspondence on a real controller is limited
+to PROTO-01-NOUV E2 (2026-10-28, `docs/PROTO-01-NOUV.md` §10), four
+correct automatic source-to-deposit links given an operator-defined
+site inventory. Separately, the capture path has bounded physical
+validation: guided auto-shutter on Xiaomi (GUIDE-03), device
+calibration and camera gates (CAL-01, CAMERA-01/02), authenticated
+Receiver transfer (HARDWARE-03), and real-photo change-detection runs
+(HARDWARE-01/02). All other vision results below come from synthetic
+fixtures and unit tests.
 
 HARDWARE-03 (`docs/integration/HARDWARE-03.md`, source `bcea6310`): real
 camera, seven ArUco IDs, positive pose age, persisted captures and authenticated
 hash-identical Receiver transfer were reported PASS. Uncalibrated intrinsics
-correctly block metric pose. Intrinsics/print metrology, Guided Auto-Shutter,
-tracking-loss testing and full Camera→Assembly Memory→SVG→Muse remain
-PENDING_EVIDENCE. Preview/analysis around 33 fps is not continuous end-to-end
-Core throughput. The complete spatial integration history (Wave 2,
-Spatial/Core/CAD/QA and Mesh) is consolidated locally; this does not validate
-metric reconstruction, CAD licensing or pending physical gates.
+correctly block metric pose. Guided Auto-Shutter and tracking-loss
+behavior were since validated on Xiaomi (`docs/integration/GUIDE-03.md`,
+accepted/frozen at `b65cc0a0`). Intrinsics/print metrology and the full
+Camera→Assembly Memory→SVG→Muse loop remain PENDING_EVIDENCE.
+Preview/analysis around 33 fps is not continuous end-to-end
+Core throughput. The spatial integration history (Wave 2,
+Spatial/Core/CAD/QA and Mesh) is merged into main at `80eb2030`
+(2026-10-31); this does not validate metric reconstruction, CAD
+licensing or pending physical gates.
 
 ## Design rules (observed, keep them)
 
@@ -35,8 +43,12 @@ metric reconstruction, CAD licensing or pending physical gates.
 - Stable tiers: `assembly-memory` and the capture validator are
   standard-library-only; vision modules use the pinned
   OpenCV + NumPy environment (`calibration/requirements.txt`).
-- Offline: Python has no network imports; the capture PWA's only
-  network use is same-origin service-worker caching of its app shell.
+- Offline by default: product Python has no network imports except
+  the three isolated carve-outs documented under "Offline and future
+  AI-provider boundaries" (`sam-tracking` client, workstation
+  Receiver, `tools/live/providers/meta.py`); the capture PWA's only
+  network use is same-origin service-worker caching of its app shell
+  plus paired-receiver transfer per `SYNC_PROTOCOL.md`.
 - Licensing is deliberately deferred: no root `LICENSE` file, no
   project license declared anywhere. Agent operating rules live in
   versioned [`AGENTS.md`](AGENTS.md); personal agent notes stay local
@@ -93,6 +105,8 @@ flowchart TD
     MEM -->|memory.jsonl read-only| MISS
     CAP -->|validated .zip| REV[human review]
     REV -.->|manual step; never auto-imported| MEM
+    CAP -->|staged packages| RECV[Receiver staging]
+    RECV -->|scene evidence index; never writes memory| CORE[tools/core-ingest/]
 ```
 
 ## Module / status index
@@ -100,12 +114,14 @@ flowchart TD
 Status definitions (hygiene gate 01):
 
 - `implemented`: code and relevant isolated tests exist.
-- `integrated`: code is part of `main` (or this hygiene branch's
-  inherited `main` history) and cross-module verification has been
-  performed where applicable.
+- `integrated`: code is part of `main` and cross-module verification
+  has been performed where applicable.
 - `hardware-validated`: the capability passed documented tests using
   real physical hardware and genuine images. Synthetic tests never
-  count. Nothing below has this status.
+  count. Only the bounded capture validations named at the top of
+  this document (GUIDE-03, CAL-01, CAMERA-01/02, HARDWARE-01/02/03)
+  and the custody development-footage runs hold evidence of this
+  kind; no module claims general hardware-validated accuracy.
 
 Integration baseline: five feature branches
 (`feat/capture-companion`, `feat/cable-routing`, `feat/missing-parts`,
@@ -122,8 +138,22 @@ executed; TypeScript compilation (`tsc`) and the production build
 executions. The compliance check reported 0 errors with 8 open
 review items (8 SPDX annotations, grouped into 6 narrative items in
 `THIRD_PARTY_NOTICES.md`). No real-hardware validation reported.
-This hygiene branch is docs-only, so it inherits those results;
-test counts below are per-module
+That record is historical and preserved as such.
+
+Consolidation baseline (2026-10-31, current main): the accepted
+Android MVP (`integration/spatial-capture-v1` @ `b65cc0a0`) and Core
+ingestion MVP (`integration/core-ingest-v1` @ `66580106`) were merged
+into main via a tested staging branch
+(`integration/main-consolidation-20261031`) and fast-forwarded to
+`80eb2030` (`6736f3b3` Android merge, `80eb2030` Core merge), with no
+rebase and no history rewrite. Verification on that HEAD: core-ingest
+8/8, Receiver 185 pass + 3 env skips, capture validator 22/22,
+Assembly Memory 24/25 (1 `cv2` env error, pre-existing),
+Android 443/461 (18 pre-existing `GuidanceViewModelTest` failures at
+the frozen checkpoint), lint/assemble clean, compliance 0 errors.
+Full record in [`INTEGRATION-STATUS.md`](INTEGRATION-STATUS.md).
+
+Test counts below are per-module
 (`python -m unittest discover -s tests` from the module directory
 unless noted) and match the current tree's test methods exactly.
 
@@ -131,7 +161,7 @@ unless noted) and match the current tree's test methods exactly.
 |---|---|---|---|---|
 | `calibration/` | printable sheets, ChArUco, px/mm frames | `generate.py` | integrated | 13 run, 9 pass (1 failure + 3 errors need native Cairo/poppler; known Windows gap) |
 | `change-detection/` | planar before/after change check | `detect.py` | integrated | 3 pass + synthetic selftest 16/16 |
-| `assembly-memory/` | append-only disassembly memory, where-goes queries | `memory.py` | integrated | 28 pass |
+| `assembly-memory/` | append-only disassembly memory, where-goes queries | `memory.py` | integrated | 24/25 on system python (1 `test_integration` loader error: missing `cv2`, pre-existing); 29/29 with the pinned `cv2` env |
 | `resistor-reader/` | resistor color-code reader (experimental) | `read.py` | integrated | 30 pass |
 | `tray-counter/` | tray addition/removal candidates | `count.py` | integrated | 14 pass |
 | `pcb-ocr/` | silkscreen reference-designator extraction (needs OCR engine) | `ocr.py` | integrated | 31 pass |
@@ -145,21 +175,21 @@ unless noted) and match the current tree's test methods exactly.
 | `washer-spacer/` | washer/spacer recognition + classifier | `washer.py` | integrated | 82 pass |
 | `missing-parts/` | missing/displaced-part candidates | `missing.py` | integrated | 81 pass |
 | `cable-routing/` | cable paths + assembly-order graph | `cable.py` | integrated | 53 pass |
-| `capture-companion/` | offline-first capture PWA + validator | app + `python/anastylos_capture_validate.py` | integrated | TS 66 pass, `tsc` clean, `vite build` ok; validator 22 pass |
-| `tools/compliance/` | third-party inventory checker (SPDX) | `check.py` | integrated | 5 pass; `check.py`: 0 errors, 11 open reviews |
+| `capture-companion/` | offline-first capture PWA + validator; native Android app with guided auto-shutter; TLS receiver | app + `python/anastylos_capture_validate.py` + `android/` + `receiver/` | integrated | PWA: TS 66 pass, `tsc` clean, `vite build` ok; validator 22 pass; Android: 443/461 unit (18 pre-existing `GuidanceViewModelTest` failures at frozen `b65cc0a0`), lint/assemble clean, GUIDE-03 physical on Xiaomi; receiver 185 pass + 3 env skips, HARDWARE-03 transfer verified |
+| `tools/compliance/` | third-party inventory checker (SPDX) | `check.py` | integrated | 5 pass; `check.py`: 0 errors, 18 open reviews |
 | `sam-tracking/` | SAM 3.1 segmentation/tracking eval (cloud-isolated experiment) | `sam.py` | implemented | 55 pass; live runs ledgered, none claimed yet |
 | `tools/retrospective-custody/` | offline inspection of cached tool-mask endpoints in a video clip (diagnostic) | `retrospective_custody.py` | implemented, experimental geometry gate only | 8 pass; cached real-clip execution; physical contact, removals, deposits and correspondence are not implemented in this tool |
 | `tools/retrospective-custody/matcher/` | deposit-triggered source-to-tray correspondence over supplied `anastylos-observation-v1` events (see "Correspondence contracts and owner decisions") | `match.py`, `validate.py` | implemented, synthetic only | 22 pass; no real observation file has been consumed; owner decisions V1, V2, V4, V5 not yet implemented |
 | `assembly-reconstruction/` | read-only Assembly Memory → Assembly State v1 → exploded-view SVG | `reconstruct.py` | integrated | 54 pass; real replay on hardware-02 and PROTO-01-NOUV E2 memory |
 | `custody-ledger/` | video custody: adaptive source discovery, zone observation with colour-free hand mask, temporal/elimination/hand-order linker | `custody.py` | integrated (`eb9744a9`, observer 1.7.0, `custody-config.v15.json`) | 94 pass; development footage only (E2, FULL-01, SNES-01); frozen v1.1/v1.2 stay on their branches for E2R/E3-A |
 | `tools/session/` | one-command phase run (video → custody → numbered parts → evidence → memory → open questions); answer package/apply/remap | `session.py`, `answers.py` | integrated | 23 pass; FULL-01 v20 rebuilt and reproduced |
-| `tools/core-ingest/` | Receiver staged capture packages → Core Capture Evidence Index (hash-verified JPEG store + session/observation lookup; no `memory.jsonl` writes) | `anastylos_core_ingest` | implemented (MVP; `integration/core-ingest-v1`) | focused suite in module `tests/` |
+| `tools/core-ingest/` | Receiver staged capture packages → Core Capture Evidence Index (hash-verified JPEG store + session/observation lookup; no `memory.jsonl` writes) | `anastylos_core_ingest` | integrated in main @ `80eb2030` (MVP `66580106`) | 8 pass |
 | `tools/guide/` | guide (Muse) package from memory, rules, grounding and advisory claims checks | `package.py`, `check.py`, `claims.py` | integrated | 51 pass (local consolidation, 2026-10-29) |
 | `tools/reassembly/` | return checks of a reassembly take against declared plans | `returns.py` | integrated | 11 pass |
-| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | implemented; pinned integration `ebf7f46a`, with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; L2 benefit PENDING_EVIDENCE |
-| `calibration/spatial/` | spatial evidence validator and dataset builder | `validate.py` | locally integrated via `integration/spatial-capture-v1` at `bcea6310` | synthetic checks; physical metric calibration pending |
-| `assembly-reconstruction/cad/` | isolated trusted CAD worker | `cadwork.py` | locally integrated; existing isolated runtime only | licensing/redistribution owner reviews and real-image/FreeCAD gates remain open |
-| `assembly-reconstruction/mesh/` | silhouette-constrained reconstruction experiment | `anastylos_mesh.cli` | locally integrated, synthetic only | known Case A z-floor failure retained; no real reconstruction claim |
+| `tools/live/` | deterministic live clarification coordinator and gated advisory proposer | `coordinator.py` | integrated in main (from `integration/live-v1` @ `ebf7f46a`), with cross-module checks | core 51, providers 27, l2sim 33, eval 38, integration 12 pass; journal contract 0.2 fields remain inconsistent; L2 benefit PENDING_EVIDENCE |
+| `calibration/spatial/` | spatial evidence validator and dataset builder | `validate.py` | integrated in main @ `80eb2030` (via `integration/spatial-capture-v1`) | synthetic checks; physical metric calibration pending |
+| `assembly-reconstruction/cad/` | isolated trusted CAD worker | `cadwork.py` | in main; existing isolated runtime only | licensing/redistribution owner reviews and real-image/FreeCAD gates remain open |
+| `assembly-reconstruction/mesh/` | silhouette-constrained reconstruction experiment | `anastylos_mesh.cli` | in main, synthetic only | known Case A z-floor failure retained; no real reconstruction claim |
 | `anastylos-microscopy/` | Offline orchestration over ten readers; separate operator reviews; Pi capture/preview node and experimental live resistor analysis on Windows | Core CLI; node CLI in `node/README.md` | Pi 3B+ appliance provisioned; HDMI branding, SSH frame transport, concurrent capture, live reader text, motion response and camera/worker reconnect were physically observed. The operator reported an incorrect candidate for a 3.3 kΩ resistor and `unknown` for a 1 kΩ scene; the resistor mode assumes the part type and is not a general detector. Recognition accuracy remains unverified. | Microscopy suite: 120 tests, 1 failure and 9 skips; the resistor reader's changed code does not match the Core's pinned revision. Reader regression: 543 passes historically. Held-out resistor candidate precision 39.5% historically. See node README for live limits and evidence. |
 | `tools/snes01-benchmark/` | standalone research preparation, correspondence experiments and gated API runners | see module README | implemented research tooling; no product runtime connection | 84 offline tests pass; historical scientific outcomes were not rerun |
 
@@ -167,7 +197,9 @@ Hardware evidence is bounded: the Pi node has displayed live HDMI preview,
 recovered from a camera disconnect, software reboot and physical cold boot,
 and produced a byte/hash-verified real capture accepted by the Windows
 manifest validator. Metric calibration, recognizer accuracy, long-duration
-stability and GTX 970 inspection remain unvalidated. Synthetic evaluation is
+stability and GTX 970 inspection remain unvalidated. Phone-side bounded
+validations (GUIDE-03, CAL-01, CAMERA-01/02, HARDWARE-01/02/03) are named
+at the top of this document. Synthetic evaluation is
 not hardware validation; see each module README for its validation scope.
 
 ## Stable data interfaces
@@ -419,6 +451,10 @@ never be set by analysis code:
 - Capture `confirmed` category/quantity/review states are set only by
   operator action in the inspector; identification candidates stay
   `suggested`.
+- Core-ingest receipts (`accepted_for_review` scene evidence) never
+  auto-append `observation` / `tray_link` events: a JPEG does not
+  independently prove a physical part removal. Session binding is an
+  explicit operator `--associate-session` step.
 - `measured_print_scale`, `--mapping` files, and frame-metadata
   scales are operator-owned evidence: wrong input, wrong output, and
   the module must not second-guess them.
@@ -451,8 +487,9 @@ never be set by analysis code:
   only from a consumer's `main()`; the live core never imports
   `providers/`. Contributor tier with the provider default
   `store: true`: the provider may retain and train on inputs and
-  outputs. Pinned completed implementation: `integration/live-v1` at
-  `ebf7f46a`; integrating it establishes no scientific L2 benefit.
+  outputs. The completed implementation is in main (merged from
+  `integration/live-v1` at `ebf7f46a`); integrating it establishes no
+  scientific L2 benefit.
 - `tools/snes01-benchmark/gate2a_client.py` is preserved standalone
   research tooling using stdlib `urllib`, with credentials supplied at
   execution time through the environment or stdin. Its Gate 2 runners
@@ -487,38 +524,53 @@ never be set by analysis code:
     labels identification as future functionality.
 - Seam contract: providers may add evidence or notes, never change a
   verdict, never confirm an identity, never call the network from
-  Python. SAM exists only as the isolated `sam-tracking/` experiment
-  with no pipeline consumer. The only Meta Muse integration is the
-  advisory `tools/live/providers/` seam above; the preserved Gate 2A
-  research client is independent. No automated BOM sourcing, CAD
-  reconstruction, or live sync exists — do not document any as
-  present.
+  Python except the three carve-outs above. SAM exists only as the
+  isolated `sam-tracking/` experiment with no pipeline consumer. The
+  only Meta Muse integration is the advisory `tools/live/providers/`
+  seam above; the preserved Gate 2A research client is independent.
+  No automated BOM sourcing exists. CAD work is limited to the
+  isolated parametric worker (no image-based reconstruction claim)
+  and the synthetic mesh experiment; live sync is limited to the
+  verified Receiver transport plus the control journal (no autonomous
+  closed loop) — do not document more than that as present.
 
 ## Actual integration status
 
 What "integrated" concretely means today — and does not:
 
-- Does mean: all modules merged to `main`, shared `.venv`
-  environment, per-module suites green (except the 4 known
-  Cairo/poppler calibration cases), cross-module file contracts
-  exercised (`assembly-memory` ⇄ `change-detection` integration
-  test; capture TS↔Python round-trip test), compliance inventory
-  consistent.
+- Does mean: all modules merged to `main` (consolidated at
+  `80eb2030`, see above), shared `.venv` environment, per-module
+  suites green except the known exceptions (4 Cairo/poppler
+  calibration cases; 18 pre-existing Android
+  `GuidanceViewModelTest` failures; 1 Assembly-Memory `cv2` env
+  error — see [`INTEGRATION-STATUS.md`](INTEGRATION-STATUS.md)),
+  cross-module file contracts exercised (`assembly-memory` ⇄
+  `change-detection` integration test; capture TS↔Python round-trip
+  test), compliance inventory consistent.
 - Does not mean: a single runnable pipeline. There is no top-level
-  orchestrator, no shared runner, and no end-to-end real-photo run.
-  All recognizers write only to their own `--out` dir and none
-  writes to memory; wiring them into memory import is future work
-  requiring per-module contract decisions — not a bulk edit. The
-  only producer paths into `memory.jsonl` today are
-  `assembly-memory import` (change-detection `result.json`) and the
-  manual `record observation` / `record tray-link` commands; the
-  only read-only consumers of the log are `missing-parts`
-  reconcile, the `cable-routing` graph and `assembly-reconstruction`.
+  orchestrator on main, no shared runner, and no end-to-end
+  real-photo run. All recognizers write only to their own `--out`
+  dir and none writes to memory; wiring them into memory import is
+  future work requiring per-module contract decisions — not a bulk
+  edit. The producer paths into `memory.jsonl` today are
+  `assembly-memory import` (change-detection `result.json`), the
+  manual `record observation` / `record tray-link` commands, and the
+  `tools/session/` runner (session-scoped memory plus validated
+  answer apply); the read-only consumers of the log are
+  `missing-parts` reconcile, the `cable-routing` graph and
+  `assembly-reconstruction`.
+- The M0–M2 agent orchestrator (`tools/agent/`) is **not** on main:
+  it lives on branch `integration/agent-v1` (worktree
+  `Anastylos-live-integration`), behind the existing
+  `tools/session/`, `tools/guide/`, `tools/reassembly/`, and
+  `tools/live/` seams. Fixture-tested there; model-driven and
+  physical end-to-end validation pending. No M3 exists anywhere.
 - `custody-ledger/` (real-video observer, adaptive discovery, linker)
   is in `main` since `eb9744a9` (2026-10-29), byte-identical to
   `feat/custody-v1.3` @ `45d7440d`. Frozen versions stay on their
-  branches and worktrees: v1.1 `feat/custody-ledger` (E2R), v1.2
-  `feat/custody-v1.2` @ `e057cf4f` (E3-A pin). Its module-local schemas
+  branches (worktrees removed after preservation): v1.1
+  `feat/custody-ledger` (E2R), v1.2 `feat/custody-v1.2` @ `e057cf4f`
+  (E3-A pin). Its module-local schemas
   are not `anastylos-observation-v1`. Active FULL-01 development memory:
   `C:\ANASTYLOS\data\session-runs-v20\FULL-01` (pointer
   `C:\ANASTYLOS\data\active-memory.json`; v18 kept unchanged).
@@ -556,10 +608,11 @@ hand-built detection pairs, stub OCR backends) prove pipeline
 self-consistency and contract conformance only — never real-hardware
 accuracy. Real-photo evaluation harnesses (`eval` subcommands with
 hand labels) exist per module but no labelled real-photo set exists
-yet. Known validation gaps: zero real images scored anywhere; capture
-camera/install/offline behavior verified by inspection + build checks,
-not on devices; calibration print masters unmeasured
-(`measured_print_scale` unset).
+yet. Bounded exceptions: HARDWARE-01/02 scored real before/after
+pairs; the capture app, calibration, and Receiver transfer were
+verified on physical phones (GUIDE-03, CAL-01, CAMERA-01/02,
+HARDWARE-03). Remaining gaps: no general accuracy measurement;
+calibration print masters unmeasured (`measured_print_scale` unset).
 
 ## Integration limitations and remaining work
 
@@ -576,11 +629,13 @@ not on devices; calibration print masters unmeasured
 3. npm transitive closure licenses unverified (compliance review
    item); direct capture devDeps are MIT/Apache-2.0 per installed
    metadata.
-4. Real-hardware runs are development data only: PROTO-01-NOUV E2
-   (frozen custody v1.1, one take, operator-defined inventory) and
-   FULL-01 (custody 1.7.0, owner answers). No independent validation;
-   E3-A is preregistered but not recorded. No other module has a
-   real-hardware result.
+4. Real-hardware runs are development data only, no independent
+   validation: PROTO-01-NOUV E2 (frozen custody v1.1, one take,
+   operator-defined inventory), FULL-01 (custody 1.7.0, owner
+   answers), HARDWARE-01/02 real-photo change detection, and the
+   bounded phone validations (GUIDE-03, CAL-01, CAMERA-01/02,
+   HARDWARE-03). E3-A is preregistered but not recorded. No module
+   claims general real-hardware accuracy.
 5. Current priority: real-hardware validation and end-to-end demo
    readiness — print and measure the calibration sheets, photograph a
    real disassembly, score the `eval` harnesses on labelled real
@@ -591,4 +646,6 @@ not on devices; calibration print masters unmeasured
    evaluated by the frozen custody observer against sealed physical
    ground truth (`docs/PROTO-01.md`).
 
-Combined consolidation checks: Android 384 pass, lint/build successful; capture-companion/receiver: 185 run/0 failures/0 errors/0 skips, calibration/spatial: 88 run/0 failures/0 errors/0 skips, calibration: 13 run/0 failures/0 errors/0 skips, assembly-reconstruction: 54 run/0 failures/0 errors/0 skips, assembly-reconstruction/cad: 63 run/0 failures/0 errors/0 skips, assembly-reconstruction/mesh: 64 run/1 failures/0 errors/0 skips, tools/session: 35 run/0 failures/0 errors/0 skips, tools/capture-control: 13 run/0 failures/0 errors/1 skips, tools/agentcam-acceptance: 20 run/0 failures/0 errors/0 skips, tools/live: 51 run/0 failures/0 errors/0 skips, tools/live/providers: 27 run/0 failures/0 errors/0 skips, tools/live/l2sim: 33 run/0 failures/0 errors/0 skips, tools/live/eval: 38 run/0 failures/0 errors/0 skips, tools/live/integration: 12 run/0 failures/0 errors/0 skips, tools/guide: 51 run/0 failures/0 errors/0 skips, assembly-memory: 29 run/0 failures/0 errors/0 skips. Compliance zero errors; frozen E3-B 20/20. Mesh retains only the documented Case A bbox 0.2375 versus 0.05 failure. Capture-control MCP registration skip remains pending its SDK approval.
+2026-10-29 branch checks (historical, canonical worktree — kept as record): Android 384 pass, lint/build successful; capture-companion/receiver: 185 run/0 failures/0 errors/0 skips, calibration/spatial: 88 run/0 failures/0 errors/0 skips, calibration: 13 run/0 failures/0 errors/0 skips, assembly-reconstruction: 54 run/0 failures/0 errors/0 skips, assembly-reconstruction/cad: 63 run/0 failures/0 errors/0 skips, assembly-reconstruction/mesh: 64 run/1 failures/0 errors/0 skips, tools/session: 35 run/0 failures/0 errors/0 skips, tools/capture-control: 13 run/0 failures/0 errors/1 skips, tools/agentcam-acceptance: 20 run/0 failures/0 errors/0 skips, tools/live: 51 run/0 failures/0 errors/0 skips, tools/live/providers: 27 run/0 failures/0 errors/0 skips, tools/live/l2sim: 33 run/0 failures/0 errors/0 skips, tools/live/eval: 38 run/0 failures/0 errors/0 skips, tools/live/integration: 12 run/0 failures/0 errors/0 skips, tools/guide: 51 run/0 failures/0 errors/0 skips, assembly-memory: 29 run/0 failures/0 errors/0 skips. Compliance zero errors; frozen E3-B 20/20. Mesh retains only the documented Case A bbox 0.2375 versus 0.05 failure. Capture-control MCP registration skip remains pending its SDK approval.
+
+2026-10-31 main checks (current, `80eb2030`): core-ingest 8/8; receiver 185 pass + 3 env skips; capture validator 22/22; assembly-memory 24/25 (1 pre-existing `cv2` env error); Android 443/461 (18 pre-existing `GuidanceViewModelTest` failures at frozen `b65cc0a0`), lint 0 errors, assemble clean; compliance 0 errors (1 warning, 18 open reviews). Detail in `INTEGRATION-STATUS.md`.

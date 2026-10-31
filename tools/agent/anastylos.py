@@ -28,6 +28,7 @@ import assemble
 import declare
 import guide
 import selection
+import selected_guide
 from phases import REPO, run_phase, subprocess_runner, vision_python
 from state import SessionError, SessionState
 
@@ -228,6 +229,28 @@ def cmd_select(args) -> dict:
     return selection.resolve(args.memory, args.guide, binding)
 
 
+def cmd_selected_ask(args) -> dict:
+    try:
+        binding = json.loads(args.selection.read_text(encoding="utf-8"))
+        selection.resolve(args.memory, args.guide, binding)
+        proposer, limit = None, None
+        if args.claims:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "live" / "providers"))
+            from fake import FakeProposer
+            proposer = FakeProposer(script={"guide_claims": {"mode": "output", "output":
+                                    json.loads(args.claims.read_text(encoding="utf-8"))}})
+        elif args.muse:
+            state = SessionState.load(_session_root(args.session))
+            proposer, limit = session_proposer(state, None)
+        result = selected_guide.answer(args.memory, args.guide, binding, args.intent, proposer,
+                                       args.cache, args.timeout, "offline_claims" if args.claims else "Muse")
+        if limit is not None:
+            result["muse_budget"] = muse_budget(proposer, limit)
+        return result
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise SessionError("Selected question inputs/cache cannot be read as valid JSON.") from exc
+
+
 def cmd_status(args) -> dict:
     return summary(SessionState.load(_session_root(args.session)))
 
@@ -279,16 +302,29 @@ def main(argv=None) -> int:
     select.add_argument("--memory", type=Path, required=True)
     select.add_argument("--guide", type=Path, required=True)
     select.add_argument("--selection", type=Path, required=True)
+    selected = sub.add_parser("selected-ask", help="ask only recorded origin or storage of a bound single part")
+    for name in ("memory", "guide", "selection"):
+        selected.add_argument("--" + name, type=Path, required=True)
+    selected.add_argument("--intent", choices=("origin", "storage"), required=True)
+    selected.add_argument("--session", type=Path, help="existing budget session, required with --muse; no budget increase")
+    mode = selected.add_mutually_exclusive_group()
+    mode.add_argument("--muse", action="store_true")
+    mode.add_argument("--claims", type=Path, help="offline claims fixture; never a real model call")
+    selected.add_argument("--cache", type=Path, help="separate selected-answer cache JSONL")
+    selected.add_argument("--timeout", type=float, default=guide.MUSE_TIMEOUT_S)
     status = sub.add_parser("status", help="phases, questions, memory events and whether the session is complete")
     status.add_argument("--session", required=True, type=Path)
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):  # operator labels may carry any characters
         sys.stdout.reconfigure(encoding="utf-8")
     handlers = {"new": cmd_new, "phase": cmd_phase, "prepare": cmd_prepare, "ask": cmd_ask, "declare": cmd_declare,
-                "guide": cmd_guide, "assemble": cmd_assemble, "status": cmd_status, "select": cmd_select}
+                "guide": cmd_guide, "assemble": cmd_assemble, "status": cmd_status, "select": cmd_select, "selected-ask": cmd_selected_ask}
     command_lock = None
     if getattr(args, "muse", False):
         from lock import SessionLock, LockHeld
+        if args.session is None:
+            print("STOPPED: --muse requires an existing --session for its saved budget.", file=sys.stderr)
+            return 1
         try:
             state = SessionState.load(_session_root(args.session))
         except SessionError as exc:

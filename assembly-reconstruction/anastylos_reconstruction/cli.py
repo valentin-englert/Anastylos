@@ -34,10 +34,15 @@ def cmd_build(args) -> int:
     svg_text = render_svg(state, svg_path=str(svg_path),
                           embed_crops=args.embed_crops)
     svg_path.write_bytes(svg_text.encode("utf-8"))
+    components = state["components"]
+    n_obs = sum(1 for c in components if c.get("kind", "observation") == "observation")
+    n_dec = len(components) - n_obs
     print(json.dumps({
         "status": state["status"],
         "reason": state["reason"],
-        "observations": len(state["components"]),
+        "components": len(components),
+        "observations": n_obs,
+        "declared_removals": n_dec,
         "embedded_images": svg_text.count('<image id="cropimg-') if args.embed_crops else 0,
         "confirmed": len(state["relationships"].get("confirmed", [])),
         "candidates": len(state["relationships"].get("candidates", [])),

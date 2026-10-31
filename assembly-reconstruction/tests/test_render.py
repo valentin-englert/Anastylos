@@ -52,7 +52,8 @@ class RenderStructure(unittest.TestCase):
     def test_physical_and_observation_sections_present(self):
         text = render_svg(_fixture_state())
         self.assertIn("Physical map", text)
-        self.assertIn("Observation stack", text)
+        self.assertIn("Component stack", text)
+        self.assertIn("Technical explosion sketch", text)
         self.assertNotIn("Exploded stack", text)
         self.assertIn("layout-only", text)
         self.assertIn("verbatim", text)
@@ -62,16 +63,28 @@ class RenderStructure(unittest.TestCase):
 
     def test_header_counts_observations_not_parts(self):
         text = render_svg(_fixture_state())
-        self.assertIn("observations: 5", text)
-        self.assertIn("5 observations of removal evidence — not 5 "
+        self.assertIn("components: 5 (5 observations, 0 declared)", text)
+        self.assertIn("5 components (5 observations, 0 declared) — not 5 "
                       "verified parts", text)
-        self.assertIn("not a verified part", text)
+        self.assertIn("Identity stays unknown", text)
 
     def test_every_card_labeled_identity_unknown_with_badge(self):
         text = render_svg(_fixture_state())
         for index, component in enumerate(_fixture_state()["components"]):
             badge = f"[{index + 1}]"
-            self.assertIn(f"{badge} {component['id']}  identity: unknown", text)
+            self.assertIn(
+                f"{badge} {component['id']}  kind: observation  identity: unknown",
+                text)
+
+    def test_technical_sketch_has_stable_part_ids_and_balloons(self):
+        text = render_svg(_fixture_state())
+        root = ET.fromstring(text)
+        for component in _fixture_state()["components"]:
+            part = root.find(f".//*[@id='part-{component['id']}']")
+            self.assertIsNotNone(part)
+            self.assertEqual(part.get("data-event-id"), component["id"])
+            self.assertIsNotNone(root.find(f".//*[@id='balloon-{component['id']}']"))
+            self.assertIn(f'href="#part-{component["id"]}"', text)
 
     def test_badges_link_map_boxes_to_cards(self):
         text = render_svg(_fixture_state())

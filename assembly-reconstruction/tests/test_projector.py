@@ -39,7 +39,12 @@ class ProjectorContract(unittest.TestCase):
         state = _fixture_state()
         validate_state(state)
         self.assertEqual(state["schema_version"], SCHEMA_VERSION)
-        self.assertEqual(state["projector"]["version"], "1.0.0")
+        self.assertEqual(state["projector"]["version"], "1.1.0")
+        for component in state["components"]:
+            self.assertEqual(component["kind"], "observation")
+            self.assertIsNone(component["declaration"])
+            self.assertIn(component["representation"]["kind"],
+                          ("mask_contour", "evidence_crop", "declared_card"))
 
     def test_live_components_in_log_order_with_superseded(self):
         state = _fixture_state()
@@ -170,13 +175,17 @@ class ProjectorContract(unittest.TestCase):
 
 
 class ProjectorEdgeCases(unittest.TestCase):
-    def test_operator_declared_events_are_accepted_and_not_projected(self):
+    def test_operator_declared_events_are_projected_with_null_geometry(self):
         declared = [
             {"type": "phase", "id": "phase-0001", "session": "s", "label": "P1", "starts_after": None},
             {"type": "declared_removal", "id": "dec-0001", "session": "s", "operator_label": "back shell",
-             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+             "source": "device", "phase": "phase-0001", "declared_by": "owner", "evidence_note": None,
+             "t_s": None},
             {"type": "storage_link", "id": "store-0001", "session": "s", "target_id": "dec-0001",
              "location": "OUT-B", "basis": {"kind": "human", "confirmed_by": "owner"}},
+            {"type": "compatible_group", "id": "grp-0001", "session": "s",
+             "members": ["dec-0001", "obs-0001"], "label": "demo-group",
+             "basis": {"kind": "operator_statement", "declared_by": "owner"}},
         ]
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp) / "memory.jsonl"
@@ -186,7 +195,81 @@ class ProjectorEdgeCases(unittest.TestCase):
         plain = _fixture_state()
         validate_state(with_declared)
         self.assertEqual(with_declared["status"], plain["status"])
-        self.assertEqual(len(with_declared["components"]), len(plain["components"]))
+        self.assertEqual(len(with_declared["components"]), len(plain["components"]) + 1)
+        by_id = {c["id"]: c for c in with_declared["components"]}
+        dec = by_id["dec-0001"]
+        self.assertEqual(dec["kind"], "declared_removal")
+        self.assertEqual(dec["declaration"]["operator_label"], "back shell")
+        self.assertEqual(dec["identity"]["status"], "unknown")
+        self.assertIsNone(dec["identity"]["label"])
+        self.assertIsNone(dec["physical"]["bbox_mm"])
+        self.assertEqual(dec["storage"]["location"], "OUT-B")
+        self.assertEqual(dec["representation"]["kind"], "declared_card")
+        self.assertTrue(any(g["id"] == "grp-0001" for g in dec["compatible_groups"]))
+        self.assertTrue(any(g["id"] == "grp-0001" for g in by_id["obs-0001"]["compatible_groups"]))
+        self.assertEqual(with_declared["phases"][0]["id"], "phase-0001")
+
+    def test_superseded_declared_removal_is_not_live(self):
+        events = [
+            {"type": "phase", "id": "phase-0001", "session": "s", "label": "P1", "starts_after": None},
+            {"type": "declared_removal", "id": "dec-0001", "session": "s", "operator_label": "old",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "declared_removal", "id": "dec-0002", "session": "s", "operator_label": "new",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner",
+             "supersedes": "dec-0001"},
+            {"type": "storage_link", "id": "store-0001", "session": "s", "target_id": "dec-0002",
+             "location": "OUT-A", "basis": {"kind": "human", "confirmed_by": "owner"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "memory.jsonl"
+            log.write_text("".join(json.dumps(event) + "\n" for event in events),
+                           encoding="utf-8")
+            state = build_state(str(log))
+        validate_state(state)
+        self.assertEqual([c["id"] for c in state["components"]], ["dec-0002"])
+        self.assertEqual(state["superseded"], ["dec-0001"])
+
+    def test_conflicting_storage_locations_are_warned(self):
+        events = [
+            {"type": "phase", "id": "phase-0001", "session": "s", "label": "P1", "starts_after": None},
+            {"type": "declared_removal", "id": "dec-0001", "session": "s", "operator_label": "a",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "declared_removal", "id": "dec-0002", "session": "s", "operator_label": "b",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "storage_link", "id": "store-0001", "session": "s", "target_id": "dec-0001",
+             "location": "cell-1", "basis": {"kind": "human", "confirmed_by": "owner"}},
+            {"type": "storage_link", "id": "store-0002", "session": "s", "target_id": "dec-0002",
+             "location": "cell-1", "basis": {"kind": "human", "confirmed_by": "owner"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "memory.jsonl"
+            log.write_text("".join(json.dumps(event) + "\n" for event in events),
+                           encoding="utf-8")
+            state = build_state(str(log))
+        self.assertEqual(len(state["components"]), 2)
+        self.assertTrue(any("claimed by multiple targets" in w for w in state["warnings"]))
+
+    def test_shared_storage_inside_compatible_group_is_not_a_conflict(self):
+        events = [
+            {"type": "phase", "id": "phase-0001", "session": "s", "label": "P1", "starts_after": None},
+            {"type": "declared_removal", "id": "dec-0001", "session": "s", "operator_label": "a",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "declared_removal", "id": "dec-0002", "session": "s", "operator_label": "b",
+             "source": "device", "phase": "phase-0001", "declared_by": "owner"},
+            {"type": "storage_link", "id": "store-0001", "session": "s", "target_id": "dec-0001",
+             "location": "cell-1", "basis": {"kind": "human", "confirmed_by": "owner"}},
+            {"type": "storage_link", "id": "store-0002", "session": "s", "target_id": "dec-0002",
+             "location": "cell-1", "basis": {"kind": "human", "confirmed_by": "owner"}},
+            {"type": "compatible_group", "id": "grp-0001", "session": "s",
+             "members": ["dec-0001", "dec-0002"], "label": "screws",
+             "basis": {"kind": "operator_statement", "declared_by": "owner"}},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "memory.jsonl"
+            log.write_text("".join(json.dumps(event) + "\n" for event in events),
+                           encoding="utf-8")
+            state = build_state(str(log))
+        self.assertFalse(any("claimed by multiple targets" in w for w in state["warnings"]))
 
     def test_missing_log_is_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:

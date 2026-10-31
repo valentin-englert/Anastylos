@@ -4,9 +4,11 @@ from __future__ import annotations
 
 SCHEMA_VERSION = "assembly-state-v1"
 PROJECTOR_NAME = "anastylos-assembly-reconstruction"
-PROJECTOR_VERSION = "1.0.0"
+PROJECTOR_VERSION = "1.1.0"
 
 STATUSES = ("ok", "ambiguous", "unknown", "unavailable")
+COMPONENT_KINDS = ("observation", "declared_removal")
+REPRESENTATION_KINDS = ("mask_contour", "evidence_crop", "declared_card")
 
 # Deterministic exploded-layout constants (layout_px; no physical meaning).
 LAYOUT = {
@@ -18,10 +20,27 @@ LAYOUT = {
     "column_gap": 48.0,
     "row_gap": 28.0,
     "label_band": 64.0,    # vertical space reserved for card labels
+    # Fixed symbol size when a declared removal has no bbox_mm.
+    "declared_w": 48.0,
+    "declared_h": 36.0,
 }
 
 # Physical-map rendering scale (SVG px per frame mm; stated in the SVG).
 PHYSICAL_SCALE = 2.0
+
+# Technical explosion sketch layout (layout_px only; not measured poses).
+TECH_LAYOUT = {
+    "origin_x": 160.0,
+    "origin_y": 280.0,
+    "lane_x0": 320.0,
+    "lane_gap_x": 200.0,
+    "row_gap_y": 150.0,
+    "phase_gap_y": 36.0,
+    "contour_max": 96.0,
+    "card_w": 120.0,
+    "card_h": 72.0,
+    "balloon_r": 12.0,
+}
 
 
 class StateError(ValueError):
@@ -48,17 +67,36 @@ def validate_state(state: dict) -> None:
     if not isinstance(components, list):
         raise StateError("components must be a list")
     for component in components:
+        cid = component.get("id")
         _need(component, "id", "component")
-        identity = _need(component, "identity", f"component {component.get('id')}")
+        kind = component.get("kind", "observation")
+        if kind not in COMPONENT_KINDS:
+            raise StateError(f"component {cid}: kind must be one of {COMPONENT_KINDS}")
+        identity = _need(component, "identity", f"component {cid}")
         if identity.get("status") != "unknown" or identity.get("label") is not None:
             raise StateError(
-                f"component {component.get('id')}: v1 identity must stay unknown with null label")
-        physical = _need(component, "physical", f"component {component.get('id')}")
-        _need(physical, "source_view", "physical")
-        _need(physical, "bbox_mm", "physical")
-        _need(physical, "centroid_mm", "physical")
-        _need(physical, "evidence", "physical")
-        exploded = _need(component, "exploded", f"component {component.get('id')}")
+                f"component {cid}: v1 identity must stay unknown with null label")
+        physical = _need(component, "physical", f"component {cid}")
+        if kind == "observation":
+            _need(physical, "source_view", "physical")
+            _need(physical, "bbox_mm", "physical")
+            _need(physical, "centroid_mm", "physical")
+            _need(physical, "evidence", "physical")
+        else:
+            declaration = _need(component, "declaration", f"component {cid}")
+            if not isinstance(declaration, dict):
+                raise StateError(f"component {cid}: declaration must be an object")
+            for key in ("operator_label", "phase", "declared_by"):
+                _need(declaration, key, "declaration")
+        representation = component.get("representation")
+        if representation is not None:
+            if not isinstance(representation, dict):
+                raise StateError(f"component {cid}: representation must be an object")
+            if representation.get("kind") not in REPRESENTATION_KINDS:
+                raise StateError(
+                    f"component {cid}: representation.kind must be one of "
+                    f"{REPRESENTATION_KINDS}")
+        exploded = _need(component, "exploded", f"component {cid}")
         for key in ("x", "y", "w", "h", "column", "row"):
             _need(exploded, key, "exploded")
         if exploded.get("units") != "layout_px":

@@ -51,8 +51,10 @@ library only, offline). One invocation writes `assembly_state.json` and
 {
   "id": "obs-0003",
   "timeline_index": 2,
+  "kind": "observation",
   "identity": {"status": "unknown", "label": null,
     "note": "memory records no part names; identity stays unknown until an operator asserts it elsewhere"},
+  "declaration": null,
   "physical": {
     "source_view": "surface_a3",
     "bbox_mm": [154.0, 81.0, 6.75, 6.25],
@@ -75,20 +77,90 @@ library only, offline). One invocation writes `assembly_state.json` and
   "tray": {"link_id": "link-0001",
     "tray": {"sheet_id": "surface_a3", "frame": "surface_a3", "number": 1, "rect_frame_mm": […]},
     "basis": {"kind": "human", "confirmed_by": "…", "note": null}},
+  "storage": null,
+  "storages": null,
+  "compatible_groups": [],
+  "representation": {
+    "kind": "mask_contour",
+    "method": "change-detection-mask-boundary-v1",
+    "source_image": "…/mask.png",
+    "source_sha256": "…",
+    "roi_px": [1002, 606, 50, 49],
+    "coordinate_space": "rectified_image_px",
+    "points_px": [[…], […]],
+    "note": "…"
+  },
   "exploded": {"x": 40.0, "y": 40.0, "w": 27.0, "h": 25.0,
     "units": "layout_px", "column": 0, "row": 2}
+}
+```
+
+### Additive fields (projector ≥ 1.1.0)
+
+These fields extend Assembly State v1 without redefining existing ones.
+`schema_version` stays `"assembly-state-v1"`. Existing observation
+consumers that ignore unknown keys remain valid.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `kind` | string | `"observation"` or `"declared_removal"`. |
+| `declaration` | object\|null | Operator declaration copied verbatim for declared removals (`operator_label`, `source`, `phase`, `declared_by`, `evidence_note`, `t_s`, optional related `observation_id`). **Not** an identity claim. Null on observations. |
+| `storage` | object\|null | Single live `storage_link` for this component (`link_id`, `location`, `basis`). |
+| `storages` | array\|null | When several live storage links target the same id, all are listed and the entry is flagged ambiguous — the projector never picks one. |
+| `compatible_groups` | array | Live `compatible_group` memberships that include this id (group `id`, `label`, `members`, `basis`). Interchangeable members stay a group; no per-hole assignment is invented. |
+| `representation` | object | How the technical sketch draws this entry. `kind` is one of `mask_contour` (boundary from cited change-detection `mask.png` inside `bbox_px`), `evidence_crop` (labeled crop substitute when no usable mask contour exists), or `declared_card` (labeled operator substitute when no metric silhouette exists). Always carries method, source path/hash when applicable, ROI, coordinate space, and an honesty note. |
+
+Declared-removal example (metric geometry unknown):
+
+```json
+{
+  "id": "dec-0006",
+  "timeline_index": 5,
+  "kind": "declared_removal",
+  "identity": {"status": "unknown", "label": null,
+    "note": "operator_label is a declaration, not a verified part identity"},
+  "declaration": {
+    "operator_label": "back shell",
+    "source": "controller (top half)",
+    "phase": "phase-0002",
+    "declared_by": "owner",
+    "evidence_note": null,
+    "t_s": null,
+    "observation_id": null
+  },
+  "physical": {
+    "source_view": null, "bbox_mm": null, "centroid_mm": null,
+    "evidence": null, "region_resolved": false, "region": null,
+    "missing_reason": "declared_removal carries no metric geometry"
+  },
+  "crops": [],
+  "crop_unavailable": "declared_removal has no change-detection crops",
+  "tray": null,
+  "storage": {"link_id": "store-0006", "location": "OUT-B (outside the sheet)",
+    "basis": {"kind": "human", "confirmed_by": "owner"}},
+  "storages": null,
+  "compatible_groups": [],
+  "representation": {"kind": "declared_card", "method": "operator-declaration-card-v1",
+    "note": "SUBSTITUTE — operator declaration; no measured silhouette"},
+  "exploded": {"x": …, "y": …, "w": 48.0, "h": 36.0, "units": "layout_px", …}
 }
 ```
 
 Rules:
 
 - `identity.status` is always `"unknown"` and `label` always `null` in
-  v1. The projector names no parts. (`ambiguous` is reserved for a
-  future version fed by an explicit operator assertion file.)
+  v1. The projector names no parts. Operator words live only under
+  `declaration.operator_label` and must be rendered as operator basis.
+  (`ambiguous` is reserved for a future version fed by an explicit
+  operator assertion file.)
+- Live components are every non-superseded `observation` **and**
+  `declared_removal`, in log order. Superseded ids of either kind are
+  listed under `superseded` and are not drawn as live.
 - `tray` is `null` when the observation has no live tray link
   (`unassigned`). When several live links exist, all are listed under
   `trays` instead and the entry is flagged ambiguous — the projector
-  never picks one.
+  never picks one. Declared removals keep `tray` null; storage uses
+  `storage` / `storages`.
 - `crops` lists only image files that exist on disk at projection time,
   resolved as siblings of the cited `result.json` via its `output_files`
   names. `clip_px` is the region's `bbox_px` verbatim (rectified-image
@@ -96,7 +168,14 @@ Rules:
   `crop_unavailable` carries the reason. Before/after clips are always
   presented as an uninterrupted pair — the projector never states which
   one shows the component.
+- `representation` prefers a `mask_contour` from the cited result's
+  `output_files.mask` when that PNG exists and the ROI has nonzero
+  pixels; otherwise an `evidence_crop` when rectified crops exist; else
+  a `declared_card` / explicit unavailable substitute. Arbitrary
+  rectangles are never emitted as recognized silhouettes.
 - `exploded` positions come only from the layout algorithm below.
+  Declared entries without `bbox_mm` use a fixed layout symbol size
+  (not a physical measurement).
 - Provenance: the current SHA-256 of each cited `result.json` is
   recomputed and compared with the cited `result_sha256`. A mismatch
   rejects the region (`missing_reason`, plus a `missing_evidence`

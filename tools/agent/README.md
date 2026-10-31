@@ -129,9 +129,26 @@ Compliance: `python tools/compliance/check.py` reports 0 errors, 1 warning (no w
 environment check skipped), 18 existing open reviews. `python -m unittest test_check` in `tools/compliance`
 passes 5 tests; its selftests are not in a `tests/` directory. No dependency or license inventory changed.
 
-Remaining integration limits for a real Muse run: `guide.py::_propose_with_timeout` stops waiting after 60 s
-but does not cancel the provider thread; `providers/meta.py::MetaProposer` persists attempt counts only when
-the call finishes and does not serialize concurrent CLI processes. Run one model command at a time and let
-in-flight work finish before retrying; concurrent/crash-in-flight budget hardening is outside this stabilization.
-Provider retention is unchanged. The camera-to-memory-to-guide-to-Muse hardware workflow remains
-PENDING_EVIDENCE; no new model capabilities or real API validation are claimed.
+Provider lifecycle repair (local branch `codex/provider-lifecycle`, 2026-10-31): guide workers are non-daemon.
+The answer deadline remains 60 s by default. After it, the fallback is fixed and late claims never replace it.
+The CLI displays that fallback and an English waiting message, then drains the provider before returning;
+its session lock remains held. Drain joins use the remaining provider work bound (367 s from start plus 5 s
+cleanup allowance), never an unbounded join. JSON budget reporting follows draining so late retries are counted.
+The real transport enforces a subprocess wall deadline: see [provider limits](../live/providers/README.md).
+Thus the response deadline is not the process duration: a free guide question may take up to 367 s of
+transport/backoff (plus OS/local overhead) to exit, rather than 60 s. A command with multiple prefetch proposals
+has this bound per proposal, not per entire command. Filesystem/OS stalls and nonconforming injected transports
+have no hard process-lifetime guarantee. Hard termination can lose the completion, but not its fsynced budget
+reservation. Saved session limits, old traces, cache semantics and provider retention are preserved.
+
+The camera-to-memory-to-guide-to-Muse hardware workflow remains PENDING_EVIDENCE. No real API invocation or
+hardware validation is part of this repair. The serial Muse development test can be attempted after the offline
+lifecycle checks pass; copy the existing trace/reservation budget together with a session, never reset it.
+
+Offline repair verification: `python -m unittest discover -s tests` from `tools/agent`: 60 PASS;
+from `tools/live/providers`: 32 PASS; from `tools/live`: 57 PASS; from `tools/live/integration`: 12 PASS.
+All final suites have 0 FAIL / 0 ERROR / 0 SKIP. Controlled tests cover late results, CLI process shutdown,
+pre-send reservation, hard `os._exit` and restart, legacy accounting, retries/cache, concurrent process/CLI
+exclusion and exhausted budgets. A test-child encoding error was corrected by explicitly setting its UTF-8
+stdio environment; no assertion was weakened. `python tools/compliance/check.py --json`: 0 errors, 1 warning
+(no worktree venv), 18 existing reviews. E3-B task bytes before/after: 20/20. Zero real API attempts.

@@ -198,6 +198,10 @@ def cmd_guide(args) -> dict:
     if args.muse:
         proposer, limit = session_proposer(state, args.max_calls)
     result = guide.answer(state, args.question, proposer=proposer, timeout_s=args.timeout)
+    if proposer is not None:
+        if result.get("source") == "refusal":
+            print(result["text"], file=sys.stderr, flush=True)
+        guide.wait_for_provider_work()
     output = {k: result.get(k) for k in ("question", "text", "source", "accepted", "package_sha256", "findings")}
     if proposer is not None:
         output["muse_budget"] = muse_budget(proposer, limit)
@@ -269,12 +273,32 @@ def main(argv=None) -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     handlers = {"new": cmd_new, "phase": cmd_phase, "prepare": cmd_prepare, "ask": cmd_ask, "declare": cmd_declare,
                 "guide": cmd_guide, "assemble": cmd_assemble, "status": cmd_status}
+    command_lock = None
+    if getattr(args, "muse", False):
+        from lock import SessionLock, LockHeld
+        try:
+            state = SessionState.load(_session_root(args.session))
+        except SessionError as exc:
+            print(f"STOPPED: {exc}", file=sys.stderr)
+            return 1
+        command_lock = SessionLock(state.root)
+        try:
+            command_lock.acquire({"operation": "model command"})
+        except LockHeld:
+            print("STOPPED: Another model command is still running for this session.", file=sys.stderr)
+            return 1
     try:
         result = handlers[args.command](args)
     except (SessionError, ask_loop.Stopped, guide.GuideError) as exc:
         print(f"STOPPED: {exc}", file=sys.stderr)
         return 1
-    print(json.dumps(result, ensure_ascii=False, indent=1))
+    finally:
+        try:
+            guide.wait_for_provider_work()
+        finally:
+            if command_lock is not None:
+                command_lock.release()
+    print(json.dumps(result, ensure_ascii=False, indent=1), flush=True)
     return 0
 
 

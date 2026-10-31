@@ -157,3 +157,78 @@ class Budget(tq.Case):
         self.assertEqual(raised["muse_budget"], {"limit": 13, "used": 13, "remaining": 0})
         self.assertEqual(again["muse_budget"], raised["muse_budget"])
         self.assertEqual(len(transport.requests), 1)
+
+
+class ProviderLifecycle(tq.Case):
+    def test_cli_waits_for_late_provider_and_keeps_timeout_answer(self):
+        import threading
+        import time
+        state = m2.full_session(self.tmp / "s")
+        guide.build(state)
+        entered, finished = threading.Event(), threading.Event()
+        class Slow:
+            calls_used = 1
+            def propose(self, *args):
+                entered.set()
+                time.sleep(0.15)
+                finished.set()
+                return {"status": "ok", "output": {"schema": "anastylos-guide-claims@1", "claims": [],
+                                                      "insufficient_evidence": True}}
+        out, err = io.StringIO(), io.StringIO()
+        with patch("anastylos.session_proposer", return_value=(Slow(), 2)):
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = anastylos.main(["guide", "ask", "--session", str(state.root), "--muse",
+                                       "--question", "explain this assembly", "--timeout", "0.01"])
+        self.assertEqual(code, 0)
+        self.assertTrue(entered.is_set() and finished.is_set())
+        result = json.loads(out.getvalue())
+        self.assertEqual(result["source"], "refusal")
+        self.assertFalse(result["accepted"])
+        self.assertIn("Waiting for provider work", err.getvalue())
+        self.assertIn("no answer within", " ".join(result["findings"]))
+        self.assertFalse(guide._pending_workers)
+
+    def test_normal_cli_process_drains_non_daemon_work(self):
+        import subprocess
+        import sys
+        import os
+        code = """
+import sys, time
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import test_m2 as m2
+import anastylos, guide
+state = m2.full_session(Path(sys.argv[2]))
+guide.build(state)
+class Slow:
+    calls_used = 1
+    def propose(self, *args):
+        time.sleep(0.15)
+        print('fake provider completed', file=sys.stderr, flush=True)
+        return {'status':'ok','output':{'schema':'anastylos-guide-claims@1','claims':[], 'insufficient_evidence':True}}
+anastylos.session_proposer = lambda state, cap: (Slow(), 2)
+raise SystemExit(anastylos.main(['guide','ask','--session',str(state.root),'--muse',
+                              '--question','explain the assembly','--timeout','0.01']))
+"""
+        done = subprocess.run([sys.executable, "-c", code, str(tq.AGENT / "tests"), str(self.tmp / "process")],
+                              capture_output=True, text=True, encoding="utf-8", timeout=20,
+                              env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn("Waiting for provider work", done.stderr)
+        self.assertIn("fake provider completed", done.stderr)
+        self.assertEqual(json.loads(done.stdout)["source"], "refusal")
+
+    def test_cli_rejects_concurrent_model_command(self):
+        from lock import SessionLock
+        state = self.session()
+        held = SessionLock(state.root)
+        held.acquire({"operation": "test concurrent CLI"})
+        try:
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err), patch("anastylos.session_proposer") as factory:
+                code = anastylos.main(["prepare", "--session", str(state.root), "--muse"])
+            self.assertEqual(code, 1)
+            self.assertIn("Another model command", err.getvalue())
+            factory.assert_not_called()
+        finally:
+            held.release()

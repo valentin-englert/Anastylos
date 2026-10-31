@@ -247,3 +247,66 @@ target pose following the cues, let dwell fire, then sync and verify the
 receiver package hash. Everything up to dwell has been seen passing
 today; this is a ~10 minute operator run. In parallel: contract review
 of the 150 ms freshness gate against measured per-device pipeline floors.
+
+## 13. Addendum 2026-10-31 — XCAL run 3 (tripod set + hand-held tilts)
+
+Input: operator tripod set `xiaomi-round2` (114 originals, sessions 2a–2d,
+camera 0 “Back 6.0 mm”, manual focus 40 cm per operator) plus the 18
+hand-held ChArUco views of run 1 (same optics). A previous Codex fit of the
+tripod set alone reached held-out 1.06 px (gate 0.8) with `camera_id`
+and focus left `unknown`.
+
+Diagnosis (per-session ChArUco-only fit, diagnostic): tripod session 2b
+alone gives fx = 10 877 (near-fronto-parallel views make focal length
+unobservable), 2c fx = 1481, pooled 1640 — ill-conditioned. Tilt
+diversity, not image quality, was missing.
+
+Run 3, subsampling fixed before fitting and not error-based (validator
+allows 25–40 views): all 18 hand-held tilted ChArUco views, every 5th
+tripod ChArUco view (10), every 3rd A3 fit view (9); the 26 A3
+validation views (odd sorted index) untouched. `--camera-id 0
+--focus-diopters 2.5`.
+
+| | value | gate |
+|---|---|---|
+| fit / held-out views | 25 / 12 | 25–40 total |
+| fit RMS | 0.70 px | — |
+| held-out RMS | **0.78 px** | ≤ 0.8 ✅ |
+| cross-board A3 pooled (26 unseen) | **1.42 px** | ≤ 1.5 ✅ |
+| scale anchor | ok | ✅ |
+| max single view | **1.79 px** (one A3 view, 488 mm, lowest sharpness) | ≤ 1.5 ❌ |
+| K | fx = fy = 1422.8, cx 969.5, cy 535.3 | consistent with run 1 (1418) |
+| validator | **needs_review** (`MAX_VIEW_RMS_OVER_GATE`) | |
+
+Verdict: **not validated, not bundled.** Removing the single over-gate view
+would pass, but that is error-based selection after seeing the result and
+is not done. Clean completion: one pre-registered rule set before a new
+fit (e.g. A3 views only at ≤ 470 mm and a sharpness floor fixed from the
+ChArUco set), or ~10 fresh tilted A3 views at ~45 cm. Evidence:
+`claude-review-evidence/xcal-run3/` (+ `persession.py`). The hackathon
+demo does not depend on the Xiaomi (runbook uses the SM-A536B).
+
+## 14. Addendum 2026-10-31 — XCAL run 4: Xiaomi profile validated (owner rule)
+
+Owner decision (valentin-englert, 2026-10-31): the Xiaomi must carry a
+profile; no further captures; a recorded rule change is acceptable. Rule
+written **before** the refit: `claude-review-evidence/xcal-run4-METHOD.md`
+(single-pass removal of fit-side views over the 1.5 px per-view gate under
+the run-3 profile → exactly one A3 view; one refit; gates unchanged; no run 5).
+
+| | run 4 | gate |
+|---|---|---|
+| fit / held-out views | 24 / 12 | 25–40 total ✅ |
+| fit / held-out RMS | 0.71 / **0.58 px** | ≤ 0.8 ✅ |
+| cross-board A3, 26 untouched views | **1.42 px** | ≤ 1.5 ✅ |
+| scale anchor 481.0 vs 480.98 mm | ok | ✅ |
+| validator | **accept**, `metric_validity: validated` | |
+
+Bundled as `app/src/main/assets/measured-profile-M2101K6G.json`
+(limitation names the rule and its weakness: error-based, chosen after
+run 3). Tests: `AssetMeasuredProfileSourceTest` now checks that each phone
+gets only its own profile → Android **455/455 PASS**. APK `385894bc…`
+installed and hash-verified on the Xiaomi; live log: `guided intrinsics
+measured profile=measured:e92c8ea1…`, `status=VALID`, RMS 1.21 px at
+1920×1080 (gate 1.8), 52/60 poses ≤ 150 ms, pose age avg 117 ms.
+Evidence: `claude-review-evidence/xcal-run4/` (SHA256SUMS).

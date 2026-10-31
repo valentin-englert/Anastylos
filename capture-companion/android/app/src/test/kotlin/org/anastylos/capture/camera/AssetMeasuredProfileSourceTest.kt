@@ -30,7 +30,7 @@ class AssetMeasuredProfileSourceTest {
 
     @Test
     fun otherPhoneNeverGetsTheBundledProfile() {
-        val src = source("M2101K6G")
+        val src = source("Pixel 9")
         assertThat(src.forGeometry("0", 1920, 1080, 0f, FocusMode.MANUAL, 2.5f)).isNull()
         assertThat(src.forGeometry("0", 1280, 720, 0f, FocusMode.MANUAL, 2.5f)).isNull()
         assertThat(src.calibratedOptics("0")).isNull()
@@ -43,5 +43,18 @@ class AssetMeasuredProfileSourceTest {
             .mismatch("0", 1280, 720, 0f, FocusMode.AUTO, 0f)
         assertThat(reason).contains("focus")
         assertThat(reason).contains("2.50 D")
+    }
+
+    @Test
+    fun secondPhoneGetsOnlyItsOwnProfile() {
+        val xiaomi = source("M2101K6G").forGeometry("0", 1280, 720, 0f, FocusMode.MANUAL, 2.5f)
+        val samsung = source(CAL01_DEVICE_MODEL).forGeometry("0", 1280, 720, 0f, FocusMode.MANUAL, 2.5f)
+        assertThat(xiaomi?.profileId).startsWith("measured:")
+        assertThat(xiaomi?.profileId).endsWith("@1280x720-scaled")
+        assertThat(xiaomi?.profileId).isNotEqualTo(samsung?.profileId)
+        val doc = org.anastylos.capture.guidance.CalibrationProfile.parse(
+            java.io.File("src/main/assets/measured-profile-M2101K6G.json").readText(),
+        )!!
+        assertThat(xiaomi!!.fx).isWithin(1e-9).of(doc.k[0] * 1280 / 1920)
     }
 }

@@ -92,9 +92,28 @@ sealed interface PairOutcome {
     data class Failed(val message: String) : PairOutcome
 }
 
+/** The bound attempt a guided upload belongs to. */
+data class GuidedUploadLink(
+    val sessionId: String,
+    val requestId: String,
+    val requestRevision: Int,
+    val attemptId: String,
+) {
+    fun headers(): Map<String, String> = mapOf(
+        "X-Guided-Session-Id" to sessionId,
+        "X-Guided-Request-Id" to requestId,
+        "X-Guided-Request-Revision" to requestRevision.toString(),
+        "X-Guided-Attempt-Id" to attemptId,
+    )
+}
+
 sealed interface UploadOutcome {
-    /** Staged now (`duplicate=false`) or already known (`duplicate=true`). */
-    data class Staged(val duplicate: Boolean, val reportJson: String) : UploadOutcome
+    /**
+     * Staged now (`duplicate=false`) or already known (`duplicate=true`).
+     * [receiptStatus] is the Core receipt a guided upload joins; null on the legacy path.
+     */
+    data class Staged(val duplicate: Boolean, val reportJson: String, val receiptStatus: String? = null) :
+        UploadOutcome
     /** Validator refused the bytes; retrying identical bytes is pointless. */
     data class Rejected(val reportJson: String) : UploadOutcome
     data class Unauthorized(val message: String) : UploadOutcome
@@ -143,20 +162,22 @@ class ReceiverClient(
         }
     }
 
-    suspend fun uploadPackage(token: String, pkg: BuiltFramePackage): UploadOutcome =
+    /**
+     * Uploads one package. With [guided] the receiver routes it as the
+     * guided upload of a bound attempt (guided token, `X-Guided-*`
+     * headers) and joins the attempt's receipt; without, it is the
+     * legacy upload.
+     */
+    suspend fun uploadPackage(token: String, pkg: BuiltFramePackage, guided: GuidedUploadLink? = null): UploadOutcome =
         withContext(ioDispatcher) {
+            val headers = mapOf(
+                "Content-Type" to "application/zip",
+                "Authorization" to "Bearer $token",
+                "X-Package-Id" to pkg.packageId,
+                "X-Package-Sha256" to pkg.packageSha256,
+            ) + (guided?.headers() ?: emptyMap())
             val response = transport.exchange(
-                HttpRequest(
-                    method = "POST",
-                    path = "/v1/packages",
-                    headers = mapOf(
-                        "Content-Type" to "application/zip",
-                        "Authorization" to "Bearer $token",
-                        "X-Package-Id" to pkg.packageId,
-                        "X-Package-Sha256" to pkg.packageSha256,
-                    ),
-                    body = pkg.bytes,
-                ),
+                HttpRequest(method = "POST", path = "/v1/packages", headers = headers, body = pkg.bytes),
             )
             when (response.status) {
                 201, 200 -> {
@@ -181,7 +202,12 @@ class ReceiverClient(
                     if (echoed != pkg.packageId) {
                         UploadOutcome.Failed("acceptance report referenced another package id")
                     } else {
-                        UploadOutcome.Staged(duplicate = duplicate, reportJson = text)
+                        val receipt = try {
+                            root["receipt"]?.jsonObject?.get("status")?.jsonPrimitive?.content
+                        } catch (_: Exception) {
+                            null
+                        }
+                        UploadOutcome.Staged(duplicate = duplicate, reportJson = text, receiptStatus = receipt)
                     }
                 }
                 422 -> UploadOutcome.Rejected(response.bodyText())

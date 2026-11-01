@@ -171,10 +171,11 @@ class GuidedDeliveryTest {
             updatedAt = stamp,
         )
 
-    private fun ack(packageId: String, duplicate: Boolean = false, status: Int = 201) =
+    private fun ack(packageId: String, duplicate: Boolean = false, status: Int = 201, receipt: String? = null) =
         HttpResponse(
             status,
-            """{"duplicate": $duplicate, "report": {"package_id": "$packageId", "status": "valid"}}"""
+            ("""{"duplicate": $duplicate, "report": {"package_id": "$packageId", "status": "valid"}""" +
+                (receipt?.let { ""","receipt": {"status": "$it"}}""" } ?: "}"))
                 .toByteArray(Charsets.UTF_8),
         )
 
@@ -300,7 +301,7 @@ class GuidedDeliveryTest {
         val expectedPackage = framePackageId(obs)
         transport.handler = { request ->
             when {
-                request.path == "/v1/packages" -> ack(expectedPackage)
+                request.path == "/v1/packages" -> ack(expectedPackage, receipt = "package_only")
                 request.path.endsWith("/asset-binding") -> bindAck()
                 request.path.endsWith("/spatial") -> sidecarAck()
                 else -> HttpResponse(500, ByteArray(0))
@@ -330,6 +331,16 @@ class GuidedDeliveryTest {
         val binding = json.decodeFromString(GuidedAssetBinding.serializer(), bindingBody)
         assertThat(binding.imageSha256).isEqualTo(bytes.sha256Hex())
         assertThat(binding.packageId).isEqualTo(expectedPackage)
+        // G0 order: bind, then the guided upload that joins the receipt, then the sidecar.
+        assertThat(transport.requests.map { it.path.substringAfterLast('/') })
+            .containsExactly("asset-binding", "packages", "spatial").inOrder()
+        val upload = transport.requests.single { it.path == "/v1/packages" }
+        assertThat(upload.headers["Authorization"]).isEqualTo("Bearer guided")
+        assertThat(upload.headers["X-Guided-Attempt-Id"]).isEqualTo(attemptUuid("att-1"))
+        assertThat(upload.headers["X-Guided-Request-Id"]).isEqualTo(requestUuid("req-1"))
+        assertThat(upload.headers["X-Guided-Request-Revision"]).isEqualTo("1")
+        assertThat(upload.headers["X-Guided-Session-Id"]).isEqualTo(guidedSessionId)
+        assertThat(link.receiptStatus).isEqualTo(ReceiptKind.PACKAGE_ONLY)
         val sidecarBody = transport.requests
             .first { it.path.endsWith("/spatial") }.body!!.toString(Charsets.UTF_8)
         assertThat(json.parseToJsonElement(sidecarBody).jsonObject.getValue("sidecar").jsonObject)
@@ -397,7 +408,7 @@ class GuidedDeliveryTest {
     }
 
     @Test
-    fun `rejected package is terminal and unbinds nothing`() = runTest {
+    fun `rejected guided upload is terminal`() = runTest {
         val repo = FakeRepository()
         repo.sessions[session.sessionId] = session
         val bytes = "still-bytes".toByteArray()
@@ -405,7 +416,9 @@ class GuidedDeliveryTest {
         repo.observations[obs.observationId] = obs
         val associations = FakeAssociations()
         associations.recordGuidedAssociation(association(obs))
-        val transport = ScriptedTransport { HttpResponse(422, ByteArray(0)) }
+        val transport = ScriptedTransport { request ->
+            if (request.path.endsWith("/asset-binding")) bindAck() else HttpResponse(422, ByteArray(0))
+        }
         val underTest = delivery(repo, associations, mapOf(obs.images.single().imageId to bytes), transport)
 
         val outcome = underTest.deliver(
@@ -422,7 +435,8 @@ class GuidedDeliveryTest {
         assertThat(repo.synced).isEmpty()
         assertThat(associations.getGuidedAssociation(obs.images.single().imageId)!!.deliveryState)
             .isEqualTo(DeliveryState.REJECTED)
-        assertThat(transport.requests).hasSize(1)
+        assertThat(transport.requests.map { it.path.substringAfterLast('/') })
+            .containsExactly("asset-binding", "packages").inOrder()
     }
 
     @Test
@@ -566,7 +580,7 @@ class GuidedDeliveryTest {
     }
 
     @Test
-    fun `retry resumes after the marked package`() = runTest {
+    fun `a package marked by an earlier upload still joins its receipt by guided upload`() = runTest {
         val repo = FakeRepository()
         repo.sessions[session.sessionId] = session
         val bytes = "still-bytes".toByteArray()
@@ -584,6 +598,7 @@ class GuidedDeliveryTest {
         transport.handler = { request ->
             when {
                 request.path.endsWith("/asset-binding") -> bindAck()
+                request.path == "/v1/packages" -> ack(packageId, duplicate = true, status = 200, receipt = "package_only")
                 request.path.endsWith("/spatial") -> sidecarAck(receipt = "package_only")
                 else -> HttpResponse(500, ByteArray(0))
             }
@@ -600,7 +615,8 @@ class GuidedDeliveryTest {
             ),
         ) as DeliveryOutcome.Delivered
 
-        assertThat(transport.requests.none { it.path == "/v1/packages" }).isTrue()
+        assertThat(transport.requests.single { it.path == "/v1/packages" }.headers["X-Guided-Attempt-Id"])
+            .isEqualTo(attemptUuid("att-1"))
         assertThat(outcome.deliveryState).isEqualTo(DeliveryState.PACKAGE_ACCEPTED)
         assertThat(outcome.receiptStatus).isEqualTo(ReceiptKind.PACKAGE_ONLY)
     }

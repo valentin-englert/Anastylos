@@ -273,6 +273,8 @@ class GuidanceViewModel(
     private var lastMotion: Pair<Double, Double>? = null
     private var lastUiEstimateNs: Long? = null
     private var lastStillCallbackNs: Long? = null
+    /** The pose current when the still arrived; frames keep coming before the sidecar is built. */
+    private var stillEstimate: PoseEstimator.Estimate? = null
     private var remote: GuidedRemote? = null
     private var remoteCollectJob: Job? = null
     private var bindEpoch: String? = null
@@ -435,6 +437,7 @@ class GuidanceViewModel(
         lastCorners = emptyMap()
         lastCornersNs = null
         lastEstimate = null
+        stillEstimate = null
         lastMotion = null
         lastAppliedSeen = null
         _state.update { it.copy(appliedLine = null) }
@@ -866,6 +869,7 @@ class GuidanceViewModel(
             try {
                 val still = source.takeGuidedStill()
                 lastStillCallbackNs = nanoClock()
+                stillEstimate = lastEstimate
                 val stored = persistStill(still, automatic = false)
                 _state.update { it.copy(shutterBusy = false, captureResult = stored) }
             } catch (e: Exception) {
@@ -1634,6 +1638,7 @@ class GuidanceViewModel(
                     val source = camera ?: throw IllegalStateException("camera detached")
                     val still = source.takeGuidedStill()
                     lastStillCallbackNs = nanoClock()
+                    stillEstimate = lastEstimate
                     val stored = persistStill(still, automatic = true)
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
@@ -1804,7 +1809,7 @@ class GuidanceViewModel(
         still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill,
         imageSha: String,
     ): SpatialSidecar.Input? {
-        val estimate = lastEstimate ?: return null
+        val estimate = stillEstimate ?: return null
         val snapshot = _state.value
         val sessionUuid = snapshot.remoteSessionId ?: return null
         val request = snapshot.remoteRequest ?: return null

@@ -1,4 +1,4 @@
-"""Frozen part segmentation r3: Muse names a tight box for a described part, SAM segments that box.
+"""Frozen part segmentation r4.2: Muse names a tight box for a described part, SAM segments that box.
 
     python tools/drawing-proof/muse_sam.py --manifest <images.json> --out <dir>
 
@@ -34,7 +34,8 @@ SCHEMA = {"type": "object", "additionalProperties": False, "required": ["found",
           "properties": {"found": {"type": "boolean"},
                          "box": {"type": "array", "items": {"type": "integer"}, "minItems": 4, "maxItems": 4},
                          "fully_visible": {"type": "boolean"}, "reason": {"type": "string", "maxLength": 300}}}
-FROZEN = {"revision": "r4 (r3 with the calibration-sheet sentence removed from the prompt)","muse_model": "muse-spark-1.3-contributor", "reasoning_effort": "max", "muse_max_side_px": 1024,
+FROZEN = {"revision": "r4.2 (r4.1 with reasoning effort high, accepted by EFF-1; r4.1 = r4 + box clamped to the image)",
+          "muse_model": "muse-spark-1.3-contributor", "reasoning_effort": "high", "muse_max_side_px": 1024,
           "muse_jpeg_quality": 90, "prompt_sha256": hashlib.sha256(PROMPT.encode()).hexdigest(),
           "schema_sha256": hashlib.sha256(json.dumps(SCHEMA, sort_keys=True).encode()).hexdigest(),
           "sam_model": "sam-3.1", "sam_prompt": "one box = Muse box scaled back to full resolution",

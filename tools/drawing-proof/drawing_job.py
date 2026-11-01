@@ -35,6 +35,8 @@ import source
 
 STATES = ["single_part", "assembly", "assembled_object", "unclear"]
 SCOPE_STATE = {"part": "single_part", "assembly": "assembly", "object": "assembled_object"}
+# EFF-1 measured high only for the part box; the frame choice keeps max until it is measured itself.
+CHOICE_EFFORT = "max"
 CHOICE_SCHEMA = {"type": "object", "additionalProperties": False,
                  "required": ["tile", "usable", "state", "view_side", "attachments_seen", "reason", "uncertainties"],
                  "properties": {"tile": {"type": "integer"}, "usable": {"type": "boolean"}, "state": {"type": "string", "enum": STATES},
@@ -152,7 +154,7 @@ def _muse_choice(sheet, chosen: list, spec: dict, key: str) -> tuple[dict, dict,
     times = ", ".join(f"{i} = {c.t_s:.1f} s" for i, c in enumerate(chosen, 1))
     prompt = CHOICE_PROMPT.format(times=times, part=spec["part"], scope=spec["scope"], view_side=spec["view_side"],
                                   attachments=spec["attachments"])
-    payload = {"model": muse_sam.FROZEN["muse_model"], "reasoning": {"effort": muse_sam.FROZEN["reasoning_effort"]},
+    payload = {"model": muse_sam.FROZEN["muse_model"], "reasoning": {"effort": CHOICE_EFFORT},
                "input": [{"role": "user", "content": [{"type": "input_text", "text": prompt},
                           {"type": "input_image", "image_url": "data:image/jpeg;base64," + base64.b64encode(jpg.tobytes()).decode()}]}],
                "text": {"format": {"type": "json_schema", "name": "frame_choice", "strict": True, "schema": CHOICE_SCHEMA}}}

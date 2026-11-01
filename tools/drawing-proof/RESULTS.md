@@ -130,3 +130,27 @@ object states apart; fusion is only valid inside one confirmed state, so it need
 (event window or operator).
 
 API use: Muse 6, SAM 6 (MF-1), 0 failures. EV-1 used no model.
+
+## EFF-1: reasoning effort high vs max for the part box (plan `specs/plan_eff1.json`, committed 2e576acd before the run), 2026-11-02
+
+6 dev images × {max, high} × 2 repeats, interleaved; script `effort_experiment.py`, raw output
+`C:\tmp\anastylos-drawing-proof\eff1\eff1.json`.
+
+| arm | valid | median latency | median output tokens | median IoU vs reference | median repeat IoU |
+|---|---|---|---|---|---|
+| max (r4.1) | 12/12 | 28.0 s | 2145 | 0.926 | 0.981 |
+| high | 12/12 | 19.4 s | 1428 | 0.914 | 0.966 |
+
+Pre-registered acceptance (valid 12/12; IoU within 0.03 of max: −0.012; consistency not lower by more than 0.05:
+−0.015; latency lower: −31 %) is met → **adopted as r4.2** for the part box only. The frame-choice call was not
+measured and stays at max (`drawing_job.CHOICE_EFFORT`). Caveats: the reference box is derived from max-arm
+results, so it favours max; on T5 (shoulder piece) high returned a box about 8 % too tall in both repeats (IoU 0.91
+vs 0.98) — SAM segments inside the box, so this loosens the prompt rather than cutting the part, but it is the first
+thing to watch. Latency spread is wide in both arms (max 12.6–54.2 s, high 17.2–33.8 s); high mainly removes the
+long tail.
+
+Prompt cache probe (F0, max, `prompt_cache_key`): the key is accepted; calls 2 and 3 reported 790 of 815 input
+tokens cached. Latency 31.1 / 28.9 / 19.9 s — not attributable to the cache, because input is tiny and reasoning
+dominates. Not adopted (no measurable benefit).
+
+API use: Muse 27, 0 failures, 0 retries.

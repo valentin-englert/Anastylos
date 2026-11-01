@@ -1,0 +1,19 @@
+{
+ "region_mm": [
+  58,
+  50,
+  254,
+  177
+ ],
+ "px_per_mm": 6.0,
+ "stride_s": 0.5,
+ "candidates": 6,
+ "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P2.mp4",
+ "t_range": [
+  55,
+  80
+ ],
+ "part": "printed circuit board with its cable",
+ "scope": "assembly",
+ "attachments": "cable included as part of the assembly; shells excluded"
+}

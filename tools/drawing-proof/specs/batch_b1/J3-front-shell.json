@@ -1,0 +1,19 @@
+{
+ "region_mm": [
+  58,
+  50,
+  254,
+  177
+ ],
+ "px_per_mm": 6.0,
+ "stride_s": 0.5,
+ "candidates": 6,
+ "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+ "t_range": [
+  0,
+  20
+ ],
+ "part": "front shell of the game controller with button membranes",
+ "scope": "assembly",
+ "attachments": "membranes and rubber pad included as mounted"
+}

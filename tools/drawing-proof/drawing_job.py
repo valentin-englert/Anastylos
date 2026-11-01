@@ -84,11 +84,18 @@ def run(spec: dict, job: Path) -> dict:
         with progress.stage("select_candidates"):
             chosen = frames.select(sampled, spec["candidates"])
         with progress.stage("rectify_candidates"):
-            tiles, rectified = [], []
-            for c in chosen:
-                _, rf = source.rectify(video, c.frame_index, tuple(spec["region_mm"]), spec["px_per_mm"])
+            tiles, rectified, skipped = [], [], []
+            for c in list(chosen):
+                try:
+                    _, rf = source.rectify(video, c.frame_index, tuple(spec["region_mm"]), spec["px_per_mm"])
+                except SystemExit as exc:  # the sheet reader exits on a rejected registration: skip that frame
+                    skipped.append({"frame": c.frame_index, "reason": str(exc)[:200]})
+                    chosen.remove(c)
+                    continue
                 rectified.append(rf)
                 tiles.append(rf.image)
+            if not tiles:
+                raise RuntimeError(f"no candidate frame registered: {skipped}")
             sheet = frames.contact_sheet(tiles)
             cv2.imwrite(str(job / "contact_sheet.jpg"), sheet)
         key = muse_sam.client.load_key()
@@ -116,6 +123,11 @@ def run(spec: dict, job: Path) -> dict:
             result = {"status": "MODEL_BOX_INVALID", "box": box}
             progress.write("done", None, result=result)
             return result
+        if not box["answer"]["fully_visible"]:  # Muse itself says the part is cut off: ask for a capture, draw nothing
+            result = {"status": "NEEDS_CAPTURE", "reason": box["answer"]["reason"], "frame": {"index": picked.frame_index, "t_s": picked.t_s},
+                      "capture_gap_kind": "outer_boundary", "usage": usage}
+            progress.write("done", None, result=result)
+            return result
         with progress.stage("sam"):
             usage["sam_calls"] += 1
             mask, sam_info = muse_sam.sam_mask(image_path, box["box_full"], rf.image.shape[:2], job / "sam", job / "sam_ledger.jsonl")
@@ -133,18 +145,18 @@ def run(spec: dict, job: Path) -> dict:
                         "subtitle": f"{video.name} frame {picked.frame_index} ({picked.t_s} s); attachments: {spec['attachments']}",
                         "legend": [f"Outline: SAM mask boundary, max deviation {deviation:.2f} mm, sheet plane; not part dimensions.",
                                    f"Opening candidates: {len(openings)}, unconfirmed, hidden layer 'opening_candidates'.",
-                                   "Inner details: not extracted (empty layer). Identity, view side and orientation unconfirmed."]}
+                                   "Inner details: not extracted (empty layer). Frame identity (which physical part), view side and orientation unconfirmed."]}
             (job / "drawing.svg").write_text(render_layered_svg(rf.px_to_mm(outline).round(2).tolist(), openings_mm, svg_spec), encoding="utf-8")
             cv2.imwrite(str(job / "overlay.jpg"), muse_sam.overlay(rf.image, outer, openings, box["box_full"]))
-        result = {"status": "drawn", "scope": spec["scope"], "attachments": spec["attachments"],
+        result = {"status": "drawn_unconfirmed", "needs": ["operator confirms frame identity (capture-gap kind frame_identity)"], "scope": spec["scope"], "attachments": spec["attachments"],
                   "frame": {"index": picked.frame_index, "t_s": picked.t_s}, "choice": choice, "box": box["answer"],
                   "outline_points": len(outline), "opening_candidates": len(openings), "sam": sam_info,
                   "muse_latency_s": {"choose": meta["latency_s"], "box": box["latency_s"]},
-                  "candidates": [{"frame": c.frame_index, "t_s": c.t_s, "sharpness": round(c.sharpness, 1), "motion": round(c.motion, 2),
+                  "skipped_candidates": skipped, "candidates": [{"frame": c.frame_index, "t_s": c.t_s, "sharpness": round(c.sharpness, 1), "motion": round(c.motion, 2),
                                   "skin": round(c.skin, 4)} for c in chosen], "usage": usage}
         progress.write("done", None, result=result)
         return result
-    except Exception as exc:  # the dialog must see a failure, never a silent stop
+    except (Exception, SystemExit) as exc:  # the dialog must see a failure, never a silent stop
         usage["failed_calls"] += 1
         progress.write("failed", None, error=f"{type(exc).__name__}: {str(exc)[:300]}", usage=usage)
         raise

@@ -58,7 +58,7 @@ def muse_box(image: np.ndarray, part: str, key: str) -> dict:
     answer = json.loads(text)
     box = answer["box"]
     valid = bool(answer["found"]) and 0 <= box[0] < box[2] <= sw and 0 <= box[1] < box[3] <= sh
-    return {"answer": answer, "valid": valid, "box_full": [round(v / scale) for v in box] if valid else None,
+    return {"answer": answer, "valid": valid, "box_full": [min(round(v / scale), limit) for v, limit in zip(box, (w, h, w, h))] if valid else None,
             "latency_s": meta["latency_s"], "usage": data.get("usage"), "effort_returned": (data.get("reasoning") or {}).get("effort")}
 
 

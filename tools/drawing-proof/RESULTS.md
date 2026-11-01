@@ -66,3 +66,26 @@ the rubber pad are not part of a SAM part mask at all.
 
 `sam_drawing.py` turns a SAM mask on a rectified image into an SVG with outline and openings as separate
 geometry (dev images F0 and T3).
+
+## Demonstrator batch B1 (frame choice variant + frozen r4/r4.1 box→SAM), 2026-11-01
+
+Specs `specs/batch_b1/` committed before the run (90b50c08). One attempt per job planned; J2 needed three
+because of two own bugs, all attempts kept under `C:\tmp\anastylos-drawing-proof\batch-b1\`.
+
+| Job | Chosen frame | Outcome (visual) | Stage seconds (sample / rectify / choose / box / SAM / svg) | Total s |
+|---|---|---|---|---|
+| J1 back shell (P2 0–40 s) | 0.5 s | **wrong object**: the assembled controller lying back-up, not the separate back shell; Muse called it the back shell. Top view cannot tell them apart. | 88.9 / 3.9 / 10.5 / 37.8 / 7.5 / 0.1 | 148.8 |
+| J2 PCB with cable (P2 55–80 s) | 64.5 s | **wrong**: Muse box `fully_visible=false` (cable leaves the image), SAM mask covers half the board, 10 junk opening candidates; the job drew anyway (design bug, fixed: now `NEEDS_CAPTURE`, no SVG) | 35.9 / 4.1 / 11.0 / 17.6 / 7.9 / 0.1 | 76.5 |
+| J3 front shell with membranes (P3 0–20 s) | 0.5 s | correct outline | 51.3 / 2.4 / 7.3 / 13.5 / 8.5 / 0.1 | 83.2 |
+
+J2 attempts: 1 crashed silently (sheet reader `SystemExit` on one candidate, progress stuck at `running`;
+fixed: candidate skipped and logged, any exit writes `failed`); 2 SAM refused the box locally (rescaled box one
+pixel past the image; fixed as r4.1 clamp); 3 ran.
+
+API use B1: Muse 8 calls (0 failed), SAM 3 calls (0 failed) + 1 local refusal before sending. Latency 77–149 s
+per job, sampling the video dominates (36–89 s); Muse 18–48 s per job; SAM 7.5–8.5 s. Not live: the job runs
+in the background and writes `progress.json` per stage.
+
+Consequences: every drawing is `drawn_unconfirmed` until the operator confirms frame identity; a Muse
+`fully_visible=false` stops the job with a capture request. The back-shell and PCB drawings for the explosion
+still need the two hand-free captures; no explosion is drawn.

@@ -914,11 +914,113 @@ async function stopTalking() {
 }
 
 function routeTranscript(text) {
-  /* The transcript is operator input like typed text: it goes to whatever the dialog is waiting for. */
+  /* The transcript is operator input like typed text: it goes to whatever the dialog is waiting for.
+     Two fixed commands work anywhere: "next question" and "repeat". */
+  const command = text.toLowerCase().replace(/[^a-z ]/g, "").trim();
+  if (command === "next question" || command === "next") { nextQuestion($("next-button")); return; }
+  if (command === "repeat" || command === "say that again") {
+    speak(!$("confirm-card").hidden ? $("confirm-text").textContent : $("prompt-text").textContent);
+    return;
+  }
   if (!$("confirm-card").hidden) { $("confirm-input").value = text; sendConfirm($("confirm-button")); return; }
   if (!$("prompt-card").hidden) { $("answer-input").value = text; sendAnswer(text, null, $("answer-button")); return; }
   $("ask-input").value = text.replace(/^\s*muse[,.!]?\s*/i, "");
   askGuide($("ask-button"));
+}
+
+/* ------------------------------------------------------------------ wake word */
+
+/* Opt-in hands-free mode: a local energy detector cuts speech segments; each segment is transcribed and only
+   segments that start with the wake word are acted on. No segment is kept; silence is never sent. */
+const WAKE = /^\W*(?:hey\s+|ok(?:ay)?\s+)?(?:muse|meta|mews)\b[\s,.!?:-]*(.*)$/i;
+const VAD = { blockMs: 0, startFactor: 3.0, minFloor: 0.004, hangMs: 800, maxMs: 8000, minMs: 400, prerollBlocks: 3, armedMs: 6000 };
+const listen = { on: false, stream: null, context: null, processor: null, source: null, floor: 0.01,
+                 segment: null, quiet: 0, preroll: [], busy: false, armedUntil: 0 };
+
+async function startListening() {
+  try {
+    listen.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  } catch (error) {
+    $("wake-toggle").checked = false;
+    setText("voice-state", "Microphone not available: " + error.message);
+    return;
+  }
+  listen.context = new AudioContext();
+  listen.source = listen.context.createMediaStreamSource(listen.stream);
+  listen.processor = listen.context.createScriptProcessor(4096, 1, 1);
+  VAD.blockMs = 4096 / listen.context.sampleRate * 1000;
+  listen.processor.onaudioprocess = (event) => onListenBlock(new Float32Array(event.inputBuffer.getChannelData(0)));
+  listen.source.connect(listen.processor);
+  listen.processor.connect(listen.context.destination);
+  listen.on = true;
+  setText("voice-state", "Listening for “Muse” …");
+}
+
+async function stopListening() {
+  listen.on = false;
+  listen.segment = null;
+  if (listen.processor) { listen.processor.disconnect(); listen.source.disconnect(); }
+  if (listen.stream) listen.stream.getTracks().forEach((track) => track.stop());
+  if (listen.context) await listen.context.close();
+  listen.context = listen.stream = listen.processor = listen.source = null;
+  setText("voice-state", "");
+}
+
+function onListenBlock(block) {
+  /* Deaf while the agent speaks, while a clip is transcribed and while push-to-talk records. */
+  if (!listen.on || listen.busy || voice.recording || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+    listen.segment = null;
+    return;
+  }
+  let energy = 0;
+  for (const value of block) energy += value * value;
+  const rms = Math.sqrt(energy / block.length);
+  const threshold = Math.max(VAD.minFloor, listen.floor * VAD.startFactor);
+  if (!listen.segment) {
+    listen.floor = 0.95 * listen.floor + 0.05 * rms;   // background level, only learned outside speech
+    listen.preroll.push(block);
+    if (listen.preroll.length > VAD.prerollBlocks) listen.preroll.shift();
+    if (rms > threshold) { listen.segment = [...listen.preroll]; listen.quiet = 0; }
+    return;
+  }
+  listen.segment.push(block);
+  listen.quiet = rms > threshold ? 0 : listen.quiet + VAD.blockMs;
+  const length = listen.segment.length * VAD.blockMs;
+  if (listen.quiet >= VAD.hangMs || length >= VAD.maxMs) {
+    const segment = listen.segment;
+    listen.segment = null;
+    if (length - listen.quiet >= VAD.minMs) handleSegment(segment, listen.context.sampleRate);
+  }
+}
+
+async function handleSegment(blocks, rate) {
+  listen.busy = true;
+  try {
+    const total = blocks.reduce((n, b) => n + b.length, 0);
+    const samples = new Float32Array(total);
+    let offset = 0;
+    for (const b of blocks) { samples.set(b, offset); offset += b.length; }
+    const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" },
+                                                          body: wavFromSamples(samples, rate, 16000) });
+    if (result.status !== "ok" || !result.transcript) return;
+    const match = WAKE.exec(result.transcript.trim());
+    const armed = Date.now() < listen.armedUntil;
+    if (!match && !armed) return;                       // not addressed to the agent: discarded, not shown
+    const command = match ? match[1].trim() : result.transcript.trim();
+    if (!command) {
+      listen.armedUntil = Date.now() + VAD.armedMs;
+      setText("voice-state", "Yes? (listening for your command)");
+      speak("Yes?");
+      return;
+    }
+    listen.armedUntil = 0;
+    setText("voice-state", `You said: “${command}” (${result.latency_s} s)`);
+    routeTranscript(command);
+  } catch (error) {
+    setText("voice-state", "Transcription failed: " + error.message);
+  } finally {
+    listen.busy = false;
+  }
 }
 
 /* ------------------------------------------------------------------ wiring */
@@ -956,4 +1058,5 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keyup", (event) => { if (event.code === "Space" && voice.recording) { event.preventDefault(); stopTalking(); } });
 
+$("wake-toggle").addEventListener("change", (event) => (event.target.checked ? startListening() : stopListening()));
 loadSessions();

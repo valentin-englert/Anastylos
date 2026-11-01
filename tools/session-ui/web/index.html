@@ -12,7 +12,8 @@
   <div class="voice-bar" id="voice-bar">
     <button type="button" id="talk-button" aria-describedby="voice-hint">Hold to talk</button>
     <label><input type="checkbox" id="speak-toggle" checked> Speak replies</label>
-    <span class="hint" id="voice-hint">Hold the button or the space bar, speak in English, release. Speech goes to Muse Voice Transcribe; the clip is not stored.</span>
+    <label><input type="checkbox" id="wake-toggle"> Listen for “Muse”</label>
+    <span class="hint" id="voice-hint">Hold the button or the space bar, or switch on “Listen for Muse” and start with “Muse …” or “Meta …”. While listening, every spoken phrase in the room is sent to Muse Voice Transcribe; phrases without the wake word are discarded and nothing is stored.</span>
     <p class="state" id="voice-state" role="status"></p>
   </div>
   <p class="offline-banner" id="offline-banner">Deterministic L0 questions and stored claims. Model calls (Meta API) only for voice transcription and part drawings.</p>

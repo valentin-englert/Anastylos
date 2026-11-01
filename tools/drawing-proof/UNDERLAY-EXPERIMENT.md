@@ -18,6 +18,11 @@ tablet showing two colours): a pixel that changes colour between the two shots i
 Back shell exterior up, PCB component side up (cable laid away from the board), front shell interior up. One
 shot per part and condition: 9 shots (12 with C2).
 
+Added 2026-11-02 (owner's objects, never seen by any tuned step; same three conditions, one shot each):
+open-end wrench (glossy metal: reflections, thin jaws), Ender 5 display (flat electronics with ribbon cable),
+pistol fidget toy (a multi-part assembly: also a candidate for a second full disassembly). Underlays available:
+coloured foam rubber (condition C) and an LED tracing pad (condition B) with the A4 ArUco sheets around it.
+
 ## Measured, fixed before recording
 
 Frozen r4.1 Muse box → SAM and `quality.plausibility`; visual check of outline and openings, each separately;

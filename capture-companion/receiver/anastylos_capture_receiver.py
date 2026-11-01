@@ -61,6 +61,7 @@ sys.path.insert(0, str(VALIDATOR_DIR))
 import anastylos_capture_validate as validator  # noqa: E402  (sibling import by design)
 import anastylos_qr as qr_encode  # noqa: E402  (same directory by design)
 import anastylos_guided_routes as guided  # noqa: E402  (same directory by design)
+import anastylos_voice_routes as voice  # noqa: E402  (same directory by design)
 
 SERVICE_NAME = "anastylos-capture-receiver"
 API_VERSION = 1
@@ -741,6 +742,9 @@ class ReceiverHandler(BaseHTTPRequestHandler):
                 return
             self._handle_upload()
             return
+        if voice.is_voice_path(parsed.path):
+            if voice.VoiceRoutes(self).dispatch_post(parsed):
+                return
         if parsed.path.startswith("/v1/guided/"):
             if guided.GuidedRoutes(self).dispatch_post(parsed):
                 return
@@ -1032,6 +1036,10 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Serve plaintext HTTP on loopback only (development/tests; never a LAN mode).",
     )
+    serve.add_argument("--voice-transcriber", type=Path, default=None,
+                       help="tools/live/providers/transcribe.py; enables voice transcription (VOICE-01 R9).")
+    serve.add_argument("--session-ui-port", type=int, default=None,
+                       help="Port of the session UI on 127.0.0.1; enables voice input (VOICE-01 R10).")
 
     status = sub.add_parser("status", help="List staged packages for operator review.")
     status.add_argument("--json", action="store_true", help="Print the staged index as JSON.")
@@ -1237,6 +1245,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
         print("error: --port must be within 1..65535", file=sys.stderr)
         return 2
     state = ReceiverState(args.data_dir)
+    transcriber = getattr(args, "voice_transcriber", None)
+    state.voice_config = voice.VoiceConfig(
+        transcriber=[sys.executable, "-B", str(transcriber), "--stdin"] if transcriber else None,
+        session_ui_port=getattr(args, "session_ui_port", None),
+        bindings_path=args.data_dir / voice.BINDINGS_FILE,
+    )
     host = args.host
     plaintext = bool(args.plaintext_localhost)
 

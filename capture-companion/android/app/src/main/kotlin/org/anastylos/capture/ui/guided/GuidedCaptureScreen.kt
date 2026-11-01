@@ -8,6 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import org.anastylos.capture.voice.VoiceController
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -143,6 +146,7 @@ fun GuidedCaptureScreen(
             }
         }
         TrackingBanner(state)
+        VoiceRow(container.voice)
         Box(modifier = Modifier.fillMaxWidth()) {
             AndroidView(
                 factory = { previewView },
@@ -178,6 +182,54 @@ fun GuidedCaptureScreen(
         state.captureError?.let { Text("Capture: $it", color = MaterialTheme.colorScheme.error) }
         state.sessionReason?.let { Text("Session note: $it") }
     }
+}
+
+/**
+ * Opt-in "Listen for Muse": a visible indicator while the microphone is
+ * open, a hold-to-talk fallback, and the voice status line. Transcripts
+ * are never shown here; only the status of the voice link.
+ */
+@Composable
+private fun VoiceRow(voice: VoiceController) {
+    val context = LocalContext.current
+    val voiceState by voice.state.collectAsState()
+    val micLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted -> if (granted) voice.startListening() }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = voiceState.listening,
+            onClick = {
+                when {
+                    voiceState.listening -> voice.stopListening()
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED -> voice.startListening()
+                    else -> micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            },
+            label = { Text("Listen for Muse") },
+        )
+        if (voiceState.listening) {
+            OutlinedButton(
+                onClick = {},
+                modifier = Modifier.pointerInput(Unit) {
+                    detectTapGestures(onPress = {
+                        voice.pushToTalkDown()
+                        tryAwaitRelease()
+                        voice.pushToTalkUp()
+                    })
+                },
+            ) { Text(if (voiceState.pushToTalk) "Release to send" else "Hold to talk") }
+        }
+    }
+    if (voiceState.listening) {
+        Text(
+            "● MICROPHONE ON — only phrases starting with “Muse” or “Meta” are used",
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+    voiceState.heard?.let { Text("You said: “$it”", style = MaterialTheme.typography.bodySmall) }
+    if (voiceState.status.isNotEmpty()) Text(voiceState.status, style = MaterialTheme.typography.bodySmall)
 }
 
 /** [GuidanceUiState] with every per-pose field at its default. */

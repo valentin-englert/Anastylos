@@ -3,6 +3,8 @@
 
     <!-- Declared up front, requested contextually at the moment of use. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Opt-in "Listen for Muse" voice mode only; requested when switched on. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- LAN HTTPS to the workstation is a socket like any other. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

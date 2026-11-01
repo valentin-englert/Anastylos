@@ -90,6 +90,57 @@ Source: `assembly-reconstruction/cad/PARAMETRIC-PROPOSAL.md:29-41`.
   and local (5 doc/--help strings); schema IDs, wire protocols,
   database names, and public interfaces unchanged.
 
+## R9. CR-VOICE-01 — audio uplink over the paired receiver (2026-11-01)
+
+- Requester: Android lane (VOICE-01, `docs/integration/VOICE-01.md`).
+  Android side implemented and committed (`2ce5b757`), shipped with a
+  `PendingContractVoiceLink` that sends nothing.
+- Need: the phone must get a transcript of a short spoken segment
+  without holding `MODEL_API_KEY` and without a second, unpaired channel.
+- Proposal: `POST /v1/guided/sessions/{session_id}/voice/transcribe` on
+  the receiver; same TLS, guided-token and session checks as the other
+  `/v1/guided/sessions/*` routes.
+  - Request body `audio/wav`, mono 16-bit PCM, 16 kHz (24 kHz allowed),
+    0.4–8 s, ≤ 260 kB. Anything else: 415 (not WAV/format) or 413 (size).
+  - The receiver runs `tools/live/providers/transcribe.py --stdin`
+    (`muse-voice-transcribe-1.0`) as a subprocess, exactly like
+    `tools/session-ui/server.py` `/api/voice/transcribe` on
+    `research/drawing-proof` (`4187de16`), and stores neither audio nor
+    transcript.
+  - Response 200 `{status, transcript, latency_s}` (subset of
+    `anastylos-live-transcript@1`); provider failure 502, deadline 504.
+  - Journal: one line per call with session id, duration, status,
+    latency; no audio, no transcript text.
+- Open questions for the TL: rate limit per session (proposal: 1
+  in-flight call, ≤ 20 calls/min); whether the receiver may import from
+  `tools/live/` or must shell out (proposal: shell out, as session-ui).
+
+## R10. CR-VOICE-02 — operator input up, verified speech text down (2026-11-01)
+
+- Need: a transcript is operator input like typed text
+  (`anastylos-live-operator-input@1`, `source: speech_transcript`); it
+  must reach the live coordinator / agent session, and the phone may only
+  speak text the workstation produced.
+- Proposal: `POST /v1/guided/sessions/{session_id}/voice/input`, same auth.
+  - Request `anastylos-live-operator-input@1` with either
+    `{source: "speech_transcript", text}` or
+    `{source: "command", command: "next_question" | "repeat"}`.
+  - The receiver forwards to the agent session bound to this guided
+    session (`tools/agent`, `integration/agent-v1`: `ask` / read-back /
+    `guide ask`), which applies its existing rules: nothing is written to
+    memory without a confirmed "yes".
+  - Response `{status, speak: {text, kind, basis_ref} | null}`;
+    `kind` ∈ `l0_question | read_back | status | verified_guide`;
+    `text` comes only from the coordinator, the read-back, a fixed status
+    sentence, or claims verified by `tools/guide/claims.py` — never free
+    model text.
+- Decisions needed: (a) how a guided session is bound to an agent
+  session folder (proposal: explicit `agent_session` reference set at
+  `guided/sessions` creation); (b) contract version bump of the live
+  contract (`tools/live/CONTRACT.md`) for the `command` source value.
+- Without R9/R10 the acceptance “Muse, next question” → spoken question
+  → spoken answer → “yes” → commit cannot be shown on the phone.
+
 ## Explicitly NOT Contract Owner scope (routed elsewhere)
 
 - Measured print scale for all 5 sheets + controller height

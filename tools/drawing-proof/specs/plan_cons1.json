@@ -1,0 +1,115 @@
+{
+  "schema": "anastylos-drawing-proof-plan@1",
+  "id": "CONS-1",
+  "written_before_any_run": true,
+  "date": "2026-11-01",
+  "authorisation": "TL session 2026-11-01: API use approved for product experiments in limited, logged batches with bounded retries; audit 2026-11-01 finding: Muse run-to-run consistency is unmeasured",
+  "question": "How consistent is Muse across repeated identical calls for the two decisions the drawing pipeline relies on (frame choice, part box), and what does that imply for single call vs voting vs operator confirmation?",
+  "scope_limits": [
+    "measures self-consistency only: no ground truth, so a consistently wrong answer scores as consistent",
+    "all inputs are development data (they were seen while the pipeline was built); there is no independent test set in this experiment",
+    "the pipeline is not changed: drawing_job and muse_sam defaults stay frozen (frame choice effort max; box r4.2 effort high); a voting proposal, if any, is text for the TL"
+  ],
+  "decisions": {
+    "frame_choice": {
+      "request": "drawing_job._muse_choice, frozen: effort max, CHOICE_SCHEMA, CHOICE_PROMPT, contact sheet JPEG q88",
+      "jobs": {
+        "J1-back-shell": "specs/batch_b1/J1-back-shell.json (P2 0-40 s; requested single_part back shell; B1 sheet of 5 tiles)",
+        "J2-pcb-cable": "specs/batch_b1/J2-pcb-cable.json (P2 55-80 s; requested assembly PCB with cable; B1 sheet of 4 tiles: frame 1845 was skipped in B1 and is skipped here)",
+        "J3-front-shell": "specs/batch_b1/J3-front-shell.json (P3 0-20 s; requested single_part front shell; B1 sheet of 3 tiles)"
+      },
+      "sheet_reconstruction": "frames.cached_sample + frames.select, restricted to the candidates recorded in the B1 job progress.json; tiles loaded by drawing_job._candidate_tiles from C:\\ANASTYLOS\\data\\drawing-cache (every tile file must exist beforehand, otherwise the run aborts before any API call: no video decoding). The same sheet array is sent in every repeat. Reconstruction is checked against the saved B1 contact_sheet.jpg (same shape; mean absolute pixel difference reported, JPEG re-encode expected < 3).",
+      "repeats_per_job": 5,
+      "effort": "max (frozen, drawing_job.CHOICE_EFFORT)"
+    },
+    "part_box": {
+      "request": "muse_sam.muse_box, revision r4.2: effort high (frozen default), no cache key",
+      "images": [
+        "F0-front-p3-f300",
+        "T1-front-p3-f240",
+        "T2-front-p3-f360",
+        "T3-front-empty-aftermath",
+        "T4-dpad-membrane-aftermath",
+        "T5-shoulder-piece-p3-f300"
+      ],
+      "image_source": "the EFF-1 rectified images (effort_experiment.rectified), part descriptions as in effort_experiment.PARTS",
+      "repeats_per_image": 3
+    }
+  },
+  "order": "frame choice round-robin over jobs for repeat 1..5, then box round-robin over images for repeat 1..3; strictly sequential",
+  "budget": {
+    "planned_muse_calls": 33,
+    "hard_cap_muse_calls_including_retries": 40,
+    "retries": "max 1 per planned call, only after an API/transport error or an answer that is not parseable or violates the schema; never after a well-formed answer (including found=false or unclear); 5 s pause; every retry logged. When the cap is reached the remaining planned calls are recorded as not_run and count as missing.",
+    "sam_calls": 0
+  },
+  "per_call_record": [
+    "decision",
+    "unit",
+    "repeat",
+    "attempt",
+    "latency_s",
+    "error",
+    "answer",
+    "valid",
+    "usage (box only: _muse_choice does not return usage)"
+  ],
+  "measures": {
+    "frame_choice": {
+      "gate_outcome": "NEEDS_CAPTURE if not usable or tile outside 1..n; else drawing_job.frame_decision(spec, choice, t_s, removal_s=None) -> ok | NEEDS_CONFIRMATION (this is what the pipeline does with the answer)",
+      "decision_tuple": "(gate_outcome, tile) with tile = null when gate_outcome is NEEDS_CAPTURE",
+      "state": "choice.state",
+      "view_class": "deterministic class of choice.view_side (lower case): contains both a back-word and a front-word -> mixed; back-word (back, rear, bottom, underside, inside, inner) -> back; front-word (front, top, outer) -> front; else other. Raw strings are reported next to the class and are not scored.",
+      "per_job": "modal share k/5 of decision_tuple, of gate_outcome, of tile, of state, of view_class; failed or not_run calls count as non-members of the mode; latency",
+      "not_scored": "reason, uncertainties, attachments_seen (free text, reported for visual review)"
+    },
+    "part_box": {
+      "validity": "valid count of 3 (found and box inside the image, as muse_sam.muse_box computes it)",
+      "fully_visible": "agreement across the valid calls",
+      "iou": "pairwise IoU of box_full over the valid calls (3 pairs per image): min, median; per-edge max-min spread in px",
+      "latency_and_tokens": "latency_s, output and reasoning tokens"
+    }
+  },
+  "decision_rule": {
+    "levels": {
+      "L0": "single call acceptable (no inconsistency shown; n is small, so this is absence of evidence, not a proof of high agreement)",
+      "L1": "vote required: majority of 3 independent calls, ties or no majority go to the operator",
+      "L2": "operator confirmation required: the automatic result must not pass without the operator choosing or confirming (frame choice: always NEEDS_CONFIRMATION; box: always NEEDS_REVIEW)"
+    },
+    "why_these_thresholds": "a majority of 3 reduces the error of one call only if the mode is clear: with single-call modal probability p, the majority of 3 is right with p^3+3p^2(1-p) (p=0.8 -> 0.896, p=0.6 -> 0.648: almost no gain). So 4/5 is the lowest modal share where voting is worth its cost; 3/5 or less is not stabilised by voting.",
+    "frame_choice_per_job": {
+      "L0": "decision_tuple 5/5 and state 5/5",
+      "L1": "not L0 and decision_tuple >= 4/5 and state >= 4/5",
+      "L2": "otherwise (also when fewer than 4 of 5 calls produced an answer)",
+      "view_class": "reported only; it does not change the level because the operator always confirms the view side (drawing_job legend); view_class below 4/5 is called out in the text"
+    },
+    "part_box_per_image": {
+      "L0": "3/3 valid, fully_visible identical, min pairwise IoU >= 0.90",
+      "L1": "not L0 and >= 2/3 valid, fully_visible equal across the valid calls, min pairwise IoU among valid calls >= 0.75",
+      "L2": "otherwise (also a split fully_visible among two valid calls, or fewer than 2 valid calls)"
+    },
+    "overall": "per decision type the verdict is the highest level over its units (frame choice: 3 jobs; box: 6 images); per-unit levels are reported so the TL can apply them per class of case",
+    "voting_proposal_if_L1": "text only: where in drawing_job / muse_sam, how many calls, parallel or sequential, cost and latency from the measured medians; box vote = coordinate-wise median of the valid boxes, fully_visible by majority"
+  },
+  "prediction_written_before_run": "J1 shows the lowest frame-choice agreement (the audit saw the assembled controller named 'back shell' once, and a later run answered differently); box repeats are tight (median pairwise IoU >= 0.95 as in EFF-1) except possibly T5. If J1 does not reach L0 the overall frame-choice verdict is not L0 whatever the other jobs do.",
+  "reporting": {
+    "sections_kept_separate": [
+      "development data: the numbers from these runs (all inputs are development data)",
+      "visual review: the agent looks at the contact sheets and box overlays and comments; it does not change any verdict",
+      "independent scoring: none in this experiment; stated as such"
+    ],
+    "results_file": "tools/drawing-proof/RESULTS.md section CONS-1",
+    "raw_output": "C:\\tmp\\anastylos-drawing-proof\\cons1\\ (cons1.json, cons1.log, contact sheets, box overlays)",
+    "run_once": true
+  },
+  "addenda": [
+    {
+      "id": "A1",
+      "date": "2026-11-01",
+      "written_before_any_api_request": true,
+      "reason": "The first start of the run (log kept as cons1-attempt0-local-error.log) failed locally with KeyError 'view_side': the B1 specs predate the view_side wording and cannot build the current drawing_job.CHOICE_PROMPT. 30 local errors, 0 Muse requests were sent (no part_box line, wall_s 0.0 on every attempt); the process was stopped by hand and the sheets were not affected.",
+      "change": "Contact sheets stay the B1 sheets (reconstructed from the caches, checked against the saved B1 sheets). The request fields part, scope, view_side, attachments and phase_events are taken from the current product specs (session-ui demo specs back-shell, pcb-cable, front-shell, 2026-11-01), written into consistency_experiment.REQUESTS. J3 therefore asks for scope assembly (front shell with button membranes, view side interior), unlike the B1 spec. gate_outcome uses drawing_job.first_removal_s(phase_events) as the pipeline does. The prompt is formatted once during preparation so a spec error fails before any call.",
+      "unchanged": "repeats, budget, measures, decision rule and levels are unchanged; the failed local attempts do not count as Muse calls but the runner counts every attempt towards the cap (conservative)."
+    }
+  ]
+}

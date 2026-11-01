@@ -122,6 +122,8 @@ class TranscribeTests(VoiceCase):
         for _ in range(voice.CALLS_PER_MINUTE):
             self.assertEqual(self.transcribe(wav(seconds=0.5))[0], 200)
         self.assertEqual(self.transcribe(wav(seconds=0.5))[0], 429)
+        journal = (self.data / "voice-journal.jsonl").read_text(encoding="utf-8")
+        self.assertIn('"status": "rate_limited"', journal)
 
 
 class InputTests(VoiceCase):

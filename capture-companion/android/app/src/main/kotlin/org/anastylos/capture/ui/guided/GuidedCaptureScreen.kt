@@ -228,6 +228,7 @@ private fun VoiceRow(voice: VoiceController) {
             color = MaterialTheme.colorScheme.error,
         )
     }
+    voiceState.heard?.let { Text("You said: “$it”", style = MaterialTheme.typography.bodySmall) }
     if (voiceState.status.isNotEmpty()) Text(voiceState.status, style = MaterialTheme.typography.bodySmall)
 }
 

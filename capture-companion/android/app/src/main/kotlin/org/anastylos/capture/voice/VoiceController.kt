@@ -44,6 +44,8 @@ class VoiceController(
         val segments: Int = 0,
         val backgroundRms: Double = 0.0,
         val listeningSinceMs: Long? = null,
+        /** Last addressed utterance, shown transiently; never persisted. */
+        val heard: String? = null,
     )
 
     private val appContext = context.applicationContext
@@ -56,6 +58,8 @@ class VoiceController(
     private var pttSamples: MutableList<ShortArray>? = null
     private var tts: TextToSpeech? = null
     @Volatile private var ttsReady = false
+    /** Segment end of the utterance whose reply is about to be spoken (latency log only). */
+    @Volatile private var replySegmentEndMs: Long? = null
 
     fun startListening() {
         if (reader != null) return
@@ -71,7 +75,7 @@ class VoiceController(
     fun stopListening() {
         reader = null
         armedUntilMs = 0L
-        _state.update { it.copy(listening = false, pushToTalk = false, status = "", listeningSinceMs = null) }
+        _state.update { it.copy(listening = false, pushToTalk = false, status = "", listeningSinceMs = null, heard = null) }
     }
 
     /** Push-to-talk fallback: start collecting regardless of the wake word. */
@@ -164,17 +168,24 @@ class VoiceController(
         scope.launch {
             try {
                 val wav = WavEncoder.encode(samples)
+                val transcribeStart = SystemClock.elapsedRealtime()
                 val transcript = link.transcribe(wav)
-                if (transcript.status != "ok" || transcript.text.isNullOrBlank()) {
+                val transcribeMs = SystemClock.elapsedRealtime() - transcribeStart
+                if (transcript.status != "ok") {
+                    Log.i(VOICE_LOG_TAG, "transcribe status=${transcript.status} ms=$transcribeMs")
                     _state.update { it.copy(status = statusLine(transcript.status)) }
                     return@launch
                 }
+                // Nothing recognisable: discarded like unaddressed speech; an
+                // earlier failure stays on screen instead of being wiped.
+                if (transcript.text.isNullOrBlank()) return@launch
                 val now = SystemClock.elapsedRealtime()
                 val route = if (wakeRequired) {
                     WakeWord.route(transcript.text, armed = now < armedUntilMs)
                 } else {
                     WakeWord.route("muse " + transcript.text, armed = false)
                 }
+                Log.i(VOICE_LOG_TAG, "route=${route::class.simpleName} wakeRequired=$wakeRequired")
                 when (route) {
                     WakeWord.Route.Discard -> return@launch
                     WakeWord.Route.Armed -> {
@@ -183,11 +194,22 @@ class VoiceController(
                         speak(YES)
                         return@launch
                     }
-                    is WakeWord.Route.Command -> reply(link.submit(VoiceLink.OperatorInput.Command(route.command)), spokeEndMs)
-                    is WakeWord.Route.Input -> reply(link.submit(VoiceLink.OperatorInput.Speech(route.text)), spokeEndMs)
+                    is WakeWord.Route.Command -> {
+                        showHeard(route.command.name.lowercase().replace('_', ' '))
+                        val inputStart = SystemClock.elapsedRealtime()
+                        val answer = link.submit(VoiceLink.OperatorInput.Command(route.command))
+                        reply(answer, spokeEndMs, transcribeMs, SystemClock.elapsedRealtime() - inputStart)
+                    }
+                    is WakeWord.Route.Input -> {
+                        showHeard(route.text)
+                        val inputStart = SystemClock.elapsedRealtime()
+                        val answer = link.submit(VoiceLink.OperatorInput.Speech(route.text))
+                        reply(answer, spokeEndMs, transcribeMs, SystemClock.elapsedRealtime() - inputStart)
+                    }
                 }
                 armedUntilMs = 0L
             } catch (e: Exception) {
+                Log.w(VOICE_LOG_TAG, "voice failed ${e::class.java.simpleName}: ${e.message?.take(120)}")
                 _state.update { it.copy(status = "Voice failed: ${e.message}") }
             } finally {
                 _state.update { it.copy(busy = false) }
@@ -195,10 +217,21 @@ class VoiceController(
         }
     }
 
-    private fun reply(reply: VoiceLink.SpokenReply, spokeEndMs: Long) {
+    /**
+     * Addressed speech only (wake word or push-to-talk), on screen and
+     * never logged or stored — the reference UI's "You said" line.
+     */
+    private fun showHeard(text: String) = _state.update { it.copy(heard = text) }
+
+    private fun reply(reply: VoiceLink.SpokenReply, spokeEndMs: Long, transcribeMs: Long, inputMs: Long) {
         _state.update { it.copy(status = statusLine(reply.status)) }
+        Log.i(
+            VOICE_LOG_TAG,
+            "reply status=${reply.status} transcribe ms=$transcribeMs input ms=$inputMs " +
+                "end-of-speech to reply ms=${SystemClock.elapsedRealtime() - spokeEndMs}",
+        )
         val text = reply.text ?: return
-        Log.i(VOICE_LOG_TAG, "reply latency ms=${SystemClock.elapsedRealtime() - spokeEndMs}")
+        replySegmentEndMs = spokeEndMs
         speak(text)
     }
 
@@ -224,7 +257,11 @@ class VoiceController(
                 engine.setLanguage(Locale.US) >= TextToSpeech.LANG_AVAILABLE
             Log.i(VOICE_LOG_TAG, "tts ready=$ttsReady locale=en-US")
             engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) = Unit
+                override fun onStart(utteranceId: String?) {
+                    val since = replySegmentEndMs ?: return
+                    replySegmentEndMs = null
+                    Log.i(VOICE_LOG_TAG, "tts start ms after segment end=${SystemClock.elapsedRealtime() - since}")
+                }
                 override fun onDone(utteranceId: String?) = _state.update { it.copy(speaking = false) }
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) = _state.update { it.copy(speaking = false) }

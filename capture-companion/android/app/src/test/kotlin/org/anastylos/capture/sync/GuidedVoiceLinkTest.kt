@@ -15,7 +15,7 @@ class GuidedVoiceLinkTest {
     private var replies = ArrayDeque<HttpResponse>()
 
     private fun link(token: String? = "tok") = GuidedVoiceLink(
-        transport = { request -> sent += request; replies.removeFirst() },
+        client = GuidedControlClient({ request -> sent += request; replies.removeFirst() }),
         sessionId = session, token = { token }, utcNow = { "2026-11-01T17:00:00Z" },
         ioDispatcher = kotlinx.coroutines.Dispatchers.Unconfined,
     )

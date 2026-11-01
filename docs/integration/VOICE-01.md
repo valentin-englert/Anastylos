@@ -130,3 +130,93 @@ eine Workstation-Änderung.
 Sobald CR-VOICE-01/02 umgesetzt sind, wird nur `PendingContractVoiceLink`
 durch eine Implementierung über `ReceiverClient` ersetzt; der Rest der
 Android-Seite ist fertig und getestet.
+
+## 7. Abnahme nach TL-Entscheidung R9/R10 (2026-11-01, Xiaomi, Owner-Stimme)
+
+Aufbau: Receiver PID 32008 (`--voice-transcriber` Drawing-Lab
+`transcribe.py`, `--session-ui-port 8079`, Schlüssel nur in diesem
+Prozess); Session-UI 8079 auf `C:\ANASTYLOS\data\session-ui-voice`
+(frische Demo-Kopie via `prepare_demo.py`); 8078/Drawing-Lab unberührt.
+Xiaomi als Guided-Quelle `a0b49e48…` (über den vorhandenen QR-Token),
+Guided-Session `5b798092-f7ec-4718-96c1-b6b28f354c1b`, Bindung
+`guided-voice-bindings.json` → `demo-open`. TLS-Pin gegen `cert.pem` geprüft.
+Zeiten: „TTS-Start" = Beginn der gesprochenen Antwort nach Segmentende; das
+Segmentende liegt 0,8 s nach dem Sprechende (Stille-Erkennung), Sprechende →
+Antwort also TTS-Start + 0,8 s. Transkriptionszeit = Rundweg Handy↔Receiver↔ASR.
+
+### 7.1 Äußerungen (chronologisch, Fehlschläge eingeschlossen)
+
+| # | Zeit | Gesprochen (Operator) | Wake-Word | Weg | Gesprochene Antwort `kind` | Transkr. / Eingabe | TTS-Start |
+|---|---|---|---|---|---|---|---|
+| 1 | 17:35:16 | „Muse, next question" | j | `next` | `question` (Q-P1-01) | 1,97 s / 0,18 s | 2,63 s |
+| 2 | 17:35:33–38 | „Muse, screw from the back shell" | **n** (2 kurze Segmente, Weg in diesem Build nicht geloggt) | verworfen | — | 1,34 / 1,78 s | — |
+| 3 | 17:35:45 | „Muse, yes, that is correct" (Transkript „yes that is is correct") | j | **`answer`** statt `confirm`, weil #2 verloren war | `read_back`: „…came from ‚yes that is is correct'…" | 1,91 s / 0,12 s | 2,24 s |
+| 4 | 17:36:01 | „This sentence should be ignored" | n | verworfen ✅ | — | 1,81 s | — |
+| 5 | 17:41:30 | „Muse, yes, that is correct" (mit Pause) | j, nur „Muse" | `Armed` → „Yes?"; Rest fiel in die Taubphase | „Yes?" (fest) | 2,03 s | — |
+| 6 | 17:43:26 | „Muse." → nach „Yes?": „yes, that is correct" | j | `Armed`; danach **kein Segment** (ungeklärt, Operator hörte „Yes?" vorher) | „Yes?" | 1,97 s | — |
+| 7 | 17:44:3x | „Muse, repeat" | j | `repeat` | letzter `read_back` | 2,77 s / 0,07 s | 2,86 s |
+| 8 | 17:44:48 | „Muse yes that is correct" | j | `confirm` → Koordinator `unclear` | `read_back` erneut | 1,97 s / 0,11 s | 2,26 s |
+| 9 | 17:46:25 | „Muse no" | j | `confirm` → `asked_again` | `question` | 2,98 s / 0,10 s | 3,10 s |
+| 10 | 17:46:40 | „Muse screw from the back shell" | j | `answer` | `read_back` (Label screw, Quelle the back shell) | 1,81 s / 0,08 s | 2,24 s |
+| 11 | 17:46:53 | „Muse yes" | j | `confirm` → **committed** | `status` „Recorded." | 1,93 s / 0,62 s | 2,67 s |
+
+Commit in der Demo-Kopie: `op_key` **`live-ec85a80c5879:Q-P1-01:1`**,
+Memory-Events **`dec-0001`** (declared_removal) und **`store-0001`**
+(storage_link); Memory 7 → 9 Events. Die falsche Antwort aus #3 wurde
+**nicht** geschrieben (Rückbestätigung abgelehnt). Nie wurde freier
+Modelltext gesprochen.
+
+### 7.2 20 Wake-Word-Befehle + 5 Sätze ohne Wake-Word (17:47:54–17:50:21)
+
+Liste: 20 × „Muse, repeat", dazwischen 5 Sätze ohne Muse.
+
+| Messung | Ergebnis |
+|---|---|
+| ausgeführte Befehle | **20** (`route=Command` → `repeat`, alle gesprochen) |
+| verpasste Wake-Words (ASR) | **0** — jedes transkribierte Muse-Segment wurde als Befehl erkannt |
+| verlorene Befehle | **1** Segment (17:48:54, 2,0 s) erreichte keine Transkription: 21. Aufruf in 60 s → `429 rate_limited` (aus dem Zeitablauf erschlossen; damals nicht journalisiert) |
+| Fehlauslösungen ohne Wake-Word | **0 / 5** (4 transkribiert und verworfen, 1 unter der Energieschwelle) |
+| TTS-Start nach Segmentende | Median **1,76 s** (1,51–2,56 s) → Sprechende→Antwort ≈ 2,3–3,4 s |
+| Transkription (Rundweg) | 1,45–2,49 s; Eingabe/Session-UI 44–111 ms |
+
+Fehlauslösungen pro 10 min **Werkstattgeräusch** mit Transkription sind
+**nicht gemessen** (nur Raumgeräusch auf Segmentebene, §4).
+
+### 7.3 Datenschutz-Prüfung
+
+Receiver-`voice-journal.jsonl`: Treffer für „screw", „back shell",
+„correct", „muse", „next question" = 0; nur Route, Status, Dauer.
+Keine Audiodateien im Receiver-Datenordner. Handy-Log: nur Zeiten,
+Routen-Klasse und Status. Transkripte erscheinen nur flüchtig als
+„You said: …" für an Muse gerichtete Sätze (wie Referenz-UI).
+
+### 7.4 Befunde für den TL
+
+1. **Pause nach dem Wake-Word + Taubphase während der Transkription**
+   verliert Befehle (#2, #5). Vorschlag: Segmente während der Transkription
+   weiter aufnehmen und danach der Reihe nach abarbeiten; taub nur während
+   das Handy spricht. Erfordert Änderung der Auftragsregel.
+2. **Nacktes Wake-Word + 6 s Annahme** macht einen beliebigen Folgesatz zur
+   Antwort (#3 wurde als Antwort gewertet). Die Rückbestätigung hat den
+   falschen Commit verhindert; trotzdem Risiko.
+3. **„yes, that is correct"** (Abnahmetext) wertet der Koordinator als
+   `unclear`; nur „yes"/„no" bestätigen. Abnahmetext oder Koordinatorregel
+   (Contract Owner) anpassen.
+4. **Ratenlimit 20/min pro Token** zählt Transkription und Eingabe → ≈ 10
+   Befehle/min; ein Befehl ging verloren. Vorschlag: 40/min oder pro Äußerung zählen.
+5. #6 ungeklärt: nach „Yes?" kein Segment, obwohl der Operator sprach.
+6. ASR-Wortverdopplung beobachtet („is is"), wie in der Workstation-Messung.
+
+### 7.5 Danach behoben (Receiver-Neustart nötig, um wirksam zu werden)
+
+- 429 (`rate_limited`, `busy`) wird jetzt journalisiert (Test ergänzt).
+- Übergroße Clips: Body bis 4 MB wird gelesen und verworfen, damit der
+  Client die 413 sicher erhält (vorher sporadischer Verbindungsabbruch;
+  Suite 3× stabil grün).
+- Handy: Transkriptionsfehler werden geloggt (Status, Dauer); ein leeres
+  Transkript löscht keine vorherige Fehlermeldung mehr.
+- Handy: Guided-Endpunkte liegen jetzt ausschließlich in
+  `GuidedControlClient` (Wire-Tripwire `test_android_wire_spellings`).
+
+Stand: Receiver 193/193, Android 473/473, Lint 0; APK `4f1ba184…` auf
+dem Xiaomi installiert und hash-geprüft.

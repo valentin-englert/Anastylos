@@ -32,6 +32,9 @@ import anastylos_guided_routes as guided
 
 PREFIX = "/v1/guided/sessions/"
 WAV_MAX_BYTES = 260 * 1024
+# Oversized bodies up to this size are read and discarded so the client
+# receives its 413 instead of a connection reset; larger ones close.
+DRAIN_MAX_BYTES = 4 * 1024 * 1024
 MIN_SECONDS, MAX_SECONDS, RATE = 0.4, 8.0, 16000
 TRANSCRIBE_DEADLINE_S = 60
 CALLS_PER_MINUTE = 20
@@ -151,6 +154,7 @@ class VoiceRoutes:
         if exc is not None:
             return True
         if not self._within_rate(record.get("source_id") or ""):
+            self._journal(session_id, suffix.rsplit("/", 1)[-1], "rate_limited", None, 0.0)
             return True
         if suffix == "/voice/transcribe":
             self._transcribe(session_id)
@@ -162,14 +166,17 @@ class VoiceRoutes:
 
     def _transcribe(self, session_id):
         if self.h.headers.get("Content-Type", "").split(";")[0].strip() != "audio/wav":
-            self._discard()
+            try:
+                self._discard(int(self.h.headers.get("Content-Length", "0")))
+            except ValueError:
+                self.h.close_connection = True
             return self._fail(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, "unsupported_media", "Send the clip as audio/wav.")
         try:
             length = int(self.h.headers.get("Content-Length", "0"))
         except ValueError:
             length = -1
         if not 0 < length <= WAV_MAX_BYTES:
-            self.h.close_connection = True
+            self._discard(length)
             return self._fail(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "too_large", "The clip is empty or too large.")
         audio = self.h.rfile.read(length)
         try:
@@ -180,6 +187,7 @@ class VoiceRoutes:
             return self._fail(HTTPStatus.SERVICE_UNAVAILABLE, "voice_unavailable", "Transcription is not configured.")
         voice = self._session(session_id)
         if not voice.lock.acquire(blocking=False):
+            self._journal(session_id, "transcribe", "busy", seconds, 0.0)
             return self._fail(HTTPStatus.TOO_MANY_REQUESTS, "busy", "One voice call at a time.", {"Retry-After": "1"})
         try:
             began = time.monotonic()
@@ -228,6 +236,7 @@ class VoiceRoutes:
             return self._fail(HTTPStatus.CONFLICT, "not_bound", "voice not bound to an agent session")
         voice = self._session(session_id)
         if not voice.lock.acquire(blocking=False):
+            self._journal(session_id, "input", "busy", None, 0.0)
             return self._fail(HTTPStatus.TOO_MANY_REQUESTS, "busy", "One voice call at a time.", {"Retry-After": "1"})
         try:
             began = time.monotonic()
@@ -315,14 +324,15 @@ class VoiceRoutes:
             with open(self.state.data_dir / "voice-journal.jsonl", "a", encoding="utf-8") as handle:
                 handle.write(json.dumps(line) + "\n")
 
-    def _discard(self):
-        try:
-            length = int(self.h.headers.get("Content-Length", "0"))
-        except ValueError:
-            length = 0
-        if 0 < length <= WAV_MAX_BYTES:
-            self.h.rfile.read(length)
-        else:
+    def _discard(self, length):
+        if 0 < length <= DRAIN_MAX_BYTES:
+            remaining = length
+            while remaining > 0:
+                chunk = self.h.rfile.read(min(remaining, 64 * 1024))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        if not 0 <= length <= DRAIN_MAX_BYTES:
             self.h.close_connection = True
 
     def _fail(self, status, code, message, extra=None):

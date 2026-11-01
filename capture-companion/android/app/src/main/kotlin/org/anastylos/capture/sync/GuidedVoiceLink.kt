@@ -13,14 +13,13 @@ import org.anastylos.capture.voice.VoiceLink
 import org.anastylos.capture.voice.WakeWord
 
 /**
- * [VoiceLink] over the paired receiver (VOICE-01, TL decision R9/R10):
- * `POST /v1/guided/sessions/{id}/voice/transcribe` (audio/wav) and
- * `/voice/input` (`{kind: input|command}`), guided Bearer token of the
- * attached session. The phone sends no names or paths; the workstation
+ * [VoiceLink] over the paired receiver (VOICE-01, TL decision R9/R10)
+ * via [GuidedControlClient.voiceTranscribe] / [GuidedControlClient.voiceInput]
+ * with the guided Bearer token of the attached session. The phone sends no names or paths; the workstation
  * binds the session and returns the only text the phone may speak.
  */
 class GuidedVoiceLink(
-    private val transport: HttpTransport,
+    private val client: GuidedControlClient,
     private val sessionId: String,
     private val token: suspend () -> String?,
     private val utcNow: () -> String,
@@ -32,13 +31,7 @@ class GuidedVoiceLink(
     override suspend fun transcribe(wav: ByteArray): VoiceLink.Transcript = withContext(ioDispatcher) {
         val bearer = token() ?: return@withContext VoiceLink.Transcript("not_enrolled", null, null)
         val response = try {
-            transport.exchange(
-                HttpRequest(
-                    method = "POST", path = "/v1/guided/sessions/$sessionId/voice/transcribe",
-                    headers = mapOf("Authorization" to "Bearer $bearer", "Content-Type" to "audio/wav"),
-                    body = wav,
-                ),
-            )
+            client.voiceTranscribe(bearer, sessionId, wav)
         } catch (_: TransportException) {
             return@withContext VoiceLink.Transcript("network_error", null, null)
         }
@@ -76,13 +69,7 @@ class GuidedVoiceLink(
             }
         }
         val response = try {
-            transport.exchange(
-                HttpRequest(
-                    method = "POST", path = "/v1/guided/sessions/$sessionId/voice/input",
-                    headers = mapOf("Authorization" to "Bearer $bearer", "Content-Type" to "application/json"),
-                    body = body.toString().toByteArray(Charsets.UTF_8),
-                ),
-            )
+            client.voiceInput(bearer, sessionId, body.toString())
         } catch (_: TransportException) {
             return@withContext VoiceLink.SpokenReply("network_error", null)
         }

@@ -447,6 +447,33 @@ class GuidedControlClient(
         }
     }
 
+    /**
+     * VOICE-01 R9: one WAV segment to the receiver's transcriber. Returns
+     * the raw exchange; [GuidedVoiceLink] owns the voice body formats.
+     */
+    fun voiceTranscribe(token: String, sessionId: String, wav: ByteArray): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "POST", path = "/v1/guided/sessions/$sessionId/voice/transcribe",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "audio/wav"),
+                body = wav,
+            ),
+        )
+    }
+
+    /** VOICE-01 R10: one `{kind: input|command}` body; raw exchange as above. */
+    fun voiceInput(token: String, sessionId: String, json: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "POST", path = "/v1/guided/sessions/$sessionId/voice/input",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/json"),
+                body = json.toByteArray(Charsets.UTF_8),
+            ),
+        )
+    }
+
     private fun guidedHeaders(token: String): Map<String, String> = mapOf(
         "Content-Type" to "application/json",
         "Authorization" to "Bearer $token",

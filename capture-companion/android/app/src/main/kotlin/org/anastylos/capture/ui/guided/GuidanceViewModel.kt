@@ -924,7 +924,7 @@ class GuidanceViewModel(
             )
         }
         voice?.link = org.anastylos.capture.sync.GuidedVoiceLink(
-            transport, sessionId,
+            org.anastylos.capture.sync.GuidedControlClient(transport), sessionId,
             token = { (bundle.session.resolveToken() as? GuidedTokenOutcome.Ready)?.token },
             utcNow = { utcClock().toIsoUtc() },
         )

@@ -360,3 +360,30 @@ precondition: a still sensor timestamp (`OnImageCapturedCallback` /
 
 Verification: `gradlew testDebugUnitTest lintDebug assembleDebug` with the test
 JVM pinned to JDK 21: 482 tests, 0 failures; lint passed.
+
+### 15.1 Still sensor timestamp (owner-approved capture-path change)
+
+`takeGuidedStill` now captures in memory (`OnImageCapturedCallback`): the HAL
+JPEG bytes unchanged, plus `ImageInfo.timestamp` on the analysis sensor clock.
+The sidecar pairs the still with the analysis frame exposed last at or before
+it (`guidance/StillPose.kt`, never a later frame); without a still timestamp it
+falls back to the callback age, which the gate blocks.
+
+Run on APK `2b813318c0bcdba878066fa8349c8d8c52df4a18fccb5ab14cd21be234a6e5e0`
+(device hash equal), session `4a486784-87d8-4735-a213-3a8b5f023be2`, request
+`428ee79c…`, image `c742ea5c…`:
+
+- `sample_age_ms` 13.3 (was ~900 from the callback); the 150 ms gate passes.
+- Sidecar stored (revision 1, `2f643588…`); receipt re-versioned with it.
+- JPEG keeps its EXIF orientation (6) in the in-memory path.
+- Receipt stays `package_only`. Not qualified because of two blockers outside
+  the capture path:
+  1. The receiver's spatial-validator seam is not delivered
+     (`unavailable by default: package_only, never qualified`).
+  2. The sidecar declares calibration `nominal_only` with the factory
+     descriptor even when the measured Xiaomi profile is active, and
+     `validated` needs a measured board instance (A3 print scale unmeasured).
+     Declaring the measured profile id and sha is a phone change that waits
+     for a TL decision.
+
+Verification: 485 tests, 0 failures, JDK 21 test JVM; lint passed.

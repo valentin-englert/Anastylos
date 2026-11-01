@@ -80,6 +80,8 @@ import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.PhoneRotation
 import org.anastylos.capture.guidance.DeliveryState
 import org.anastylos.capture.guidance.PoseEstimator
+import org.anastylos.capture.guidance.StillPose
+import org.anastylos.capture.guidance.poseForStill
 import org.anastylos.capture.guidance.Vec3
 import org.anastylos.capture.guidance.remoteTargetView
 import org.anastylos.capture.guidance.RegistrationState
@@ -273,8 +275,10 @@ class GuidanceViewModel(
     private var lastMotion: Pair<Double, Double>? = null
     private var lastUiEstimateNs: Long? = null
     private var lastStillCallbackNs: Long? = null
-    /** The pose current when the still arrived; frames keep coming before the sidecar is built. */
-    private var stillEstimate: PoseEstimator.Estimate? = null
+    /** Recent analysis poses, so a still can be paired with the frame exposed just before it. */
+    private val recentEstimates = ArrayDeque<PoseEstimator.Estimate>()
+    /** The pose paired with the last still; frames keep coming before the sidecar is built. */
+    private var stillPose: StillPose? = null
     private var remote: GuidedRemote? = null
     private var remoteCollectJob: Job? = null
     private var bindEpoch: String? = null
@@ -437,7 +441,8 @@ class GuidanceViewModel(
         lastCorners = emptyMap()
         lastCornersNs = null
         lastEstimate = null
-        stillEstimate = null
+        recentEstimates.clear()
+        stillPose = null
         lastMotion = null
         lastAppliedSeen = null
         _state.update { it.copy(appliedLine = null) }
@@ -869,7 +874,7 @@ class GuidanceViewModel(
             try {
                 val still = source.takeGuidedStill()
                 lastStillCallbackNs = nanoClock()
-                stillEstimate = lastEstimate
+                stillPose = pairStill(still)
                 val stored = persistStill(still, automatic = false)
                 _state.update { it.copy(shutterBusy = false, captureResult = stored) }
             } catch (e: Exception) {
@@ -1418,6 +1423,8 @@ class GuidanceViewModel(
             cues = cues.size,
         )
         lastEstimate = estimate
+        recentEstimates.addLast(estimate)
+        while (recentEstimates.size > RECENT_ESTIMATES) recentEstimates.removeFirst()
         lastMotion = motion
         _state.update {
             it.copy(
@@ -1640,7 +1647,7 @@ class GuidanceViewModel(
                     val source = camera ?: throw IllegalStateException("camera detached")
                     val still = source.takeGuidedStill()
                     lastStillCallbackNs = nanoClock()
-                    stillEstimate = lastEstimate
+                    stillPose = pairStill(still)
                     val stored = persistStill(still, automatic = true)
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
@@ -1811,7 +1818,8 @@ class GuidanceViewModel(
         still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill,
         imageSha: String,
     ): SpatialSidecar.Input? {
-        val estimate = stillEstimate ?: return null
+        val paired = stillPose ?: return null
+        val estimate = paired.estimate
         val snapshot = _state.value
         val sessionUuid = snapshot.remoteSessionId ?: return null
         val request = snapshot.remoteRequest ?: return null
@@ -1839,7 +1847,7 @@ class GuidanceViewModel(
             ExifInterface.ORIENTATION_NORMAL
         }
         val callbackNs = lastStillCallbackNs ?: return null
-        val sampleAgeMs = (callbackNs - estimate.monotonicNs) / 1_000_000.0
+        val sampleAgeMs = paired.sampleAgeMs
         val quality = estimate.frameQuality
         val motion = lastMotion
         val intrinsics = try {
@@ -1968,6 +1976,19 @@ class GuidanceViewModel(
         )
     }
 
+    /**
+     * The analysis pose exposed last before the still, on the sensor clock.
+     * Without a still sensor timestamp the age falls back to the still callback,
+     * which overstates it by the capture latency (the gate then blocks the sidecar).
+     */
+    private fun pairStill(still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill): StillPose? {
+        val sensorNs = still.sensorTimestampNs
+        if (sensorNs != null) return poseForStill(recentEstimates.toList(), sensorNs)
+        val estimate = lastEstimate ?: return null
+        val callbackNs = lastStillCallbackNs ?: return null
+        return StillPose(estimate, (callbackNs - estimate.monotonicNs) / 1_000_000.0)
+    }
+
     private suspend fun ensureSession(): String {
         sessionId?.let { return it }
         // One dedicated session per guidance run: explicit and auditable.
@@ -1998,6 +2019,8 @@ class GuidanceViewModel(
 }
 
 private const val ARM_LOG = "AnastylosArm"
+/** About 3 s of analysis frames: covers the shutter-to-exposure latency. */
+private const val RECENT_ESTIMATES = 90
 
 private val TERMINAL_REQUESTS = setOf(
     RequestState.CAPTURED_LOCAL,

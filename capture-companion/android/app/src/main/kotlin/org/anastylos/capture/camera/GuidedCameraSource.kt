@@ -17,7 +17,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import java.io.File
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -64,6 +63,11 @@ class GuidedCameraSource(
         val capturedAt: java.time.Instant,
         /** Nearest analyzer frame timestamp (monotonic ns), if any. */
         val nearestEstimateMonotonicNs: Long?,
+        /**
+         * Sensor exposure timestamp of the still (`ImageInfo.timestamp`), the
+         * same clock as the analysis frames; null when the HAL reports none.
+         */
+        val sensorTimestampNs: Long? = null,
         /** Honest association note; never a fabricated exposure link. */
         val associationNote: String,
     )
@@ -563,9 +567,9 @@ class GuidedCameraSource(
 
     /**
      * One full-resolution JPEG still. Throws on any camera failure.
-     * Exposure-time association is reported honestly: the nearest
-     * analyzer timestamp is informational only, and the sidecar
-     * stays explicitly unqualified until a real exposure link exists.
+     * Carries the still's sensor timestamp so the sidecar can pick the
+     * analysis pose exposed just before it; the solve still comes from
+     * a preview frame, never from the saved image.
      */
     override suspend fun takeGuidedStill(): GuidedStill {
         val capture = imageCapture ?: throw ImageCaptureException(
@@ -573,37 +577,41 @@ class GuidedCameraSource(
             "guided camera is not bound",
             null,
         )
-        val tmp = File.createTempFile("guided-", ".jpg", context.cacheDir)
-        try {
-            suspendCoroutine { cont ->
-                val options = ImageCapture.OutputFileOptions.Builder(tmp).build()
-                capture.takePicture(
-                    options,
-                    ContextCompat.getMainExecutor(context),
-                    object : ImageCapture.OnImageSavedCallback {
-                        override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                            cont.resumeWith(Result.success(Unit))
+        // In-memory capture: the JPEG bytes as the HAL encoded them, plus the
+        // sensor timestamp the file-save callback never exposes.
+        val (bytes, sensorNs) = suspendCoroutine<Pair<ByteArray, Long?>> { cont ->
+            capture.takePicture(
+                ContextCompat.getMainExecutor(context),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(image: ImageProxy) {
+                        val result = try {
+                            val buffer = image.planes[0].buffer
+                            val out = ByteArray(buffer.remaining())
+                            buffer.get(out)
+                            out to image.imageInfo.timestamp.takeIf { it > 0 }
+                        } finally {
+                            image.close()
                         }
+                        cont.resumeWith(Result.success(result))
+                    }
 
-                        override fun onError(exception: ImageCaptureException) {
-                            cont.resumeWithException(exception)
-                        }
-                    },
-                )
-            }
-            val nearest = lastEstimateNs
-            return GuidedStill(
-                bytes = tmp.readBytes(),
-                capturedAt = nowUtc(),
-                nearestEstimateMonotonicNs = nearest,
-                associationNote = if (nearest == null) {
-                    "no analyzer frame near shutter; spatial sidecar unqualified"
-                } else {
-                    "nearest analyzer frame is informational only; spatial sidecar unqualified"
+                    override fun onError(exception: ImageCaptureException) {
+                        cont.resumeWithException(exception)
+                    }
                 },
             )
-        } finally {
-            tmp.delete()
         }
+        val nearest = lastEstimateNs
+        return GuidedStill(
+            bytes = bytes,
+            capturedAt = nowUtc(),
+            nearestEstimateMonotonicNs = nearest,
+            associationNote = if (nearest == null) {
+                "no analyzer frame near shutter; spatial sidecar unqualified"
+            } else {
+                "nearest analyzer frame is informational only; spatial sidecar unqualified"
+            },
+            sensorTimestampNs = sensorNs,
+        )
     }
 }

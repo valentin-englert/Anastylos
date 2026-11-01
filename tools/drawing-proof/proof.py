@@ -21,6 +21,8 @@ import segment
 import source
 
 INK, FAINT, UNKNOWN = (40, 40, 40), (150, 150, 150), (30, 120, 220)
+# Region fills: SVG colour and BGR preview colour. An opening shows the page: nothing is drawn behind it.
+TONE_FILL = {"light": ("#fbfbf8", (248, 251, 251)), "dark": ("#3a3b3d", (61, 59, 58)), "opening": ("#ffffff", (255, 255, 255))}
 
 
 def _poly_mm(rf: source.RectifiedFrame, polygon_px: np.ndarray) -> np.ndarray:
@@ -143,7 +145,7 @@ def render_svg(geometry: dict, spec: dict) -> str:
              f'<path data-line-role="outline" d="{_path(geometry["outline_mm"], o)}" fill="#e9eaec" stroke="#222" stroke-width="0.45" stroke-linejoin="round"/>',
              '</g><g id="observed_regions">']
     for region in geometry["regions"]:
-        fill = "#fbfbf8" if region["tone"] == "light" else "#3a3b3d"
+        fill = TONE_FILL[region["tone"]][0]
         dash = ' stroke-dasharray="2 1"' if region["source"] == "manual_box_grabcut" else ""
         parts.append(f'<path data-line-role="edge" data-source="{region["source"]}" d="{_path(region["polygon_mm"], o)}" fill="{fill}" stroke="#222" stroke-width="0.3"{dash}/>')
         for hole in region["holes_mm"]:
@@ -185,7 +187,7 @@ def render_preview(geometry: dict, spec: dict, px_per_mm: float = 8.0) -> np.nda
     cv2.fillPoly(canvas, px(geometry["outline_mm"]), (236, 234, 233))
     cv2.polylines(canvas, px(geometry["outline_mm"]), True, INK, 3, cv2.LINE_AA)
     for region in geometry["regions"]:
-        cv2.fillPoly(canvas, px(region["polygon_mm"]), (248, 251, 251) if region["tone"] == "light" else (61, 59, 58))
+        cv2.fillPoly(canvas, px(region["polygon_mm"]), TONE_FILL[region["tone"]][1])
         if region["source"] == "manual_box_grabcut":
             _dashed(canvas, px(region["polygon_mm"])[0], (255, 255, 255), dash_px=10)
         else:

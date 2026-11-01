@@ -39,3 +39,30 @@ All plans were committed before their runs: `transfer_plan_r1.json` (14bf04cd), 
 - Still unproven: correctness against an independent reference. Owner reference masks for F0, T3, T4, T5 on
   the same `rectified.png` are needed; `quality.reference_comparison` scores them.
 - Not yet built: `list_frame_candidates` (quality pre-sort) and Muse frame choice; here the frames were given.
+
+## Frozen tool r4 on the untouched test set (`specs/testset_r4.json`, committed a0e49d1f before the run)
+
+Muse box → SAM, no gates, no manual step, all nine images reported. Visual assessment by the developer (no
+reference masks; a model mask would be a comparison proposal, not ground truth). Outer silhouette and openings
+are judged separately.
+
+| Image | Outer silhouette | Openings | Muse / SAM wall s |
+|---|---|---|---|
+| own P1 f300 (assembled controller, back up, cable) | correct, cable excluded | none expected, none found | 99.6 / 10.0 |
+| own P2 f150 (same, other phase) | correct | none | 38.3 / 9.7 |
+| own P3 f1500 (front shell with buttons) | correct | 2 found: part of the D-pad cross and a fleck on a button; incomplete | 29.1 / 10.4 |
+| Arduino Mega on wood, oblique | board correct on three sides; **cast shadow included at the lower left**; Muse `fully_visible=false` (board cut by the image edge) is right | none | 33.5 / 9.9 |
+| Adafruit FLORA held in fingers, black ground | correct, fingers excluded | **2 false openings inside the USB connector** | 60.6 / 5.0 |
+| Bicycle sprocket on white | correct incl. teeth | 10 cut-outs and the spline bore correct; small marks at teeth questionable | 25.3 / 12.2 |
+| Single screw on concrete | correct | none | 19.4 / 2.8 |
+| Keycap on white | correct | none | 11.8 / 2.7 |
+| Ball bearing | correct | bore found | 13.3 / 8.3 |
+
+Outer silhouette: 8/9 without visible error, 1 with an included shadow. Openings: correct on sprocket and
+bearing; on the empty FULL-01 shell (development image T3) all 7 through-openings are found but their rims
+are ragged and too small (the mask shows paper seen through the hole, not the hole rim); false openings on the
+FLORA connector. A good silhouette is not a complete technical drawing: inner ribs, bosses, membranes and
+the rubber pad are not part of a SAM part mask at all.
+
+`sam_drawing.py` turns a SAM mask on a rectified image into an SVG with outline and openings as separate
+geometry (dev images F0 and T3).

@@ -108,5 +108,25 @@ class WorkerEndTest(unittest.TestCase):
                 worker.wait()
 
 
+class ResumeTest(unittest.TestCase):
+    def test_checkpoint_computes_once_and_is_reused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            calls = []
+            first, reused_first = drawing_job._checkpoint(Path(tmp), "box", lambda: calls.append(1) or {"box": [1, 2, 3, 4]})
+            second, reused_second = drawing_job._checkpoint(Path(tmp), "box", lambda: calls.append(1) or {"box": [9, 9, 9, 9]})
+            self.assertEqual((first, second, len(calls)), ({"box": [1, 2, 3, 4]}, {"box": [1, 2, 3, 4]}, 1))
+            self.assertEqual((reused_first, reused_second), (False, True))
+
+    def test_sam_without_records_is_an_empty_match_not_a_failure(self):
+        import muse_sam
+        with tempfile.TemporaryDirectory() as tmp:
+            evidence = Path(tmp) / "img-1"
+            evidence.mkdir()
+            (evidence / "evidence.json").write_text(json.dumps({"records": []}), encoding="utf-8")
+            mask, info = muse_sam.read_sam_result(Path(tmp), (10, 10))
+            self.assertIsNone(mask)
+            self.assertEqual(info["records"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

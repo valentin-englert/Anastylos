@@ -156,6 +156,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/selected-ask": self._api_selected_ask, "/api/assembly/done": self._api_assembly_done,
                   "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate,
                   "/api/drawing/start": self._api_drawing_start, "/api/drawing/bind": self._api_drawing_bind,
+                  "/api/drawing/resume": self._api_drawing_resume,
                   "/api/voice/transcribe": self._api_voice_transcribe}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -320,6 +321,13 @@ class Handler(BaseHTTPRequestHandler):
         if not session_id:
             raise AdapterError("The session parameter is missing.", 400)
         self._mutate(session_id, lambda: drawings.start_drawing(Handler.workspace_root, session_id, body.get("spec", "")))
+
+    def _api_drawing_resume(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.resume_drawing(Handler.workspace_root, session_id, body.get("job", "")))
 
     def _api_drawing_bind(self) -> None:
         body = self._read_json()

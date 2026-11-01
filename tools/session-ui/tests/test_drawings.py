@@ -73,6 +73,16 @@ class DrawingsTest(unittest.TestCase):
         with self.assertRaises(AdapterError):
             drawings.drawing_bytes(self.root, "s1", "j", "progress.json")
 
+    def test_only_paused_or_failed_jobs_resume(self):
+        from unittest import mock
+        self._job("done-job", "done", "drawn_unconfirmed")
+        with self.assertRaises(AdapterError):
+            drawings.resume_drawing(self.root, "s1", "done-job")
+        self._job("paused-job", "paused")
+        with mock.patch.object(drawings.job_control, "start") as start:
+            self.assertEqual(drawings.resume_drawing(self.root, "s1", "paused-job")["state"], "resumed")
+            start.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

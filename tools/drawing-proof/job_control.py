@@ -61,10 +61,14 @@ def status(job: Path) -> dict:
 
 
 def start(spec_path: Path, job: Path) -> dict:
+    """Start a worker; started again on the same job directory it resumes from that job's checkpoints."""
     job.mkdir(parents=True, exist_ok=True)
+    kept = job / "spec.json"
+    if spec_path.resolve() != kept.resolve():
+        kept.write_text(spec_path.read_text(encoding="utf-8"), encoding="utf-8")
     flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
-    with open(job / "job.log", "w") as log:
-        process = subprocess.Popen([sys.executable, "-B", str(WORKER), "run", "--spec", str(spec_path), "--job", str(job)],
+    with open(job / "job.log", "a") as log:
+        process = subprocess.Popen([sys.executable, "-B", str(WORKER), "run", "--spec", str(kept), "--job", str(job)],
                                    stdout=log, stderr=subprocess.STDOUT, creationflags=flags)
     # A worker that dies before writing its own progress must still end visibly: status() checks this pid.
     (job / "progress.json").write_text(json.dumps({"state": "running", "stage": "starting", "pid": process.pid, "started_at": time.time(),

@@ -748,6 +748,16 @@ function drawingCard(job) {
     figure.append(image, caption);
     card.append(figure);
   }
+  if (job.state === "paused" || job.state === "failed") {
+    const resume = document.createElement("button");
+    resume.type = "button";
+    resume.textContent = "Resume job";
+    resume.addEventListener("click", async () => {
+      try { await post("/api/drawing/resume", { session: state.session, job: job.job }, resume); await loadDrawings(); }
+      catch (error) { showError("drawings-error", error.message); }
+    });
+    card.append(resume);
+  }
   if (job.binding) {
     const bound = document.createElement("p");
     bound.className = "notice";
@@ -822,7 +832,14 @@ const DRAWING_SPEECH = {
   drawn_unconfirmed: "The drawing is ready for your confirmation.",
 };
 const spokenJobs = new Map();
-const voice = { recording: false, context: null, stream: null, chunks: [], source: null, processor: null };
+const voice = { recording: false, context: null, stream: null, chunks: [], source: null, processor: null, seq: 0 };
+
+async function transcribeLatest(blob) {
+  /* Each clip gets a sequence number; only the newest clip may be routed, a late older result is dropped. */
+  const seq = ++voice.seq;
+  const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob });
+  return seq === voice.seq ? result : { status: "stale" };
+}
 
 function speak(text) {
   if (!text || !$("speak-toggle").checked || !window.speechSynthesis) return;
@@ -900,8 +917,8 @@ async function stopTalking() {
   for (const chunk of voice.chunks) { samples.set(chunk, offset); offset += chunk.length; }
   setText("voice-state", "Transcribing …");
   try {
-    const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" },
-                                                          body: wavFromSamples(samples, rate, 16000) });
+    const result = await transcribeLatest(wavFromSamples(samples, rate, 16000));
+    if (result.status === "stale") return;
     if (result.status !== "ok" || !result.transcript) {
       setText("voice-state", `Not understood (${result.status}). Please try again or type.`);
       return;
@@ -916,9 +933,11 @@ async function stopTalking() {
 function routeTranscript(text) {
   /* The transcript is operator input like typed text: it goes to whatever the dialog is waiting for.
      Two fixed commands work anywhere: "next question" and "repeat". */
-  const command = text.toLowerCase().replace(/[^a-z ]/g, "").trim();
-  if (command === "next question" || command === "next") { nextQuestion($("next-button")); return; }
-  if (command === "repeat" || command === "say that again") {
+  const command = text.toLowerCase().replace(/[^a-z' ]/g, "").replace(/^please |please$/g, "").trim();
+  /* A negated command ("don't go to the next question") never runs a command; it is treated as plain input. */
+  const negated = /\b(don't|dont|do not|not|never|no)\b/.test(command);
+  if (!negated && (command === "next question" || command === "next")) { nextQuestion($("next-button")); return; }
+  if (!negated && (command === "repeat" || command === "say that again")) {
     speak(!$("confirm-card").hidden ? $("confirm-text").textContent : $("prompt-text").textContent);
     return;
   }
@@ -1000,8 +1019,7 @@ async function handleSegment(blocks, rate) {
     const samples = new Float32Array(total);
     let offset = 0;
     for (const b of blocks) { samples.set(b, offset); offset += b.length; }
-    const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" },
-                                                          body: wavFromSamples(samples, rate, 16000) });
+    const result = await transcribeLatest(wavFromSamples(samples, rate, 16000));
     if (result.status !== "ok" || !result.transcript) return;
     const match = WAKE.exec(result.transcript.trim());
     const armed = Date.now() < listen.armedUntil;

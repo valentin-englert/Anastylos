@@ -70,9 +70,16 @@ def sam_mask(image_path: Path, box: list[int], shape: tuple[int, int], out: Path
                            "segment-image", "--image", str(image_path), "--objects-json", str(out / "objects.json"), "--out", str(out)],
                           capture_output=True, text=True, encoding="utf-8", timeout=600)
     info = {"exit": done.returncode, "wall_s": round(time.perf_counter() - began, 2), "stderr_tail": done.stderr.strip().splitlines()[-1:]}
-    evidence = next(out.glob("*/evidence.json"), None)
-    if done.returncode or evidence is None:
+    if done.returncode or next(out.glob("*/evidence.json"), None) is None:
         return None, info
+    return read_sam_result(out, shape, info)
+
+
+def read_sam_result(out: Path, shape: tuple[int, int], info: dict | None = None) -> tuple[np.ndarray | None, dict]:
+    """Mask from a stored SAM evidence file. A completed request with no records is a valid empty match:
+    (None, {"records": 0}), not a provider failure."""
+    info = dict(info or {})
+    evidence = next(out.glob("*/evidence.json"))
     records = json.loads(evidence.read_text(encoding="utf-8")).get("records", [])
     if not records:
         return None, {**info, "records": 0}

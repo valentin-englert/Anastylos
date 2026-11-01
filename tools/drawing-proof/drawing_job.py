@@ -161,6 +161,20 @@ def _muse_choice(sheet, chosen: list, spec: dict, key: str) -> tuple[dict, dict,
     return choice, meta, hashlib.sha256(prompt.encode()).hexdigest()
 
 
+class ProviderUnavailable(Exception):
+    """A model or segmentation service did not answer; the job pauses and can be resumed from its checkpoints."""
+
+
+def _checkpoint(job: Path, name: str, compute):
+    """Reuse a stage result saved by an earlier attempt of this job; otherwise compute and save it."""
+    path = job / f"checkpoint-{name}.json"
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8")), True
+    value = compute()
+    path.write_text(json.dumps(value, default=str), encoding="utf-8")
+    return value, False
+
+
 def run(spec: dict, job: Path) -> dict:
     progress = Progress(job)
     usage = {"muse_calls": 0, "sam_calls": 0}
@@ -180,7 +194,8 @@ def run(spec: dict, job: Path) -> dict:
         key = muse_sam.client.load_key()
         with progress.stage("muse_choose_frame"):
             usage["muse_calls"] += 1
-            choice, meta, prompt_sha = _muse_choice(sheet, chosen, spec, key)
+            (choice, meta, prompt_sha), reused = _checkpoint(job, "choice", lambda: list(_muse_choice(sheet, chosen, spec, key)))
+            usage["muse_calls"] -= int(reused)
         base = {"spec": spec, "choice": choice, "skipped_candidates": skipped, "usage": usage, "prompt_sha256": prompt_sha,
                 "candidates": [{"frame": c.frame_index, "t_s": c.t_s, "sharpness": round(c.sharpness, 1), "motion": round(c.motion, 2),
                                 "skin": round(c.skin, 4)} for c in chosen]}
@@ -195,17 +210,25 @@ def run(spec: dict, job: Path) -> dict:
         cv2.imwrite(str(image_path), rf.image)
         with progress.stage("muse_box"):
             usage["muse_calls"] += 1
-            box = muse_sam.muse_box(rf.image, spec["part"], key)
+            box, reused = _checkpoint(job, "box", lambda: muse_sam.muse_box(rf.image, spec["part"], key))
+            usage["muse_calls"] -= int(reused)
         base.update(frame={"index": picked.frame_index, "t_s": picked.t_s}, box=box)
         if not box["valid"]:
             result = {**base, "status": "NEEDS_CAPTURE", "reasons": ["Muse returned no valid box"]}
             progress.finish("done", result=result)
             return result
         with progress.stage("sam"):
-            usage["sam_calls"] += 1
-            mask, sam_info = muse_sam.sam_mask(image_path, box["box_full"], rf.image.shape[:2], job / "sam", job / "sam_ledger.jsonl")
-            if mask is None:
-                raise RuntimeError(f"SAM call failed: {sam_info}")
+            if next((job / "sam").glob("*/evidence.json"), None) is not None:  # resumed: the SAM answer is already here
+                mask, sam_info = muse_sam.read_sam_result(job / "sam", rf.image.shape[:2])
+            else:
+                usage["sam_calls"] += 1
+                mask, sam_info = muse_sam.sam_mask(image_path, box["box_full"], rf.image.shape[:2], job / "sam", job / "sam_ledger.jsonl")
+        if mask is None and sam_info.get("records") == 0:
+            result = {**base, "status": "NEEDS_CAPTURE", "reasons": ["SAM found no part inside Muse's box"], "sam": sam_info}
+            progress.finish("done", result=result)
+            return result
+        if mask is None:
+            raise ProviderUnavailable(f"SAM call failed: {sam_info.get('stderr_tail')}")
         with progress.stage("checks_and_svg"):
             outer, openings = muse_sam.outer_and_openings(mask)
             checks = quality.plausibility(outer, box["box_full"], sam_info.get("sam_box"))
@@ -228,7 +251,10 @@ def run(spec: dict, job: Path) -> dict:
                   "muse_latency_s": {"choose": meta["latency_s"], "box": box["latency_s"]}}
         progress.finish("done", result=result)
         return result
-    except Exception as exc:  # every failure ends visibly; no silent stop
+    except (ProviderUnavailable, muse_sam.client.ApiError, OSError) as exc:  # service or network: resumable
+        progress.finish("paused", error=f"{type(exc).__name__}: {str(exc)[:300]}", usage=usage)
+        raise
+    except Exception as exc:  # every other failure ends visibly; no silent stop
         progress.finish("failed", error=f"{type(exc).__name__}: {str(exc)[:300]}", usage=usage)
         raise
 

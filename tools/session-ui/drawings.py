@@ -71,6 +71,16 @@ def start_drawing(root: Path, session_id: str, spec_name: str) -> dict:
     return {"job": job.name, "state": "started"}
 
 
+def resume_drawing(root: Path, session_id: str, job: str) -> dict:
+    """Continue a paused or failed job from its checkpoints (no repeated Muse or SAM call for finished stages)."""
+    job_dir = _job_dir(root, session_id, job)
+    state = _summary(job_dir)["state"]
+    if state not in ("paused", "failed"):
+        raise AdapterError(f"Only a paused or failed job can be resumed (state {state}).", 409)
+    job_control.start(job_dir / "spec.json", job_dir)
+    return {"job": job, "state": "resumed"}
+
+
 def drawing_status(root: Path, session_id: str, job: str) -> dict:
     return _summary(_job_dir(root, session_id, job))
 

@@ -3,6 +3,7 @@ package org.anastylos.capture.sync
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 
 /**
@@ -49,7 +50,14 @@ sealed interface EnrollOutcome {
     data class Failed(val message: String) : EnrollOutcome
 }
 
-private val GuidedJson = Json { ignoreUnknownKeys = true }
+// The receiver requires every non-null field: a default (0, "", empty list) left out by the
+// encoder fails validation ("missing 'expected_session_revision'"). Nulls stay absent.
+@OptIn(ExperimentalSerializationApi::class)
+private val GuidedJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+    explicitNulls = false
+}
 
 class GuidedControlClient(
     private val transport: HttpTransport,

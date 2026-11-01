@@ -61,6 +61,27 @@ class GuidedControlClientTest {
     )
 
     @Test
+    fun `capabilities always carry every required field, empty lists included`() = runTest {
+        val transport = ScriptedTransport()
+        val client = GuidedControlClient(transport)
+        val caps = GuidedCapabilities(
+            sourceId = "a0b49e48-289f-4384-b531-63ef679ba742", updatedAt = "2026-11-01T18:12:00Z",
+            stale = false, targetKinds = listOf("pose"), qualityProfileIds = listOf("guidance-hypothesis-1"),
+            appVersion = "0.1.0", protocolVersion = 1,
+        )
+        transport.handler = { request -> okJson(request.body!!.toString(Charsets.UTF_8)) }
+
+        client.publishCapabilities("guided-token", caps)
+
+        val sent = json.parseToJsonElement(transport.requests.single().body!!.toString(Charsets.UTF_8)).jsonObject
+        // The receiver's validate_capabilities_input rejects a body missing any of these.
+        assertThat(sent.keys).containsExactly(
+            "source_id", "updated_at", "stale", "camera_ids", "resolutions_px", "calibration_ids",
+            "target_kinds", "quality_profile_ids", "app_version", "protocol_version",
+        )
+    }
+
+    @Test
     fun `consent arm fixture round-trips to an ACTIVE session`() = runTest {
         val transport = ScriptedTransport()
         val client = GuidedControlClient(transport)

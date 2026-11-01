@@ -957,6 +957,9 @@ class GuidanceViewModel(
             updatedAt = utcClock().toIsoUtc(),
             stale = false,
             cameraIds = _state.value.availableCameras.map { it.id }.take(8),
+            resolutionsPx = listOfNotNull(
+                _state.value.overlayGeometry?.let { listOf(it.analysisWidth, it.analysisHeight) },
+            ),
             calibrationIds = listOfNotNull(measuredCalibrationId(_state.value.intrinsicsLabel)),
             targetKinds = listOf("pose"),
             qualityProfileIds = listOf(GuidanceHypothesis1.PROFILE_ID),

@@ -1,4 +1,4 @@
-# VOICE-01 — TL decision on R9 (CR-VOICE-01) and R10 (CR-VOICE-02), 2026-11-02
+# VOICE-01 — TL decision on R9 (CR-VOICE-01) and R10 (CR-VOICE-02), 2026-11-01
 
 Requests: `docs/integration/CONTRACT-OWNER-REQUESTS.md` on `integration/spatial-capture-v1` @ `28017113`;
 Android side `2ce5b757`; design `docs/integration/VOICE-01.md`. Workstation reference: `research/drawing-proof`

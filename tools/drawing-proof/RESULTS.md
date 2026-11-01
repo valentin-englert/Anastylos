@@ -131,7 +131,10 @@ object states apart; fusion is only valid inside one confirmed state, so it need
 
 API use: Muse 6, SAM 6 (MF-1), 0 failures. EV-1 used no model.
 
-## EFF-1: reasoning effort high vs max for the part box (plan `specs/plan_eff1.json`, committed 2e576acd before the run), 2026-11-02
+## EFF-1: reasoning effort high vs max for the part box (plan `specs/plan_eff1.json`, committed 2e576acd before the run), 2026-11-01
+
+Date correction (audit 2026-11-01): the plan file and this section were first dated 2026-11-02 by mistake; the
+run took place on 2026-11-01. The plan file stays unchanged as committed.
 
 6 dev images × {max, high} × 2 repeats, interleaved; script `effort_experiment.py`, raw output
 `C:\tmp\anastylos-drawing-proof\eff1\eff1.json`.
@@ -154,3 +157,9 @@ tokens cached. Latency 31.1 / 28.9 / 19.9 s — not attributable to the cache, b
 dominates. Not adopted (no measurable benefit).
 
 API use: Muse 27, 0 failures, 0 retries.
+
+
+## Audit note 2026-11-01
+
+Paused/resume with checkpoints is covered by a unit test only (`tests/test_drawing_job.py` ResumeTest); resuming a
+real interrupted job has not been shown yet. Do not claim it as demonstrated.

@@ -9,7 +9,13 @@
 <body>
 <header>
   <h1>ANASTYLOS Session</h1>
-  <p class="offline-banner" id="offline-banner">Offline demo — deterministic L0 answers and stored claims only. No model calls.</p>
+  <div class="voice-bar" id="voice-bar">
+    <button type="button" id="talk-button" aria-describedby="voice-hint">Hold to talk</button>
+    <label><input type="checkbox" id="speak-toggle" checked> Speak replies</label>
+    <span class="hint" id="voice-hint">Hold the button or the space bar, speak in English, release. Speech goes to Muse Voice Transcribe; the clip is not stored.</span>
+    <p class="state" id="voice-state" role="status"></p>
+  </div>
+  <p class="offline-banner" id="offline-banner">Deterministic L0 questions and stored claims. Model calls (Meta API) only for voice transcription and part drawings.</p>
 </header>
 
 <main>

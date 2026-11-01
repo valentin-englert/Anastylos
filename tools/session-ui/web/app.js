@@ -191,6 +191,7 @@ function fillPromptCard(payload) {
   $("prompt-card").hidden = false;
   setText("prompt-qid", `Question ${payload.question_id} (${payload.wording || "L0"} wording)`);
   setText("prompt-text", payload.text);
+  speak(payload.text + ((payload.screen_options || []).length ? " Please look at the screen for the options." : ""));
   const options = $("screen-options");
   options.replaceChildren();
   for (const option of payload.screen_options || []) {
@@ -217,6 +218,7 @@ function fillConfirmCard(payload) {
   $("confirm-card").hidden = false;
   setText("confirm-qid", `Read-back for ${payload.question_id}`);
   setText("confirm-text", payload.read_back);
+  speak(payload.read_back);
   state.question = { qid: payload.question_id, stage: "confirm" };
 }
 
@@ -287,6 +289,7 @@ async function sendConfirm(button) {
       state.question = null;
       const notice = $("questions-notice");
       notice.textContent = "Recorded.";
+      speak("Recorded.");
       notice.hidden = false;
     } else if (payload.stage === "answer") {
       /* The read-back was rejected ("no"): the question is asked again. */
@@ -373,6 +376,7 @@ async function askGuide(button) {
     $("guide-answer").hidden = false;
     paintBadge("guide-source", payload.source, null);
     setText("guide-text", payload.text);
+    speak(payload.accepted ? payload.text : "I cannot confirm that from the evidence.");
     setText("guide-provenance",
       `Package ${(payload.package_sha256 || "").slice(0, 12)} — accepted: ${payload.accepted ? "yes" : "no"}` +
       (payload.findings && payload.findings.length ? ` — ${payload.findings.join("; ")}` : ""));
@@ -779,6 +783,7 @@ async function loadDrawings() {
     if (view.specs.includes(selected)) picker.value = selected;
     setText("drawings-state", view.specs.length ? `${view.jobs.length} drawing job(s).` : "No drawing specs in this session.");
     $("drawing-jobs").replaceChildren(...view.jobs.map(drawingCard));
+    speakDrawingChanges(view.jobs);
     if (view.jobs.some((job) => job.state === "running")) drawingTimer = setTimeout(loadDrawings, DRAWING_POLL_MS);
   } catch (error) {
     showError("drawings-error", error.message);
@@ -806,6 +811,116 @@ async function bindDrawing(job, decision, button) {
   }
 }
 
+/* ------------------------------------------------------------------ voice */
+
+/* Speech output reads verified text only: template questions, read-backs, verified guide answers and
+   fixed status sentences. Model prose is never spoken. */
+const DRAWING_SPEECH = {
+  NEEDS_CAPTURE: "I cannot see the whole part. Please place it alone in the work area and take your hands away.",
+  NEEDS_CONFIRMATION: "The drawing is ready. Please confirm that it shows the right part.",
+  NEEDS_REVIEW: "The drawing needs a review before it can be used.",
+  drawn_unconfirmed: "The drawing is ready for your confirmation.",
+};
+const spokenJobs = new Map();
+const voice = { recording: false, context: null, stream: null, chunks: [], source: null, processor: null };
+
+function speak(text) {
+  if (!text || !$("speak-toggle").checked || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  const english = window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("en"));
+  if (english) utterance.voice = english;
+  window.speechSynthesis.speak(utterance);
+}
+
+function speakDrawingChanges(jobs) {
+  for (const job of jobs) {
+    const key = `${job.state}/${job.status}`;
+    const before = spokenJobs.get(job.job);
+    spokenJobs.set(job.job, key);
+    if (before === undefined || before === key) continue;
+    if (job.state === "failed") speak("The drawing job failed.");
+    else if (job.state === "done") speak(DRAWING_SPEECH[job.status]);
+  }
+}
+
+function wavFromSamples(samples, inputRate, outputRate) {
+  const ratio = inputRate / outputRate;
+  const length = Math.floor(samples.length / ratio);
+  const view = new DataView(new ArrayBuffer(44 + length * 2));
+  const text = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
+  text(0, "RIFF"); view.setUint32(4, 36 + length * 2, true); text(8, "WAVE"); text(12, "fmt ");
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, outputRate, true); view.setUint32(28, outputRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true); text(36, "data"); view.setUint32(40, length * 2, true);
+  for (let i = 0; i < length; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[Math.floor(i * ratio)]));
+    view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+  return new Blob([view], { type: "audio/wav" });
+}
+
+async function startTalking() {
+  if (voice.recording) return;
+  voice.recording = true;
+  try {
+    voice.stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true } });
+  } catch (error) {
+    voice.recording = false;
+    setText("voice-state", "Microphone not available: " + error.message);
+    return;
+  }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  voice.context = new AudioContext();
+  voice.source = voice.context.createMediaStreamSource(voice.stream);
+  voice.processor = voice.context.createScriptProcessor(4096, 1, 1);
+  voice.chunks = [];
+  voice.processor.onaudioprocess = (event) => voice.chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+  voice.source.connect(voice.processor);
+  voice.processor.connect(voice.context.destination);
+  $("talk-button").classList.add("recording");
+  setText("voice-state", "Listening …");
+}
+
+async function stopTalking() {
+  if (!voice.recording || !voice.context) return;
+  voice.recording = false;
+  $("talk-button").classList.remove("recording");
+  voice.processor.disconnect();
+  voice.source.disconnect();
+  voice.stream.getTracks().forEach((track) => track.stop());
+  const rate = voice.context.sampleRate;
+  await voice.context.close();
+  voice.context = null;
+  const total = voice.chunks.reduce((n, c) => n + c.length, 0);
+  if (total < rate * 0.3) { setText("voice-state", "Too short. Hold while you speak."); return; }
+  const samples = new Float32Array(total);
+  let offset = 0;
+  for (const chunk of voice.chunks) { samples.set(chunk, offset); offset += chunk.length; }
+  setText("voice-state", "Transcribing …");
+  try {
+    const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" },
+                                                          body: wavFromSamples(samples, rate, 16000) });
+    if (result.status !== "ok" || !result.transcript) {
+      setText("voice-state", `Not understood (${result.status}). Please try again or type.`);
+      return;
+    }
+    setText("voice-state", `You said: “${result.transcript}” (${result.latency_s} s)`);
+    routeTranscript(result.transcript);
+  } catch (error) {
+    setText("voice-state", "Transcription failed: " + error.message);
+  }
+}
+
+function routeTranscript(text) {
+  /* The transcript is operator input like typed text: it goes to whatever the dialog is waiting for. */
+  if (!$("confirm-card").hidden) { $("confirm-input").value = text; sendConfirm($("confirm-button")); return; }
+  if (!$("prompt-card").hidden) { $("answer-input").value = text; sendAnswer(text, null, $("answer-button")); return; }
+  $("ask-input").value = text.replace(/^\s*muse[,.!]?\s*/i, "");
+  askGuide($("ask-button"));
+}
+
 /* ------------------------------------------------------------------ wiring */
 
 $("session-form").addEventListener("submit", (event) => { event.preventDefault(); openSession(); });
@@ -830,5 +945,15 @@ $("done-form").addEventListener("submit", (event) => { event.preventDefault(); c
 $("export-form").addEventListener("submit", (event) => { event.preventDefault(); exportReport($("export-button")); });
 $("drawing-form").addEventListener("submit", (event) => { event.preventDefault(); startDrawing($("drawing-start")); });
 $("evaluate-form").addEventListener("submit", (event) => { event.preventDefault(); evaluateGap($("evaluate-button")); });
+
+$("talk-button").addEventListener("pointerdown", (event) => { event.preventDefault(); startTalking(); });
+$("talk-button").addEventListener("pointerup", stopTalking);
+$("talk-button").addEventListener("pointerleave", stopTalking);
+document.addEventListener("keydown", (event) => {
+  if (event.code !== "Space" || event.repeat || /INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)) return;
+  event.preventDefault();
+  startTalking();
+});
+document.addEventListener("keyup", (event) => { if (event.code === "Space" && voice.recording) { event.preventDefault(); stopTalking(); } });
 
 loadSessions();

@@ -58,3 +58,13 @@ drawn yet.
 
 Until confirmed, an explosion layout is a proposal: layer order front shell → PCB → back shell along one
 axis, gaps in paper space only (teardown-skill convention: 8–15 mm, no measured assembly path).
+
+## Background job state (`job_control.py`)
+
+A job's `progress.json` is written atomically under a per-job lock (`progress.lock`). Each start or resume opens a new
+`generation` (with a `token`) that is on disk before the worker is spawned; the worker adopts it. A status poll
+re-judges under the lock and writes `failed` only for the same still-running generation, so a worker that just wrote
+`done` is never overwritten; a worker whose generation was replaced, or whose job a poller already ended, is refused
+(`Superseded`) and stops. Resume (`start` on an existing job dir) first kills and verifies dead the previous worker
+(by recorded pid); if it will not die, no second worker is spawned. Residual risk: a recorded pid that the OS has
+reused for an unrelated process would be killed on resume. Tests: `tests/test_drawing_job.py` (fake clock and processes).

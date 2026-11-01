@@ -98,7 +98,8 @@ def first_removal_s(events_path: str | None) -> float | None:
     if not events_path or not Path(events_path).exists():
         return None
     events = json.loads(Path(events_path).read_text(encoding="utf-8")).get("events", [])
-    times = [e["t_s"] for e in events if e.get("kind") == "site_changed"]
+    # site_changed carries the last unchanged time (t_before_s): earlier frames show the state before any observed removal.
+    times = [e["t_before_s"] for e in events if e.get("kind") == "site_changed"]
     return min(times) if times else None
 
 
@@ -112,7 +113,7 @@ def frame_decision(spec: dict, choice: dict, t_s: float, removal_s: float | None
         reasons.append(f"Muse sees {choice['state']}, requested {wanted}")
     if removal_s is not None and spec["scope"] != "object" and t_s < removal_s:
         reasons.append(f"frame at {t_s:.1f} s is before the first observed removal of this phase ({removal_s:.1f} s): "
-                       "the object may still be assembled")
+                       "it shows the phase's starting state, which may still be joined to other parts")
     return ("NEEDS_CONFIRMATION" if reasons else "ok"), reasons
 
 
@@ -216,8 +217,8 @@ def run(spec: dict, job: Path) -> dict:
             ppm = rf.px_per_mm
             outline, deviation = draw.simplify(segment.boundary(outer), ppm, 0.2)
             openings_mm = [rf.px_to_mm(draw.simplify(o, ppm, 0.2)[0]).round(2).tolist() for o in openings]
-            svg_spec = {"title": f"{spec['part']} ({spec['scope']}) - outline, unconfirmed",
-                        "subtitle": f"{video.name} frame {picked.frame_index} ({picked.t_s} s); attachments {spec['attachments']}",
+            svg_spec = {"title": "Outline (unconfirmed)",
+                        "subtitle": f"{spec['part']} ({spec['scope']}); {video.name} frame {picked.frame_index} ({picked.t_s} s)",
                         "legend": [f"Outline: SAM mask boundary, max deviation {deviation:.2f} mm, sheet plane; not part dimensions.",
                                    f"Opening candidates: {len(openings)}, unconfirmed, hidden layer 'opening_candidates'.",
                                    "Inner details: not extracted. Frame identity, view side and orientation need operator confirmation."]}

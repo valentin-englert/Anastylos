@@ -89,3 +89,22 @@ in the background and writes `progress.json` per stage.
 Consequences: every drawing is `drawn_unconfirmed` until the operator confirms frame identity; a Muse
 `fully_visible=false` stops the job with a capture request. The back-shell and PCB drawings for the explosion
 still need the two hand-free captures; no explosion is drawn.
+
+## Milestone: request a part → check → draw or request a capture → overlay → operator binding (2026-11-01)
+
+Session-UI section "Part drawings" (`tools/session-ui/drawings.py`, routes `/api/drawings`, `/api/drawing/*`) over
+the background job. Demo workspace `C:\ANASTYLOS\data\drawing-ui-demo\full01` (FULL-01 copy), specs back-shell,
+pcb-cable, front-shell. Run through the real server API on 2026-11-01:
+
+| Check | Result |
+|---|---|
+| J1 back shell (P2 0–40 s) | `NEEDS_CAPTURE`: Muse sees `assembled_object`, no usable tile; no drawing |
+| J2 PCB with cable (P2 55–80 s) | `NEEDS_CAPTURE`: Muse `unclear`, no usable tile; no drawing (synthetic J2 regression in tests: half mask + box at image edge → `NEEDS_CAPTURE`) |
+| J3 front shell (P3 0–20 s) | `NEEDS_CONFIRMATION` (frame 0.5 s precedes the first observed change at 13.8 s); SVG and overlay shown; binding buttons offered |
+| Double start of the same spec | second request returns the running job |
+| Worker killed with `taskkill` during the Muse call | status `failed`: "worker process ended without a final state" |
+| Repeated J3 | candidate index cache hit: sampling 0.01 s (was 48 s), total 34 s (was 86 s) |
+
+Latency per job: first run 86–127 s (sampling 48–84 s, Muse choice 14–47 s, Muse box 12 s, SAM 7–9 s); cached
+34 s. API use for this milestone: Muse 7 calls (one interrupted by the kill test), SAM 2 calls, 0 failures.
+Not yet checked: a browser click on the binding buttons (the server path is covered by `test_drawings.py`).

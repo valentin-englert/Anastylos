@@ -400,6 +400,32 @@ def select(root: Path, session_id: str, binding_file: str) -> dict:
     return _stopped(selection.resolve, memory, package_path, binding)
 
 
+def fresh_selection_inputs(root: Path, session_id: str, event_id: str, drawing_element_id: str):
+    """``(memory, package_path, binding)`` for one declared part, bound to the session's current bytes.
+
+    The guide must be usable first (``guide.load``: recorded build hash, intact package, memory
+    unchanged since the build), so a stale or tampered package is refused instead of silently
+    re-bound. Unlike ``_selection_inputs`` the binding is not an operator file: it is derived
+    from the verified session bytes, and ``selection.resolve`` still checks every hash.
+    """
+    state = _load_state(root, session_id)
+    package, _raw = _stopped(guide.load, state)
+    memory = state.memory_dir / "memory.jsonl"
+    package_path = guide.guide_dir(state) / "session.json"
+    binding = {"schema": selection.SCHEMA, "drawing_element_id": drawing_element_id, "event_id": event_id,
+               "source": {"session": _memory_session(memory), "memory_path": str(memory.resolve())},
+               "memory_sha256": hashlib.sha256(memory.read_bytes()).hexdigest(), "guide_sha256": package.sha256}
+    return memory, package_path, binding
+
+
+def _memory_session(memory: Path) -> str:
+    sessions = {json.loads(line).get("session") for line in memory.read_text(encoding="utf-8").splitlines()
+                if line.strip()}
+    if len(sessions) != 1 or not next(iter(sessions)):
+        raise AdapterError("The session memory carries no single session value; no part can be bound.", 409)
+    return next(iter(sessions))
+
+
 def selected_ask(root: Path, session_id: str, binding_file: str, intent: str,
                  claims_file: str | None = None) -> dict:
     """Recorded origin or storage of the bound part.

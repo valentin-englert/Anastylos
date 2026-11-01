@@ -128,3 +128,9 @@ footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none; animation: none; }
 }
+
+.drawing-job { border-top: 1px solid var(--line, #ccc); padding-block: 0.6rem; }
+.drawing-image { max-width: 100%; height: auto; border: 1px solid var(--line, #ccc); background: #fff; }
+
+.voice-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+#talk-button.recording { background: #b03a2e; color: #fff; }

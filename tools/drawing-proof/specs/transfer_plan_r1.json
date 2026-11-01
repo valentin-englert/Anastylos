@@ -1,0 +1,69 @@
+{
+  "schema": "anastylos-drawing-proof-transfer-plan@1",
+  "baseline": "baseline_r1.json",
+  "committed_before_any_run": true,
+  "targets": [
+    {
+      "id": "T1-front-p3-f240",
+      "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+      "frame_index": 240,
+      "region_mm": [
+        125,
+        100,
+        175,
+        90
+      ],
+      "kind": "same part, other frame (8.0 s)"
+    },
+    {
+      "id": "T2-front-p3-f360",
+      "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+      "frame_index": 360,
+      "region_mm": [
+        125,
+        100,
+        175,
+        90
+      ],
+      "kind": "same part, other frame (12.0 s)"
+    },
+    {
+      "id": "T3-front-empty-aftermath",
+      "video": "C:\\tmp\\anastylos-explosion-m1\\frame-hunt\\FULL-01-Aftermath.jpg",
+      "frame_index": null,
+      "region_mm": [
+        125,
+        100,
+        175,
+        90
+      ],
+      "kind": "same shell without membranes, other camera image (still)"
+    },
+    {
+      "id": "T4-dpad-membrane-aftermath",
+      "video": "C:\\tmp\\anastylos-explosion-m1\\frame-hunt\\FULL-01-Aftermath.jpg",
+      "frame_index": null,
+      "region_mm": [
+        344,
+        132,
+        50,
+        40
+      ],
+      "kind": "other part on printed tray cell lines"
+    },
+    {
+      "id": "T5-shoulder-piece-p3-f300",
+      "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+      "frame_index": 300,
+      "region_mm": [
+        344,
+        72,
+        48,
+        42
+      ],
+      "kind": "other part on printed tray cell lines"
+    }
+  ],
+  "expected_honest_outcomes": "a gate failure with a capture request is correct behaviour, not a successful drawing",
+  "no_retuning": "parameters stay at baseline_r1; any change becomes baseline_r2 with its own plan"
+}

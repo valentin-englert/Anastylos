@@ -15,6 +15,8 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import subprocess
+import sys
 import threading
 import urllib.parse
 from http import HTTPStatus
@@ -23,6 +25,7 @@ from pathlib import Path
 from typing import Callable
 
 import adapter
+import drawings
 from adapter import AdapterError
 
 LOG = logging.getLogger("session-ui")
@@ -30,6 +33,9 @@ WEB = Path(__file__).resolve().parent / "web"
 STATIC = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
           "styles.css": "text/css; charset=utf-8"}
 MAX_BODY = 64 * 1024
+MAX_AUDIO_BODY = 4 * 1024 * 1024  # about 85 s of 24 kHz mono 16-bit WAV: push-to-talk clips only
+TRANSCRIBER = [sys.executable, "-B", str(Path(__file__).resolve().parents[1] / "live" / "providers" / "transcribe.py"), "--stdin"]
+TRANSCRIBE_DEADLINE_S = 200
 
 
 def is_loopback_host(host: str) -> bool:
@@ -38,6 +44,7 @@ def is_loopback_host(host: str) -> bool:
 
 class Handler(BaseHTTPRequestHandler):
     workspace_root: Path
+    transcriber: list[str] = TRANSCRIBER
     locks: dict[str, threading.Lock]
     locks_guard = threading.Lock()
 
@@ -123,7 +130,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
-            "/api/gaps/evidence": self._api_evidence,
+            "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
+            "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
         }
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -146,7 +154,10 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/questions/confirm": self._api_confirm, "/api/guide/build": self._api_guide_build,
                   "/api/guide/ask": self._api_guide_ask, "/api/select": self._api_select,
                   "/api/selected-ask": self._api_selected_ask, "/api/assembly/done": self._api_assembly_done,
-                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate}
+                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate,
+                  "/api/drawing/start": self._api_drawing_start, "/api/drawing/bind": self._api_drawing_bind,
+                  "/api/drawing/resume": self._api_drawing_resume,
+                  "/api/voice/transcribe": self._api_voice_transcribe}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -290,6 +301,61 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The file parameter is missing.", 400)
         body, content_type = adapter.evidence_bytes(Handler.workspace_root, session_id, name)
         self._send_bytes(body, content_type)
+
+    def _api_drawings(self) -> None:
+        self._send_json(drawings.list_drawings(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_drawing_status(self) -> None:
+        query = self._query()
+        self._send_json(drawings.drawing_status(Handler.workspace_root, self._session_param(query), query.get("job", "")))
+
+    def _api_drawing_file(self) -> None:
+        query = self._query()
+        body, content_type = drawings.drawing_bytes(Handler.workspace_root, self._session_param(query), query.get("job", ""),
+                                                    query.get("file", ""))
+        self._send_bytes(body, content_type)
+
+    def _api_drawing_start(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.start_drawing(Handler.workspace_root, session_id, body.get("spec", "")))
+
+    def _api_drawing_resume(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.resume_drawing(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_drawing_bind(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.bind(Handler.workspace_root, session_id, body.get("job", ""),
+                                                       body.get("decision", ""), str(body.get("note", ""))))
+
+    def _api_voice_transcribe(self) -> None:
+        """Push-to-talk clip → transcript. The clip goes to the provider in a separate process and is not stored."""
+        length = int(self.headers.get("Content-Length") or 0)
+        if self.headers.get("Content-Type", "").split(";")[0].strip() != "audio/wav":
+            self._discard_body()
+            raise AdapterError("Send the clip as audio/wav.", 415)
+        if not 0 < length <= MAX_AUDIO_BODY:
+            self.close_connection = True
+            raise AdapterError("The clip is empty or longer than about 85 seconds.", 413)
+        audio = self.rfile.read(length)
+        try:
+            done = subprocess.run(Handler.transcriber, input=audio, capture_output=True, timeout=TRANSCRIBE_DEADLINE_S)
+        except subprocess.TimeoutExpired:
+            raise AdapterError("Transcription did not finish in time.", 504) from None
+        if done.returncode:
+            LOG.error("transcriber failed: %s", done.stderr.decode("utf-8", "replace")[-300:])
+            raise AdapterError("Transcription failed.", 502)
+        result = json.loads(done.stdout)
+        self._send_json({k: result.get(k) for k in ("status", "transcript", "latency_s", "error")})
 
 
 def serve(workspace_root: Path, host: str = "127.0.0.1", port: int = 8071) -> ThreadingHTTPServer:

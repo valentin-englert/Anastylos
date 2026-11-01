@@ -1,0 +1,84 @@
+{
+  "schema": "anastylos-drawing-proof-spec@1",
+  "title": "Front shell with button membranes - interior side (drawing proof)",
+  "subtitle": "FULL-01-P3 frame 300 (9.998 s), sheet-rectified top view; no memory record bound; orientation as photographed",
+  "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+  "video_sha256": "029e499d6646f6c987b790932c4f744f13182d2bb0ea61d8b4d709d541885908",
+  "frame_index": 300,
+  "region_mm": [
+    125,
+    100,
+    175,
+    90
+  ],
+  "px_per_mm": 10.0,
+  "threshold": {
+    "close_px": 15
+  },
+  "shadow": {
+    "texture_window_px": 9,
+    "min_b": 135,
+    "max_sd": 4.0,
+    "band_px": 80
+  },
+  "grabcut": {
+    "band_px": 12,
+    "iterations": 5
+  },
+  "outline_tolerance_mm": 0.2,
+  "edge_fit": {
+    "edge_low": 40,
+    "edge_high": 120
+  },
+  "tones": {
+    "light_L": 175,
+    "dark_L": 55,
+    "min_area_mm2": 15,
+    "tolerance_mm": 0.25,
+    "dark_min_area_mm2": 100,
+    "dark_min_solidity": 0.85,
+    "min_hole_mm2": 8,
+    "min_hole_circularity": 0.6
+  },
+  "manual": {
+    "detail_boxes_mm": [
+      {
+        "name": "start/select rubber pad",
+        "tone": "dark",
+        "rect_mm": [
+          [
+            193.8,
+            129.5
+          ],
+          [
+            228.5,
+            155.5
+          ]
+        ],
+        "why": "the pad's inner light grooves split it under any lightness threshold, and shadowed shell floor is as dark"
+      }
+    ],
+    "outline_corrections": {
+      "force_background": [],
+      "force_foreground": []
+    }
+  },
+  "geometry_classes": {
+    "observed_outline": "solid outline: mask boundary, Douglas-Peucker 0.2 mm, edge fit reported",
+    "observed_regions": "membranes and holes from the same image by lightness; rubber pad from one documented manual box",
+    "unknown": "not drawn: listed below"
+  },
+  "unknown": [
+    "part height and rim height: the view is a single top-down photograph",
+    "outer (front) side of the shell: not visible in this frame",
+    "sheet-plane millimetres: the raised rim is shifted by parallax; not part dimensions",
+    "identity: no single canonical front-shell record exists in owner memory S; nothing is bound"
+  ],
+  "legend": [
+    "Solid outline and fills: observed in this frame (outline max deviation 0.2 mm from the mask boundary).",
+    "Dashed outline: observed region traced from one documented manual box (rubber pad).",
+    "Openings: drawn only if enclosed by membrane; one D-pad contact touches its edge and is omitted.",
+    "Not drawn (unknown): heights, the outer side, hidden underside. Scale is sheet plane, not part dimensions.",
+    "Orientation: as photographed on the sheet; interior side up; not confirmed against other parts."
+  ]
+}

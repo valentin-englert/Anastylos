@@ -168,8 +168,12 @@ def rubric(text: str, anchor_possible: bool, has_anchor: bool, phase_words: str 
 
 YES, NO, SKIP, UNSURE, NOT_A_PART = "yes", "no", "skip", "unsure", "not_a_part"
 _YES = {"yes", "y", "yes correct", "correct", "right", "that's right", "that is right", "thats right", "confirm",
-        "confirmed", "ok", "okay", "yes that's right", "yes that is right", "yep", "yeah"}
-_NO = {"no", "n", "wrong", "incorrect", "not correct", "that's wrong", "that is wrong", "no that's wrong", "nope"}
+        "confirmed", "ok", "okay", "yes that's right", "yes that is right", "yep", "yeah",
+        # spoken read-back replies as transcribed (punctuation is stripped by _key)
+        "that is correct", "that's correct", "thats correct", "yes that is correct", "yes that's correct",
+        "yes thats correct", "yes it is", "yes please"}
+_NO = {"no", "n", "wrong", "incorrect", "not correct", "that's wrong", "that is wrong", "no that's wrong", "nope",
+       "that is not correct", "that's not correct", "no that is wrong", "no that is not correct", "no that's not right"}
 _SKIP = {"skip", "later", "ask later", "ask me later", "next", "next question"}
 _UNSURE = {"i don't know", "i dont know", "don't know", "dont know", "not sure", "i'm not sure", "im not sure",
            "unsure", "no idea"}

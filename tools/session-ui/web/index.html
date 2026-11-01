@@ -9,7 +9,14 @@
 <body>
 <header>
   <h1>ANASTYLOS Session</h1>
-  <p class="offline-banner" id="offline-banner">Offline demo — deterministic L0 answers and stored claims only. No model calls.</p>
+  <div class="voice-bar" id="voice-bar">
+    <button type="button" id="talk-button" aria-describedby="voice-hint">Hold to talk</button>
+    <label><input type="checkbox" id="speak-toggle" checked> Speak replies</label>
+    <label><input type="checkbox" id="wake-toggle"> Listen for “Muse”</label>
+    <span class="hint" id="voice-hint">Hold the button or the space bar, or switch on “Listen for Muse” and start with “Muse …” or “Meta …”. While listening, every spoken phrase in the room is sent to Muse Voice Transcribe; phrases without the wake word are discarded and nothing is stored.</span>
+    <p class="state" id="voice-state" role="status"></p>
+  </div>
+  <p class="offline-banner" id="offline-banner">Deterministic L0 questions and stored claims. Model calls (Meta API) only for voice transcription and part drawings.</p>
 </header>
 
 <main>
@@ -194,6 +201,18 @@
       </div>
     </div>
     <p class="error" id="gaps-error" role="alert" hidden></p>
+  </section>
+  <section aria-labelledby="drawings-heading">
+    <h2 id="drawings-heading">Part drawings</h2>
+    <p class="hint">Starts a background job that calls Muse and SAM (Meta API) on frames of the session video. The page stays usable while it runs. A drawing stays unconfirmed until you bind it; memory is never changed. Opening candidates are hidden in the SVG.</p>
+    <form id="drawing-form">
+      <label for="drawing-spec">Requested part</label>
+      <select id="drawing-spec" name="spec"></select>
+      <button type="submit" id="drawing-start">Start drawing job</button>
+    </form>
+    <p class="state" id="drawings-state" role="status"></p>
+    <div id="drawing-jobs"></div>
+    <p class="error" id="drawings-error" role="alert" hidden></p>
   </section>
 </main>
 

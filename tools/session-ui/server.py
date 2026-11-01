@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Callable
 
 import adapter
+import assembly_help
 import captures
 import drawings
 from adapter import AdapterError
@@ -133,6 +134,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
             "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
             "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
+            "/api/parts/link-candidates": self._api_parts_candidates,
         }
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -160,6 +162,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/drawing/resume": self._api_drawing_resume,
                   "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
+                  "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
                   "/api/voice/transcribe": self._api_voice_transcribe}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -363,6 +366,27 @@ class Handler(BaseHTTPRequestHandler):
         if not session_id:
             raise AdapterError("The session parameter is missing.", 400)
         self._mutate(session_id, lambda: captures.capture_status(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_parts_candidates(self) -> None:
+        query = self._query()
+        self._send_json(assembly_help.link_candidates(Handler.workspace_root, self._session_param(query), query.get("job", "")))
+
+    def _api_parts_link(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: assembly_help.link_part(Handler.workspace_root, session_id, body.get("job", ""),
+                                                                 body.get("part", ""), bool(body.get("supersede")),
+                                                                 str(body.get("note", ""))))
+
+    def _api_parts_ask(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._send_json(assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""),
+                                                     str(body.get("question", ""))))
 
     def _api_voice_transcribe(self) -> None:
         """Push-to-talk clip → transcript. The clip goes to the provider in a separate process and is not stored."""

@@ -56,6 +56,16 @@ class LevelRuleTest(unittest.TestCase):
         self.assertEqual((mode, count, len(counts)), (["ok", 1], 2, 2))
 
 
+class RequestFieldsTest(unittest.TestCase):
+    def test_every_job_can_build_the_current_choice_prompt(self):
+        import drawing_job
+        for job, request in cons.REQUESTS.items():
+            with self.subTest(job=job):
+                prompt = drawing_job.CHOICE_PROMPT.format(times="1 = 0.5 s", **{k: request[k] for k in ("part", "scope", "view_side", "attachments")})
+                self.assertIn(request["part"], prompt)
+                self.assertIn(request["scope"], drawing_job.SCOPE_STATE)
+
+
 class BudgetTest(unittest.TestCase):
     def runner(self):
         return cons.Runner("secret-key", Path(tempfile.mkdtemp()) / "log.jsonl")

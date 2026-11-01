@@ -34,6 +34,18 @@ FRAME_REPEATS, BOX_REPEATS = 5, 3
 HARD_CAP = 40
 RETRY_PAUSE_S = 5
 MAX_SHEET_DIFF = 3.0  # mean absolute pixel difference to the saved B1 sheet (JPEG re-encode level)
+# Request fields of the current product specs (session-ui demo specs, 2026-11-01); the B1 specs predate view_side/attachments
+# wording and cannot build the current CHOICE_PROMPT. Sheets stay the B1 sheets (plan addendum A1).
+REQUESTS = {
+    "J1-back-shell": {"part": "back shell of the game controller", "scope": "part", "view_side": "exterior",
+                      "attachments": "excluded: PCB, cable, front shell",
+                      "phase_events": r"C:\ANASTYLOS\data\session-runs-v21\FULL-01\P2\pass2\events.json"},
+    "J2-pcb-cable": {"part": "printed circuit board with its cable", "scope": "assembly", "view_side": "component side",
+                     "attachments": "included: cable; excluded: shells",
+                     "phase_events": r"C:\ANASTYLOS\data\session-runs-v21\FULL-01\P2\pass2\events.json"},
+    "J3-front-shell": {"part": "front shell of the game controller with button membranes", "scope": "assembly", "view_side": "interior",
+                       "attachments": "included: membranes and rubber pad as mounted",
+                       "phase_events": r"C:\ANASTYLOS\data\session-runs-v21\FULL-01\P3\pass2\events.json"}}
 BACK_WORDS, FRONT_WORDS = ("back", "rear", "bottom", "underside", "inside", "inner"), ("front", "top", "outer")
 
 
@@ -50,10 +62,11 @@ def view_class(view_side: str) -> str:
 
 
 def gate_outcome(spec: dict, choice: dict, chosen: list) -> tuple[str, int | None]:
-    """What the pipeline does with the answer: NEEDS_CAPTURE, or frame_decision on the picked tile."""
+    """What the pipeline does with the answer: NEEDS_CAPTURE, or frame_decision on the picked tile (with the phase events)."""
     if not choice["usable"] or not 1 <= choice["tile"] <= len(chosen):
         return "NEEDS_CAPTURE", None
-    return drawing_job.frame_decision(spec, choice, chosen[choice["tile"] - 1].t_s, None)[0], choice["tile"]
+    removal_s = drawing_job.first_removal_s(spec.get("phase_events"))
+    return drawing_job.frame_decision(spec, choice, chosen[choice["tile"] - 1].t_s, removal_s)[0], choice["tile"]
 
 
 def modal(values: list) -> tuple[object, int, dict]:
@@ -126,7 +139,8 @@ def summarise_box_image(rows: list[dict]) -> dict:
 
 def build_sheet(job: str) -> dict:
     """B1 contact sheet rebuilt from the candidate and tile caches; aborts instead of decoding video."""
-    spec = json.loads((B1_SPECS / f"{job}.json").read_text(encoding="utf-8"))
+    spec = {**json.loads((B1_SPECS / f"{job}.json").read_text(encoding="utf-8")), **REQUESTS[job]}
+    drawing_job.CHOICE_PROMPT.format(times="", **{k: spec[k] for k in ("part", "scope", "view_side", "attachments")})  # fails before any call
     b1 = json.loads((B1_RUNS / job / "progress.json").read_text(encoding="utf-8"))["result"]["candidates"]
     video = Path(spec["video"])
     sampled, cache = frames.cached_sample(video, spec["stride_s"], tuple(spec["t_range"]))

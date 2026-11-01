@@ -26,7 +26,7 @@ import cv2
 
 import draw
 import frames
-from job_control import HEARTBEAT_S, STAGE_TIMEOUT_S, STAGES, start, status
+from job_control import HEARTBEAT_S, STAGES, TOKEN_ENV, Superseded, claim_run, start, status, write_if_owner
 import muse_sam
 import proof
 import quality
@@ -54,27 +54,34 @@ CHOICE_PROMPT = ("Numbered tiles: top-down photos of a calibration sheet during 
 # ---------------------------------------------------------------- process liveness and progress
 
 class Progress:
-    def __init__(self, job: Path):
-        self.path, self.lock = job / "progress.json", threading.Lock()
-        self.doc = {"state": "running", "stage": None, "done": 0, "total": len(STAGES), "stage_s": {}, "pid": os.getpid(),
-                    "started_at": time.time(), "stage_started_at": None, "heartbeat_at": time.time(), "timeouts_s": STAGE_TIMEOUT_S}
-        self.flush()
+    """The owning worker's view of progress.json. It adopts the run ``job_control.start`` prepared (token from the
+    environment) and writes only while that run is still the current running generation (see job_control)."""
+
+    def __init__(self, job: Path, token: str | None = None):
+        self.job, self.lock = job, threading.Lock()
+        self.doc = claim_run(job, token or os.environ.get(TOKEN_ENV))
+        self.doc["stage"] = None
         self._stop = threading.Event()
         threading.Thread(target=self._beat, daemon=True).start()
 
     def _beat(self) -> None:
         while not self._stop.wait(HEARTBEAT_S):
-            self.update()
+            try:
+                self.update()
+            except Superseded:
+                return  # a poller or a newer generation ended this run; the main thread finds out at its next update
 
     def flush(self) -> None:
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.doc, indent=1, default=str), encoding="utf-8")
-        os.replace(tmp, self.path)
+        write_if_owner(self.job, self.doc)
 
     def update(self, **fields) -> None:
         with self.lock:
             self.doc.update(fields, heartbeat_at=time.time(), elapsed_s=round(time.time() - self.doc["started_at"], 2))
-            self.flush()
+            try:
+                self.flush()
+            except Superseded:
+                self._stop.set()
+                raise
 
     def stage(self, name: str):
         progress = self
@@ -91,7 +98,10 @@ class Progress:
 
     def finish(self, state: str, **fields) -> None:
         self._stop.set()
-        self.update(state=state, stage=None, **fields)
+        try:
+            self.update(state=state, stage=None, **fields)
+        except Superseded as exc:  # a stale worker never ends a job it no longer owns
+            print(f"final state {state} not written: {exc}", flush=True)
 
 
 # ---------------------------------------------------------------- decision rules (deterministic)

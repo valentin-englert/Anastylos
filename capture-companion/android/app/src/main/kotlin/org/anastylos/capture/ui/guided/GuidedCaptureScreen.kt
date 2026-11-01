@@ -217,6 +217,7 @@ private fun RequestCardView(card: RequestCard) {
                     style = MaterialTheme.typography.titleLarge,
                     color = if (outcome.retake) MaterialTheme.colorScheme.error else Color(0xFF2E7D32),
                 )
+                outcome.note?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
             }
         }
     }

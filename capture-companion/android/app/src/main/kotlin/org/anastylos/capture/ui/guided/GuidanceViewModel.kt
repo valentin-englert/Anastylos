@@ -73,6 +73,7 @@ import org.anastylos.capture.guidance.DwellAccumulator
 import org.anastylos.capture.guidance.HackathonMvp
 import org.anastylos.capture.guidance.DwellState
 import org.anastylos.capture.guidance.GuidanceHypothesis1
+import org.anastylos.capture.guidance.GuidanceHypothesis2
 import org.anastylos.capture.guidance.ImageQualityInput
 import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.LateMark
@@ -146,6 +147,8 @@ data class CaptureResult(
     val sha256: String,
     val automatic: Boolean,
     val associationNote: String,
+    /** An image gate failed when the shutter fired (H2 shoots anyway). */
+    val qualityLow: Boolean = false,
 )
 
 data class GuidanceUiState(
@@ -973,7 +976,7 @@ class GuidanceViewModel(
             ),
             calibrationIds = listOfNotNull(measuredCalibrationId(_state.value.intrinsicsLabel)),
             targetKinds = listOf("pose"),
-            qualityProfileIds = listOf(GuidanceHypothesis1.PROFILE_ID),
+            qualityProfileIds = listOf(GuidanceHypothesis1.PROFILE_ID, GuidanceHypothesis2.PROFILE_ID),
             appVersion = appVersion,
             protocolVersion = 1,
         )
@@ -1367,6 +1370,8 @@ class GuidanceViewModel(
                 motionMedianPx = motion?.first,
                 motionP90Px = motion?.second,
             ),
+            maxMotionMedianPx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX * motionGateScale(),
+            maxMotionP90Px = GuidanceHypothesis1.MAX_MOTION_P90_PX * motionGateScale(),
         )
         // Hackathon MVP: ArUco corner jitter is a warning. Exposure and
         // sharpness still reject. guidance-hypothesis-1 itself is unchanged.
@@ -1375,7 +1380,9 @@ class GuidanceViewModel(
         val qualityForGate = quality == ImageQualityVerdict.Accepted || motionWarning
         val calibrated = !_state.value.uncalibrated
         val poseFresh = ageMs in 0..GuidanceHypothesis1.POSE_AGE_MS
-        val aligned = orientationOk && distanceOk && qualityForGate && calibrated
+        // H2 (workstation requests): only tracking and stillness block the shutter.
+        val shootAnyway = shutterOnTrackingOnly()
+        val aligned = shootAnyway || (orientationOk && distanceOk && qualityForGate && calibrated)
         val gatesPass = _state.value.session == SessionState.ACTIVE &&
             registration == RegistrationState.ACQUIRED && aligned && poseFresh
         // A stale but still-acquired pose is not evidence either way.
@@ -1408,7 +1415,7 @@ class GuidanceViewModel(
             )
         }
         if (!ignoreStale) {
-            navigate(registration, cues, aligned && poseFresh)
+            navigate(registration, if (shootAnyway) emptyList() else cues, aligned && poseFresh)
         }
         noteDwell(
             before = beforeDwell,
@@ -1442,6 +1449,17 @@ class GuidanceViewModel(
         maybeReserveAttempt()
         maybeFireShutter()
     }
+
+    /**
+     * Motion thresholds are pixels at [GuidanceHypothesis1.REF_WIDTH_PX], like the
+     * RMS gate (TL decision on R12): scale them to the analysis width.
+     */
+    private fun motionGateScale(): Double =
+        (_state.value.overlayGeometry?.analysisWidth ?: GuidanceHypothesis1.REF_WIDTH_PX).toDouble() /
+            GuidanceHypothesis1.REF_WIDTH_PX
+
+    /** `guidance-hypothesis-2` applies to an adopted workstation request; local arming stays H1. */
+    private fun shutterOnTrackingOnly(): Boolean = _state.value.remoteRequest != null
 
     private fun navigate(registration: RegistrationState, cues: List<MovementCue>, aligned: Boolean) {
         val request = _state.value.request
@@ -1594,9 +1612,10 @@ class GuidanceViewModel(
                 session = snapshot.session, request = snapshot.request,
                 lateMark = snapshot.lateMark, registration = snapshot.registration,
                 poseAgeMs = snapshot.poseAgeMs, dwell = snapshot.dwell,
-                orientationOk = snapshot.orientationOk, distanceOk = snapshot.distanceOk,
+                orientationOk = snapshot.orientationOk || shutterOnTrackingOnly(),
+                distanceOk = snapshot.distanceOk || shutterOnTrackingOnly(),
                 qualityOk = snapshot.qualityVerdict == ImageQualityVerdict.Accepted ||
-                    snapshot.motionWarning,
+                    snapshot.motionWarning || shutterOnTrackingOnly(),
                 boardId = snapshot.boardId, targetBoardId = snapshot.target?.boardId,
                 profileId = snapshot.intrinsicsLabel,
                 requiredProfileId = null,
@@ -1644,12 +1663,14 @@ class GuidanceViewModel(
                     return@withLock
                 }
                 firedForArming = true
+                val qualityLowAtShutter = _state.value.qualityVerdict is ImageQualityVerdict.Rejected
                 try {
                     val source = camera ?: throw IllegalStateException("camera detached")
                     val still = source.takeGuidedStill()
                     lastStillCallbackNs = nanoClock()
                     stillPose = pairStill(still)
                     val stored = persistStill(still, automatic = true)
+                        .copy(qualityLow = qualityLowAtShutter)
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
                     _state.update { it.copy(shutterBusy = false, captureResult = stored) }
@@ -1948,8 +1969,8 @@ class GuidanceViewModel(
                 rmsGatePx = GuidanceHypothesis1.LIVE_RMS_PX,
                 motionMedianPx = motion?.first,
                 motionP90Px = motion?.second,
-                motionMedianGatePx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX,
-                motionP90GatePx = GuidanceHypothesis1.MAX_MOTION_P90_PX,
+                motionMedianGatePx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX * motionGateScale(),
+                motionP90GatePx = GuidanceHypothesis1.MAX_MOTION_P90_PX * motionGateScale(),
                 sharpness = quality?.sharpness,
                 sharpnessReference = snapshot.sharpnessReference,
                 sharpnessRatioGate = GuidanceHypothesis1.MIN_SHARPNESS_RATIO,

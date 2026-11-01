@@ -483,3 +483,28 @@ focus and exposure pass). The phone applies the motion gate unscaled at the
 1280 px is a TL question; nothing changed here.
 
 Verification: 490 tests, 0 failures, JDK 21 test JVM; lint passed.
+
+### 15.5 `guidance-hypothesis-2`: the phone takes the photo (TL decision on R12)
+
+For an adopted workstation request the shutter blocks only on tracking
+(registration acquired, fresh pose) and the 0.5 s stillness dwell. Target
+offset, sharpness, exposure and motion no longer block; they are still
+measured against the unchanged H1 thresholds and reported in the sidecar, so
+such a photo stays `package_only`. Local arming stays H1. Motion thresholds are
+now scaled to the analysis width like the RMS gate (live gate and sidecar).
+Card: "Photo sent", plus "a bit blurry — retake if the drawing looks wrong"
+when an image gate failed at the shutter. Capabilities list H1 and H2.
+
+Wide workstation tolerances (`integration/northstar` @ `d4eec96b`: ±100/±100/
+±150 mm, 20°) are adopted as sent (test
+`workstationRequestShootsWhenTrackedAndStillEvenOffTarget`, which also shows a
+shot 250 mm off target).
+
+Run on APK `f7a7d42bbabe057c51122624a94a335cbf92d0883f71f202d63a698fb4f89d8c`
+(device hash equal), session `b5751f5d…`, request `8161005f…`: posted
+23:51:39Z, adopted 23:51:41.3Z (2 s change poll), captured 23:51:42.9Z,
+receipt `package_only` 23:51:42Z, re-versioned with the sidecar 23:51:43Z.
+About 1.7 s from adoption to the photo at the workstation, about 4 s from the
+post. The first-arm revision fix is in since `3ad13126` (one tap, verified).
+
+Verification: 491 tests, 0 failures, JDK 21 test JVM; lint passed.

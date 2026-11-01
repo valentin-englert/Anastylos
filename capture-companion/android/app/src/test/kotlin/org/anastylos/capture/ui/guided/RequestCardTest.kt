@@ -49,10 +49,15 @@ class RequestCardTest {
     fun receiptsMapToSentOrRetake() {
         val qualified = requestCardOf(base.copy(delivery = delivered(ReceiptKind.QUALIFIED)))!!.outcome!!
         assertThat(qualified.retake).isFalse()
-        assertThat(qualified.text).contains("qualified")
-        val packageOnly = requestCardOf(base.copy(delivery = delivered(ReceiptKind.PACKAGE_ONLY)))!!.outcome!!
+        assertThat(qualified.text).isEqualTo("Photo sent")
+        assertThat(qualified.note).isNull()
+        val blurred = CaptureResult("obs", "img", "s".repeat(64), automatic = true, associationNote = "", qualityLow = true)
+        val packageOnly = requestCardOf(
+            base.copy(delivery = delivered(ReceiptKind.PACKAGE_ONLY), captureResult = blurred),
+        )!!.outcome!!
         assertThat(packageOnly.retake).isFalse()
-        assertThat(packageOnly.text).contains("not spatially qualified")
+        assertThat(packageOnly.text).isEqualTo("Photo sent")
+        assertThat(packageOnly.note).isEqualTo("a bit blurry — retake if the drawing looks wrong")
         val rejected = requestCardOf(base.copy(delivery = delivered(ReceiptKind.REJECTED)))!!.outcome!!
         assertThat(rejected.retake).isTrue()
     }

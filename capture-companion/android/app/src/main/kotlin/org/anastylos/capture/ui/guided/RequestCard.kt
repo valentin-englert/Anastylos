@@ -20,7 +20,8 @@ data class RequestCard(
     val outcome: RequestOutcome?,
 )
 
-data class RequestOutcome(val text: String, val retake: Boolean)
+/** [note] is an optional second line, e.g. a low-quality hint on a sent photo. */
+data class RequestOutcome(val text: String, val retake: Boolean, val note: String? = null)
 
 /** Null without an adopted workstation request. */
 fun requestCardOf(state: GuidanceUiState): RequestCard? {
@@ -69,8 +70,10 @@ private fun outcomeOf(state: GuidanceUiState): RequestOutcome? {
         else -> Unit
     }
     when (state.delivery?.receiptStatus) {
-        ReceiptKind.QUALIFIED -> return RequestOutcome("Sent — spatially qualified", retake = false)
-        ReceiptKind.PACKAGE_ONLY -> return RequestOutcome("Sent — image only, not spatially qualified", retake = false)
+        ReceiptKind.QUALIFIED, ReceiptKind.PACKAGE_ONLY -> return RequestOutcome(
+            "Photo sent", retake = false,
+            note = if (state.captureResult?.qualityLow == true) LOW_QUALITY_NOTE else null,
+        )
         ReceiptKind.REJECTED -> return RequestOutcome("Retake needed: workstation rejected the image", retake = true)
         null -> Unit
         else -> return RequestOutcome("Sent too late for this request", retake = true)
@@ -82,6 +85,8 @@ private fun outcomeOf(state: GuidanceUiState): RequestOutcome? {
     if (state.captureResult != null || state.delivery != null) return RequestOutcome("Captured — sending…", retake = false)
     return null
 }
+
+private const val LOW_QUALITY_NOTE = "a bit blurry — retake if the drawing looks wrong"
 
 private val FAILURE_WORDS = listOf("rejected", "failed", "blocked", "lost", "deferred")
 

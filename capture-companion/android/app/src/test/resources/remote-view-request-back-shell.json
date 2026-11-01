@@ -1,0 +1,31 @@
+{
+  "_note": "ViewRequest as the guided session feed carries it (contract G0). Workstation target a3-top-center on surface_a3. Replace with the request recorded from the Xiaomi run once it exists.",
+  "request_id": "00000000-0000-4000-8000-0000000000b1",
+  "session_id": "00000000-0000-4000-8000-000000000011",
+  "source_id": "source-1",
+  "revision": 1,
+  "operation_id": "00000000-0000-4000-8000-0000000000b2",
+  "created_at": "2026-10-29T12:00:00Z",
+  "expires_at": "2026-10-29T12:05:00Z",
+  "target_label": "Back shell, inner side up — hands off",
+  "board_id": "board-uuid-1",
+  "calibration_id": "calibration-1",
+  "target": {
+    "kind": "pose",
+    "T_B_C": {
+      "from": "camera:xiaomi",
+      "to": "board:surface_a3",
+      "units": "mm",
+      "matrix": [1, 0, 0, 198, 0, 1, 0, 136.5, 0, 0, 1, -450, 0, 0, 0, 1]
+    },
+    "translation_tolerance_mm": [15, 15, 20],
+    "rotation_tolerance_deg": 5,
+    "roi": null
+  },
+  "quality_profile_id": "guidance-hypothesis-1",
+  "status": "QUEUED",
+  "board_registration_epoch_id": "board-epoch-1",
+  "object_pose_epoch_id": "object-epoch-1",
+  "cad_context": null,
+  "reason": "Show the back shell for the reassembly check."
+}

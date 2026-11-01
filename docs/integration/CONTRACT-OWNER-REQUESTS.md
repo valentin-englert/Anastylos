@@ -141,6 +141,24 @@ Source: `assembly-reconstruction/cad/PARAMETRIC-PROPOSAL.md:29-41`.
 - Without R9/R10 the acceptance “Muse, next question” → spoken question
   → spoken answer → “yes” → commit cannot be shown on the phone.
 
+## R11. Adapter discovers the grant the phone created (2026-11-01)
+
+- Problem: the phone mints the grant when the operator arms
+  (`POST .../consent`). The adapter that opened the session holds only
+  its `adapter_bootstrap` token and must `claim` that grant to get an
+  `adapter_session` token, but it cannot read the `grant_id`:
+  `GET /v1/guided/sessions/{id}` already returns `session.grant_id`,
+  yet `anastylos_guided_routes._get_session` admits only `source`,
+  `adapter_session` and `spatial`.
+- Proposal: `GET /v1/guided/sessions/{session_id}/grant` for the
+  `adapter_bootstrap` principal that opened this session (any other
+  principal gets the generic 404). Response
+  `{grant_id, consent_revision, expires_at, revoked, claimed}`; no
+  token, no camera id beyond what `claim` returns. Read-only, no
+  journal write.
+- Interim (TL): the workstation reads `control.db` read-only on the
+  same machine. No phone change either way.
+
 ## Explicitly NOT Contract Owner scope (routed elsewhere)
 
 - Measured print scale for all 5 sheets + controller height

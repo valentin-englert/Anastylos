@@ -55,6 +55,7 @@ import org.anastylos.capture.guidance.SessionState
 import org.anastylos.capture.guidance.WireRegistration
 import org.anastylos.capture.sync.EphemeralPairingStore
 import org.anastylos.capture.sync.GuidedAttemptInput
+import org.anastylos.capture.sync.GuidedCapabilities
 import org.anastylos.capture.sync.GuidedControlClient
 import org.anastylos.capture.sync.GuidedDelivery
 import org.anastylos.capture.sync.GuidedDeviceStatus
@@ -642,6 +643,12 @@ class GuidanceViewModelTest {
             return attemptOutcome
         }
 
+        val published = mutableListOf<GuidedCapabilities>()
+        override suspend fun publishCapabilities(caps: GuidedCapabilities): RemoteEventOutcome {
+            published += caps
+            return eventOutcome
+        }
+
         override suspend fun resolveToken(): GuidedTokenOutcome = token
 
         override fun buildEvent(
@@ -805,6 +812,19 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun attachPublishesCapabilitiesWithoutInventingACalibration() = runTest(dispatcher) {
+        buildRemoteViewModel()
+        attachRemote()
+        val caps = remoteSession.published.single()
+        assertThat(caps.sourceId).isEqualTo("source-1")
+        assertThat(caps.targetKinds).containsExactly("pose")
+        assertThat(caps.qualityProfileIds).containsExactly("guidance-hypothesis-1")
+        assertThat(caps.protocolVersion).isEqualTo(1)
+        // The fake camera has no measured profile, so no calibration id is offered.
+        assertThat(caps.calibrationIds).isEmpty()
+    }
+
+    @Test
     fun armConsentsThenAdoptsTheMappedRequest() = runTest(dispatcher) {
         buildRemoteViewModel()
         attachRemote()
@@ -828,6 +848,44 @@ class GuidanceViewModelTest {
         assertThat(state.target?.boardId).isEqualTo("surface_a3")
         assertThat(state.request).isEqualTo(RequestState.ACCEPTED)
         assertThat(remoteSession.events.map { it.kind }).containsAtLeast("armed", "accepted")
+    }
+
+    @Test
+    fun recordedRemoteRequestAutoShuttersThroughTheGatesAndBindsTheAttempt() = runTest(dispatcher) {
+        val wire = javaClass.classLoader!!.getResourceAsStream("remote-view-request-back-shell.json")!!
+            .bufferedReader().use { it.readText() }
+        val request = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            .decodeFromString(GuidedViewRequest.serializer(), wire)
+        buildRemoteViewModel()
+        attachRemote()
+        remotePrefs.setBoardFrame(request.boardId, "surface_a3")
+        remoteViewModel.arm()
+        advanceUntilIdle()
+        remoteSession.backing.value = remoteSession.backing.value.copy(
+            session = SessionState.ACTIVE,
+            requests = mapOf(request.requestId to request),
+            activeRequestId = request.requestId,
+        )
+        advanceUntilIdle()
+
+        val card = requestCardOf(remoteViewModel.state.value)!!
+        assertThat(card.label).isEqualTo("Back shell, inner side up — hands off")
+        assertThat(card.outcome).isNull()
+        camera.geometry = GuidedCamera.StreamGeometry(1280, 720, 0, 1280, 720)
+
+        feedStableDwell(frames = 15)
+        advanceUntilIdle()
+
+        val state = remoteViewModel.state.value
+        assertThat(camera.stillsFired).isEqualTo(1)
+        assertThat(state.request).isEqualTo(RequestState.CAPTURED_LOCAL)
+        assertThat(state.captureResult!!.automatic).isTrue()
+        val bound = remoteAssociations.rows.getValue(state.captureResult!!.imageId)
+        assertThat(bound.requestId).isEqualTo(request.requestId)
+        assertThat(bound.requestRevision).isEqualTo(1)
+        assertThat(bound.attemptId).isEqualTo("attempt-1")
+        assertThat(remoteSession.events.map { it.kind }).containsAtLeast("accepted", "captured_local").inOrder()
+        assertThat(requestCardOf(state)!!.hint).isEqualTo("Captured.")
     }
 
     @Test

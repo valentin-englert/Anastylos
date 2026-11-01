@@ -930,6 +930,7 @@ class GuidanceViewModel(
         )
         bundle.session.attach(sessionId)
         bundle.session.startPolling()
+        viewModelScope.launch { publishCapabilities(bundle.session) }
         remoteCollectJob?.cancel()
         remoteCollectJob = viewModelScope.launch {
             bundle.session.state.collect { rs ->
@@ -942,6 +943,29 @@ class GuidanceViewModel(
                 mirrorRemoteSession(rs)
                 mirrorRemoteRequests(rs)
             }
+        }
+    }
+
+    /**
+     * Publishes what this phone can fulfil. Only a measured profile's
+     * uuid is offered as a calibration id; factory intrinsics offer none.
+     */
+    private suspend fun publishCapabilities(session: GuidedRemoteSession) {
+        val source = session.resolveToken() as? GuidedTokenOutcome.Ready ?: return
+        val caps = org.anastylos.capture.sync.GuidedCapabilities(
+            sourceId = source.sourceId,
+            updatedAt = utcClock().toIsoUtc(),
+            stale = false,
+            cameraIds = _state.value.availableCameras.map { it.id }.take(8),
+            calibrationIds = listOfNotNull(measuredCalibrationId(_state.value.intrinsicsLabel)),
+            targetKinds = listOf("pose"),
+            qualityProfileIds = listOf(GuidanceHypothesis1.PROFILE_ID),
+            appVersion = appVersion,
+            protocolVersion = 1,
+        )
+        when (val outcome = session.publishCapabilities(caps)) {
+            is RemoteEventOutcome.Sent -> Unit
+            is RemoteEventOutcome.Failed -> _state.update { it.copy(remoteError = outcome.message) }
         }
     }
 
@@ -1223,6 +1247,12 @@ class GuidanceViewModel(
             CameraSelector.LENS_FACING_FRONT -> "camera:1"
             else -> "camera:0"
         }
+
+    /** `measured:<uuid>[@WxH-scaled]` → `<uuid>`; factory intrinsics → null. */
+    private fun measuredCalibrationId(intrinsicsLabel: String?): String? {
+        val id = intrinsicsLabel?.removePrefix("measured:")?.substringBefore('@') ?: return null
+        return id.takeIf { intrinsicsLabel.startsWith("measured:") && isUuid(it) }
+    }
 
     private fun isUuid(value: String): Boolean =
         try {

@@ -41,13 +41,23 @@ def _summary(job_dir: Path) -> dict:
     progress = job_control.status(job_dir)
     result = progress.get("result") or {}
     binding = job_dir / "binding.json"
+    capture = job_dir / "capture-request.json"
     return {"job": job_dir.name, "state": progress.get("state"), "stage": progress.get("stage"), "done": progress.get("done"),
             "total": progress.get("total"), "elapsed_s": progress.get("elapsed_s"), "stage_s": progress.get("stage_s"),
             "error": progress.get("error"), "status": result.get("status"), "reasons": result.get("reasons", []),
             "part": (result.get("spec") or {}).get("part"), "scope": (result.get("spec") or {}).get("scope"),
             "choice": result.get("choice"), "frame": result.get("frame"), "opening_candidates": result.get("opening_candidates"),
             "files": [name for name in FILES if (job_dir / name).is_file()],
-            "binding": json.loads(binding.read_text(encoding="utf-8")) if binding.is_file() else None}
+            "binding": json.loads(binding.read_text(encoding="utf-8")) if binding.is_file() else None,
+            "capture": _capture_view(capture), "still": bool((result.get("spec") or {}).get("still"))}
+
+
+def _capture_view(path: Path) -> dict | None:
+    """The job's phone capture request as stored (read only; captures.py owns the record)."""
+    if not path.is_file():
+        return None
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    return {k: doc.get(k) for k in ("state", "phone_status", "label", "follow_up_job", "failure", "requested_at", "delivered_at")}
 
 
 def list_drawings(root: Path, session_id: str) -> dict:

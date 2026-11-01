@@ -758,6 +758,7 @@ function drawingCard(job) {
     });
     card.append(resume);
   }
+  if (job.status === "NEEDS_CAPTURE" && job.state === "done") card.append(captureBlock(job));
   if (job.binding) {
     const bound = document.createElement("p");
     bound.className = "notice";
@@ -781,6 +782,80 @@ function drawingCard(job) {
   return card;
 }
 
+const CAPTURE_TEXT = {
+  requested: "Waiting for the photo from the phone",
+  delivered: "Photo received, checking it",
+  follow_up_started: "Photo received; drawing again from the new photo",
+  failed: "The phone could not take this view",
+};
+
+function captureBlock(job) {
+  const block = document.createElement("div");
+  block.className = "capture-request";
+  const capture = job.capture;
+  if (!capture || capture.state === "failed") {
+    if (capture) {
+      const failed = document.createElement("p");
+      failed.className = "error";
+      failed.textContent = `${CAPTURE_TEXT.failed} (${capture.failure}).`;
+      block.append(failed);
+    }
+    const ask = document.createElement("button");
+    ask.type = "button";
+    ask.textContent = capture ? "Ask the phone again" : "Request this view on the phone";
+    ask.addEventListener("click", () => requestCapture(job.job, ask));
+    block.append(ask);
+    return block;
+  }
+  const line = document.createElement("p");
+  line.className = "notice";
+  const phone = capture.phone_status ? ` (phone: ${capture.phone_status})` : "";
+  line.textContent = `${capture.label}: ${CAPTURE_TEXT[capture.state] || capture.state}${phone}.`;
+  block.append(line);
+  if (capture.follow_up_job) {
+    const follow = document.createElement("p");
+    follow.className = "provenance";
+    follow.textContent = `Follow-up job: ${capture.follow_up_job}. The photo does not prove which part it shows; you confirm that on the new drawing.`;
+    block.append(follow);
+  }
+  return block;
+}
+
+async function requestCapture(job, button) {
+  try {
+    const result = await post("/api/capture/request", { session: state.session, job }, button);
+    speak(`Please photograph the ${result.label}.`);
+    await loadDrawings();
+  } catch (error) {
+    showError("drawings-error", error.message);
+  }
+}
+
+async function pollCaptures(jobs) {
+  const open = jobs.filter((job) => job.capture && (job.capture.state === "requested" || job.capture.state === "delivered"));
+  for (const job of open) {
+    const result = await post("/api/capture/poll", { session: state.session, job: job.job });
+    if (result.state === "follow_up_started") speak("Photo received. I am drawing the part again.");
+  }
+  return open.length > 0;
+}
+
+async function loadPhoneLink(connect = false) {
+  try {
+    const link = await post(connect ? "/api/capture/connect" : "/api/capture/link", {}, connect ? $("phone-connect") : undefined);
+    const text = {
+      not_connected: "Phone: not connected.",
+      waiting_for_phone: "Phone: open the guided session on the phone and arm it.",
+      connected: "Phone: connected for capture requests.",
+    };
+    setText("phone-link-state", text[link.state] || `Phone: ${link.state}`);
+    $("phone-connect").hidden = link.state === "connected";
+    if (link.state === "waiting_for_phone") setTimeout(loadPhoneLink, DRAWING_POLL_MS);
+  } catch (error) {
+    setText("phone-link-state", `Phone: ${error.message}`);
+  }
+}
+
 async function loadDrawings() {
   if (!state.session) return;
   clearTimeout(drawingTimer);
@@ -794,7 +869,8 @@ async function loadDrawings() {
     setText("drawings-state", view.specs.length ? `${view.jobs.length} drawing job(s).` : "No drawing specs in this session.");
     $("drawing-jobs").replaceChildren(...view.jobs.map(drawingCard));
     speakDrawingChanges(view.jobs);
-    if (view.jobs.some((job) => job.state === "running")) drawingTimer = setTimeout(loadDrawings, DRAWING_POLL_MS);
+    const waiting = await pollCaptures(view.jobs);
+    if (waiting || view.jobs.some((job) => job.state === "running")) drawingTimer = setTimeout(loadDrawings, DRAWING_POLL_MS);
   } catch (error) {
     showError("drawings-error", error.message);
   }
@@ -1063,6 +1139,8 @@ $("claims-form").addEventListener("submit", (event) => {
 });
 $("done-form").addEventListener("submit", (event) => { event.preventDefault(); confirmStep($("done-button")); });
 $("export-form").addEventListener("submit", (event) => { event.preventDefault(); exportReport($("export-button")); });
+$("phone-connect").addEventListener("click", () => loadPhoneLink(true));
+loadPhoneLink();
 $("drawing-form").addEventListener("submit", (event) => { event.preventDefault(); startDrawing($("drawing-start")); });
 $("evaluate-form").addEventListener("submit", (event) => { event.preventDefault(); evaluateGap($("evaluate-button")); });
 

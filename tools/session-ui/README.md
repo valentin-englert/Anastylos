@@ -69,6 +69,24 @@ Mutating actions are serialized per session; while a request is in flight its
 button is disabled, and a repeated POST is a no-op on the new state (never a
 duplicate write). Every section has loading, empty, error and stale states.
 
+## Capture loop (part drawings ↔ phone)
+
+A drawing job that ends `NEEDS_CAPTURE` shows **Request this view on the phone**. The workstation posts one G0
+`ViewRequest` (top-down over the A3 sheet, label "<part>, <view side> up, on the sheet, hands off") into the guided
+session it drives; the phone adopts it and shoots through its normal gates. On delivery the still is fetched with its
+hash re-checked, stored under `drawings/captures/` with an evidence record, and a follow-up job
+`<job>-capture-<time>` draws from that still. Request, evidence and part binding stay separate records
+(`captures.py`); the photo never proves which part it shows — the operator confirms the follow-up drawing.
+
+One-time setup (not part of the normal flow): `<workspace>/capture-settings.json` with `receiver_url` (https),
+`spki_pin_sha256` or `ca_file`, `receiver_data_dir`, `source_id` (the enrolled phone), and the `board_id`,
+`calibration_id`, `board_frame` the phone accepts for the A3 sheet. Then **Connect phone** mints an adapter token
+via the receiver CLI, opens a guided session and waits until the operator arms it on the phone.
+
+Known bridge: the G0 contract gives the adapter's bootstrap token no read route for the grant the phone creates, so
+`captures._find_grant` reads the receiver's `control.db` read-only on the same workstation. A proper route is
+requested from the contract owner.
+
 ## API (JSON, localhost only)
 
 Reads: `GET /api/sessions /api/status /api/questions /api/guide

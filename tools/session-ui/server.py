@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Callable
 
 import adapter
+import captures
 import drawings
 from adapter import AdapterError
 
@@ -157,6 +158,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate,
                   "/api/drawing/start": self._api_drawing_start, "/api/drawing/bind": self._api_drawing_bind,
                   "/api/drawing/resume": self._api_drawing_resume,
+                  "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
+                  "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/voice/transcribe": self._api_voice_transcribe}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -336,6 +339,30 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The session parameter is missing.", 400)
         self._mutate(session_id, lambda: drawings.bind(Handler.workspace_root, session_id, body.get("job", ""),
                                                        body.get("decision", ""), str(body.get("note", ""))))
+
+    def _api_capture_connect(self) -> None:
+        self._read_json()
+        with self._session_lock("__capture_link__"):
+            self._send_json(captures.connect_phone(Handler.workspace_root))
+
+    def _api_capture_link(self) -> None:
+        self._read_json()
+        with self._session_lock("__capture_link__"):
+            self._send_json(captures.link_status(Handler.workspace_root))
+
+    def _api_capture_request(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: captures.request_capture(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_capture_poll(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: captures.capture_status(Handler.workspace_root, session_id, body.get("job", "")))
 
     def _api_voice_transcribe(self) -> None:
         """Push-to-talk clip → transcript. The clip goes to the provider in a separate process and is not stored."""

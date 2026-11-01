@@ -118,10 +118,14 @@ class TranscribeTests(VoiceCase):
         self.assertEqual(self.transcribe(wav(seconds=9.0))[0], 413)
         self.assertEqual(self.transcribe(b"not audio")[0], 415)
 
-    def test_rate_limit_per_token(self):
-        for _ in range(voice.CALLS_PER_MINUTE):
+    def test_rate_limit_per_token_and_route(self):
+        for _ in range(voice.CALLS_PER_MINUTE["transcribe"]):
             self.assertEqual(self.transcribe(wav(seconds=0.5))[0], 200)
         self.assertEqual(self.transcribe(wav(seconds=0.5))[0], 429)
+        (self.data / voice.BINDINGS_FILE).write_text("{}", encoding="utf-8")
+        for _ in range(voice.CALLS_PER_MINUTE["input"]):
+            self.assertEqual(self.say({"kind": "command", "command": "repeat"})[0], 409)
+        self.assertEqual(self.say({"kind": "command", "command": "repeat"})[0], 429)
         journal = (self.data / "voice-journal.jsonl").read_text(encoding="utf-8")
         self.assertIn('"status": "rate_limited"', journal)
 

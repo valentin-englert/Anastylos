@@ -25,9 +25,12 @@ internal const val VOICE_LOG_TAG = "AnastylosVoice"
 /**
  * Opt-in hands-free voice on the phone microphone. One reader thread owns
  * [AudioRecord] (16 kHz mono PCM, VOICE_RECOGNITION source); the camera
- * pipeline is untouched. The phone is deaf while it speaks, while a clip
- * is transcribed, and while push-to-talk records. Segments live only in
- * memory until sent; nothing is written to storage.
+ * pipeline is untouched. The phone is deaf while it speaks and while
+ * push-to-talk records. While a clip is in flight it keeps segmenting but
+ * holds at most the next segment, processed only if the in-flight clip
+ * turns out to be a bare wake word; everything else is dropped, never
+ * queued (TL review of 6f9edcef, point 4). Segments live only in memory
+ * until sent; nothing is written to storage.
  */
 class VoiceController(
     context: Context,
@@ -55,6 +58,9 @@ class VoiceController(
 
     @Volatile private var reader: Thread? = null
     @Volatile private var armedUntilMs = 0L
+    private var segmentCount = 0L
+    /** The one segment captured while a clip was in flight; see the class comment. */
+    private var held: Segment? = null
     private var pttSamples: MutableList<ShortArray>? = null
     private var tts: TextToSpeech? = null
     @Volatile private var ttsReady = false
@@ -93,7 +99,7 @@ class VoiceController(
             _state.update { it.copy(status = "Too short. Hold while you speak.") }
             return
         }
-        handleClip(samples, wakeRequired = false)
+        handleClip(Segment(++segmentCount, samples, SystemClock.elapsedRealtime()), wakeRequired = false)
     }
 
     /** Speaks workstation-verified text only (see [VoiceLink.SpokenReply]). */
@@ -141,16 +147,30 @@ class VoiceController(
                 blocks++
                 synchronized(this) { pttSamples?.add(buffer.copyOf()) }
                 val s = _state.value
-                if (s.pushToTalk || s.busy || s.speaking) {
+                if (s.pushToTalk || s.speaking) {
                     segmenter.reset()
                     continue
                 }
-                val segment = segmenter.feed(buffer)
+                val samples = segmenter.feed(buffer)
                 if (blocks % 50 == 0L) _state.update { it.copy(backgroundRms = segmenter.backgroundRms) }
-                if (segment != null) {
+                if (samples != null) {
                     _state.update { it.copy(segments = it.segments + 1) }
-                    Log.i(VOICE_LOG_TAG, "segment ms=${segment.size * 1000 / SpeechSegmenter.SAMPLE_RATE} floor=${"%.4f".format(Locale.US, segmenter.backgroundRms)}")
-                    handleClip(segment, wakeRequired = true)
+                    val endMs = SystemClock.elapsedRealtime()
+                    val segment = Segment(++segmentCount, samples, endMs)
+                    val disposition = synchronized(this) {
+                        when {
+                            !_state.value.busy -> "processed"
+                            held == null -> "held".also { held = segment }
+                            else -> "dropped_busy"
+                        }
+                    }
+                    Log.i(
+                        VOICE_LOG_TAG,
+                        "segment id=${segment.id} vad_start=${endMs - segment.durationMs} vad_end=$endMs " +
+                            "ms=${segment.durationMs} bytes=${samples.size * 2} " +
+                            "floor=${"%.4f".format(Locale.US, segmenter.backgroundRms)} disposition=$disposition",
+                    )
+                    if (disposition == "processed") handleClip(segment, wakeRequired = true)
                 }
             }
         } finally {
@@ -162,34 +182,46 @@ class VoiceController(
         }
     }
 
-    private fun handleClip(samples: ShortArray, wakeRequired: Boolean) {
+    private class Segment(val id: Long, val samples: ShortArray, val endMs: Long) {
+        val durationMs: Long get() = samples.size * 1000L / SpeechSegmenter.SAMPLE_RATE
+    }
+
+    private fun handleClip(segment: Segment, wakeRequired: Boolean) {
         _state.update { it.copy(busy = true) }
-        val spokeEndMs = SystemClock.elapsedRealtime()
+        val spokeEndMs = segment.endMs
+        var next: Segment? = null
         scope.launch {
             try {
-                val wav = WavEncoder.encode(samples)
+                // A bare wake word arms exactly one following segment (TL point 5).
+                val armed = wakeRequired && segment.endMs < armedUntilMs
+                if (wakeRequired) armedUntilMs = 0L
+                val wav = WavEncoder.encode(segment.samples)
                 val transcribeStart = SystemClock.elapsedRealtime()
                 val transcript = link.transcribe(wav)
                 val transcribeMs = SystemClock.elapsedRealtime() - transcribeStart
                 if (transcript.status != "ok") {
-                    Log.i(VOICE_LOG_TAG, "transcribe status=${transcript.status} ms=$transcribeMs")
+                    Log.i(VOICE_LOG_TAG, "segment id=${segment.id} transcribe status=${transcript.status} ms=$transcribeMs")
                     _state.update { it.copy(status = statusLine(transcript.status)) }
                     return@launch
                 }
                 // Nothing recognisable: discarded like unaddressed speech; an
                 // earlier failure stays on screen instead of being wiped.
-                if (transcript.text.isNullOrBlank()) return@launch
-                val now = SystemClock.elapsedRealtime()
+                if (transcript.text.isNullOrBlank()) {
+                    Log.i(VOICE_LOG_TAG, "segment id=${segment.id} transcribe status=empty ms=$transcribeMs")
+                    return@launch
+                }
                 val route = if (wakeRequired) {
-                    WakeWord.route(transcript.text, armed = now < armedUntilMs)
+                    WakeWord.route(transcript.text, armed = armed)
                 } else {
                     WakeWord.route("muse " + transcript.text, armed = false)
                 }
-                Log.i(VOICE_LOG_TAG, "route=${route::class.simpleName} wakeRequired=$wakeRequired")
+                Log.i(VOICE_LOG_TAG, "segment id=${segment.id} route=${route::class.simpleName} armed=$armed wakeRequired=$wakeRequired")
                 when (route) {
                     WakeWord.Route.Discard -> return@launch
                     WakeWord.Route.Armed -> {
-                        armedUntilMs = now + WakeWord.ARMED_MS
+                        armedUntilMs = SystemClock.elapsedRealtime() + WakeWord.ARMED_MS
+                        next = synchronized(this@VoiceController) { held.also { held = null } }
+                        if (next != null) return@launch // already spoken: process it instead of asking
                         _state.update { it.copy(status = "Yes? (listening for your command)") }
                         speak(YES)
                         return@launch
@@ -207,12 +239,19 @@ class VoiceController(
                         reply(answer, spokeEndMs, transcribeMs, SystemClock.elapsedRealtime() - inputStart)
                     }
                 }
-                armedUntilMs = 0L
             } catch (e: Exception) {
                 Log.w(VOICE_LOG_TAG, "voice failed ${e::class.java.simpleName}: ${e.message?.take(120)}")
                 _state.update { it.copy(status = "Voice failed: ${e.message}") }
             } finally {
-                _state.update { it.copy(busy = false) }
+                val dropped = synchronized(this@VoiceController) { held.also { held = null } }
+                if (dropped != null) Log.i(VOICE_LOG_TAG, "segment id=${dropped.id} disposition=dropped_not_after_wake")
+                val follow = next
+                if (follow != null) {
+                    Log.i(VOICE_LOG_TAG, "segment id=${follow.id} disposition=processed_after_wake")
+                    handleClip(follow, wakeRequired = true)
+                } else {
+                    _state.update { it.copy(busy = false) }
+                }
             }
         }
     }

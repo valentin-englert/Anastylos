@@ -220,3 +220,13 @@ Routen-Klasse und Status. Transkripte erscheinen nur flüchtig als
 
 Stand: Receiver 193/193, Android 473/473, Lint 0; APK `4f1ba184…` auf
 dem Xiaomi installiert und hash-geprüft.
+
+### 7.6 Umgesetzte TL-Entscheidungen zum Review von 6f9edcef
+
+- **Punkt 3 (Ja-Varianten):** kein Regelproblem, Versionsabstand. Die Session-UI auf 8079 läuft jetzt aus `Anastylos-drawing-lab/tools/session-ui` (`research/drawing-proof`, enthält 4187de16), gleiche Argumente `--workspace-root C:\ANASTYLOS\data\session-ui-voice --port 8079`. Abnahmetext bleibt „yes, that is correct“; Koordinator-Regel unverändert.
+- **Punkt 4 (Atempause):** Das Handy segmentiert während einer laufenden Transkription weiter, hält aber höchstens das nächste Segment. Es wird nur verarbeitet, wenn der laufende Clip ein reines Wake-Word war (dann ohne „Yes?“); sonst verworfen, nie eingereiht. Weitere Segmente während „busy“ werden sofort verworfen.
+- **Punkt 5:** Ein reines „Muse“ schärft genau ein folgendes Segment (Fenster weiter 6 s); jedes Segment verbraucht die Schärfung, auch leere oder fehlgeschlagene Transkripte. Die Workstation-Seite (bloßes yes/no auf offene Teilefrage) ist TL-Sache.
+- **Punkt 6:** Rate-Limit pro Token und Route: transcribe ≤ 20/min, input ≤ 30/min; ein gleichzeitiger Aufruf pro Session bleibt.
+- **Punkt 7:** Pro Segment loggt das Handy (Tag `AnastylosVoice`) `segment id vad_start vad_end ms bytes floor disposition` (`processed|held|dropped_busy|processed_after_wake|dropped_not_after_wake`) und danach `segment id transcribe status|route armed` — keine Audiodaten, kein Transkript. `vad_start` ist `vad_end` minus Segmentlänge (inkl. Preroll), Zeitbasis `elapsedRealtime`.
+
+Verifikation: Receiver `python -m unittest discover -s tests` 193/193 OK; Android `testDebugUnitTest lintDebug assembleDebug` (JDK 21) 473/473, Lint ok; APK `c210d521…` auf dem Xiaomi installiert. Nicht verifiziert: Verhalten auf echter Stimme (nächster Abnahmelauf); Receiver-Neustart nötig.

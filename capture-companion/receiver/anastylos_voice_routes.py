@@ -37,7 +37,8 @@ WAV_MAX_BYTES = 260 * 1024
 DRAIN_MAX_BYTES = 4 * 1024 * 1024
 MIN_SECONDS, MAX_SECONDS, RATE = 0.4, 8.0, 16000
 TRANSCRIBE_DEADLINE_S = 60
-CALLS_PER_MINUTE = 20
+# Per token and route (TL review of 6f9edcef, point 6).
+CALLS_PER_MINUTE = {"transcribe": 20, "input": 30}
 INPUT_BODY_MAX = 16 * 1024
 SESSION_UI_TIMEOUT_S = 120
 BINDINGS_FILE = "guided-voice-bindings.json"
@@ -153,8 +154,9 @@ class VoiceRoutes:
                                                      session_id, record.get("source_id"))
         if exc is not None:
             return True
-        if not self._within_rate(record.get("source_id") or ""):
-            self._journal(session_id, suffix.rsplit("/", 1)[-1], "rate_limited", None, 0.0)
+        route = suffix.rsplit("/", 1)[-1]
+        if not self._within_rate(record.get("source_id") or "", route):
+            self._journal(session_id, route, "rate_limited", None, 0.0)
             return True
         if suffix == "/voice/transcribe":
             self._transcribe(session_id)
@@ -300,19 +302,20 @@ class VoiceRoutes:
         with self.runtime["lock"]:
             return self.runtime["sessions"].setdefault(session_id, _SessionVoice())
 
-    def _within_rate(self, token_key):
+    def _within_rate(self, token_key, route):
+        limit = CALLS_PER_MINUTE.get(route, min(CALLS_PER_MINUTE.values()))
         now = time.monotonic()
         with self.runtime["lock"]:
-            window = self.runtime["rates"].setdefault(token_key, deque())
+            window = self.runtime["rates"].setdefault((token_key, route), deque())
             while window and now - window[0] > 60:
                 window.popleft()
-            if len(window) >= CALLS_PER_MINUTE:
+            if len(window) >= limit:
                 limited = True
             else:
                 window.append(now)
                 limited = False
         if limited:
-            self._fail(HTTPStatus.TOO_MANY_REQUESTS, "rate_limited", "At most 20 voice calls per minute.",
+            self._fail(HTTPStatus.TOO_MANY_REQUESTS, "rate_limited", f"At most {limit} {route} calls per minute.",
                        {"Retry-After": "5"})
         return not limited
 

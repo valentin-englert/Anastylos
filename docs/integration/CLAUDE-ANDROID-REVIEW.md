@@ -387,3 +387,41 @@ Run on APK `2b813318c0bcdba878066fa8349c8d8c52df4a18fccb5ab14cd21be234a6e5e0`
      for a TL decision.
 
 Verification: 485 tests, 0 failures, JDK 21 test JVM; lint passed.
+
+### 15.2 Sidecar cites the measured profile (step a)
+
+The sidecar now cites the measured profile when the pose was solved with its
+unscaled intrinsics: `profile_id`, `profile_sha256` (sha256 of the exact
+bundled asset bytes), the profile's `sensor_mode` and
+`calibration_pixel_frame_id`, and `calibrated = true` (pose `valid`, basis
+`geometric_measurement`). A scaled or factory solve stays nominal.
+`metric_validity` stays `nominal_only`: the A3 print scale is unmeasured.
+Fixed on the way: the sidecar used the consent spelling `camera:0` as
+`camera_id`, which made `T_board_camera.from` `camera:camera:0`; it now
+carries the bare Camera2 id.
+
+Workstation staging (done for this run): the profile bytes at
+`<receiver-data>/spatial/profiles/aeac1c7c130fb017e7ee42f94c907043c530ae452c3f55b1c2f82ac7f97537eb.json`.
+
+Run on APK `7c12e352a845c86c0fa4c4a0af3a893662835985c40a963bb4ce00e08cf76f4d`
+(device hash equal), session `6d27c352…`, request `e09f4268…`: receipt
+`package_only`. The validator, run with the receiver's own context builder:
+verdict `needs_review`, no rejects; profile bound, pose `valid`,
+`sample_age_ms` 13.3.
+
+Still between this and `qualified`:
+
+| Item | Kind | Owner |
+|---|---|---|
+| `CALIBRATION_NOT_VALIDATED` | A3 board instance: measured 100 mm bars, `anastylos-board-instance@1` record staged, its id in the sidecar | owner measures; phone + workstation wire the id |
+| `UNKNOWN_SOLVE_SOURCE` | `timestamp_interpolated` needs two bracketing pose samples uploaded as assets; the receiver has no route for them | contract request (TL) |
+| `NULL_MAX_RESIDUAL`, `NULL_UNCERTAINTY` | the estimator reports RMS only; max residual and pose uncertainty are null | phone (estimator) |
+| `QUALITY_NOT_ACCEPTED` | quality is `rejected` here (motion verdict; the hackathon gate only warns on motion) and is never `accepted` without validated calibration | follows the rows above; motion needs a still tripod |
+| `LAYOUT_CHECK_SKIPPED`, `EPOCH_CHECK_SKIPPED` | no layout / epochs staged on the workstation | workstation |
+
+A3 measurement (owner): print check per `calibration/README.md` step 5. With a
+steel ruler or caliper, read the horizontal and the vertical 100 mm line, end
+tick to end tick, to 0.1 mm. Record both values, the instrument, the
+uncertainty (ruler ±0.5 mm, caliper ±0.05 mm), who measured, the time (UTC)
+and whether the sheet lies flat. The validator rejects more than 0.5 % per axis
+(below 99.5 or above 100.5 mm): reprint at 100 % then.

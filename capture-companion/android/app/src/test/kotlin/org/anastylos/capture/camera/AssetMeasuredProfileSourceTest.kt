@@ -46,6 +46,19 @@ class AssetMeasuredProfileSourceTest {
     }
 
     @Test
+    fun referenceCitesTheExactBundledBytes() {
+        val bytes = java.io.File("src/main/assets/measured-profile-M2101K6G.json").readBytes()
+        val sha = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+        val ref = source("M2101K6G").reference("e92c8ea1-36a8-449f-8df9-50f0f3481548")!!
+        assertThat(ref.sha256).isEqualTo(sha)
+        assertThat(ref.sensorMode).isEqualTo("0-1920x1080-still-MF40cm-AE-EV0")
+        assertThat(ref.pixelFrameId).isEqualTo("cam0-native-1920x1080")
+        // Another phone never cites this profile.
+        assertThat(source("Pixel 9").reference("e92c8ea1-36a8-449f-8df9-50f0f3481548")).isNull()
+    }
+
+    @Test
     fun secondPhoneGetsOnlyItsOwnProfile() {
         val xiaomi = source("M2101K6G").forGeometry("0", 1280, 720, 0f, FocusMode.MANUAL, 2.5f)
         val samsung = source(CAL01_DEVICE_MODEL).forGeometry("0", 1280, 720, 0f, FocusMode.MANUAL, 2.5f)

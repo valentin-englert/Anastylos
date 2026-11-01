@@ -145,6 +145,8 @@ object SpatialSidecar {
         val captureTime: CaptureTime,
         val pose: Pose,
         val calibrated: Boolean,
+        /** The measured profile's own pixel frame; null keeps the analysis-stream frame. */
+        val calibrationPixelFrameId: String? = null,
         val target: Target,
         val quality: Quality,
         val associationReason: String = "no custody observer linked",
@@ -308,7 +310,8 @@ object SpatialSidecar {
                 put("pixel_convention", PIXEL_CONVENTION)
                 put(
                     "calibration_pixel_frame_id",
-                    "analysis-${input.analysisWidthPx}x${input.analysisHeightPx}-rot${input.analysisRotationDeg}",
+                    input.calibrationPixelFrameId
+                        ?: "analysis-${input.analysisWidthPx}x${input.analysisHeightPx}-rot${input.analysisRotationDeg}",
                 )
                 put(
                     "reference_to_image",

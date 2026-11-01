@@ -1858,6 +1858,11 @@ class GuidanceViewModel(
         val nominalDescriptor = intrinsics?.let {
             "factory-fx${it.fx}-fy${it.fy}-cx${it.cx}-cy${it.cy}-w${it.width}-h${it.height}-dist${it.distortion.joinToString(",")}"
         } ?: "unresolved-factory-analysis-${geometry.analysisWidth}x${geometry.analysisHeight}"
+        // Cite the measured profile only when the pose was solved with its
+        // unscaled intrinsics; a scaled or factory solve stays nominal.
+        val profile = measuredCalibrationId(intrinsics?.profileId)
+            ?.takeIf { intrinsics?.profileId?.contains('@') == false }
+            ?.let { measuredProfiles?.reference(it) }
         val layoutDescriptor = canonicalBoardLayout(board)
         val goalBytes = try {
             Json.encodeToString(GuidedTarget.serializer(), request.target).toByteArray(Charsets.UTF_8)
@@ -1885,18 +1890,22 @@ class GuidanceViewModel(
                 exifOrientation = exifOrientation,
             ),
             camera = SpatialSidecar.Camera(
-                cameraId = cameraIdForConsent(),
+                // The bare Camera2 id: the sidecar prefixes "camera:" itself for T_board_camera.
+                cameraId = snapshot.effectiveCameraId ?: return null,
                 lensFacing = when (geometry.lensFacing) {
                     CameraSelector.LENS_FACING_FRONT -> "front"
                     LENS_FACING_EXTERNAL -> "external"
                     else -> "back"
                 },
-                sensorMode = "default",
+                sensorMode = profile?.sensorMode ?: "default",
             ),
             calibration = SpatialSidecar.Calibration(
-                nominalDescriptor = nominalDescriptor,
+                profileId = profile?.profileId ?: "",
+                profileSha256 = profile?.sha256 ?: "",
+                nominalDescriptor = if (profile == null) nominalDescriptor else "",
                 layoutSha256 = layoutDescriptor.toByteArray(Charsets.UTF_8).sha256Hex(),
                 boardFrameId = board.boardId,
+                // A measured profile on a nominal board: the print scale is unmeasured.
                 metricValidity = "nominal_only",
             ),
             analysisWidthPx = geometry.analysisWidth,
@@ -1917,7 +1926,8 @@ class GuidanceViewModel(
                 sampleAgeMs = sampleAgeMs,
                 imageSha256 = imageSha,
             ),
-            calibrated = false,
+            calibrated = profile != null,
+            calibrationPixelFrameId = profile?.pixelFrameId,
             target = SpatialSidecar.Target(
                 goalBytes = goalBytes,
                 roiVerticesMm = boardRoiCorners(board),

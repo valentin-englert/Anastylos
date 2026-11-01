@@ -101,6 +101,13 @@ Writes (POST, foreign `Origin` refused with 403): `/api/questions/next`,
 Ids are plain names resolved inside the workspace root; paths from the browser
 are rejected. The server refuses non-loopback `--host` values.
 
+## Explosion view (adapter ready, routes not wired)
+
+`explosion.py` and `web/explosion.html|js|css` show the schematic explosion drawing composed by
+`tools/explosion` (click a part for its evidence, assembled/exploded toggle, operator layer
+confirmation). `server.py` does not serve them yet: the routes and exact signatures are in the
+`explosion.py` docstring and in `docs/integration/EXPLOSION-VIEW-01.md`.
+
 ## Stale demo (optional)
 
 ```powershell

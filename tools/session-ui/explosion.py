@@ -1,0 +1,133 @@
+"""Explosion view for the session UI: list, compose and serve bytes. Composition itself lives in tools/explosion.
+
+Reads are side-effect free (nothing is written for GET requests; the SVG is composed in memory). The only writes are
+the operator's layout decisions in ``<session>/drawings/explosion.json``; memory and job folders are never touched.
+Ids are plain names resolved inside the workspace root, files come from a fixed whitelist (same rule as drawings.py).
+
+Routes for ``server.py`` (not wired here; the integration owner adds them). Query/body field ``session`` is the
+session id as everywhere else; ``Handler.workspace_root`` is the workspace root; AdapterError carries the HTTP status.
+
+    GET  /api/explosion?session=<id>
+         self._send_json(explosion.explosion_view(Handler.workspace_root, session_id))
+    GET  /api/explosion/file?session=<id>&name=<name>[&job=<job>][&mode=exploded|assembled]
+         body, content_type = explosion.explosion_bytes(Handler.workspace_root, session_id, name, job, mode)
+         self._send_bytes(body, content_type)
+         name=explosion.svg (no job) is the composed drawing; with job: drawing.svg | overlay.jpg | rectified.png
+    POST /api/explosion/layout   JSON body {"session": "<id>", "action": "propose" | "confirm" | "reorder", ...}
+         self._mutate(session_id, lambda: explosion.layout_action(Handler.workspace_root, session_id, body))
+         propose: {}                                                          writes the skeleton, keeps confirmations
+         confirm: {"job", "label"?, "view_side"?, "flip_horizontal"?, "confirmed"? (default true)}
+         reorder: {"jobs": [<every layer job, top to bottom>]}
+    Static (add to ``STATIC`` and to the GET route table): /explosion.html, /explosion.js, /explosion.css
+
+Every POST answers with the refreshed ``explosion_view`` plus ``action`` (and ``added`` for propose). The page for a
+session is ``/explosion.html?session=<id>``; it announces the selected part with the window event
+``anastylos:part-selected`` (detail ``{job, label}``; both null when the selection is cleared).
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+from adapter import AdapterError, resolve_session
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "explosion"))
+import compose  # noqa: E402  (tools/explosion; stdlib only)
+import explosion_jobs  # noqa: E402
+import explosion_layout  # noqa: E402
+
+JOB_FILES = {"drawing.svg": "image/svg+xml", "overlay.jpg": "image/jpeg", "rectified.png": "image/png"}
+SVG_TYPE = "image/svg+xml"
+ACTIONS = ("propose", "confirm", "reorder")
+
+
+def _session(root: Path, session_id: str) -> Path:
+    return resolve_session(root, session_id)
+
+
+def _refused(exc: Exception, status: int = 409) -> AdapterError:
+    return AdapterError(str(exc), status)
+
+
+def explosion_view(root: Path, session_id: str) -> dict:
+    """Layout spec, composed manifest and per-layer file links for the page; ``error`` explains an unusable spec."""
+    session = _session(root, session_id)
+    view = {"session": session_id, "layout": None, "manifest": None, "error": None, "files": {},
+            "proposable_jobs": [e.job for e in _drawn_jobs(session)]}
+    try:
+        view["layout"] = explosion_layout.load(session)
+        if view["layout"] is not None:
+            view["manifest"] = compose.compose(session, view["layout"]).manifest
+    except (explosion_layout.LayoutError, explosion_jobs.JobError) as exc:
+        view["error"] = str(exc)
+        return view
+    if view["manifest"]:
+        view["files"] = {layer["job"]: [name for name in JOB_FILES if layer["inputs"].get(name)] for layer in view["manifest"]["layers"]}
+    return view
+
+
+def _drawn_jobs(session: Path) -> list:
+    found = (explosion_jobs.read_job(session, name) for name in explosion_jobs.list_job_names(session))
+    return [e for e in found if e.state == "done" and e.outline is not None]
+
+
+def explosion_bytes(root: Path, session_id: str, name: str, job: str = "", mode: str = "exploded") -> tuple[bytes, str]:
+    session = _session(root, session_id)
+    if not job:
+        if name != "explosion.svg":
+            raise AdapterError(f"Unknown explosion file {name!r}.", 404)
+        try:
+            return compose.compose(session, mode=mode).svg.encode("utf-8"), SVG_TYPE
+        except explosion_layout.LayoutError as exc:
+            raise _refused(exc) from exc
+    if name not in JOB_FILES:
+        raise AdapterError(f"Unknown explosion file {name!r}.", 404)
+    try:
+        job_path = explosion_jobs.jobs_root(session) / explosion_jobs.plain_job(job)
+    except explosion_jobs.JobError as exc:
+        raise _refused(exc, 404) from exc
+    path = explosion_jobs.find_rectified(job_path) if name == "rectified.png" else job_path / name
+    if path is None or not (job_path / "progress.json").is_file() or not path.is_file() or path.resolve().parent != job_path.resolve():
+        raise AdapterError(f"{name} is not available for drawing job {job!r}.", 404)
+    return path.read_bytes(), JOB_FILES[name]
+
+
+def layout_action(root: Path, session_id: str, body: dict) -> dict:
+    """Apply one operator decision to the layout spec and return the refreshed view."""
+    session = _session(root, session_id)
+    action = body.get("action")
+    if action not in ACTIONS:
+        raise AdapterError(f"Action must be one of {', '.join(ACTIONS)}.", 400)
+    extra: dict = {}
+    try:
+        if action == "propose":
+            extra["added"] = explosion_layout.propose(session)["added"]
+        elif action == "confirm":
+            explosion_layout.confirm_layer(session, _text(body, "job", required=True), label=_text(body, "label"),
+                                           view_side=_text(body, "view_side"), flip_horizontal=_flag(body, "flip_horizontal"),
+                                           confirmed=_flag(body, "confirmed", default=True))
+        else:
+            jobs = body.get("jobs")
+            if not isinstance(jobs, list) or not all(isinstance(j, str) for j in jobs):
+                raise AdapterError("jobs must be a list of drawing job names.", 400)
+            explosion_layout.reorder_layers(session, jobs)
+    except (explosion_layout.LayoutError, explosion_jobs.JobError) as exc:
+        raise _refused(exc) from exc
+    return {"action": action, **extra, **explosion_view(root, session_id)}
+
+
+def _text(body: dict, key: str, required: bool = False) -> str | None:
+    value = body.get(key)
+    if value is None and not required:
+        return None
+    if not isinstance(value, str):
+        raise AdapterError(f"{key} must be text.", 400)
+    return value
+
+
+def _flag(body: dict, key: str, default: bool | None = None) -> bool | None:
+    value = body.get(key, default)
+    if value is not None and not isinstance(value, bool):
+        raise AdapterError(f"{key} must be true or false.", 400)
+    return value

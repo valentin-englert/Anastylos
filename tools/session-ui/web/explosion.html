@@ -62,9 +62,25 @@
         <button type="button" id="move-up">Move up</button>
         <button type="button" id="move-down">Move down</button>
       </form>
+      <section id="part-help" aria-labelledby="part-help-heading">
+        <h3 id="part-help-heading">Assembly help</h3>
+        <form id="part-help-form">
+          <label for="part-help-question">Ask about this part</label>
+          <input id="part-help-question" maxlength="200" value="Where does this part belong?">
+          <button type="submit" id="part-help-ask">Ask</button>
+        </form>
+        <p class="state" id="part-help-answer" role="status"></p>
+        <ul id="part-help-details" class="note-list"></ul>
+        <div id="part-help-link" hidden>
+          <label for="part-help-candidate">This drawing shows the recorded part</label>
+          <select id="part-help-candidate"></select>
+          <button type="button" id="part-help-link-button">Link drawing to this part</button>
+        </div>
+      </section>
     </div>
   </aside>
 </main>
 <script src="explosion.js"></script>
+<script src="part-help.js"></script>
 </body>
 </html>

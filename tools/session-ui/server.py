@@ -28,12 +28,15 @@ import adapter
 import assembly_help
 import captures
 import drawings
+import explosion
 from adapter import AdapterError
 
 LOG = logging.getLogger("session-ui")
 WEB = Path(__file__).resolve().parent / "web"
 STATIC = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
-          "styles.css": "text/css; charset=utf-8"}
+          "styles.css": "text/css; charset=utf-8", "explosion.html": "text/html; charset=utf-8",
+          "explosion.js": "text/javascript; charset=utf-8", "explosion.css": "text/css; charset=utf-8",
+          "part-help.js": "text/javascript; charset=utf-8"}
 MAX_BODY = 64 * 1024
 MAX_AUDIO_BODY = 4 * 1024 * 1024  # about 85 s of 24 kHz mono 16-bit WAV: push-to-talk clips only
 TRANSCRIBER = [sys.executable, "-B", str(Path(__file__).resolve().parents[1] / "live" / "providers" / "transcribe.py"), "--stdin"]
@@ -135,6 +138,11 @@ class Handler(BaseHTTPRequestHandler):
             "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
             "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
             "/api/parts/link-candidates": self._api_parts_candidates,
+            "/explosion.html": lambda: self._send_static("explosion.html"),
+            "/explosion.js": lambda: self._send_static("explosion.js"),
+            "/explosion.css": lambda: self._send_static("explosion.css"),
+            "/part-help.js": lambda: self._send_static("part-help.js"),
+            "/api/explosion": self._api_explosion, "/api/explosion/file": self._api_explosion_file,
         }
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -163,6 +171,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
+                  "/api/explosion/layout": self._api_explosion_layout,
                   "/api/voice/transcribe": self._api_voice_transcribe}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -366,6 +375,22 @@ class Handler(BaseHTTPRequestHandler):
         if not session_id:
             raise AdapterError("The session parameter is missing.", 400)
         self._mutate(session_id, lambda: captures.capture_status(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_explosion(self) -> None:
+        self._send_json(explosion.explosion_view(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_explosion_file(self) -> None:
+        query = self._query()
+        body, content_type = explosion.explosion_bytes(Handler.workspace_root, self._session_param(query), query.get("name", ""),
+                                                       query.get("job", ""), query.get("mode", "exploded"))
+        self._send_bytes(body, content_type)
+
+    def _api_explosion_layout(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: explosion.layout_action(Handler.workspace_root, session_id, body))
 
     def _api_parts_candidates(self) -> None:
         query = self._query()

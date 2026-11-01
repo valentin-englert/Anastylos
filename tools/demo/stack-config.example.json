@@ -1,0 +1,11 @@
+{
+  "workspace_root": "C:/ANASTYLOS/data/session-ui-demo",
+  "receiver_data_dir": "C:/ANASTYLOS/data/receiver",
+  "backup_root": "C:/ANASTYLOS/backups",
+  "host": "192.168.0.10",
+  "session_ui_port": 8079,
+  "receiver_port": 8443,
+  "cert": "C:/ANASTYLOS/data/receiver/tls/cert.pem",
+  "key": "C:/ANASTYLOS/data/receiver/tls/key.pem",
+  "python": "C:/Users/<you>/Documents/Anastylos/.venv/Scripts/python.exe"
+}

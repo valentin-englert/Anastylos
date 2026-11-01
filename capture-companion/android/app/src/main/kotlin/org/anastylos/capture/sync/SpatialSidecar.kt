@@ -86,6 +86,11 @@ object SpatialSidecar {
         val tBC: List<Double>?,
         val estimatorStatus: WireRegistration,
         val rmsPx: Double?,
+        val maxResidualPx: Double? = null,
+        /** 1 sigma camera centre in board mm and rotation in degrees, with how it was computed. */
+        val positionUncertaintyMm: List<Double>? = null,
+        val angleUncertaintyDeg: Double? = null,
+        val uncertaintyMethod: String = "none",
         val detectedMarkerIds: List<Int>,
         val residualReferenceWidthPx: Int,
         val sampleAgeMs: Double?,
@@ -694,14 +699,19 @@ object SpatialSidecar {
                 put("detected_marker_ids", JsonArray(detected.map { JsonPrimitive(it) }))
                 put("inlier_marker_ids", JsonArray(detected.map { JsonPrimitive(it) }))
                 put("rms_px", pose.rmsPx?.let { JsonPrimitive(it) } ?: JsonNull)
-                put("max_residual_px", JsonNull)
+                put("max_residual_px", pose.maxResidualPx?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("residual_reference_width_px", pose.residualReferenceWidthPx)
                 put("inlier_ratio", ratio?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("alternate_solution_separation_mm", JsonNull)
                 put("alternate_solution_separation_deg", JsonNull)
-                put("uncertainty_method", "none")
-                put("position_uncertainty_mm", JsonNull)
-                put("angle_uncertainty_deg", JsonNull)
+                val uncertain = pose.positionUncertaintyMm != null && pose.angleUncertaintyDeg != null
+                put("uncertainty_method", if (uncertain) pose.uncertaintyMethod else "none")
+                put(
+                    "position_uncertainty_mm",
+                    pose.positionUncertaintyMm?.takeIf { uncertain }
+                        ?.let { v -> JsonArray(v.map { JsonPrimitive(it) }) } ?: JsonNull,
+                )
+                put("angle_uncertainty_deg", pose.angleUncertaintyDeg?.takeIf { uncertain }?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("corner_evidence", JsonNull)
             })
             put("reasons", JsonArray(emptyList()))

@@ -459,3 +459,27 @@ layout and epochs not staged. `measured_print_scale` in
 generated file).
 
 Verification: 488 tests, 0 failures, JDK 21 test JVM; lint passed.
+
+### 15.4 Pose metrics: max residual and uncertainty
+
+The estimator now hands on the max reprojection residual it already gated on,
+and computes a 1 sigma uncertainty for gated poses
+(`guidance/PoseUncertainty.kt`): Gauss-Newton covariance `s²(JᵀJ)⁻¹` at the
+solution, residual variance over `2N−6`, central-difference Jacobian through
+`PoseMath.projectPoints`, propagated to the camera centre in board mm (the
+frame the sidecar reports) and to the rotation angle in degrees. The sidecar
+writes `max_residual_px`, `position_uncertainty_mm`, `angle_uncertainty_deg`
+and the method string; `none` and nulls when not computable.
+
+Run on APK `78c581a4253f046745820041ace87788461619912ed087051345420579783556`
+(device hash equal), session `42cc4b1b…`, request `71ac5944…`: RMS 0.80 px,
+max residual 2.04 px, uncertainty (0.47, 0.57, 0.12) mm and 0.09°. Validator:
+`needs_review`, no rejects, the only review left is `UNKNOWN_SOLVE_SOURCE`.
+
+Quality is `rejected` on motion alone: p90 1.5001 px against 1.5 px (pose,
+focus and exposure pass). The phone applies the motion gate unscaled at the
+1920 px analysis width, while the RMS and max-residual gates are scaled from
+`REF_WIDTH_PX` 1280. Whether the frozen motion thresholds are also defined at
+1280 px is a TL question; nothing changed here.
+
+Verification: 490 tests, 0 failures, JDK 21 test JVM; lint passed.

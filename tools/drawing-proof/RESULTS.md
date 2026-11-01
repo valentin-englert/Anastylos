@@ -108,3 +108,25 @@ pcb-cable, front-shell. Run through the real server API on 2026-11-01:
 Latency per job: first run 86–127 s (sampling 48–84 s, Muse choice 14–47 s, Muse box 12 s, SAM 7–9 s); cached
 34 s. API use for this milestone: Muse 7 calls (one interrupted by the kill test), SAM 2 calls, 0 failures.
 Not yet checked: a browser click on the binding buttons (the server path is covered by `test_drawings.py`).
+
+## EV-1 and MF-1 (plan `specs/plan_ev1_mf1.json`, committed 755df53b before the runs), 2026-11-01
+
+**EV-1, before/after footprint without a model.** The quiet-frame rule (motion and skin both ≤ 25th percentile)
+found only two quiet frames per video, so each video gave one pair spanning many steps.
+- P3 13.5 → 48.5 s: the changed region outlines the removed ABXY membrane roughly (ragged rim, no shadow); the
+  D-pad membrane removed in the same interval is **missed** (white membrane over paper seen through the white
+  cross opening: almost no difference).
+- P2 13.0 → 70.0 s: unusable; the pair spans opening and flipping the device, the largest region is shadow and
+  cable.
+- Finding: the footprint works when the object stays put and the part contrasts with what lies below; it needs
+  short pairs around single steps. Revision candidate r2 (not run): quiet = low motion only with an absolute skin
+  limit, pairs bounded by custody event windows.
+
+**MF-1, multi-frame fusion of the held back shell (P2 12–24 s).** Invalid by construction: the six frames show
+three different states (assembled controller 12–13 s, held controller 15–16 s, opened device 19–24 s); the separated
+back shell never lies in the work area (it was put down outside). The fusion still "succeeded" (aligned IoU 0.91,
+rim observed 89 %), because these states have nearly the same outline. Finding: outline similarity cannot tell
+object states apart; fusion is only valid inside one confirmed state, so it needs an identity gate first
+(event window or operator).
+
+API use: Muse 6, SAM 6 (MF-1), 0 failures. EV-1 used no model.

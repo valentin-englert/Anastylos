@@ -43,16 +43,19 @@ FROZEN = {"revision": "r4 (r3 with the calibration-sheet sentence removed from t
 SAM = REPO / "sam-tracking" / "sam.py"
 
 
-def muse_box(image: np.ndarray, part: str, key: str) -> dict:
+def muse_box(image: np.ndarray, part: str, key: str, effort: str | None = None, cache_key: str | None = None) -> dict:
+    """Frozen box request; ``effort`` and ``cache_key`` exist only for measured experiments (defaults = frozen)."""
     h, w = image.shape[:2]
     scale = min(1.0, FROZEN["muse_max_side_px"] / max(h, w))
     small = cv2.resize(image, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
     ok, jpg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, FROZEN["muse_jpeg_quality"]])
     sw, sh = small.shape[1], small.shape[0]
-    payload = {"model": FROZEN["muse_model"], "reasoning": {"effort": FROZEN["reasoning_effort"]},
+    payload = {"model": FROZEN["muse_model"], "reasoning": {"effort": effort or FROZEN["reasoning_effort"]},
                "input": [{"role": "user", "content": [{"type": "input_text", "text": PROMPT.format(w=sw, h=sh, part=part)},
                           {"type": "input_image", "image_url": "data:image/jpeg;base64," + base64.b64encode(jpg.tobytes()).decode()}]}],
                "text": {"format": {"type": "json_schema", "name": "part_box", "strict": True, "schema": SCHEMA}}}
+    if cache_key:
+        payload["prompt_cache_key"] = cache_key
     data, meta = client.post_responses_once(payload, key, timeout_s=300)
     text = next(c.get("text") for o in data.get("output", []) if o.get("type") == "message" for c in o.get("content", []))
     answer = json.loads(text)

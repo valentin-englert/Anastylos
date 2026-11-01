@@ -16,6 +16,7 @@ import json
 import math
 from pathlib import Path
 
+from anastylos_reconstruction.contour import ContourError, extract_mask_contour
 from anastylos_reconstruction.schema import (
     LAYOUT,
     PROJECTOR_NAME,
@@ -28,7 +29,13 @@ UNKNOWN_IDENTITY_NOTE = (
     "operator asserts it elsewhere"
 )
 
+DECLARED_IDENTITY_NOTE = (
+    "operator_label is a declaration, not a verified part identity; "
+    "identity stays unknown until asserted through confirmation channels"
+)
+
 CROP_ROLES = ("before_rectified", "after_rectified")
+COMPONENT_EVENT_TYPES = ("observation", "declared_removal")
 
 
 def _sha256_file(path: Path) -> str | None:
@@ -88,8 +95,8 @@ def _read_json(path: Path):
         return None
 
 
-# Operator-declared events (phase, declared_removal, storage_link, compatible_group) are valid
-# memory but carry no geometry; the projection reads only observations and tray links.
+# Operator-declared events are valid memory. Observations keep their evidence
+# path; declared removals project as components with null metric geometry.
 MEMORY_EVENT_TYPES = ("observation", "tray_link", "declared_removal", "storage_link", "compatible_group", "phase")
 
 
@@ -122,8 +129,7 @@ def load_log(memory_path: Path) -> tuple[list[dict] | None, str | None]:
     return events, None
 
 
-def _replay(events: list[dict]) -> tuple[list[dict], list[str], list[dict], str | None]:
-    """Live observations in log order, superseded ids, live tray links."""
+def _follow_map(events: list[dict]) -> tuple[dict[str, str], str | None]:
     by_id = {event["id"]: event for event in events}
     follow = {
         event["supersedes"]: event["id"]
@@ -132,25 +138,63 @@ def _replay(events: list[dict]) -> tuple[list[dict], list[str], list[dict], str 
     }
     for old, new in follow.items():
         if old not in by_id:
-            return [], [], [], f"event {new!r} supersedes missing id {old!r}"
-    live_obs = [
+            return {}, f"event {new!r} supersedes missing id {old!r}"
+    return follow, None
+
+
+def _resolve_follow(target, follow: dict[str, str]):
+    while target in follow:
+        target = follow[target]
+    return target
+
+
+def _replay(events: list[dict]) -> tuple[
+    list[dict], list[str], list[dict], list[dict], list[dict], list[dict], str | None
+]:
+    """Live component events, superseded ids, tray/storage links, groups, phases."""
+    follow, error = _follow_map(events)
+    if error is not None:
+        return [], [], [], [], [], [], error
+    live_components = [
         event
         for event in events
-        if event.get("type") == "observation" and event["id"] not in follow
+        if event.get("type") in COMPONENT_EVENT_TYPES and event["id"] not in follow
     ]
-    links = []
+    live_ids = {item["id"] for item in live_components}
+    live_obs_ids = {
+        item["id"] for item in live_components if item.get("type") == "observation"
+    }
+    tray_links = []
     for event in events:
         if event.get("type") != "tray_link" or event["id"] in follow:
             continue
-        target = event.get("observation_id")
-        while target in follow:
-            target = follow[target]
-        if target not in {item["id"] for item in live_obs}:
-            return [], [], [], (
+        target = _resolve_follow(event.get("observation_id"), follow)
+        if target not in live_obs_ids:
+            return [], [], [], [], [], [], (
                 f"link {event['id']!r} points at missing observation {target!r}"
             )
-        links.append({**event, "observation_id": target})
-    return live_obs, sorted(follow), links, None
+        tray_links.append({**event, "observation_id": target})
+    storage_links = []
+    for event in events:
+        if event.get("type") != "storage_link" or event["id"] in follow:
+            continue
+        target = _resolve_follow(event.get("target_id"), follow)
+        if target not in live_ids:
+            return [], [], [], [], [], [], (
+                f"storage_link {event['id']!r} points at missing target {target!r}"
+            )
+        storage_links.append({**event, "target_id": target})
+    groups = [
+        event for event in events
+        if event.get("type") == "compatible_group" and event["id"] not in follow
+    ]
+    phases = [
+        event for event in events
+        if event.get("type") == "phase" and event["id"] not in follow
+    ]
+    return (
+        live_components, sorted(follow), tray_links, storage_links, groups, phases, None
+    )
 
 
 def _resolve_result(
@@ -293,8 +337,15 @@ def _layout(components: list[dict]) -> None:
         y = LAYOUT["margin_y"]
         for row, component in enumerate(items):
             box = component["physical"]["bbox_mm"]
-            width = box[2] * scale if _is_box(box, 4) else 0.0
-            height = box[3] * scale if _is_box(box, 4) else 0.0
+            if _is_box(box, 4):
+                width = box[2] * scale
+                height = box[3] * scale
+            elif component.get("kind") == "declared_removal":
+                width = LAYOUT["declared_w"]
+                height = LAYOUT["declared_h"]
+            else:
+                width = 0.0
+                height = 0.0
             component["exploded"] = {
                 "x": round(x, 2),
                 "y": round(y, 2),
@@ -305,6 +356,149 @@ def _layout(components: list[dict]) -> None:
                 "row": row,
             }
             y += height + LAYOUT["label_band"] + LAYOUT["row_gap"]
+
+
+def _pack_storage(linked: list[dict]) -> tuple[dict | None, list[dict] | None, str | None]:
+    if len(linked) == 1:
+        return {
+            "link_id": linked[0]["id"],
+            "location": linked[0].get("location"),
+            "basis": copy.deepcopy(linked[0].get("basis")),
+        }, None, None
+    if len(linked) > 1:
+        storages = [
+            {
+                "link_id": item["id"],
+                "location": item.get("location"),
+                "basis": copy.deepcopy(item.get("basis")),
+            }
+            for item in linked
+        ]
+        return None, storages, (
+            f"{len(linked)} live storage links; ambiguous, no link preferred"
+        )
+    return None, None, None
+
+
+def _pack_tray(linked: list[dict]) -> tuple[dict | None, list[dict] | None, str | None]:
+    if len(linked) == 1:
+        return {
+            "link_id": linked[0]["id"],
+            "tray": copy.deepcopy(linked[0].get("tray")),
+            "basis": copy.deepcopy(linked[0].get("basis")),
+        }, None, None
+    if len(linked) > 1:
+        trays = [
+            {
+                "link_id": item["id"],
+                "tray": copy.deepcopy(item.get("tray")),
+                "basis": copy.deepcopy(item.get("basis")),
+            }
+            for item in linked
+        ]
+        return None, trays, (
+            f"{len(linked)} live tray links; ambiguous, no link preferred"
+        )
+    return None, None, None
+
+
+def _groups_for(component_id: str, groups: list[dict]) -> list[dict]:
+    matched = []
+    for group in groups:
+        members = group.get("members") or []
+        if component_id in members:
+            matched.append({
+                "id": group["id"],
+                "label": group.get("label"),
+                "members": copy.deepcopy(members),
+                "basis": copy.deepcopy(group.get("basis")),
+            })
+    return matched
+
+
+def _mask_path_for_region(region: dict | None) -> Path | None:
+    if not isinstance(region, dict):
+        return None
+    result_json = region.get("result_json")
+    if not result_json:
+        return None
+    result_path = Path(result_json)
+    result = _read_json(result_path)
+    if not isinstance(result, dict):
+        return None
+    output_files = result.get("output_files") or {}
+    name = output_files.get("mask")
+    if not name:
+        return None
+    candidate = result_path.parent / name
+    return candidate if candidate.is_file() else None
+
+
+def _build_representation(
+    *,
+    kind: str,
+    region: dict | None,
+    crops: list[dict],
+    declaration: dict | None,
+) -> dict:
+    """Honest drawing basis: mask contour, evidence crop, or declared card."""
+    if kind == "observation" and region is not None:
+        clip = region.get("bbox_px")
+        mask_path = _mask_path_for_region(region)
+        if mask_path is not None and _is_box(clip, 4):
+            try:
+                return extract_mask_contour(mask_path, clip)
+            except (ContourError, OSError) as exc:
+                # Fall through to evidence crop / card with the reason noted.
+                contour_error = str(exc)
+        else:
+            contour_error = (
+                "no usable change-detection mask for contour extraction"
+                if mask_path is None else "region has no bbox_px"
+            )
+        if crops:
+            crop = crops[0]
+            return {
+                "kind": "evidence_crop",
+                "method": "rectified-evidence-crop-v1",
+                "parameters": {"preferred_role": crop.get("role")},
+                "source_image": crop.get("image"),
+                "source_sha256": _sha256_file(Path(crop["image"]))
+                if crop.get("image") else None,
+                "roi_px": copy.deepcopy(crop.get("clip_px")),
+                "coordinate_space": "rectified_image_px",
+                "image_size_px": copy.deepcopy(crop.get("image_size_px")),
+                "points_px": None,
+                "note": "SUBSTITUTE — evidence crop clip, not a recognized "
+                        f"silhouette ({contour_error})",
+                "contour_error": contour_error,
+            }
+        return {
+            "kind": "declared_card",
+            "method": "unavailable-silhouette-v1",
+            "parameters": {},
+            "source_image": None,
+            "source_sha256": None,
+            "roi_px": None,
+            "coordinate_space": None,
+            "points_px": None,
+            "note": "SUBSTITUTE — no mask contour and no evidence crop "
+                    f"({contour_error})",
+            "contour_error": contour_error,
+        }
+    label = (declaration or {}).get("operator_label")
+    return {
+        "kind": "declared_card",
+        "method": "operator-declaration-card-v1",
+        "parameters": {},
+        "source_image": None,
+        "source_sha256": None,
+        "roi_px": None,
+        "coordinate_space": None,
+        "points_px": None,
+        "note": "SUBSTITUTE — operator declaration; no measured silhouette"
+                + (f" ({label})" if label else ""),
+    }
 
 
 def _relationships(graph_path: str | None) -> dict:
@@ -369,74 +563,127 @@ def build_state(
                 "result_files": {},
             },
             "coordinate_systems": _coordinate_systems(),
+            "phases": [],
             "components": [],
             "superseded": [],
             "relationships": _relationships(graph_path),
             "missing_evidence": [],
             "warnings": [],
         }
-    live_obs, superseded, links, replay_error = _replay(events)
+    (live_components, superseded, tray_links, storage_links, groups, phases,
+     replay_error) = _replay(events)
     if replay_error is not None:
         state = build_empty(memory_path, results_dir, graph_path)
         state["reason"] = replay_error
         return state
     links_by_obs: dict[str, list[dict]] = {}
-    for link in links:
+    for link in tray_links:
         links_by_obs.setdefault(link["observation_id"], []).append(link)
+    storage_by_target: dict[str, list[dict]] = {}
+    for link in storage_links:
+        storage_by_target.setdefault(link["target_id"], []).append(link)
+    # Conflicting storage: same location claimed by targets that are not
+    # co-members of one live compatible_group (shared cells inside a group
+    # are expected for interchangeable parts).
+    by_location: dict[str, list[str]] = {}
+    for link in storage_links:
+        location = link.get("location")
+        if isinstance(location, str) and location.strip():
+            by_location.setdefault(location, []).append(link["target_id"])
+    group_sets = [
+        frozenset(group.get("members") or [])
+        for group in groups
+        if isinstance(group.get("members"), list)
+    ]
     components = []
     missing_evidence: list[dict] = []
     warnings: list[str] = []
-    for index, observation in enumerate(live_obs):
-        region, missing_reason, crops, crop_reason, proven = _attach_region(
-            observation, results_dir, memory, provenance_files)
-        if missing_reason is not None:
-            missing_evidence.append({
-                "observation_id": observation.get("id"),
-                "cited": (observation.get("evidence") or {}).get("result_json"),
-                "region": (observation.get("evidence") or {}).get("region"),
-                "reason": missing_reason,
-                "cited_sha256": proven["cited_sha256"],
-                "current_sha256": proven["current_sha256"],
-            })
-        linked = links_by_obs.get(observation["id"], [])
-        tray: dict | None = None
-        trays: list[dict] | None = None
-        if len(linked) == 1:
-            tray = {
-                "link_id": linked[0]["id"],
-                "tray": copy.deepcopy(linked[0].get("tray")),
-                "basis": copy.deepcopy(linked[0].get("basis")),
-            }
-        elif len(linked) > 1:
-            trays = [
-                {
-                    "link_id": item["id"],
-                    "tray": copy.deepcopy(item.get("tray")),
-                    "basis": copy.deepcopy(item.get("basis")),
-                }
-                for item in linked
-            ]
-            warnings.append(
-                f"{observation['id']}: {len(linked)} live tray links; "
-                "ambiguous, no link preferred")
-        entry = {
-            "id": observation["id"],
-            "timeline_index": index,
-            "identity": {"status": "unknown", "label": None,
-                         "note": UNKNOWN_IDENTITY_NOTE},
-            "physical": {
-                "source_view": observation.get("source_view"),
-                "bbox_mm": copy.deepcopy(observation.get("bbox_mm")),
-                "centroid_mm": copy.deepcopy(observation.get("centroid_mm")),
-                "evidence": copy.deepcopy(observation.get("evidence")),
+    for location, targets in sorted(by_location.items()):
+        unique = sorted(set(targets))
+        if len(unique) <= 1:
+            continue
+        covered = any(set(unique) <= members for members in group_sets)
+        if covered:
+            continue
+        warnings.append(
+            f"storage location {location!r} claimed by multiple targets: "
+            + ", ".join(unique)
+            + " (contradiction left visible; no winner chosen)")
+    for index, event in enumerate(live_components):
+        kind = event["type"]
+        if kind == "observation":
+            region, missing_reason, crops, crop_reason, proven = _attach_region(
+                event, results_dir, memory, provenance_files)
+            if missing_reason is not None:
+                missing_evidence.append({
+                    "observation_id": event.get("id"),
+                    "component_id": event.get("id"),
+                    "cited": (event.get("evidence") or {}).get("result_json"),
+                    "region": (event.get("evidence") or {}).get("region"),
+                    "reason": missing_reason,
+                    "cited_sha256": proven["cited_sha256"],
+                    "current_sha256": proven["current_sha256"],
+                })
+            tray, trays, tray_warn = _pack_tray(links_by_obs.get(event["id"], []))
+            if tray_warn:
+                warnings.append(f"{event['id']}: {tray_warn}")
+            declaration = None
+            identity_note = UNKNOWN_IDENTITY_NOTE
+            physical = {
+                "source_view": event.get("source_view"),
+                "bbox_mm": copy.deepcopy(event.get("bbox_mm")),
+                "centroid_mm": copy.deepcopy(event.get("centroid_mm")),
+                "evidence": copy.deepcopy(event.get("evidence")),
                 "region_resolved": region is not None,
                 "region": region,
                 "missing_reason": missing_reason,
-            },
+            }
+        else:
+            region = None
+            crops = []
+            crop_reason = "declared_removal has no change-detection crops"
+            tray = None
+            trays = None
+            declaration = {
+                "operator_label": event.get("operator_label"),
+                "source": event.get("source"),
+                "phase": event.get("phase"),
+                "declared_by": event.get("declared_by"),
+                "evidence_note": event.get("evidence_note"),
+                "t_s": event.get("t_s"),
+                "observation_id": event.get("observation_id"),
+            }
+            identity_note = DECLARED_IDENTITY_NOTE
+            physical = {
+                "source_view": None,
+                "bbox_mm": None,
+                "centroid_mm": None,
+                "evidence": None,
+                "region_resolved": False,
+                "region": None,
+                "missing_reason": "declared_removal carries no metric geometry",
+            }
+        storage, storages, storage_warn = _pack_storage(
+            storage_by_target.get(event["id"], []))
+        if storage_warn:
+            warnings.append(f"{event['id']}: {storage_warn}")
+        representation = _build_representation(
+            kind=kind, region=region, crops=crops, declaration=declaration)
+        entry = {
+            "id": event["id"],
+            "timeline_index": index,
+            "kind": kind,
+            "identity": {"status": "unknown", "label": None, "note": identity_note},
+            "declaration": declaration,
+            "physical": physical,
             "crops": crops,
             "crop_unavailable": crop_reason,
             "tray": tray,
             "trays": trays,
+            "storage": storage,
+            "storages": storages,
+            "compatible_groups": _groups_for(event["id"], groups),
+            "representation": representation,
             "exploded": {},
         }
         components.append(entry)
@@ -450,8 +697,16 @@ def build_state(
         warnings.append(
             f"candidate {contradiction.get('before')} -> "
             f"{contradiction.get('after')} contradicts a confirmed edge")
+    phase_index = [
+        {
+            "id": phase["id"],
+            "label": phase.get("label"),
+            "starts_after": phase.get("starts_after"),
+        }
+        for phase in phases
+    ]
     if not components:
-        status, reason = "unknown", "no live observations"
+        status, reason = "unknown", "no live components"
     elif missing_evidence or relationships.get("missing_confirmations"):
         status = "ambiguous"
         reason = "some evidence or confirmations did not resolve"
@@ -472,6 +727,7 @@ def build_state(
             "result_files": provenance_files,
         },
         "coordinate_systems": _coordinate_systems(),
+        "phases": phase_index,
         "components": components,
         "superseded": superseded,
         "relationships": relationships,
@@ -499,6 +755,7 @@ def build_empty(
             "result_files": {},
         },
         "coordinate_systems": _coordinate_systems(),
+        "phases": [],
         "components": [],
         "superseded": [],
         "relationships": _relationships(graph_path),

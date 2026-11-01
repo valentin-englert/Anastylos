@@ -1,6 +1,7 @@
 package org.anastylos.capture
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,12 +22,30 @@ import org.anastylos.capture.ui.guided.GuidedCaptureScreen
 import org.anastylos.capture.ui.session.SessionViewModel
 
 class MainActivity : ComponentActivity() {
+    private val container: AppContainer get() = (application as CaptureApp).container
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val container = (application as CaptureApp).container
         setContent {
             AnastylosApp(container)
         }
+    }
+
+    // Volume-down is the push-to-talk fallback, only while voice mode is on.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && container.voice.state.value.listening) {
+            if (event.repeatCount == 0) container.voice.pushToTalkDown()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN && container.voice.state.value.listening) {
+            container.voice.pushToTalkUp()
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 }
 

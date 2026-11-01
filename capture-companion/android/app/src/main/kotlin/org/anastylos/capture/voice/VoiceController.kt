@@ -1,0 +1,251 @@
+package org.anastylos.capture.voice
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.os.SystemClock
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import android.util.Log
+import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+/** Log tag for voice diagnostics: counts and timings only, never audio or transcripts. */
+internal const val VOICE_LOG_TAG = "AnastylosVoice"
+
+/**
+ * Opt-in hands-free voice on the phone microphone. One reader thread owns
+ * [AudioRecord] (16 kHz mono PCM, VOICE_RECOGNITION source); the camera
+ * pipeline is untouched. The phone is deaf while it speaks, while a clip
+ * is transcribed, and while push-to-talk records. Segments live only in
+ * memory until sent; nothing is written to storage.
+ */
+class VoiceController(
+    context: Context,
+    private val link: VoiceLink = PendingContractVoiceLink(),
+) {
+    data class State(
+        val listening: Boolean = false,
+        val pushToTalk: Boolean = false,
+        val busy: Boolean = false,
+        val speaking: Boolean = false,
+        val status: String = "",
+        val segments: Int = 0,
+        val backgroundRms: Double = 0.0,
+        val listeningSinceMs: Long? = null,
+    )
+
+    private val appContext = context.applicationContext
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val _state = MutableStateFlow(State())
+    val state: StateFlow<State> = _state.asStateFlow()
+
+    @Volatile private var reader: Thread? = null
+    @Volatile private var armedUntilMs = 0L
+    private var pttSamples: MutableList<ShortArray>? = null
+    private var tts: TextToSpeech? = null
+    @Volatile private var ttsReady = false
+
+    fun startListening() {
+        if (reader != null) return
+        ensureTts()
+        val thread = Thread({ readLoop() }, "anastylos-voice")
+        reader = thread
+        _state.update {
+            it.copy(listening = true, status = "Listening for “Muse” …", listeningSinceMs = SystemClock.elapsedRealtime(), segments = 0)
+        }
+        thread.start()
+    }
+
+    fun stopListening() {
+        reader = null
+        armedUntilMs = 0L
+        _state.update { it.copy(listening = false, pushToTalk = false, status = "", listeningSinceMs = null) }
+    }
+
+    /** Push-to-talk fallback: start collecting regardless of the wake word. */
+    fun pushToTalkDown() {
+        if (!_state.value.listening) startListening()
+        synchronized(this) { pttSamples = mutableListOf() }
+        _state.update { it.copy(pushToTalk = true, status = "Recording … release to send") }
+    }
+
+    fun pushToTalkUp() {
+        val blocks = synchronized(this) { pttSamples.also { pttSamples = null } } ?: return
+        _state.update { it.copy(pushToTalk = false) }
+        val samples = concat(blocks)
+        if (samples.size < SpeechSegmenter.SAMPLE_RATE * 3 / 10) {
+            _state.update { it.copy(status = "Too short. Hold while you speak.") }
+            return
+        }
+        handleClip(samples, wakeRequired = false)
+    }
+
+    /** Speaks workstation-verified text only (see [VoiceLink.SpokenReply]). */
+    fun speakVerified(text: String) = speak(text)
+
+    fun release() {
+        stopListening()
+        tts?.shutdown()
+        tts = null
+    }
+
+    @SuppressLint("MissingPermission") // caller requests RECORD_AUDIO before startListening
+    private fun readLoop() {
+        val rate = SpeechSegmenter.SAMPLE_RATE
+        val block = SpeechSegmenter.BLOCK_SAMPLES
+        val min = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        val record = try {
+            AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION, rate,
+                AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(min, block * 2 * 4),
+            )
+        } catch (e: Exception) {
+            fail("Microphone not available: ${e.message}")
+            return
+        }
+        if (record.state != AudioRecord.STATE_INITIALIZED) {
+            record.release()
+            fail("Microphone not available")
+            return
+        }
+        val segmenter = SpeechSegmenter()
+        val buffer = ShortArray(block)
+        var blocks = 0L
+        try {
+            record.startRecording()
+            Log.i(VOICE_LOG_TAG, "mic started rate=$rate state=${record.recordingState} source=VOICE_RECOGNITION")
+            while (reader === Thread.currentThread()) {
+                var filled = 0
+                while (filled < block) {
+                    val n = record.read(buffer, filled, block - filled)
+                    if (n <= 0) break
+                    filled += n
+                }
+                if (filled < block) continue
+                blocks++
+                synchronized(this) { pttSamples?.add(buffer.copyOf()) }
+                val s = _state.value
+                if (s.pushToTalk || s.busy || s.speaking) {
+                    segmenter.reset()
+                    continue
+                }
+                val segment = segmenter.feed(buffer)
+                if (blocks % 50 == 0L) _state.update { it.copy(backgroundRms = segmenter.backgroundRms) }
+                if (segment != null) {
+                    _state.update { it.copy(segments = it.segments + 1) }
+                    Log.i(VOICE_LOG_TAG, "segment ms=${segment.size * 1000 / SpeechSegmenter.SAMPLE_RATE} floor=${"%.4f".format(Locale.US, segmenter.backgroundRms)}")
+                    handleClip(segment, wakeRequired = true)
+                }
+            }
+        } finally {
+            try {
+                record.stop()
+            } catch (_: Exception) {
+            }
+            record.release()
+        }
+    }
+
+    private fun handleClip(samples: ShortArray, wakeRequired: Boolean) {
+        _state.update { it.copy(busy = true) }
+        val spokeEndMs = SystemClock.elapsedRealtime()
+        scope.launch {
+            try {
+                val wav = WavEncoder.encode(samples)
+                val transcript = link.transcribe(wav)
+                if (transcript.status != "ok" || transcript.text.isNullOrBlank()) {
+                    _state.update { it.copy(status = statusLine(transcript.status)) }
+                    return@launch
+                }
+                val now = SystemClock.elapsedRealtime()
+                val route = if (wakeRequired) {
+                    WakeWord.route(transcript.text, armed = now < armedUntilMs)
+                } else {
+                    WakeWord.route("muse " + transcript.text, armed = false)
+                }
+                when (route) {
+                    WakeWord.Route.Discard -> return@launch
+                    WakeWord.Route.Armed -> {
+                        armedUntilMs = now + WakeWord.ARMED_MS
+                        _state.update { it.copy(status = "Yes? (listening for your command)") }
+                        speak(YES)
+                        return@launch
+                    }
+                    is WakeWord.Route.Command -> reply(link.submit(VoiceLink.OperatorInput.Command(route.command)), spokeEndMs)
+                    is WakeWord.Route.Input -> reply(link.submit(VoiceLink.OperatorInput.Speech(route.text)), spokeEndMs)
+                }
+                armedUntilMs = 0L
+            } catch (e: Exception) {
+                _state.update { it.copy(status = "Voice failed: ${e.message}") }
+            } finally {
+                _state.update { it.copy(busy = false) }
+            }
+        }
+    }
+
+    private fun reply(reply: VoiceLink.SpokenReply, spokeEndMs: Long) {
+        _state.update { it.copy(status = statusLine(reply.status)) }
+        val text = reply.text ?: return
+        Log.i(VOICE_LOG_TAG, "reply latency ms=${SystemClock.elapsedRealtime() - spokeEndMs}")
+        speak(text)
+    }
+
+    private fun statusLine(status: String): String = when (status) {
+        "ok" -> ""
+        PendingContractVoiceLink.STATUS -> "Voice link not available yet (awaiting TL contract CR-VOICE-01)"
+        else -> "Not understood ($status). Please try again or type."
+    }
+
+    private fun speak(text: String) {
+        val engine = tts ?: return
+        if (!ttsReady) return
+        _state.update { it.copy(speaking = true) }
+        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "anastylos-${SystemClock.elapsedRealtime()}")
+    }
+
+    private fun ensureTts() {
+        if (tts != null) return
+        tts = TextToSpeech(appContext) { status ->
+            val engine = tts ?: return@TextToSpeech
+            ttsReady = status == TextToSpeech.SUCCESS &&
+                engine.setLanguage(Locale.US) >= TextToSpeech.LANG_AVAILABLE
+            Log.i(VOICE_LOG_TAG, "tts ready=$ttsReady locale=en-US")
+            engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) = Unit
+                override fun onDone(utteranceId: String?) = _state.update { it.copy(speaking = false) }
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) = _state.update { it.copy(speaking = false) }
+            })
+        }
+    }
+
+    private fun fail(message: String) {
+        reader = null
+        _state.update { it.copy(listening = false, status = message) }
+    }
+
+    private fun concat(blocks: List<ShortArray>): ShortArray {
+        val out = ShortArray(blocks.sumOf { it.size })
+        var offset = 0
+        for (b in blocks) {
+            b.copyInto(out, offset)
+            offset += b.size
+        }
+        return out
+    }
+
+    private companion object {
+        /** Fixed status sentence of the reference behaviour; never model text. */
+        const val YES = "Yes?"
+    }
+}

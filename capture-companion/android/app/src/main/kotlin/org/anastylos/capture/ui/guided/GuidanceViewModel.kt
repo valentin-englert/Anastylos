@@ -236,7 +236,10 @@ class GuidanceViewModel(
     private val timing: TimingAccumulator = TimingAccumulator(),
     /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
     private val armDebounceMs: Long = 0L,
-    private val armClock: () -> Long = { android.os.SystemClock.elapsedRealtime() },
+    // Same monotonic domain as nanoClock (elapsedRealtime in production);
+    // deriving it keeps one injectable clock, so JVM tests need no Android.
+    private val armClock: () -> Long = { nanoClock() / 1_000_000L },
+    private val armLog: (String) -> Unit = { Log.i(ARM_LOG, it) },
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
@@ -1466,9 +1469,7 @@ class GuidanceViewModel(
         else -> "counting"
     }
 
-    private fun logArm(message: String) {
-        Log.i(ARM_LOG, message)
-    }
+    private fun logArm(message: String) = armLog(message)
 
     private fun dwellSamples(state: DwellState): Int = when (state) {
         DwellState.Idle -> 0

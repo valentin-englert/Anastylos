@@ -28,6 +28,7 @@ import org.anastylos.capture.sync.GuidedRemoteFactory
 import org.anastylos.capture.sync.GuidedSessionController
 import org.anastylos.capture.sync.ReceiverClient
 import org.anastylos.capture.data.DataStoreGuidedPrefs
+import org.anastylos.capture.voice.VoiceController
 import org.anastylos.capture.data.GuidedAssociationRepository
 import org.anastylos.capture.data.GuidedPrefs
 import org.anastylos.capture.data.SamplingPrefs
@@ -104,6 +105,9 @@ class AppContainer(context: Context) {
 
     private val guidedPrefs: GuidedPrefs by lazy { DataStoreGuidedPrefs(appContext) }
     private val guideTiming = TimingAccumulator()
+
+    /** Opt-in voice mode; one microphone owner for the whole app. */
+    val voice: VoiceController by lazy { VoiceController(appContext) }
     private val measuredProfiles: MeasuredProfileSource by lazy { AssetMeasuredProfileSource(appContext) }
     private val poseEstimator: PoseEstimator by lazy {
         OpenCvPoseEstimator(TimingArucoBackend(OpenCvArucoBackend(), guideTiming))

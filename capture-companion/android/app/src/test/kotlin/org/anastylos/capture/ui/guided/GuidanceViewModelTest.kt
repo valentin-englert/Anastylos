@@ -189,7 +189,7 @@ class GuidanceViewModelTest {
             repo = repo, sampler = sampler,
             cameraFactory = { _, _ -> camera },
             prefs = FakePrefs(ref = 60.0),
-            nanoClock = { nowNs }, utcClock = { nowUtc },
+            nanoClock = { nowNs }, utcClock = { nowUtc }, armLog = {},
             ioDispatcher = dispatcher,
             cameraPrefs = prefs,
             settingsStore = store,
@@ -341,7 +341,7 @@ class GuidanceViewModelTest {
             repo = repo, sampler = sampler,
             cameraFactory = { _, _ -> camera },
             prefs = FakePrefs(ref = 60.0),
-            nanoClock = { nowNs }, utcClock = { nowUtc },
+            nanoClock = { nowNs }, utcClock = { nowUtc }, armLog = {},
             ioDispatcher = dispatcher,
         )
     }
@@ -711,7 +711,7 @@ class GuidanceViewModelTest {
             repo = repo, sampler = sampler,
             cameraFactory = { _, _ -> camera },
             prefs = remotePrefs,
-            nanoClock = { nowNs }, utcClock = { nowUtc },
+            nanoClock = { nowNs }, utcClock = { nowUtc }, armLog = {},
             ioDispatcher = dispatcher,
             pairingStore = store,
             remoteFactory = GuidedRemoteFactory { _ ->

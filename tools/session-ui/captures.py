@@ -40,8 +40,11 @@ PRINCIPAL = "anastylos-session-ui"
 REQUESTABLE = {"NEEDS_CAPTURE"}
 DELIVERED = {"package_only", "qualified"}
 TERMINAL_REQUEST = {"CANCELLED", "EXPIRED", "SUPERSEDED", "UNREACHABLE"}
-# Top-down view over the A3 sheet centre, the phone's own "a3-top-center" viewpoint (camera 450 mm above the board).
-TOP_DOWN_CENTER_MM = (198.0, 136.5, -450.0)
+# Roughly top-down, about 450 mm above the part's region. The workstation rectifies every still on the sheet markers,
+# so the camera pose only has to keep the sheet and the part in view: generous tolerances, no millimetre aiming.
+CAMERA_HEIGHT_MM = -450.0
+TOLERANCE_MM = [100, 100, 150]
+TOLERANCE_DEG = 20
 RECEIVER = Path(__file__).resolve().parents[2] / "capture-companion" / "receiver" / "anastylos_capture_receiver.py"
 
 
@@ -172,14 +175,14 @@ def view_label(spec: dict) -> str:
 
 def request_body(conf: dict, link: dict, spec: dict, reasons: list[str], revision: int) -> dict:
     x, y, w, h = spec["region_mm"]
-    cx, cy, cz = TOP_DOWN_CENTER_MM
+    cx, cy, cz = x + w / 2, y + h / 2, CAMERA_HEIGHT_MM
     return {"operation_id": str(uuid.uuid4()), "session_id": link["guided_session_id"], "expected_session_revision": revision,
             "source_id": conf["source_id"], "target_label": view_label(spec), "board_id": conf["board_id"],
             "calibration_id": conf["calibration_id"],
             "target": {"kind": "pose",
                        "T_B_C": {"from": conf.get("camera_frame", "camera:0"), "to": conf["board_frame"], "units": "mm",
                                  "matrix": [1, 0, 0, cx, 0, 1, 0, cy, 0, 0, 1, cz, 0, 0, 0, 1]},
-                       "translation_tolerance_mm": [15, 15, 20], "rotation_tolerance_deg": 5,
+                       "translation_tolerance_mm": TOLERANCE_MM, "rotation_tolerance_deg": TOLERANCE_DEG,
                        "roi": {"min_B_mm": [x, y, -80], "max_B_mm": [x + w, y + h, 0], "basis": "operator_declared",
                                "evidence_ids": []}},
             "quality_profile_id": conf.get("quality_profile_id", "guidance-hypothesis-1"),

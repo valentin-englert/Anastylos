@@ -163,3 +163,100 @@ API use: Muse 27, 0 failures, 0 retries.
 
 Paused/resume with checkpoints is covered by a unit test only (`tests/test_drawing_job.py` ResumeTest); resuming a
 real interrupted job has not been shown yet. Do not claim it as demonstrated.
+
+
+## CONS-1: Muse run-to-run consistency of frame choice and part box (plan `specs/plan_cons1.json`, committed 02721b66 before any request; addendum A1 in 8e4c930b), 2026-11-01
+
+Question: how stable are the two Muse decisions the drawing job relies on when the identical request is repeated?
+Script `consistency_experiment.py` (reuses `drawing_job._muse_choice` at effort max and `muse_sam.muse_box` r4.2 at
+effort high, defaults untouched), raw output `C:\tmp\anastylos-drawing-proof\cons1\` (`cons1.json`, `cons1.log`,
+`sheet_J*.jpg`, `overlay_*.jpg`). Run once, sequential. Not a ground-truth test: it measures self-consistency only.
+
+Deviation from the plan (addendum A1): the first start failed locally (`KeyError 'view_side'`: the B1 specs predate the
+current `CHOICE_PROMPT` fields) before any request was sent (30 local errors, 0 requests, log kept as
+`cons1-attempt0-local-error.log`). Sheets stay the B1 sheets (rebuilt from the candidate/tile caches without video
+decoding; mean pixel difference to the saved B1 sheets 0.67–0.93; J2 has 4 tiles because frame 1845 was skipped in B1
+too); the request fields (part, scope, view side, attachments, phase events) come from the current product specs, so J3
+asks for scope `assembly`, not `part` as in B1.
+
+### Development data (all inputs were seen while the pipeline was built; no independent test set)
+
+**Frame choice, 5 repeats per job, effort max** (gate = what the pipeline does with the answer):
+
+| job | usable | gate outcome (modal) | tile | state | view class | latency | level |
+|---|---|---|---|---|---|---|---|
+| J1 back shell (5 tiles) | false 5/5 | NEEDS_CAPTURE 5/5 | none | assembled_object 3, unclear 2 | other 5/5 | 31–42 s | **L2** (state 3/5) |
+| J2 PCB + cable (4 tiles) | true 2, false 3 | NEEDS_CAPTURE 3, ok(tile 2) 2 → tuple 3/5 | tile 2 in 2 of 5 | assembly 4, unclear 1 | other 4, back 1 | 32–71 s | **L2** (tuple 3/5) |
+| J3 front shell (3 tiles) | true 5/5 | NEEDS_CONFIRMATION 5/5 | tile 1 5/5 | assembly 5/5 | other 5/5 | 16–23 s | **L0** |
+
+Overall frame-choice verdict by the pre-registered rule (worst unit): **L2, operator confirmation**. Raw `view_side`
+strings: J1 "exterior" 5/5, J3 "interior" 5/5, J2 "solder side" in 4 spellings and "component side" once (the opposite
+side, in the repeat that picked tile 2). My `view_class` mapping mostly yields "other" because the model repeats the
+request's own words, so it carries little signal (reported only, as planned).
+
+**Part box, 3 repeats per image, r4.2 effort high** (all 18 calls valid, `fully_visible` true in all 18):
+
+| image | min pairwise IoU | median | edge spread px (l,t,r,b) | median latency | level |
+|---|---|---|---|---|---|
+| F0 front p3 f300 | 0.957 | 0.959 | 19, 4, 7, 17 | 23.9 s | L0 |
+| T1 front p3 f240 | 0.902 | 0.911 | 5, 2, 17, 58 | 17.2 s | L0 |
+| T2 front p3 f360 | **0.899** | 0.903 | 2, 0, 72, 41 | 19.8 s | **L1** (0.001 under the L0 line) |
+| T3 front empty aftermath | 0.908 | 0.933 | 7, 4, 38, 44 | 21.4 s | L0 |
+| T4 D-pad membrane aftermath | 0.931 | 0.953 | 3, 2, 27, 2 | 15.6 s | L0 |
+| T5 shoulder piece | 0.967 | 0.969 | 5, 3, 3, 3 | 19.3 s | L0 |
+
+Overall box verdict: **L1, vote of 3** (driven by T2 alone; 5 of 6 images are L0).
+
+API use: Muse 33 calls (15 frame choice, 18 box), 0 retries, 0 failures, 0 SAM; budget cap 40 not reached. Latency
+over all calls: frame choice median 32.4 s (15.6–71.2 s), box median 19.3 s (14.3–25.0 s), box output median 1726 tokens
+(frame choice returns no usage in `_muse_choice`).
+
+Prediction written before the run: partly wrong. J1 did have the lowest *state* agreement, but its gate was the most
+stable (always NEEDS_CAPTURE); the unstable gate was J2. Box median IoU ≥ 0.95 held for 3 of 6 images only
+(0.903–0.969) and T5, the one flagged as risky, was the tightest.
+
+### Visual review (my own reading of the saved sheets and overlays; it changes no verdict)
+
+- T2: the three boxes agree on left/top; one repeat (repeat 3, right edge x = 1596 vs 1654/1668) ends about 4 % short
+  of the shell's right end, so that box would cut the part. The other two include it. The spread is a real error in
+  one repeat, not only loose edges; SAM would segment inside the clipped box and lose the right end of the shell.
+- J2: tile 2 is a clean, hand-free frame of the PCB with its cable lying in the front shell. The request says
+  "excluded: shells" but from above the PCB sits inside the shell, so `usable` false and true are both defensible: the
+  disagreement mirrors an ambiguous request more than random noise. Tile 4 (PCB entering at the bottom edge, shell
+  below) and tiles 1/3 (hands) are not candidates.
+- J1: the model never found a usable tile and called the frame either `assembled_object` or `unclear` ("front shell may
+  still be attached underneath"); the product conclusion (no usable back-shell frame in 0–40 s, capture needed) is
+  stable even though the label is not.
+
+### Independent scoring
+
+None. There is no ground truth and no held-out set here; IoU between repeats says nothing about correctness, and a
+consistently wrong answer would count as consistent. n is small (5 or 3 per unit): L0 means "no inconsistency seen",
+not "high agreement proven" (5/5 only bounds the single-call agreement above ≈ 0.55 at 95 %).
+
+### Decision by the pre-registered rule
+
+- **Frame choice: L2.** Voting is not the answer: J2's split is 3/2, where a majority of 3 is barely better than one
+  call (plan: voting pays only from a modal share of 4/5). `usable`/`state` must not be an automatic gate on their own:
+  a single call on J2 would have stopped the job (NEEDS_CAPTURE, 3 of 5) or let it draw (2 of 5).
+- **Part box: L1.** A majority of 3 is worth its cost for the box; one call is mostly fine (17 of 18 pairwise IoUs
+  are ≥ 0.90) but can clip the part (T2 repeat 3).
+
+### Proposals for the TL (nothing changed in the pipeline)
+
+1. Box vote, in `drawing_job.run` stage `muse_box` (or a `muse_box_vote` next to `muse_sam.muse_box`, default 1 → 3):
+   three calls in parallel threads, box = coordinate-wise median of the valid boxes (at least 2 valid, else
+   NEEDS_CAPTURE as today), `fully_visible` by majority; store all three answers in the `box` checkpoint. Retrospective
+   check on this development data: the median box of T2 is [176, 118, 1654, 796], i.e. the clipped repeat is outvoted.
+   Cost: +2 Muse calls and about 3.4k more output tokens per job; latency about +5 s when parallel (median of the
+   per-image maximum of three 24.0 s vs single median 19.3 s), +40 s if sequential. Voting should be re-measured
+   after adoption, as EFF-1 was.
+2. Frame choice: no voting. Treat "Muse found no usable tile" as a soft stop: keep NEEDS_CAPTURE but show the contact
+   sheet and let the operator pick or reject a tile, and display `state` as Muse's opinion, not as a gate. A job that
+   flips between "no usable tile" and "tile 2" (J2) should always reach the operator. Cost: no extra API calls.
+3. A frame-choice re-run with a request that matches the footage (for J2, "excluded: shells" cannot be true from the
+   top) would separate request ambiguity from model noise; not done here (outside CONS-1's budget).
+
+Caveats: single run, one day, one provider revision; inputs are development data; sheets are B1 sheets with the
+current product request fields (A1); `view_class` is uninformative with these requests; the L0/L1 line for T2
+(0.8986 vs 0.90) is a fixed rule, not a finding of a sharp boundary.

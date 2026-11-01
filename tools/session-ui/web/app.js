@@ -950,7 +950,8 @@ function routeTranscript(text) {
 /* ------------------------------------------------------------------ wake word */
 
 /* Opt-in hands-free mode: a local energy detector cuts speech segments; each segment is transcribed and only
-   segments that start with the wake word are acted on. No segment is kept; silence is never sent. */
+   segments that start with the wake word are acted on (or the one segment armed by a bare wake word, within
+   VAD.armedMs). No segment is kept; silence is never sent. */
 const WAKE = /^\W*(?:hey\s+|ok(?:ay)?\s+)?(?:muse|meta|mews)\b[\s,.!?:-]*(.*)$/i;
 const VAD = { blockMs: 0, startFactor: 3.0, minFloor: 0.004, hangMs: 800, maxMs: 8000, minMs: 400, prerollBlocks: 3, armedMs: 6000 };
 const listen = { on: false, stream: null, context: null, processor: null, source: null, floor: 0.01,
@@ -972,12 +973,14 @@ async function startListening() {
   listen.source.connect(listen.processor);
   listen.processor.connect(listen.context.destination);
   listen.on = true;
+  listen.armedUntil = 0;
   setText("voice-state", "Listening for “Muse” …");
 }
 
 async function stopListening() {
   listen.on = false;
   listen.segment = null;
+  listen.armedUntil = 0;
   if (listen.processor) { listen.processor.disconnect(); listen.source.disconnect(); }
   if (listen.stream) listen.stream.getTracks().forEach((track) => track.stop());
   if (listen.context) await listen.context.close();
@@ -1008,12 +1011,16 @@ function onListenBlock(block) {
   if (listen.quiet >= VAD.hangMs || length >= VAD.maxMs) {
     const segment = listen.segment;
     listen.segment = null;
-    if (length - listen.quiet >= VAD.minMs) handleSegment(segment, listen.context.sampleRate);
+    if (length - listen.quiet >= VAD.minMs) handleSegment(segment, listen.context.sampleRate, Date.now());
   }
 }
 
-async function handleSegment(blocks, rate) {
+async function handleSegment(blocks, rate, endedAt) {
   listen.busy = true;
+  /* Same rule as the phone (VoiceController.handleClip): a bare "Muse" arms exactly ONE following segment, judged by when
+     that segment ended. The arming is spent here, before transcription, so an empty or failed segment consumes it too. */
+  const armed = endedAt < listen.armedUntil;
+  listen.armedUntil = 0;
   try {
     const total = blocks.reduce((n, b) => n + b.length, 0);
     const samples = new Float32Array(total);
@@ -1022,7 +1029,6 @@ async function handleSegment(blocks, rate) {
     const result = await transcribeLatest(wavFromSamples(samples, rate, 16000));
     if (result.status !== "ok" || !result.transcript) return;
     const match = WAKE.exec(result.transcript.trim());
-    const armed = Date.now() < listen.armedUntil;
     if (!match && !armed) return;                       // not addressed to the agent: discarded, not shown
     const command = match ? match[1].trim() : result.transcript.trim();
     if (!command) {
@@ -1031,7 +1037,6 @@ async function handleSegment(blocks, rate) {
       speak("Yes?");
       return;
     }
-    listen.armedUntil = 0;
     setText("voice-state", `You said: “${command}” (${result.latency_s} s)`);
     routeTranscript(command);
   } catch (error) {
@@ -1076,5 +1081,8 @@ document.addEventListener("keydown", (event) => {
 });
 document.addEventListener("keyup", (event) => { if (event.code === "Space" && voice.recording) { event.preventDefault(); stopTalking(); } });
 
+/* Wake-word listening is OFF at every page load (a browser may restore a checked box); the demo voice path is the phone,
+   push-to-talk stays the browser's default. */
+$("wake-toggle").checked = false;
 $("wake-toggle").addEventListener("change", (event) => (event.target.checked ? startListening() : stopListening()));
 loadSessions();

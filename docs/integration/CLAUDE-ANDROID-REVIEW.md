@@ -310,3 +310,53 @@ installed and hash-verified on the Xiaomi; live log: `guided intrinsics
 measured profile=measured:e92c8ea1…`, `status=VALID`, RMS 1.21 px at
 1920×1080 (gate 1.8), 52/60 poses ≤ 150 ms, pose age avg 117 ms.
 Evidence: `claude-review-evidence/xcal-run4/` (SHA256SUMS).
+
+## 15. Addendum 2026-11-01 — Remote view request end to end on the Xiaomi
+
+Device Xiaomi `M2101K6G`, profile `measured:e92c8ea1-36a8-449f-8df9-50f0f3481548`,
+tripod over `surface_a3`. Workstation side: a scratch script in place of
+`tools/session-ui/captures.py`, using the TL client
+`integration/northstar` @ `7db24380` with SPKI pin `6c5f72a4…`. Grant read
+read-only from `control.db` (R11 open).
+
+Final run, APK `78630d4c8e4cd3d9dcfffb450e9f43201198043205f038daf115ef0a1f7fb744`
+(device `base.apk` hash equal), session `5bc9fe29-cad5-4a9c-aafb-54aed2548f41`:
+
+| Step | Evidence |
+|---|---|
+| Capabilities after attach | stored: cameras `0,1`, `[1920,1080]`, calibration `e92c8ea1…`, `pose`, `guidance-hypothesis-1`, protocol 1 |
+| First arm | one tap, no revision conflict; grant `865d8c10…` claimed |
+| Request | `5cb2d223-0ce5-4ee6-8c77-56830e1daca1`, label “Back shell, inner side up — hands off”, `board_id` `5a3a3a3a-0000-4000-8000-00000000a3a3` mapped once to `surface_a3`, `T_B_C.to` `board:surface_a3` |
+| Gates | NAVIGATING → ALIGNING → HOLD_STILL, dwell 5/5, then one shutter; no gate changed |
+| Local | `CAPTURED_LOCAL`, image `0d1e5ad3-f894-4241-9adb-369f6b05d1a5` |
+| Core | events `armed`, `accepted`, `captured_local`; attempt `e00fb4e0…` `asset_bound` |
+| Receipt | `package_only` (card: “Sent — image only, not spatially qualified”) |
+
+The request as recorded is the test vector
+`app/src/test/resources/remote-view-request-back-shell.json`; the only change is
+`status` restored to `QUEUED`.
+
+Defects found only against the live receiver (all fixed, each with a test on
+the bytes the phone sends):
+
+1. Wire bodies dropped fields at their default (`resolutions_px`,
+   `expected_session_revision`) and nulls (`reason`). G0 bodies carry every
+   field, nulls explicit. Fixtures only checked replies, which hid it.
+2. First arm sent revision 0: the phone now fetches the session first.
+3. Delivery uploaded on the legacy route before binding, so no receipt was
+   ever joined. Now G0 order: bind → guided upload (`X-Guided-*`, guided token)
+   → sidecar.
+4. Guided captures went to a local session with its own id; Core accepts a
+   guided package only when its manifest names the guided session. The local
+   session is now the guided session's twin.
+5. The sidecar used the newest pose instead of the pose at still time.
+
+Gate still blocking `qualified` (not loosened): the sidecar is skipped because
+`sample_age_ms` exceeds the 150 ms exposure-association gate. It is measured
+from the still callback (~0.9 s after the shutter request), because the file
+save path (`OnImageSavedCallback`) gives no sensor timestamp. Missing
+precondition: a still sensor timestamp (`OnImageCapturedCallback` /
+`ImageInfo.timestamp`), a capture-path change awaiting approval.
+
+Verification: `gradlew testDebugUnitTest lintDebug assembleDebug` with the test
+JVM pinned to JDK 21: 482 tests, 0 failures; lint passed.

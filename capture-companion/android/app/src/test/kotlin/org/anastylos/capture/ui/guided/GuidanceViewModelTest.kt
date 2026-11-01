@@ -241,6 +241,13 @@ class GuidanceViewModelTest {
         override fun observeSessions(): Flow<List<CaptureSession>> = flowOf(sessions.values.toList())
         override fun observeSession(id: String): Flow<CaptureSession?> = flowOf(sessions[id])
         override suspend fun getSession(id: String): CaptureSession? = sessions[id]
+        override suspend fun ensureSession(id: String, name: String): CaptureSession =
+            sessions.getOrPut(id) {
+                CaptureSession(
+                    sessionId = id, name = name, createdAt = Instant.EPOCH, updatedAt = Instant.EPOCH,
+                    assemblyMemorySession = null, trayDefault = null,
+                )
+            }
         override suspend fun createSession(name: String): CaptureSession {
             val session = CaptureSession(
                 sessionId = "session-${++nextSession}", name = name,
@@ -857,7 +864,7 @@ class GuidanceViewModelTest {
         val request = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
             .decodeFromString(GuidedViewRequest.serializer(), wire)
         buildRemoteViewModel()
-        attachRemote()
+        attachRemote(request.sessionId)
         remotePrefs.setBoardFrame(request.boardId, "surface_a3")
         remoteViewModel.arm()
         advanceUntilIdle()
@@ -880,6 +887,9 @@ class GuidanceViewModelTest {
         assertThat(camera.stillsFired).isEqualTo(1)
         assertThat(state.request).isEqualTo(RequestState.CAPTURED_LOCAL)
         assertThat(state.captureResult!!.automatic).isTrue()
+        // Core accepts a guided package only when its manifest names the guided session.
+        assertThat(repo.getObservation(state.captureResult!!.observationId)!!.sessionId)
+            .isEqualTo(request.sessionId)
         val bound = remoteAssociations.rows.getValue(state.captureResult!!.imageId)
         assertThat(bound.requestId).isEqualTo(request.requestId)
         assertThat(bound.requestRevision).isEqualTo(1)

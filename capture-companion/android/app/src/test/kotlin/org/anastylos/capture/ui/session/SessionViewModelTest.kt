@@ -62,6 +62,7 @@ class SessionViewModelTest {
         override fun observeSessions(): Flow<List<CaptureSession>> = sessionsFlow
         override fun observeSession(id: String): Flow<CaptureSession?> = flowOf(sessions[id])
         override suspend fun getSession(id: String): CaptureSession? = sessions[id]
+        override suspend fun ensureSession(id: String, name: String): CaptureSession = TODO()
         override suspend fun createSession(name: String): CaptureSession {
             require(name.isNotBlank()) { "name: must not be blank" }
             val now = nowUtc()

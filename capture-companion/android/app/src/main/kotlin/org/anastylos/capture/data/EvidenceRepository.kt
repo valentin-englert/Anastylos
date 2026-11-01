@@ -50,6 +50,8 @@ interface EvidenceRepository {
     fun observeSession(id: String): Flow<CaptureSession?>
     suspend fun getSession(id: String): CaptureSession?
     suspend fun createSession(name: String): CaptureSession
+    /** The session with [id], created under [name] when absent (a guided session's local twin). */
+    suspend fun ensureSession(id: String, name: String): CaptureSession
     suspend fun renameSession(id: String, name: String)
     suspend fun deleteSession(id: String)
 
@@ -85,6 +87,16 @@ class RoomEvidenceRepository(
 
     override suspend fun getSession(id: String): CaptureSession? =
         db.sessions().getById(id)?.toDomain()
+
+    override suspend fun ensureSession(id: String, name: String): CaptureSession {
+        getSession(id)?.let { return it }
+        val now = clock()
+        val session = CaptureSession(id, name.trim(), now, now, null, null)
+        val issues = validateSessionDraft(session)
+        require(issues.isEmpty()) { issues.joinToString("; ") { "${it.path}: ${it.message}" } }
+        db.sessions().upsert(session.toEntity())
+        return session
+    }
 
     override suspend fun createSession(name: String): CaptureSession {
         val now = clock()

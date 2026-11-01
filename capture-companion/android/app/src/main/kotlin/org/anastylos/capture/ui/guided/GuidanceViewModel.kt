@@ -914,6 +914,7 @@ class GuidanceViewModel(
         val bundle = factory.create(transport)
         remote = bundle
         bindEpoch = uuid()
+        this.sessionId = null // captures now go to the guided session's local twin
         adoptedRequestIds.clear()
         pendingAttempt = null
         reservedAttemptId = null
@@ -977,6 +978,7 @@ class GuidanceViewModel(
     }
 
     fun detachRemote() {
+        sessionId = null
         voice?.link = org.anastylos.capture.voice.DetachedVoiceLink()
         remoteCollectJob?.cancel()
         remoteCollectJob = null
@@ -1969,7 +1971,17 @@ class GuidanceViewModel(
     private suspend fun ensureSession(): String {
         sessionId?.let { return it }
         // One dedicated session per guidance run: explicit and auditable.
-        val id = withContext(ioDispatcher) { repo.createSession("Guided capture").sessionId }
+        // Attached to a workstation, the local session is the guided session's
+        // twin: Core only accepts a guided package whose manifest names exactly
+        // that session.
+        val remoteId = _state.value.remoteSessionId
+        val id = withContext(ioDispatcher) {
+            if (remoteId != null) {
+                repo.ensureSession(remoteId, "Workstation session ${remoteId.take(8)}").sessionId
+            } else {
+                repo.createSession("Guided capture").sessionId
+            }
+        }
         sessionId = id
         return id
     }

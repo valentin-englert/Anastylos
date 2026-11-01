@@ -161,6 +161,7 @@ class AppContainer(context: Context) {
                     },
                     associations = repository as GuidedAssociationRepository,
                     measuredProfiles = measuredProfiles,
+                    voice = voice,
                     timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,
                     armDebounceMs = 1200L,

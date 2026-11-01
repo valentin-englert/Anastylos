@@ -31,8 +31,10 @@ internal const val VOICE_LOG_TAG = "AnastylosVoice"
  */
 class VoiceController(
     context: Context,
-    private val link: VoiceLink = PendingContractVoiceLink(),
+    link: VoiceLink = DetachedVoiceLink(),
 ) {
+    /** Swapped by the guided screen: the paired receiver link while a remote session is attached. */
+    @Volatile var link: VoiceLink = link
     data class State(
         val listening: Boolean = false,
         val pushToTalk: Boolean = false,
@@ -202,7 +204,8 @@ class VoiceController(
 
     private fun statusLine(status: String): String = when (status) {
         "ok" -> ""
-        PendingContractVoiceLink.STATUS -> "Voice link not available yet (awaiting TL contract CR-VOICE-01)"
+        DetachedVoiceLink.STATUS -> "Voice needs an attached workstation session"
+        "not_bound" -> "Voice is not bound to an agent session on the workstation"
         else -> "Not understood ($status). Please try again or type."
     }
 

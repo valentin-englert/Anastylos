@@ -6,9 +6,9 @@ package org.anastylos.capture.voice
  * muse-voice-transcribe-1.0 and returns the only text the phone may speak
  * (L0 questions, read-backs, fixed status sentences, verified guide
  * answers). It must travel over the paired, encrypted receiver/control
- * channel; that channel has no audio or spoken-text message type yet, so
- * the shipped implementation is [PendingContractVoiceLink] until the TL
- * accepts CR-VOICE-01/02 (docs/integration/VOICE-01.md).
+ * channel (TL decision R9/R10, `GuidedVoiceLink`). Without an attached
+ * workstation session the link is [DetachedVoiceLink], which sends
+ * nothing (docs/integration/VOICE-01.md).
  */
 interface VoiceLink {
     suspend fun transcribe(wav: ByteArray): Transcript
@@ -28,8 +28,8 @@ interface VoiceLink {
     data class SpokenReply(val status: String, val text: String?)
 }
 
-/** No paired message type exists yet: every call reports it, nothing is sent. */
-class PendingContractVoiceLink : VoiceLink {
+/** No attached workstation session: every call reports it, nothing is sent. */
+class DetachedVoiceLink : VoiceLink {
     override suspend fun transcribe(wav: ByteArray) =
         VoiceLink.Transcript(STATUS, null, null)
 
@@ -37,6 +37,6 @@ class PendingContractVoiceLink : VoiceLink {
         VoiceLink.SpokenReply(STATUS, null)
 
     companion object {
-        const val STATUS = "contract_pending"
+        const val STATUS = "detached"
     }
 }

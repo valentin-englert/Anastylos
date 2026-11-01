@@ -233,6 +233,7 @@ class GuidanceViewModel(
     private val appVersion: String = "0.1.0",
     private val uuid: () -> String = { UUID.randomUUID().toString() },
     private val measuredProfiles: MeasuredProfileSource? = null,
+    private val voice: org.anastylos.capture.voice.VoiceController? = null,
     private val timing: TimingAccumulator = TimingAccumulator(),
     /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
     private val armDebounceMs: Long = 0L,
@@ -922,6 +923,11 @@ class GuidanceViewModel(
                 delivery = null, deliveryNote = null,
             )
         }
+        voice?.link = org.anastylos.capture.sync.GuidedVoiceLink(
+            transport, sessionId,
+            token = { (bundle.session.resolveToken() as? GuidedTokenOutcome.Ready)?.token },
+            utcNow = { utcClock().toIsoUtc() },
+        )
         bundle.session.attach(sessionId)
         bundle.session.startPolling()
         remoteCollectJob?.cancel()
@@ -940,6 +946,7 @@ class GuidanceViewModel(
     }
 
     fun detachRemote() {
+        voice?.link = org.anastylos.capture.voice.DetachedVoiceLink()
         remoteCollectJob?.cancel()
         remoteCollectJob = null
         try {

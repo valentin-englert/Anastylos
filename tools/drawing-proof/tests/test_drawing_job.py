@@ -128,5 +128,43 @@ class ResumeTest(unittest.TestCase):
             self.assertEqual(info["records"], 0)
 
 
+class StillTest(unittest.TestCase):
+    class _Progress:
+        def stage(self, name):
+            import contextlib
+            return contextlib.nullcontext()
+
+    def _still(self, tmp, content=b"jpeg-bytes"):
+        import hashlib
+        path = Path(tmp) / "still.jpg"
+        path.write_bytes(content)
+        return {"path": str(path), "sha256": hashlib.sha256(content).hexdigest(), "request_id": "r-1"}
+
+    def test_requested_still_is_rectified_once_and_offered_as_one_tile(self):
+        from unittest import mock
+        import numpy as np
+        with tempfile.TemporaryDirectory() as tmp:
+            spec = {"still": self._still(tmp), "region_mm": [0, 0, 10, 10], "px_per_mm": 2}
+            rf = mock.Mock(image=np.zeros((20, 20, 3), np.uint8))
+            with mock.patch.object(drawing_job.source, "rectify", return_value=(None, rf)) as rectify:
+                sheet, chosen, skipped, still_rf = drawing_job._acquire_still(spec, self._Progress())
+            self.assertIs(still_rf, rf)
+            self.assertEqual((len(chosen), skipped), (1, []))
+            self.assertIsNone(rectify.call_args.args[1])  # None = still image, not a video frame
+            self.assertEqual(sheet.ndim, 3)
+
+    def test_still_with_a_changed_file_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            still = self._still(tmp)
+            Path(still["path"]).write_bytes(b"other")
+            with self.assertRaises(drawing_job.source.SourceError):
+                drawing_job._acquire_still({"still": still, "region_mm": [0, 0, 1, 1], "px_per_mm": 1}, self._Progress())
+
+    def test_phase_start_rule_does_not_apply_to_a_requested_still(self):
+        spec = {"scope": "assembly"}
+        choice = {"state": "assembly"}
+        self.assertEqual(drawing_job.frame_decision(spec, choice, 0.0, None), ("ok", []))
+
+
 if __name__ == "__main__":
     unittest.main()

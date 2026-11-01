@@ -5,7 +5,9 @@
 
 Job spec: video, part, scope (part | assembly | object), view_side, attachments ("included: ..." / "excluded: ..."),
 region_mm, px_per_mm, stride_s, candidates, t_range (optional), phase_events (optional custody events.json for
-the temporal disassembly context).
+the temporal disassembly context). Instead of video sampling a job can take one requested phone still:
+``still`` = {path, sha256, request_id} (written by the session UI's capture link; the hash is re-checked here and the
+phase-start rule is skipped because the still was taken after the request; Muse's state check still applies).
 
 Final states: failed | NEEDS_CAPTURE | NEEDS_CONFIRMATION | NEEDS_REVIEW | drawn_unconfirmed. No state releases
 a drawing: binding needs the operator (``binding.json`` written by the session UI); memory is never touched.
@@ -149,6 +151,39 @@ def _candidate_tiles(spec: dict, video: Path, chosen: list, cache_dir: Path) -> 
     return tiles, kept, skipped
 
 
+def _acquire_video(spec: dict, progress) -> tuple:
+    video = Path(spec["video"])
+    with progress.stage("sample_frames"):
+        sampled, cache = frames.cached_sample(video, spec["stride_s"], tuple(spec["t_range"]) if spec.get("t_range") else None)
+    progress.update(cache=cache)
+    with progress.stage("select_candidates"):
+        chosen = frames.select(sampled, spec["candidates"])
+    with progress.stage("rectify_candidates"):
+        tiles, chosen, skipped = _candidate_tiles(spec, video, chosen, Path(cache["path"]).parent)
+        if not tiles:
+            raise source.SourceError(f"no candidate frame registered: {skipped}")
+    return frames.contact_sheet(tiles), chosen, skipped
+
+
+def _acquire_still(spec: dict, progress) -> tuple:
+    """One requested phone still: hash-checked against its capture evidence, then rectified on the same sheet."""
+    still = spec["still"]
+    path = Path(still["path"])
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    if digest != still["sha256"]:
+        raise source.SourceError(f"still image hash mismatch: expected {still['sha256']}, found {digest}")
+    with progress.stage("rectify_candidates"):
+        _, rf = source.rectify(path, None, tuple(spec["region_mm"]), spec["px_per_mm"], digest)
+    single = frames.Candidate(frame_index=-1, t_s=0.0, sharpness=0.0, motion=0.0, skin=0.0, dhash=0)
+    return frames.contact_sheet([rf.image]), [single], [], rf
+
+
+def _source_label(spec: dict, picked) -> str:
+    if spec.get("still"):
+        return f"requested still {Path(spec['still']['path']).name} (request {spec['still'].get('request_id', '?')})"
+    return f"{Path(spec['video']).name} frame {picked.frame_index} ({picked.t_s} s)"
+
+
 def _muse_choice(sheet, chosen: list, spec: dict, key: str) -> tuple[dict, dict, str]:
     ok, jpg = cv2.imencode(".jpg", sheet, [cv2.IMWRITE_JPEG_QUALITY, 88])
     times = ", ".join(f"{i} = {c.t_s:.1f} s" for i, c in enumerate(chosen, 1))
@@ -181,18 +216,12 @@ def run(spec: dict, job: Path) -> dict:
     progress = Progress(job)
     usage = {"muse_calls": 0, "sam_calls": 0}
     try:
-        video = Path(spec["video"])
-        with progress.stage("sample_frames"):
-            sampled, cache = frames.cached_sample(video, spec["stride_s"], tuple(spec["t_range"]) if spec.get("t_range") else None)
-        progress.update(cache=cache)
-        with progress.stage("select_candidates"):
-            chosen = frames.select(sampled, spec["candidates"])
-        with progress.stage("rectify_candidates"):
-            tiles, chosen, skipped = _candidate_tiles(spec, video, chosen, Path(cache["path"]).parent)
-            if not tiles:
-                raise source.SourceError(f"no candidate frame registered: {skipped}")
-            sheet = frames.contact_sheet(tiles)
-            cv2.imwrite(str(job / "contact_sheet.jpg"), sheet)
+        if spec.get("still"):
+            sheet, chosen, skipped, still_rf = _acquire_still(spec, progress)
+        else:
+            sheet, chosen, skipped = _acquire_video(spec, progress)
+            still_rf = None
+        cv2.imwrite(str(job / "contact_sheet.jpg"), sheet)
         key = muse_sam.client.load_key()
         with progress.stage("muse_choose_frame"):
             usage["muse_calls"] += 1
@@ -206,8 +235,10 @@ def run(spec: dict, job: Path) -> dict:
             progress.finish("done", result=result)
             return result
         picked = chosen[choice["tile"] - 1]
-        decision, decision_reasons = frame_decision(spec, choice, picked.t_s, first_removal_s(spec.get("phase_events")))
-        _, rf = source.rectify(video, picked.frame_index, tuple(spec["region_mm"]), spec["px_per_mm"])
+        # A requested still was taken after the request, so the phase-start rule does not apply; Muse's state check does.
+        removal_s = None if still_rf else first_removal_s(spec.get("phase_events"))
+        decision, decision_reasons = frame_decision(spec, choice, picked.t_s, removal_s)
+        rf = still_rf or source.rectify(Path(spec["video"]), picked.frame_index, tuple(spec["region_mm"]), spec["px_per_mm"])[1]
         image_path = job / "chosen_rectified.png"
         cv2.imwrite(str(image_path), rf.image)
         with progress.stage("muse_box"):
@@ -243,7 +274,7 @@ def run(spec: dict, job: Path) -> dict:
             outline, deviation = draw.simplify(segment.boundary(outer), ppm, 0.2)
             openings_mm = [rf.px_to_mm(draw.simplify(o, ppm, 0.2)[0]).round(2).tolist() for o in openings]
             svg_spec = {"title": "Outline (unconfirmed)",
-                        "subtitle": f"{spec['part']} ({spec['scope']}); {video.name} frame {picked.frame_index} ({picked.t_s} s)",
+                        "subtitle": f"{spec['part']} ({spec['scope']}); {_source_label(spec, picked)}",
                         "legend": [f"Outline: SAM mask boundary, max deviation {deviation:.2f} mm, sheet plane; not part dimensions.",
                                    f"Opening candidates: {len(openings)}, unconfirmed, hidden layer 'opening_candidates'.",
                                    "Inner details: not extracted. Frame identity, view side and orientation need operator confirmation."]}

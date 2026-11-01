@@ -1,0 +1,44 @@
+{
+  "schema": "anastylos-drawing-proof-plan@1",
+  "written_before_any_run": true,
+  "date": "2026-11-01",
+  "EV-1": {
+    "question": "Does the before/after difference between quiet hand-free frames isolate the removed or moved part, without a model?",
+    "videos": [
+      "FULL-01-P2.mp4",
+      "FULL-01-P3.mp4"
+    ],
+    "timeline": "frames.cached_sample, stride 0.5 s, whole video",
+    "quiet_frame": "motion <= 25th percentile AND skin <= 25th percentile of that video",
+    "pair": "consecutive quiet frames with >= 1 non-quiet sample between them",
+    "region_mm": [
+      58,
+      50,
+      254,
+      177
+    ],
+    "px_per_mm": 4.0,
+    "change": "Lab: deltaE76 > 14; a pixel counts as shadow (ignored) if |delta a|,|delta b| <= 4 and L ratio in [0.45, 0.92]",
+    "cleanup": "open 5 px, close 9 px, holes filled, components >= 300 mm2",
+    "binding_candidates": "custody site_changed events whose [t_before_s, t_after_s] overlaps the pair interval (candidates only)",
+    "report": "every pair with change; visual check: does the largest component outline the part that left or arrived?"
+  },
+  "MF-1": {
+    "question": "Can outline pieces visible in different held frames be fused into one complete outline?",
+    "video": "FULL-01-P2.mp4",
+    "t_range": [
+      12,
+      24
+    ],
+    "frames": "6 from frames.select (skin is NOT penalised away: hands are expected)",
+    "per_frame_mask": "frozen r4.1 Muse box -> SAM on each rectified frame (part phrase: back shell of the game controller)",
+    "skin": "quality.skin_fraction rule; mask pixels within 6 px of skin are 'occluded'",
+    "alignment": "ECC affine on mask distance maps to the frame with the least skin; residual IoU reported",
+    "fusion": "outline pixels kept only where not occluded in at least one aligned frame; union of aligned masks; fused outline per source frame",
+    "report": "fused outline over the reference frame, per-frame contributions, alignment residuals; held parts tilt and move closer to the camera, so a non-rigid residual is expected and reported, not hidden"
+  },
+  "budget": {
+    "muse_calls_max": 12,
+    "sam_calls_max": 6
+  }
+}

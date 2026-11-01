@@ -98,6 +98,8 @@ Workstation-Referenz misst 1,5–4,1 s Transkriptionslatenz pro Clip und
 
 ## 5. Vertragsanfragen an den TL
 
+Formal eingereicht als R9/R10 in `docs/integration/CONTRACT-OWNER-REQUESTS.md`.
+
 **CR-VOICE-01 — Audio-Uplink über den gepaarten Receiver-Weg.**
 Vorschlag: `POST /v1/guided/voice/transcribe` am Receiver, gleiche TLS-
 und Token-Prüfung wie `/v1/guided/*`. Body `audio/wav`, mono 16-bit,

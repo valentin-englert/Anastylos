@@ -150,7 +150,7 @@ async function openSession() {
   for (const id of ["prompt-card", "confirm-card", "guide-body", "resolution",
                     "assembly-body", "guide-answer", "selected-answer"]) $(id).hidden = true;
   if (!(await loadStatus())) return;
-  await Promise.all([loadQuestions(true), loadGuide(), loadSelections(), loadAssembly(), loadGaps()]);
+  await Promise.all([loadQuestions(true), loadGuide(), loadSelections(), loadAssembly(), loadGaps(), loadDrawings()]);
 }
 
 async function refreshAfterMutation() {
@@ -695,6 +695,117 @@ async function evaluateGap(button) {
   }
 }
 
+/* ------------------------------------------------------------------ part drawings */
+
+const DRAWING_POLL_MS = 3000;
+let drawingTimer = null;
+
+function drawingUrl(job, file) {
+  return `/api/drawing/file?session=${encodeURIComponent(state.session)}&job=${encodeURIComponent(job)}&file=${file}`;
+}
+
+function drawingCard(job) {
+  const card = document.createElement("div");
+  card.className = "drawing-job";
+  const head = document.createElement("p");
+  const progress = job.state === "running" ? ` — ${job.stage || "starting"} (${job.done || 0}/${job.total || 7}, ${job.elapsed_s ?? 0} s)` : "";
+  head.textContent = `${job.job}: ${job.state}${job.status ? " / " + job.status : ""}${progress}`;
+  card.append(head);
+  if (job.error) {
+    const error = document.createElement("p");
+    error.className = "error";
+    error.textContent = job.error;
+    card.append(error);
+  }
+  if (job.reasons && job.reasons.length) {
+    const list = document.createElement("ul");
+    for (const reason of job.reasons) {
+      const item = document.createElement("li");
+      item.textContent = reason;
+      list.append(item);
+    }
+    card.append(list);
+  }
+  if (job.choice) {
+    const choice = document.createElement("p");
+    choice.className = "provenance";
+    choice.textContent = `Muse: ${job.choice.state}, ${job.choice.view_side}; ${job.choice.reason} Uncertain: ${job.choice.uncertainties}`;
+    card.append(choice);
+  }
+  for (const file of job.files) {
+    if (file === "contact_sheet.jpg") continue;
+    const figure = document.createElement("figure");
+    const image = document.createElement("img");
+    image.src = drawingUrl(job.job, file);
+    image.alt = file === "drawing.svg" ? "Unconfirmed outline drawing" : "Photo overlay: outline (green), opening candidates (red), Muse box (blue)";
+    image.className = "drawing-image";
+    const caption = document.createElement("figcaption");
+    caption.textContent = file === "drawing.svg" ? "Drawing (unconfirmed)" : "Photo overlay for checking";
+    figure.append(image, caption);
+    card.append(figure);
+  }
+  if (job.binding) {
+    const bound = document.createElement("p");
+    bound.className = "notice";
+    bound.textContent = `Binding ${job.binding.decision}ed at ${job.binding.recorded_at}; memory unchanged.`;
+    card.append(bound);
+  } else if (job.state === "done" && (job.status === "drawn_unconfirmed" || job.status === "NEEDS_CONFIRMATION")) {
+    const form = document.createElement("form");
+    const question = document.createElement("p");
+    question.textContent = `Does this drawing show the requested ${job.scope}: ${job.part}?`;
+    const yes = document.createElement("button");
+    yes.type = "button";
+    yes.textContent = "Yes, bind this drawing";
+    yes.addEventListener("click", () => bindDrawing(job.job, "confirm", yes));
+    const no = document.createElement("button");
+    no.type = "button";
+    no.textContent = "No, reject";
+    no.addEventListener("click", () => bindDrawing(job.job, "reject", no));
+    form.append(question, yes, no);
+    card.append(form);
+  }
+  return card;
+}
+
+async function loadDrawings() {
+  if (!state.session) return;
+  clearTimeout(drawingTimer);
+  showError("drawings-error", "");
+  try {
+    const view = await call(`/api/drawings?session=${encodeURIComponent(state.session)}`);
+    const picker = $("drawing-spec");
+    const selected = picker.value;
+    picker.replaceChildren(...view.specs.map((name) => new Option(name, name)));
+    if (view.specs.includes(selected)) picker.value = selected;
+    setText("drawings-state", view.specs.length ? `${view.jobs.length} drawing job(s).` : "No drawing specs in this session.");
+    $("drawing-jobs").replaceChildren(...view.jobs.map(drawingCard));
+    if (view.jobs.some((job) => job.state === "running")) drawingTimer = setTimeout(loadDrawings, DRAWING_POLL_MS);
+  } catch (error) {
+    showError("drawings-error", error.message);
+  }
+}
+
+async function startDrawing(button) {
+  const spec = $("drawing-spec").value;
+  if (!spec) return;
+  try {
+    const result = await post("/api/drawing/start", { session: state.session, spec }, button);
+    setText("drawings-state", result.already_running ? `Job ${result.job} is already running.` : `Started ${result.job}.`);
+    await loadDrawings();
+  } catch (error) {
+    showError("drawings-error", error.message);
+  }
+}
+
+async function bindDrawing(job, decision, button) {
+  try {
+    await post("/api/drawing/bind", { session: state.session, job, decision }, button);
+    await loadDrawings();
+  } catch (error) {
+    showError("drawings-error", error.message);
+  }
+}
+
 /* ------------------------------------------------------------------ wiring */
 
 $("session-form").addEventListener("submit", (event) => { event.preventDefault(); openSession(); });
@@ -717,6 +828,7 @@ $("claims-form").addEventListener("submit", (event) => {
 });
 $("done-form").addEventListener("submit", (event) => { event.preventDefault(); confirmStep($("done-button")); });
 $("export-form").addEventListener("submit", (event) => { event.preventDefault(); exportReport($("export-button")); });
+$("drawing-form").addEventListener("submit", (event) => { event.preventDefault(); startDrawing($("drawing-start")); });
 $("evaluate-form").addEventListener("submit", (event) => { event.preventDefault(); evaluateGap($("evaluate-button")); });
 
 loadSessions();

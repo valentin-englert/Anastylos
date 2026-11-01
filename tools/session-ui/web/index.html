@@ -195,6 +195,18 @@
     </div>
     <p class="error" id="gaps-error" role="alert" hidden></p>
   </section>
+  <section aria-labelledby="drawings-heading">
+    <h2 id="drawings-heading">Part drawings</h2>
+    <p class="hint">Starts a background job that calls Muse and SAM (Meta API) on frames of the session video. The page stays usable while it runs. A drawing stays unconfirmed until you bind it; memory is never changed. Opening candidates are hidden in the SVG.</p>
+    <form id="drawing-form">
+      <label for="drawing-spec">Requested part</label>
+      <select id="drawing-spec" name="spec"></select>
+      <button type="submit" id="drawing-start">Start drawing job</button>
+    </form>
+    <p class="state" id="drawings-state" role="status"></p>
+    <div id="drawing-jobs"></div>
+    <p class="error" id="drawings-error" role="alert" hidden></p>
+  </section>
 </main>
 
 <footer>

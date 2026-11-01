@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Callable
 
 import adapter
+import drawings
 from adapter import AdapterError
 
 LOG = logging.getLogger("session-ui")
@@ -123,7 +124,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
-            "/api/gaps/evidence": self._api_evidence,
+            "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
+            "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
         }
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
@@ -146,7 +148,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/questions/confirm": self._api_confirm, "/api/guide/build": self._api_guide_build,
                   "/api/guide/ask": self._api_guide_ask, "/api/select": self._api_select,
                   "/api/selected-ask": self._api_selected_ask, "/api/assembly/done": self._api_assembly_done,
-                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate}
+                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate,
+                  "/api/drawing/start": self._api_drawing_start, "/api/drawing/bind": self._api_drawing_bind}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -290,6 +293,34 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The file parameter is missing.", 400)
         body, content_type = adapter.evidence_bytes(Handler.workspace_root, session_id, name)
         self._send_bytes(body, content_type)
+
+    def _api_drawings(self) -> None:
+        self._send_json(drawings.list_drawings(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_drawing_status(self) -> None:
+        query = self._query()
+        self._send_json(drawings.drawing_status(Handler.workspace_root, self._session_param(query), query.get("job", "")))
+
+    def _api_drawing_file(self) -> None:
+        query = self._query()
+        body, content_type = drawings.drawing_bytes(Handler.workspace_root, self._session_param(query), query.get("job", ""),
+                                                    query.get("file", ""))
+        self._send_bytes(body, content_type)
+
+    def _api_drawing_start(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.start_drawing(Handler.workspace_root, session_id, body.get("spec", "")))
+
+    def _api_drawing_bind(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.bind(Handler.workspace_root, session_id, body.get("job", ""),
+                                                       body.get("decision", ""), str(body.get("note", ""))))
 
 
 def serve(workspace_root: Path, host: str = "127.0.0.1", port: int = 8071) -> ThreadingHTTPServer:

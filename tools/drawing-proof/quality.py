@@ -87,3 +87,43 @@ def reference_comparison(candidate: np.ndarray, reference: np.ndarray, px_per_mm
             "extra_area_share": round(float((candidate & ~reference).sum() / area), 4),
             "missed_area_share": round(float((reference & ~candidate).sum() / area), 4),
             "rim_distance_p95_mm": round(float(np.percentile(d_ref, 95)), 3)}
+
+
+PLAUSIBILITY = {
+    "image_edge_px": 3,            # Muse box this close to the image border: the part may continue outside
+    "max_box_edge_contact": 0.25,  # share of the SAM box rim covered by mask: mask clipped by its box
+    "min_box_fill": 0.30,          # mask area / Muse box area
+    "min_box_iou": 0.50,           # mask bounding box vs Muse box
+}
+
+
+def plausibility(mask: np.ndarray, muse_box: list[int], sam_box: dict | None) -> dict:
+    """Technical consistency of box and mask. Flags report doubt; passing proves no identity or completeness."""
+    h, w = mask.shape
+    left, top, right, bottom = muse_box
+    margin = PLAUSIBILITY["image_edge_px"]
+    flags, measures = [], {}
+    if left <= margin or top <= margin or right >= w - margin or bottom >= h - margin:
+        flags.append("BOX_AT_IMAGE_EDGE")
+    ys, xs = np.nonzero(mask)
+    if xs.size == 0:
+        return {"flags": ["NO_PART_IN_REGION"], "measures": {}}
+    box_area = max((right - left) * (bottom - top), 1)
+    measures["box_fill"] = round(float(mask[top:bottom, left:right].sum() / box_area), 3)
+    if measures["box_fill"] < PLAUSIBILITY["min_box_fill"]:
+        flags.append("MASK_SPARSE_IN_BOX")
+    mx0, my0, mx1, my1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    inter = max(0, min(mx1, right) - max(mx0, left)) * max(0, min(my1, bottom) - max(my0, top))
+    union = (mx1 - mx0) * (my1 - my0) + box_area - inter
+    measures["mask_box_iou"] = round(float(inter / max(union, 1)), 3)
+    if measures["mask_box_iou"] < PLAUSIBILITY["min_box_iou"]:
+        flags.append("MASK_BOX_MISMATCH")
+    if sam_box:
+        l, t, r, b = (int(sam_box[k]) for k in ("left", "top", "right", "bottom"))
+        rim = np.concatenate([mask[t, l:r], mask[b - 1, l:r], mask[t:b, l], mask[t:b, r - 1]])
+        measures["sam_box_edge_contact"] = round(float(rim.mean()), 3)
+        if measures["sam_box_edge_contact"] > PLAUSIBILITY["max_box_edge_contact"]:
+            flags.append("MASK_CLIPPED_BY_BOX")
+    if mask[0, :].any() or mask[-1, :].any() or mask[:, 0].any() or mask[:, -1].any():
+        flags.append("MASK_AT_IMAGE_EDGE")
+    return {"flags": flags, "measures": measures, "limits": PLAUSIBILITY}

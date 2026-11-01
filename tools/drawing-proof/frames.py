@@ -6,7 +6,9 @@ that judgement is left to Muse (choose_frame) and the operator.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import hashlib
+import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import cv2
@@ -94,3 +96,36 @@ def contact_sheet(tiles: list[np.ndarray], tile_width: int = 480) -> np.ndarray:
     while len(padded) % 3:
         padded.append(np.full_like(padded[0], 255))
     return np.vstack([np.hstack(padded[k:k + 3]) for k in range(0, len(padded), 3)])
+
+
+CACHE_ROOT = Path(r"C:\ANASTYLOS\data\drawing-cache")
+
+
+def video_sha256(video: Path) -> str:
+    """Content hash, remembered per (path, size, mtime) so a 500 MB video is hashed once."""
+    stat = video.stat()
+    memo = CACHE_ROOT / "video-hashes.json"
+    known = json.loads(memo.read_text(encoding="utf-8")) if memo.exists() else {}
+    key = f"{video.resolve()}|{stat.st_size}|{stat.st_mtime_ns}"
+    if key not in known:
+        digest = hashlib.sha256()
+        with open(video, "rb") as handle:
+            for block in iter(lambda: handle.read(1 << 22), b""):
+                digest.update(block)
+        known[key] = digest.hexdigest()
+        memo.parent.mkdir(parents=True, exist_ok=True)
+        memo.write_text(json.dumps(known, indent=1), encoding="utf-8")
+    return known[key]
+
+
+def cached_sample(video: Path, stride_s: float, t_range: tuple[float, float] | None) -> tuple[list[Candidate], dict]:
+    """``sample`` keyed by video content hash and extraction parameters; returns (candidates, cache info)."""
+    params = {"stride_s": stride_s, "t_range": list(t_range) if t_range else None, "width": 480, "version": 1}
+    key = hashlib.sha256(json.dumps(params, sort_keys=True).encode()).hexdigest()[:16]
+    path = CACHE_ROOT / video_sha256(video) / f"samples-{key}.json"
+    if path.exists():
+        return [Candidate(**c) for c in json.loads(path.read_text(encoding="utf-8"))["candidates"]], {"hit": True, "path": str(path)}
+    candidates = sample(video, stride_s, t_range)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"params": params, "candidates": [asdict(c) for c in candidates]}), encoding="utf-8")
+    return candidates, {"hit": False, "path": str(path)}

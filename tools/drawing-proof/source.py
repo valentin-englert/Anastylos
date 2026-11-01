@@ -25,6 +25,10 @@ from anastylos_custody.sheet import SheetReader  # noqa: E402
 CUSTODY_CONFIG = REPO / "custody-ledger" / "custody-config.v15.json"
 
 
+class SourceError(Exception):
+    """A frame could not be read or registered; raised instead of exiting so callers can skip that frame."""
+
+
 @dataclass
 class RectifiedFrame:
     image: np.ndarray            # BGR, sheet-plane top view
@@ -57,7 +61,7 @@ def read_frame(video: Path, frame_index: int) -> tuple[np.ndarray, float, float]
     finally:
         capture.release()
     if not ok:
-        raise SystemExit(f"cannot read frame {frame_index} of {video}")
+        raise SourceError(f"cannot read frame {frame_index} of {video}")
     return frame, fps, frame_index / fps
 
 
@@ -72,12 +76,12 @@ def rectify(video: Path, frame_index: int | None, region_mm: tuple[float, float,
     if frame_index is None:
         frame, fps, t_s = cv2.imread(str(video)), None, 0.0
         if frame is None:
-            raise SystemExit(f"cannot read image {video}")
+            raise SourceError(f"cannot read image {video}")
     else:
         frame, fps, t_s = read_frame(video, frame_index)
     report, homography, _corners = reader.register(frame)
     if homography is None:
-        raise SystemExit(f"sheet registration failed: {report.get('reasons')}")
+        raise SourceError(f"sheet registration failed: {report.get('reasons')}")
     x, y, w, h = region_mm
     to_px = np.array([[px_per_mm, 0, -x * px_per_mm], [0, px_per_mm, -y * px_per_mm], [0, 0, 1.0]])
     size = (int(round(w * px_per_mm)), int(round(h * px_per_mm)))

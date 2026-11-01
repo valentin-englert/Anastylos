@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 import proof
+import source
 
 GENERIC_TEXT = {
     "title": "Part outline (drawing proof, frozen baseline)",
@@ -30,7 +31,7 @@ def run(plan_path: Path, out: Path) -> list[dict]:
                 "subtitle": f'{target["id"]}: {target["kind"]}'}
         try:
             report = proof.build(spec, out / target["id"])
-        except SystemExit as exc:  # registration or read failure is a result, not a crash
+        except source.SourceError as exc:  # registration or read failure is a result, not a crash
             rows.append({"id": target["id"], "status": "failed", "reason": str(exc)})
             continue
         rows.append({"id": target["id"], "status": report["status"], "flags": report["quality"]["flags"],

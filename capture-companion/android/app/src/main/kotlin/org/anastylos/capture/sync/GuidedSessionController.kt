@@ -187,6 +187,9 @@ class GuidedSessionController(
         val sessionId = _state.value.sessionId
             ?: return RemoteConsentOutcome.Failed("no remote session attached")
         val token = guidedTokenOrNull() ?: return RemoteConsentOutcome.Failed(lastAuthError())
+        // Revision 0 means no snapshot yet (first arm right after attach): Core
+        // opens sessions at revision 1, so fetch it instead of a certain conflict.
+        if (_state.value.sessionRevision == 0) refreshSession(token, sessionId)
         val snapshot = _state.value
         val input = GuidedConsentInput(
             operationId = uuid(),

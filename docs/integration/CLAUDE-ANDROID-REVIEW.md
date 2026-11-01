@@ -425,3 +425,37 @@ tick to end tick, to 0.1 mm. Record both values, the instrument, the
 uncertainty (ruler ±0.5 mm, caliper ±0.05 mm), who measured, the time (UTC)
 and whether the sheet lies flat. The validator rejects more than 0.5 % per axis
 (below 99.5 or above 100.5 mm): reprint at 100 % then.
+
+### 15.3 Measured A3 print (board instance)
+
+Owner measurement 2026-11-01 (reported 2026-11-02 00:00 local): both 100 mm
+check lines on the `surface_a3` print read about 100.15 mm with a Mahr caliper
+(+0.15 %, limit 0.5 %). Recorded as `anastylos-board-instance@1`
+`50462f3b-d954-4e96-8d3f-ae877e144f25` in
+`app/src/main/assets/board-instance-surface_a3.json` (uncertainty 0.05 mm,
+flatness `unknown` because it was not stated); `validate_board_instance`:
+accept. Staged on the workstation at
+`<receiver-data>/spatial/boards/b6f7da9a37124483cc72f7b5d7e7daa2b0a394f0730024f90786475225e1f5af.json`.
+Note for review: the earlier CAL-01 diagonal check (481.0 vs 480.98 mm, ±0.2,
+Hultafors Talmeter) implies about +0.004 %, the bars +0.15 %; both are inside
+the limit, but they disagree by more than their stated uncertainties.
+
+The phone cites the record (id + sha256 of its bytes) only together with the
+measured profile and only when the record's layout hash equals the phone's
+layout; then `metric_validity` is `validated`.
+
+The card no longer says "On target — hold still" while an image gate blocks:
+it names the blocking reason (sharpness, dark, saturated). Found in a run where
+sharpness blocked the shutter (gate unchanged); the next run captured.
+
+Run on APK `1d9d2596bf97dd11bc4c8f5da716c8ba7284ed1bfe88386613fb5ac00b9aa6d0`
+(device hash equal), session `c33c73e5…`, request `49ff251e…`: receipt
+`package_only`; validator `needs_review`, no rejects,
+`CALIBRATION_NOT_VALIDATED` gone. Remaining: `UNKNOWN_SOLVE_SOURCE` (contract
+route for pose-sample assets), `NULL_MAX_RESIDUAL` / `NULL_UNCERTAINTY`
+(estimator), `QUALITY_NOT_ACCEPTED` (quality `rejected` in this sidecar),
+layout and epochs not staged. `measured_print_scale` in
+`calibration/calibration-config.json` is not updated (calibration module,
+generated file).
+
+Verification: 488 tests, 0 failures, JDK 21 test JVM; lint passed.

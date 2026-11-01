@@ -2,6 +2,7 @@ package org.anastylos.capture.ui.guided
 
 import org.anastylos.capture.guidance.CueAxis
 import org.anastylos.capture.guidance.DwellState
+import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.ReceiptKind
 import org.anastylos.capture.guidance.RegistrationState
@@ -42,7 +43,20 @@ internal fun liveHint(state: GuidanceUiState): String = when {
         state.registration == RegistrationState.UNREGISTERED -> "Point the camera at the A3 board"
     state.registration == RegistrationState.DEGRADED -> "Show more of the board"
     state.cues.isNotEmpty() -> cueText(state.cues.first())
+    // On target but an image gate blocks the shutter: say which, never "hold still".
+    qualityBlock(state) != null -> qualityBlock(state)!!
     else -> "On target — hold still"
+}
+
+/** The blocking image-quality reason in operator words; motion only warns. */
+private fun qualityBlock(state: GuidanceUiState): String? {
+    val reasons = (state.qualityVerdict as? ImageQualityVerdict.Rejected)?.reasons ?: return null
+    return when {
+        "sharpness" in reasons -> "Image not sharp — check focus and light"
+        "dark" in reasons -> "Too dark — add light"
+        "saturated" in reasons -> "Too bright — reduce glare"
+        else -> null
+    }
 }
 
 private fun outcomeOf(state: GuidanceUiState): RequestOutcome? {

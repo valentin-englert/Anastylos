@@ -235,6 +235,7 @@ class GuidanceViewModel(
     private val appVersion: String = "0.1.0",
     private val uuid: () -> String = { UUID.randomUUID().toString() },
     private val measuredProfiles: MeasuredProfileSource? = null,
+    private val boardInstances: org.anastylos.capture.camera.BoardInstanceSource? = null,
     private val voice: org.anastylos.capture.voice.VoiceController? = null,
     private val timing: TimingAccumulator = TimingAccumulator(),
     /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
@@ -1864,6 +1865,10 @@ class GuidanceViewModel(
             ?.takeIf { intrinsics?.profileId?.contains('@') == false }
             ?.let { measuredProfiles?.reference(it) }
         val layoutDescriptor = canonicalBoardLayout(board)
+        val layoutSha = layoutDescriptor.toByteArray(Charsets.UTF_8).sha256Hex()
+        // A measured print is cited only together with a measured profile:
+        // `validated` needs both (SpatialSidecar honesty policy).
+        val boardInstance = profile?.let { boardInstances?.forBoard(board.boardId, layoutSha) }
         val goalBytes = try {
             Json.encodeToString(GuidedTarget.serializer(), request.target).toByteArray(Charsets.UTF_8)
         } catch (_: Exception) {
@@ -1903,10 +1908,11 @@ class GuidanceViewModel(
                 profileId = profile?.profileId ?: "",
                 profileSha256 = profile?.sha256 ?: "",
                 nominalDescriptor = if (profile == null) nominalDescriptor else "",
-                layoutSha256 = layoutDescriptor.toByteArray(Charsets.UTF_8).sha256Hex(),
+                layoutSha256 = layoutSha,
+                boardInstanceId = boardInstance?.boardInstanceId ?: "",
+                boardInstanceSha256 = boardInstance?.sha256 ?: "",
                 boardFrameId = board.boardId,
-                // A measured profile on a nominal board: the print scale is unmeasured.
-                metricValidity = "nominal_only",
+                metricValidity = if (boardInstance != null) "validated" else "nominal_only",
             ),
             analysisWidthPx = geometry.analysisWidth,
             analysisHeightPx = geometry.analysisHeight,

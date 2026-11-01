@@ -33,6 +33,19 @@ class RequestCardTest {
     }
 
     @Test
+    fun aBlockingImageGateIsNamedInsteadOfHoldStill() {
+        val blurred = base.copy(
+            registration = RegistrationState.ACQUIRED,
+            qualityVerdict = org.anastylos.capture.guidance.ImageQualityVerdict.Rejected(listOf("sharpness")),
+        )
+        assertThat(requestCardOf(blurred)!!.hint).isEqualTo("Image not sharp — check focus and light")
+        val shaky = blurred.copy(
+            qualityVerdict = org.anastylos.capture.guidance.ImageQualityVerdict.Rejected(listOf("motion")),
+        )
+        assertThat(requestCardOf(shaky)!!.hint).isEqualTo("On target — hold still")
+    }
+
+    @Test
     fun receiptsMapToSentOrRetake() {
         val qualified = requestCardOf(base.copy(delivery = delivered(ReceiptKind.QUALIFIED)))!!.outcome!!
         assertThat(qualified.retake).isFalse()

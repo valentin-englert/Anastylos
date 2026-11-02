@@ -64,7 +64,7 @@ class ExplosionTest(unittest.TestCase):
         self.assertTrue(all(l["status"] == "unconfirmed" for l in added["manifest"]["layers"]))
         confirmed = explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "label": "Front shell", "flip_horizontal": False})
         self.assertTrue(confirmed["layout"]["layers"][0]["confirmed_by_operator"])
-        self.assertEqual(confirmed["manifest"]["layers"][0]["reasons"], ["drawing not bound by operator"])
+        self.assertEqual(confirmed["manifest"]["layers"][0]["status"], "confirmed")  # one click binds the drawing too
         moved = explosion.layout_action(self.root, "s1", {"action": "reorder", "jobs": ["pcb-1", "front-1"]})
         self.assertEqual([l["job"] for l in moved["layout"]["layers"]], ["pcb-1", "front-1"])
         self.assertFalse(moved["layout"]["layers"][1]["confirmed_by_operator"])  # moved: confirmation withdrawn

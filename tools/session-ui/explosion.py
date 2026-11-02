@@ -32,6 +32,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import drawings
 from adapter import AdapterError, resolve_session
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "explosion"))
@@ -128,6 +129,9 @@ def layout_action(root: Path, session_id: str, body: dict) -> dict:
             explosion_layout.confirm_layer(session, _text(body, "job", required=True), label=_text(body, "label"),
                                            view_side=_text(body, "view_side"), flip_horizontal=_flag(body, "flip_horizontal"),
                                            confirmed=_flag(body, "confirmed", default=True))
+            if _flag(body, "confirmed", default=True):  # the panel shows outline and source, so one click decides both questions
+                layer = next(l for l in explosion_layout.load(session)["layers"] if l["job"] == body["job"])
+                drawings.bind(root, session_id, body["job"], "confirm", f"confirmed in the explosion view as {layer['label']}")
         elif action == "rotate":
             explosion_layout.rotate_layer(session, _text(body, "job", required=True))
         else:

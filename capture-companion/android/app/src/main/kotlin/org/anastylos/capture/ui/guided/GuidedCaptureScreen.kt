@@ -388,6 +388,15 @@ private fun BannerText(banner: StatusBanner, landscape: Boolean) {
     if (!landscape) banner.detail?.let { Text(it, color = Palette.Paper, style = MaterialTheme.typography.titleMedium.onImage()) }
 }
 
+/** The Muse mark with its state below it: Listening, Thinking, Speaking or Your turn; nothing while voice is off. */
+@Composable
+private fun VoiceBadge(voice: VoiceController, voiceState: VoiceController.State, size: Dp) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        MuseButton(voice, voiceState, size)
+        voiceLabelOf(voiceState)?.let { Text(it, color = Palette.Muse, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+    }
+}
+
 /**
  * Opt-in voice: just the Muse mark. A blue ring shows the microphone
  * is open; transcripts never appear here.
@@ -625,7 +634,7 @@ private fun ActionButtons(
     }
     if (compact) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MuseButton(voice, voiceState, 44.dp)
+            VoiceBadge(voice, voiceState, 44.dp)
             if (recorder != null) RecordButton(recordingNow, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
             if (photoActions) photoButtons(Modifier.fillMaxWidth())
             buttons(Modifier.fillMaxWidth())
@@ -635,7 +644,7 @@ private fun ActionButtons(
         if (recorder != null) RecordButton(recordingNow, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             buttons(Modifier.weight(1f))
-            MuseButton(voice, voiceState, 52.dp)
+            VoiceBadge(voice, voiceState, 52.dp)
         }
     }
 }

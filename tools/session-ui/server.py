@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -34,9 +35,11 @@ from adapter import AdapterError
 LOG = logging.getLogger("session-ui")
 WEB = Path(__file__).resolve().parent / "web"
 STATIC = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
-          "styles.css": "text/css; charset=utf-8", "explosion.html": "text/html; charset=utf-8",
-          "explosion.js": "text/javascript; charset=utf-8", "explosion.css": "text/css; charset=utf-8",
-          "part-help.js": "text/javascript; charset=utf-8"}
+          "styles.css": "text/css; charset=utf-8", "shell.js": "text/javascript; charset=utf-8",
+          "explosion.html": "text/html; charset=utf-8", "explosion.js": "text/javascript; charset=utf-8",
+          "explosion.css": "text/css; charset=utf-8", "part-help.js": "text/javascript; charset=utf-8"}
+ASSET_DIRS = ("assets", "fonts")
+ASSET_TYPES = {".woff2": "font/woff2", ".svg": "image/svg+xml", ".png": "image/png", ".txt": "text/plain; charset=utf-8"}
 MAX_BODY = 64 * 1024
 MAX_AUDIO_BODY = 4 * 1024 * 1024  # about 85 s of 24 kHz mono 16-bit WAV: push-to-talk clips only
 TRANSCRIBER = [sys.executable, "-B", str(Path(__file__).resolve().parents[1] / "live" / "providers" / "transcribe.py"), "--stdin"]
@@ -76,6 +79,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", STATIC[name])
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_asset(self, path: str) -> None:
+        """Static files of the page itself: only web/assets and web/fonts, fixed extensions, no traversal."""
+        target = (WEB / urllib.parse.unquote(path).lstrip("/")).resolve()
+        content_type = ASSET_TYPES.get(target.suffix.lower())
+        if content_type is None or not target.is_file() or target.parent.parent != WEB.resolve()                 or target.parent.name not in ASSET_DIRS:
+            self._send_json({"error": "Unknown path."}, 404)
+            return
+        body = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "max-age=3600")
         self.end_headers()
         self.wfile.write(body)
 
@@ -131,7 +149,9 @@ class Handler(BaseHTTPRequestHandler):
         routes: dict[str, Callable[[], None]] = {
             "/": self._page, "/index.html": self._page, "/app.js": lambda: self._send_static("app.js"),
             "/styles.css": lambda: self._send_static("styles.css"),
+            "/shell.js": lambda: self._send_static("shell.js"),
             "/api/sessions": self._api_sessions, "/api/status": self._api_status,
+            "/api/connection": self._api_connection,
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
@@ -145,7 +165,11 @@ class Handler(BaseHTTPRequestHandler):
             "/part-help.js": lambda: self._send_static("part-help.js"),
             "/api/explosion": self._api_explosion, "/api/explosion/file": self._api_explosion_file,
         }
-        route = routes.get(urllib.parse.urlsplit(self.path).path)
+        path = urllib.parse.urlsplit(self.path).path
+        if path.startswith(tuple(f"/{name}/" for name in ASSET_DIRS)):
+            self._send_asset(path)
+            return
+        route = routes.get(path)
         if route is None:
             self._send_json({"error": "Unknown path."}, 404)
             return
@@ -204,6 +228,10 @@ class Handler(BaseHTTPRequestHandler):
     def _mutate(self, session_id: str, func: Callable[[], dict]) -> None:
         with self._session_lock(session_id):
             self._send_json(func())
+
+    def _api_connection(self) -> None:
+        """Whether the Muse key is set in this server's environment. The value is never read out or sent."""
+        self._send_json({"muse_key_set": bool(os.environ.get("MODEL_API_KEY", "").strip())})
 
     def _api_status(self) -> None:
         session_id = self._session_param(self._query())

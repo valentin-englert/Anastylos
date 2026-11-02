@@ -864,6 +864,7 @@ async function loadDrawings() {
   clearTimeout(drawingTimer);
   showError("drawings-error", "");
   try {
+    $("explosion-link").href = `/explosion.html?session=${encodeURIComponent(state.session)}`;
     const view = await call(`/api/drawings?session=${encodeURIComponent(state.session)}`);
     const picker = $("drawing-spec");
     const selected = picker.value;

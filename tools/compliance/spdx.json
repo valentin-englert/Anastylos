@@ -911,7 +911,7 @@
           "annotationDate": "2026-11-02T00:00:00Z",
           "annotationType": "OTHER",
           "annotator": "Tool: anastylos-compliance-check",
-          "comment": "category=android-bundled-font; source=capture-companion/android/app/src/main/res/font/khula_*.ttf; evidence: name table IDs 0 and 14 of the TTF (licence URL http://scripts.sil.org/OFL); bundled in the APK; the OFL text must accompany a redistributed APK"
+          "comment": "category=android-bundled-font; source=capture-companion/android/app/src/main/res/font/khula_*.ttf; evidence: name table IDs 0 and 14 of the TTF (licence URL http://scripts.sil.org/OFL); bundled in the APK; the OFL text must accompany a redistributed APK; also tools/session-ui/web/fonts/ (woff2 with OFL text)"
         }
       ]
     }

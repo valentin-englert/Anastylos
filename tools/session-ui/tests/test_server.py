@@ -50,10 +50,31 @@ class ServerCase(unittest.TestCase):
         self.addCleanup(self.thread.join, 30)
         self.addCleanup(self.httpd.shutdown)
 
+    def test_page_assets_are_served_and_confined(self):
+        for path, kind in (("/shell.js", "javascript"), ("/styles.css", "css"), ("/fonts/khula-latin-400-normal.woff2", "woff2"),
+                           ("/assets/favicon.svg", "svg"), ("/fonts/Khula-OFL-LICENSE.txt", "text/plain")):
+            with urllib.request.urlopen(self.base + path, timeout=30) as response:
+                self.assertEqual(response.status, 200, path)
+                self.assertIn(kind, response.headers["Content-Type"], path)
+        for path in ("/assets/../server.py", "/assets/%2e%2e/server.py", "/fonts/../app.js", "/assets/missing.png", "/assets/"):
+            status, _ = call(self.base, path)
+            self.assertEqual(status, 404, path)
+
+    def test_connection_reports_only_whether_a_key_is_set(self):
+        import os
+        previous = os.environ.get("MODEL_API_KEY")
+        self.addCleanup(lambda: os.environ.__setitem__("MODEL_API_KEY", previous) if previous is not None
+                        else os.environ.pop("MODEL_API_KEY", None))
+        os.environ["MODEL_API_KEY"] = "secret-test-value"
+        status, payload = call(self.base, "/api/connection")
+        self.assertEqual((status, payload), (200, {"muse_key_set": True}))
+        os.environ["MODEL_API_KEY"] = "  "
+        self.assertEqual(call(self.base, "/api/connection")[1], {"muse_key_set": False})
+
     def test_page_and_sessions(self):
         with urllib.request.urlopen(self.base + "/", timeout=30) as response:
             self.assertEqual(response.status, 200)
-            self.assertIn("ANASTYLOS Session", response.read().decode("utf-8"))
+            self.assertIn("<title>Anastylos</title>", response.read().decode("utf-8"))
         status, payload = call(self.base, "/api/sessions")
         self.assertEqual(status, 200)
         self.assertEqual([s["id"] for s in payload["sessions"]], ["p1"])

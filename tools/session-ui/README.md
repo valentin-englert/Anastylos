@@ -117,3 +117,7 @@ still-stale binding).
   camera control, no `request_view` is wired; see `INTEGRATION.md`.
 - Guide/selection/assembly answers are only as good as the session evidence;
   a selection is not a frame→record confirmation or assembly approval.
+
+## One-click start (no terminal)
+
+`launch\Create-Shortcuts.bat` puts an **Anastylos** and a **Stop Anastylos** icon on the desktop; double-click `launch\Start-Anastylos.bat` to start the page and open it in the browser. Optional environment variables: `ANASTYLOS_WORKSPACE` (session folder, default `C:\ANASTYLOS\data\session-ui-demo`) and `ANASTYLOS_PORT` (default 8071). The first start shows a welcome guide; the Muse key (`MODEL_API_KEY`) is explained there and never typed into the page. See `web/UI-NOTES.md` for the shell structure and open items.

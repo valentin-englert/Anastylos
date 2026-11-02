@@ -58,9 +58,30 @@ import org.anastylos.capture.guidance.PhoneRotation
 import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.RegistrationState
 import org.anastylos.capture.guidance.SessionState
-import org.anastylos.capture.ui.camera.CameraPicker
 import org.anastylos.capture.camera.SETTING_PROFILES
-import org.anastylos.capture.ui.camera.CameraSettingsPanel
+import org.anastylos.capture.R
+import org.anastylos.capture.ui.camera.CameraMenu
+import org.anastylos.capture.ui.camera.CameraTopControls
+import org.anastylos.capture.ui.camera.MenuSection
+import org.anastylos.capture.ui.camera.Pill
+import org.anastylos.capture.ui.camera.ScrimIconButton
+import org.anastylos.capture.ui.camera.SettingsReadout
+import org.anastylos.capture.ui.camera.SettingsWheelPanel
+import org.anastylos.capture.ui.camera.WheelKind
+import org.anastylos.capture.ui.onboarding.HelpDialog
+import org.anastylos.capture.ui.onboarding.HelpTopic
+import org.anastylos.capture.ui.theme.Glyph
+import org.anastylos.capture.ui.theme.Palette
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 
 /**
  * Operational Guided Capture screen: live preview with detection
@@ -72,6 +93,8 @@ import org.anastylos.capture.ui.camera.CameraSettingsPanel
 fun GuidedCaptureScreen(
     container: AppContainer,
     onBack: () -> Unit,
+    onPair: () -> Unit,
+    onReplayGuide: () -> Unit,
     viewModel: GuidanceViewModel = viewModel(factory = container.guidedViewModelFactory()),
 ) {
     val context = LocalContext.current
@@ -133,164 +156,187 @@ fun GuidedCaptureScreen(
         val label = cold.remoteRequest?.targetLabel
         if (requestId != null && !label.isNullOrBlank()) container.voice.speakVerified(label)
     }
-    var details by rememberSaveable { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    var wheel by remember { mutableStateOf<WheelKind?>(null) }
+    var help by remember { mutableStateOf<HelpTopic?>(null) }
+    var diagnostics by rememberSaveable { mutableStateOf(false) }
+    val caps = viewModel.capsFor(cold.effectiveCameraId)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Box(Modifier.fillMaxSize().background(Palette.Ground)) {
+        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+        DetectionOverlay(state, Modifier.fillMaxSize())
+        Column(
+            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            OutlinedButton(onClick = onBack) { Text("Back") }
-            Spacer(Modifier.weight(1f))
-            StatusPill(
-                if (cold.remoteAttached) "Connected" else "Not connected",
-                if (cold.remoteAttached) PillGreen else PillRed,
-            )
-            voiceLabelOf(voiceState)?.let { StatusPill(it, PillBlue) }
-        }
-        StatusBannerView(statusBannerOf(state))
-        Box(modifier = Modifier.fillMaxWidth()) {
-            AndroidView(
-                factory = { previewView },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            DetectionOverlay(state, Modifier.matchParentSize())
-        }
-        if (cold.remoteRequest == null) CueList(state)
-        MainControls(cold, viewModel)
-        VoiceToggle(container.voice, voiceState)
-        state.cameraError?.let { Text("Camera: $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) }
-        state.captureError?.let { Text("Capture: $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) }
-        state.remoteError?.let { error ->
-            Text(error, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
-            OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
-        }
-        OutlinedButton(onClick = { details = !details }) {
-            Text(if (details) "Hide details" else "Details")
-        }
-        if (details) {
-            if (state.uncalibrated) {
-                Text(
-                    "UNCALIBRATED: factory intrinsics (${state.intrinsicsLabel ?: "none"}). " +
-                        "Poses are coarse; metric evidence is disabled until calibration.",
-                    color = MaterialTheme.colorScheme.error,
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                ScrimIconButton(Glyph.Back, "Back", onClick = onBack)
+                ConnectionPill(cold.remoteAttached, voiceLabelOf(voiceState))
+                Spacer(Modifier.weight(1f))
+                if (!cold.remoteAttached) ScrimIconButton(Glyph.Qr, "Pair with the workstation", onClick = onPair)
+                CameraTopControls(
+                    torchOn = cold.settings.torch,
+                    torchAvailable = caps.flashAvailable,
+                    onTorch = { viewModel.updateSettings { it.copy(torch = !it.torch) } },
+                    onMenu = { menuOpen = true },
                 )
-                cold.calibrationBlocker?.let { reason ->
-                    Text("Calibrated profile not applied: $reason")
-                    Button(onClick = { viewModel.applyCalibratedOptics() }) {
-                        Text("Use calibrated optics")
-                    }
-                }
             }
-            StateGrid(state)
-            state.sessionReason?.let { Text("Session note: $it") }
-            RemoteDetails(cold)
-            ResultDetails(cold, viewModel)
-            DetailControls(cold, viewModel)
-            VoiceDetails(container.voice, voiceState)
-            TargetPicker(cold, viewModel)
-            CameraPicker(
+            StatusBannerView(statusBannerOf(state))
+            if (cold.remoteRequest == null) CueList(state)
+            Spacer(Modifier.weight(1f))
+            state.cameraError?.let { ErrorLine("Camera: $it") }
+            state.captureError?.let { ErrorLine("Capture: $it") }
+            state.remoteError?.let { error ->
+                ErrorLine(error)
+                OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
+            }
+            SettingsReadout(cold.settings, caps, wheel) { kind -> wheel = if (wheel == kind) null else kind }
+            wheel?.let { kind ->
+                SettingsWheelPanel(kind, cold.settings, caps, viewModel::updateSettings, onInfo = { help = it }, onClose = { wheel = null })
+            }
+            MainControls(cold, viewModel, container.voice, voiceState)
+        }
+        if (menuOpen) {
+            CameraMenu(
                 cameras = cold.availableCameras,
-                effectiveId = cold.effectiveCameraId,
-                note = cold.cameraNote,
-                onSelect = { viewModel.selectCamera(it) },
-            )
-            CameraSettingsPanel(
-                settings = cold.settings,
-                caps = viewModel.capsFor(cold.effectiveCameraId),
+                effectiveCameraId = cold.effectiveCameraId,
+                cameraNote = cold.cameraNote,
+                onSelectCamera = { viewModel.selectCamera(it) },
                 profiles = SETTING_PROFILES,
                 activeProfile = cold.activeProfile,
+                onProfile = { viewModel.selectProfile(it) },
+                settings = cold.settings,
+                caps = caps,
+                onUpdate = viewModel::updateSettings,
                 appliedLine = cold.appliedLine,
                 settingsNote = cold.settingsNote,
                 analysisSelectable = true,
-                onUpdate = viewModel::updateSettings,
-                onProfile = { viewModel.selectProfile(it) },
-            )
-            QualityRow(state, viewModel)
+                onInfo = { help = it },
+                onClose = { menuOpen = false },
+            ) {
+                MenuSection("Guide") {
+                    Pill("How it works", selected = false, onClick = { menuOpen = false; onReplayGuide() })
+                }
+                MenuSection("Diagnostics") {
+                    Pill(if (diagnostics) "Hide" else "Show", selected = diagnostics, onClick = { diagnostics = !diagnostics })
+                    if (diagnostics) Diagnostics(state, cold, viewModel, container.voice, voiceState)
+                }
+            }
         }
+        help?.let { HelpDialog(it) { help = null } }
     }
 }
 
-private val PillGreen = Color(0xFF1B5E20)
-private val PillRed = Color(0xFFB71C1C)
-private val PillBlue = Color(0xFF0D47A1)
+@Composable
+private fun Diagnostics(
+    state: GuidanceUiState,
+    cold: GuidanceUiState,
+    viewModel: GuidanceViewModel,
+    voice: VoiceController,
+    voiceState: VoiceController.State,
+) {
+    if (state.uncalibrated) {
+        Text(
+            "UNCALIBRATED: factory intrinsics (${state.intrinsicsLabel ?: "none"}). " +
+                "Poses are coarse; metric evidence is disabled until calibration.",
+            color = MaterialTheme.colorScheme.error,
+        )
+        cold.calibrationBlocker?.let { reason ->
+            Text("Calibrated profile not applied: $reason")
+            Button(onClick = { viewModel.applyCalibratedOptics() }) { Text("Use calibrated optics") }
+        }
+    }
+    StateGrid(state)
+    state.sessionReason?.let { Text("Session note: $it") }
+    RemoteDetails(cold)
+    ResultDetails(cold, viewModel)
+    DetailControls(cold, viewModel)
+    VoiceDetails(voice, voiceState)
+    TargetPicker(cold, viewModel)
+    QualityRow(state, viewModel)
+}
 
 @Composable
-private fun StatusPill(text: String, color: Color) {
+private fun ErrorLine(text: String) {
     Text(
         text,
-        color = Color.White,
+        color = Palette.Brick,
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier
-            .background(color, RoundedCornerShape(50))
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+        modifier = Modifier.background(Palette.Scrim, RoundedCornerShape(12.dp)).padding(12.dp),
     )
 }
 
-/** The one current task, in large high-contrast type. */
+/** Connected or not, plus the voice state while the microphone is in use. */
+@Composable
+private fun ConnectionPill(connected: Boolean, voiceLabel: String?) {
+    Row(
+        modifier = Modifier.background(Palette.Scrim, RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(9.dp).background(if (connected) Palette.Sage else Palette.Brick, CircleShape))
+        Text(if (connected) "Connected" else "Not connected", color = Palette.Paper, style = MaterialTheme.typography.titleSmall)
+        voiceLabel?.let { Text(it, color = Palette.Muse, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+    }
+}
+
+/** The one current task, in large high-contrast type on a dark scrim. */
 @Composable
 private fun StatusBannerView(banner: StatusBanner) {
     val color = when (banner.tone) {
-        BannerTone.NEUTRAL -> Color(0xFF263238)
-        BannerTone.WAITING -> Color(0xFF0D47A1)
-        BannerTone.ACTION -> Color(0xFFBF360C)
-        BannerTone.SUCCESS -> Color(0xFF1B5E20)
-        BannerTone.PROBLEM -> Color(0xFFB71C1C)
+        BannerTone.NEUTRAL, BannerTone.WAITING -> Palette.Paper
+        BannerTone.ACTION -> Palette.Ochre
+        BannerTone.SUCCESS -> Palette.Sage
+        BannerTone.PROBLEM -> Palette.Brick
     }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(color, RoundedCornerShape(16.dp))
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .background(Color(0xB3000000), RoundedCornerShape(16.dp))
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            banner.title,
-            color = Color.White,
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-        )
-        banner.detail?.let {
-            Text(it, color = Color.White, style = MaterialTheme.typography.titleLarge)
-        }
+        Text(banner.title, color = color, style = MaterialTheme.typography.headlineMedium)
+        banner.detail?.let { Text(it, color = Palette.Paper, style = MaterialTheme.typography.titleMedium) }
     }
 }
 
 /**
- * Opt-in "Listen for Muse": a visible indicator while the microphone is
- * open. Transcripts are never shown on the main screen.
+ * Opt-in voice: the Muse mark with its blue wordmark. The mark shows
+ * whether the microphone is open; transcripts never appear here.
  */
 @Composable
-private fun VoiceToggle(voice: VoiceController, voiceState: VoiceController.State) {
+private fun MuseButton(voice: VoiceController, voiceState: VoiceController.State) {
     val context = LocalContext.current
     val micLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> if (granted) voice.startListening() }
-    FilterChip(
-        selected = voiceState.listening,
-        onClick = {
-            when {
-                voiceState.listening -> voice.stopListening()
-                ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                    PackageManager.PERMISSION_GRANTED -> voice.startListening()
-                else -> micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    Row(
+        modifier = Modifier
+            .height(60.dp)
+            .background(Palette.Scrim, RoundedCornerShape(50))
+            .clickable(onClickLabel = if (voiceState.listening) "Turn the microphone off" else "Talk to Muse") {
+                when {
+                    voiceState.listening -> voice.stopListening()
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                        PackageManager.PERMISSION_GRANTED -> voice.startListening()
+                    else -> micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
             }
-        },
-        label = {
-            Text(
-                if (voiceState.listening) "Microphone on — say “Muse…”" else "Voice off — tap to talk to Muse",
-                style = MaterialTheme.typography.titleMedium,
-            )
-        },
-        modifier = Modifier.heightIn(min = 48.dp),
-    )
+            .padding(start = 8.dp, end = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painterResource(R.drawable.muse_logo),
+            contentDescription = null,
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .border(if (voiceState.listening) 3.dp else 0.dp, Palette.Muse, RoundedCornerShape(12.dp)),
+        )
+        Text("Muse", color = Palette.Muse, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    }
 }
 
 /** Hold-to-talk fallback, last phrase heard and the voice link status. */
@@ -369,8 +415,11 @@ private fun CueList(state: GuidanceUiState) {
         }
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        state.cues.forEach { cue -> Text(cueText(cue), style = MaterialTheme.typography.bodyLarge) }
+    Column(
+        modifier = Modifier.background(Palette.Scrim, RoundedCornerShape(12.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        state.cues.forEach { cue -> Text(cueText(cue), style = MaterialTheme.typography.titleMedium, color = Palette.Paper) }
     }
 }
 
@@ -427,16 +476,29 @@ private fun TargetPicker(state: GuidanceUiState, viewModel: GuidanceViewModel) {
 }
 
 @Composable
-private fun BigButton(text: String, primary: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
-    val modifier = Modifier.fillMaxWidth().height(64.dp)
-    val label: @Composable () -> Unit = { Text(text, style = MaterialTheme.typography.titleLarge) }
-    if (primary) Button(onClick = onClick, enabled = enabled, modifier = modifier) { label() }
-    else OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier) { label() }
+private fun BigButton(text: String, primary: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+    val sized = modifier.height(60.dp)
+    val label: @Composable () -> Unit = { Text(text, style = MaterialTheme.typography.titleMedium) }
+    if (primary) {
+        Button(onClick = onClick, enabled = enabled, modifier = sized) { label() }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = sized,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Paper, containerColor = Palette.Scrim),
+        ) { label() }
+    }
 }
 
-/** The few actions the operator needs during the flow; the rest lives in Details. */
+/** The few actions the operator needs during the flow; the rest lives in the menu. */
 @Composable
-private fun MainControls(state: GuidanceUiState, viewModel: GuidanceViewModel) {
+private fun MainControls(
+    state: GuidanceUiState,
+    viewModel: GuidanceViewModel,
+    voice: VoiceController,
+    voiceState: VoiceController.State,
+) {
     var sessionField by rememberSaveable { mutableStateOf(state.remoteSessionId ?: "") }
     if (!state.remoteAttached) {
         OutlinedTextField(
@@ -444,27 +506,34 @@ private fun MainControls(state: GuidanceUiState, viewModel: GuidanceViewModel) {
             onValueChange = { sessionField = it.trim() },
             label = { Text("Session id from the workstation") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().background(Palette.Scrim, RoundedCornerShape(12.dp)),
         )
-        BigButton("Attach", primary = true, enabled = sessionField.isNotBlank()) {
-            viewModel.attachRemote(sessionField)
-        }
-        return
     }
-    when (state.session) {
-        SessionState.DISARMED -> BigButton("Start", primary = true) { viewModel.arm() }
-        SessionState.ACTIVE -> {
-            BigButton("Next request", primary = true) { viewModel.arm() }
-            BigButton("Pause", primary = false) { viewModel.pause() }
+    if (state.remoteAttached && state.remoteRequest != null) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BigButton("Take photo now", primary = false, modifier = Modifier.weight(1f), enabled = !state.shutterBusy) { viewModel.captureManual() }
+            if (!state.attemptReady && !state.reservingAttempt) {
+                BigButton("Retry connection", primary = false, modifier = Modifier.weight(1f)) { viewModel.retryAttempt() }
+            }
         }
-        SessionState.PAUSED -> BigButton("Resume", primary = true) { viewModel.resume() }
-        else -> BigButton("New session", primary = true) { viewModel.newSession() }
     }
-    if (state.remoteRequest != null) {
-        BigButton("Take photo now", primary = false, enabled = !state.shutterBusy) { viewModel.captureManual() }
-        if (!state.attemptReady && !state.reservingAttempt) {
-            BigButton("Retry connection to workstation", primary = false) { viewModel.retryAttempt() }
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!state.remoteAttached) {
+            BigButton("Attach", primary = true, modifier = Modifier.weight(1f), enabled = sessionField.isNotBlank()) {
+                viewModel.attachRemote(sessionField)
+            }
+        } else {
+            when (state.session) {
+                SessionState.DISARMED -> BigButton("Start", primary = true, modifier = Modifier.weight(1f)) { viewModel.arm() }
+                SessionState.ACTIVE -> {
+                    BigButton("Next request", primary = true, modifier = Modifier.weight(1f)) { viewModel.arm() }
+                    BigButton("Pause", primary = false) { viewModel.pause() }
+                }
+                SessionState.PAUSED -> BigButton("Resume", primary = true, modifier = Modifier.weight(1f)) { viewModel.resume() }
+                else -> BigButton("New session", primary = true, modifier = Modifier.weight(1f)) { viewModel.newSession() }
+            }
         }
+        MuseButton(voice, voiceState)
     }
 }
 

@@ -8,8 +8,11 @@ coordinator question and is committed individually after the combined read-back.
 
 from __future__ import annotations
 
+import json
+import re
 import sys
 import threading
+import time
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
@@ -17,7 +20,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
 from catalog.selector import where_words  # noqa: E402
 from dialogue import bundle, settings  # noqa: E402
 from dialogue.agent import DialogueAgent  # noqa: E402
-from dialogue.executor import Executor, extract_by_rule  # noqa: E402
+from dialogue.executor import _NOISE, Executor, extract_by_rule  # noqa: E402
 
 ALL_DONE = "There are no more questions."
 SCREEN_HINT = " Please look at the screen for the options."
@@ -45,6 +48,8 @@ class DialogueFlow:
                                    open_items_path=self.root / session_id / "dialogue-open-items.jsonl")
         self.current: dict | None = None
         self.unbundled: set[str] = set()
+        self._closing_marker = self.root / session_id / "dialogue-closing-done"
+        self._notes = self.root / session_id / "dialogue-notes.jsonl"
         self._marker = self.root / session_id / "dialogue-pending-open"  # written when a video finished processing
 
     # ------------------------------------------------------------------ entry
@@ -65,6 +70,8 @@ class DialogueFlow:
     def _open_next(self) -> dict:
         result = self.api.question_next(self.root, self.session_id)
         if result.get("done"):
+            if not self._closing_marker.exists():
+                return self._closing_assemblies_ask()
             self.current = None
             return _speak(ALL_DONE, "status")
         qid = result["question_id"]
@@ -204,3 +211,98 @@ class DialogueFlow:
                 self.api.question_confirm(self.root, self.session_id, qid, "no")
             return self._open_next()
         return self._bundle_unclear(text)
+
+    # ------------------------------------------------------------------ end of the video's dialogue
+    # What is said here has no coordinator question kind (the frozen answer plan knows only parts). It goes through
+    # the same read-back + "yes", then into ``dialogue-notes.jsonl`` as operator-said notes; memory is not written.
+
+    def _closing_assemblies_ask(self) -> dict:
+        self.current = {"mode": "closing", "stage": "assemblies", "event": "closing-assemblies"}
+        return _speak(self.agent.say("assemblies_left", "closing-assemblies"), "question")
+
+    def _closing_missed_ask(self, lead: str = "") -> dict:
+        self.current = {"mode": "closing", "stage": "missed", "event": "closing-missed"}
+        line = self.agent.say("missed_anything", "closing-missed")
+        return _speak(f"{lead} {line}".strip(), "question")
+
+    def _closing_finish(self, lead: str = "") -> dict:
+        self._closing_marker.write_text("done", encoding="utf-8")
+        self.current = None
+        return _speak(f"{lead} {ALL_DONE}".strip(), "status")
+
+    def _note(self, kind: str, said: dict) -> None:
+        record = {"schema": "anastylos-dialogue-note@1", "kind": kind, "operator_said": said, "confirmed_by_operator": True,
+                  "memory_write": False, "wall_time": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+        with open(self._notes, "a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    def _closing_unclear(self, text: str, on_defer) -> dict:
+        again = self.agent.misunderstood(self.current["event"], text)
+        return on_defer(again["speak"]) if again["closed"] else _speak(again["speak"], "status")
+
+    def _closing_assemblies(self, text: str) -> dict:
+        intent = extract_by_rule(text)["intent"]
+        if intent in ("no", "skip") or re.fullmatch(r"\W*(?:nothing|none|nothing left|no(?:thing)? (?:is )?left)\W*", text, re.I):
+            return self._closing_missed_ask()
+        if intent == "unsure":
+            return self._closing_missed_ask(self.agent.defer("closing-assemblies", text, "operator unsure")["speak"])
+        if intent == "yes" or not (set(re.findall(r"[a-z']+", text.lower())) - _NOISE):
+            return self._closing_unclear(text, lambda line: self._closing_missed_ask(line))
+        self.current.update(stage="assemblies_confirm", said=text.strip())
+        core = f"I will note that this is still lying in the work area: “{text.strip()}”. Is that correct? Answer yes or no."
+        self.agent.reset_reasks("closing-assemblies")
+        return _speak(self.agent.read_back_line("closing-assemblies", core), "read_back")
+
+    def _closing_assemblies_confirm(self, text: str) -> dict:
+        intent = extract_by_rule(text)["intent"]
+        if intent == "yes":
+            self._note("assemblies_left", {"text": self.current["said"]})
+            return self._closing_missed_ask(self.agent.recorded_line("closing-assemblies"))
+        if intent == "no":
+            self.agent.reset_reasks("closing-assemblies")
+            return self._closing_assemblies_ask()
+        return self._closing_unclear(text, lambda line: self._closing_missed_ask(line))
+
+    _CELL_WORDS = {w: i for i, w in enumerate("one two three four five six seven eight nine ten eleven twelve".split(), 1)}
+    _CELL = re.compile(r"\bcell\s+(\d{1,3}|" + "|".join(_CELL_WORDS) + r")\b", re.I)
+
+    def _closing_missed(self, text: str) -> dict:
+        intent = extract_by_rule(text)["intent"]
+        if intent in ("no", "skip") or re.fullmatch(r"\W*(?:nothing|no,? that'?s all|that'?s all|nope)\W*", text, re.I):
+            return self._closing_finish()
+        if intent == "yes":
+            self.current["stage"] = "missed_detail"
+            self.agent.reset_reasks("closing-missed")
+            return _speak(self.agent.say("missed_cell", "closing-missed"), "question")
+        if intent == "unsure":
+            return self._closing_finish(self.agent.defer("closing-missed", text, "operator unsure")["speak"])
+        self.current["stage"] = "missed_detail"
+        return self._closing_missed_detail(text)
+
+    def _closing_missed_detail(self, text: str) -> dict:
+        match = self._CELL.search(text)
+        name = None
+        if match:
+            rest = (text[:match.start()] + " " + text[match.end():]).strip(" ,.;")
+            rest = re.sub(r"^(?:yes|it'?s|it (?:is|was)|there (?:is|was)|a|an|the|in|and|,|\s)+", "", rest, flags=re.I).strip(" ,.;")
+            fields = extract_by_rule(rest)
+            name = fields["part_name"] if fields["intent"] == "answer" else None
+        if not match or not name:
+            return self._closing_unclear(text, self._closing_finish)
+        token = match.group(1).lower()
+        cell = int(token) if token.isdigit() else self._CELL_WORDS[token]
+        self.current.update(stage="missed_confirm", cell=cell, name=name)
+        self.agent.reset_reasks("closing-missed")
+        core = f"I will note a part that was missed in cell {cell}: “{name}”. Is that correct? Answer yes or no."
+        return _speak(self.agent.read_back_line("closing-missed", core), "read_back")
+
+    def _closing_missed_confirm(self, text: str) -> dict:
+        intent = extract_by_rule(text)["intent"]
+        if intent == "yes":
+            self._note("missed_part", {"cell": self.current["cell"], "part_name": self.current["name"]})
+            return self._closing_finish(self.agent.recorded_line("closing-missed"))
+        if intent == "no":
+            self.current["stage"] = "missed_detail"
+            self.agent.reset_reasks("closing-missed")
+            return _speak(self.agent.say("missed_cell", "closing-missed"), "question")
+        return self._closing_unclear(text, self._closing_finish)

@@ -153,7 +153,7 @@ class FlowTests(unittest.TestCase):
         self.assertIn("could you please repeat it?", self.say("mmm"))
         self.assertIn(DEFER, self.say("uhh"))
         self.assertEqual(self.api.state["Q4"], "LEFT_UNRESOLVED")
-        self.assertEqual(self.say(command="next_question"), "There are no more questions.")
+        self.assertIn("work area", self.say(command="next_question"))
 
     def test_single_part_answer_read_back_yes(self):
         self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
@@ -168,6 +168,47 @@ class FlowTests(unittest.TestCase):
             if False else None
         text = self.say(command="next_question")
         self.assertIn("cell 1", text)
+
+    def finished(self):
+        for q in self.api.state:
+            self.api.state[q] = "COMMITTED"
+
+    def notes(self):
+        path = self.root / "s1" / "dialogue-notes.jsonl"
+        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.exists() else []
+
+    def test_closing_questions_go_through_read_back_and_land_in_notes_not_memory(self):
+        self.finished()
+        self.assertIn("work area", self.say(command="next_question"))
+        read_back = self.say("the front shell and the back shell")
+        self.assertIn("“the front shell and the back shell”", read_back)
+        self.assertEqual(self.notes(), [])
+        self.assertIn("miss", self.say("yes"))
+        self.assertIn("cell", self.say("yes"))
+        read_back = self.say("it was in cell six, the start button")
+        self.assertIn("missed in cell 6: “start button”", read_back)
+        self.assertIn("no more questions", self.say("yes"))
+        notes = self.notes()
+        self.assertEqual([n["kind"] for n in notes], ["assemblies_left", "missed_part"])
+        self.assertEqual(notes[1]["operator_said"], {"cell": 6, "part_name": "start button"})
+        self.assertFalse(any(n["memory_write"] for n in notes))
+        self.assertIn("no more questions", self.say(command="next_question"))
+        self.assertEqual([c for c in self.api.log if c[0] in ("answer", "confirm")], [])
+
+    def test_closing_nothing_left_and_nothing_missed(self):
+        self.finished()
+        self.say(command="next_question")
+        self.assertIn("miss", self.say("nothing"))
+        self.assertIn("no more questions", self.say("no, that's all"))
+        self.assertEqual(self.notes(), [])
+
+    def test_closing_unclear_twice_defers_and_moves_on(self):
+        self.finished()
+        self.say(command="next_question")
+        self.assertIn("could you please repeat it?", self.say("mmm"))
+        reply = self.say("uhh")
+        self.assertIn(DEFER, reply)
+        self.assertIn("miss", reply)
 
     def test_text_outside_a_question_is_not_handled(self):
         self.assertFalse(self.flow.turn(None, "where does it go")["handled"])

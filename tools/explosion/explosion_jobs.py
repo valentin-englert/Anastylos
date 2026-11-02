@@ -16,6 +16,7 @@ from xml.etree import ElementTree
 JOB_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$")
 RECTIFIED_NAMES = ("rectified.png", "chosen_rectified.png")  # drawing_job.py writes the second name
 MAX_SVG_BYTES = 4_000_000
+DRAWABLE_STATUSES = frozenset({"drawn_unconfirmed", "NEEDS_CONFIRMATION"})
 MM_TOLERANCE = 0.5  # width="159.3mm" next to viewBox 159.33: rounding in the generator
 
 _PATH_CHARS = re.compile(r"^[MLHVZ0-9eE.,\s+\-]+$")

@@ -22,6 +22,21 @@ def parts(svg: str) -> list[ElementTree.Element]:
 
 
 class ComposeTest(SessionCase):
+    def test_technical_gate_failures_never_enter_the_explosion_even_with_a_saved_binding(self):
+        for status in ("NEEDS_CAPTURE", "NEEDS_REVIEW"):
+            name = status.lower()
+            job = self.job(name, part=name, binding="confirm")
+            path = job / "progress.json"
+            progress = json.loads(path.read_text(encoding="utf-8"))
+            progress["result"]["status"] = status
+            path.write_text(json.dumps(progress), encoding="utf-8")
+        proposal = layout.propose(self.session)
+        self.assertEqual(proposal["added"], [])
+        self.spec(self.layer("needs_capture"), self.layer("needs_review"))
+        result = compose.compose(self.session)
+        self.assertEqual(parts(result.svg), [])
+        self.assertEqual(len(result.manifest["excluded"]), 2)
+
     def confirmed_three(self):
         self.three_jobs()
         for name in ("front-1", "pcb-1", "back-1"):

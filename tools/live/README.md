@@ -28,13 +28,13 @@ journal/memory line → stopped, no truncation; EO-6 stale revision never commit
 detected → stopped. Read-back confirmation is L0 only (no model decides a "yes").
 
 ## Limits (fail closed; frozen files not changed)
-- The journal still emits Lane A fields such as `at`, rather than all contract 0.2 fields such as
-  `t_wall`; integration does not establish journal conformance. The original fixture manifest also
-  retains its CRLF-source versus LF-blob mismatch for `audit/memory.before-answers.jsonl`; the local
-  integration report records both hashes without changing the forensic fixture or its manifest.
+- Current journal records include `t_wall` and the contract 0.2 question fields (see the contract and
+  integration suite). Historical logs and the original fixture manifest retain their original bytes,
+  including the CRLF-source versus LF-blob mismatch for `audit/memory.before-answers.jsonl`.
 - l2sim's `session.py` shadows `tools/session/session.py`; run the simulator in its own process,
   as the integration tests do. The real L2 evaluation remains independently owned; no benefit is claimed.
-- `request_view` remains gated. Contract 0.3 and refreshed provider fixtures remain future work.
+- Contract 0.3 is implemented. The session UI's drawing capture bridge uses the existing guided receiver;
+  this does not close generic capture gaps or establish physical capture-loop acceptance.
 - memory.py/store.py do not fsync: a memory line may be lost on power failure. Recovery treats memory as truth and stops
   if the journal acknowledges an event memory lacks.
 - No op_key field in memory: the op_key travels in the existing free-text note (`live op_key=...` via `provenance`);
@@ -42,7 +42,8 @@ detected → stopped. Read-back confirmation is L0 only (no model decides a "yes
 - The lock excludes only live coordinators; `session.py`, `answers.py apply`, manual `memory.py` ignore it.
 - EO-1 bulk test uses `anastylos_memory.cli.main` in-process (same code, no subprocess) for speed.
 - Label/place splitting (`<label> aus <place>`) is a heuristic; the read-back is the safeguard.
-- `identical_to` groups and EXTRA parts are not handled live. The demo CLI is L0 only (no provider wired).
+- The voice cell flow can record confirmed operator-stated extras through `write_operator_notes`, with
+  origin separate from storage. It does not identify parts automatically. The demo CLI is L0 only.
 
 ## Contract requests for the TL
 1. `answer_interpretation` intent `not_a_part` (L0 supports it; schema lacks it).

@@ -31,7 +31,10 @@ capture or frozen file is read for writing, only copied from fixtures.
 
 ## Offline demo
 
-This build is offline by construction:
+The guide demo paths are offline; the integrated phone, dialogue, transcription and drawing paths can
+use their existing providers when configured. In the spoken cell flow, Muse interprets free answers
+first, deterministic code validates the proposal, and an explicit read-back confirmation authorizes
+the write. Tests with recorded proposals do not establish live-model or physical-phone acceptance.
 
 - The server wires **no proposer** into guide answers: `source` is `L0`
   (deterministic package answer), `cache` (previously accepted answer) or
@@ -75,7 +78,7 @@ A drawing job that ends `NEEDS_CAPTURE` shows **Request this view on the phone**
 `ViewRequest` (top-down over the A3 sheet, label "<part>, <view side> up, on the sheet, hands off") into the guided
 session it drives; the phone adopts it and shoots through its normal gates. On delivery the still is fetched with its
 hash re-checked, stored under `drawings/captures/` with an evidence record, and a follow-up job
-`<job>-capture-<time>` draws from that still. Request, evidence and part binding stay separate records
+`<job>-capture-<request hash>` draws from that still. Request, evidence and part binding stay separate records
 (`captures.py`); the photo never proves which part it shows — the operator confirms the follow-up drawing.
 
 One-time setup (not part of the normal flow): `<workspace>/capture-settings.json` with `receiver_url` (https),
@@ -101,12 +104,24 @@ Writes (POST, foreign `Origin` refused with 403): `/api/questions/next`,
 Ids are plain names resolved inside the workspace root; paths from the browser
 are rejected. The server refuses non-loopback `--host` values.
 
-## Explosion view (adapter ready, routes not wired)
+## Explosion view
 
 `explosion.py` and `web/explosion.html|js|css` show the schematic explosion drawing composed by
 `tools/explosion` (click a part for its evidence, assembled/exploded toggle, operator layer
-confirmation). `server.py` does not serve them yet: the routes and exact signatures are in the
-`explosion.py` docstring and in `docs/integration/EXPLOSION-VIEW-01.md`.
+confirmation). `server.py` serves `/explosion.html?session=<id>`, `/api/explosion`,
+`/api/explosion/file` and `/api/explosion/layout`. Selected-part help uses `/api/parts/ask` and
+explicit `/api/parts/link`; origin and storage remain separate. The contracts are in the
+`explosion.py` docstring and `docs/integration/EXPLOSION-VIEW-01.md`.
+
+A part link remains valid when memory is extended append-only. Replacing the memory with a different
+history makes the link stale even if that history reuses a part ID; replacement requires an explicit
+operator decision. The selector starts without a selected part and offers **No current record matches**.
+Jobs held at `NEEDS_CAPTURE` or `NEEDS_REVIEW` do not enter the explosion even if an old binding exists.
+
+Interrupted capture follow-up starts use a stable request-bound job ID. `follow_up_starting` is polled
+for recovery; `follow_up_pending_recovery` stops automatic polling and explains what must be inspected.
+Legacy capture requests without the new source/spec binding are refused or held for recovery, never
+silently rebound. A fresh request is required; original records need no in-place migration.
 
 ## Stale demo (optional)
 
@@ -139,7 +154,9 @@ still-stale binding).
   confirmation, and no technical image check exists in this repo to produce
   the former — the UI submits no reviews and synthesizes none. Gaps stay
   `open` or `needs_review` with the planner's reason. No image analysis, no
-  camera control, no `request_view` is wired; see `INTEGRATION.md`.
+  generic capture-gap closure is wired. The separate drawing `NEEDS_CAPTURE` loop above does request
+  a guided phone view; its receipt never proves part identity. `INTEGRATION.md` describes the older
+  offline gap evaluator boundary.
 - Guide/selection/assembly answers are only as good as the session evidence;
   a selection is not a frame→record confirmation or assembly approval.
 

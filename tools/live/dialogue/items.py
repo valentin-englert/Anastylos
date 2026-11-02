@@ -23,6 +23,7 @@ _EMPTY = re.compile(r"^\W*(?:nothing|none|empty|no part|no parts|it'?s empty|(?:
 _WORD = re.compile(r"[a-z0-9']+")
 MAX_NAME_WORDS = 4
 UNKNOWN = "unknown"
+_REPEATED_CVC = re.compile(r"(?i)(?<![aeiou])([bcdfghjklmnpqrstvwxz][aeiou][bcdfghjklmnpqrstvwxz])\1$")
 
 
 def words(text: str) -> list[str]:
@@ -47,6 +48,23 @@ def classify_plain(text: str) -> str | None:
     return None
 
 
+def classify_confirmation(text: str) -> str | None:
+    """Accept only unhedged yes/no phrases; mixed or qualified answers need another turn."""
+    plain = classify_plain(text)
+    if plain in ("yes", "no"):
+        return plain
+    tokens = words(text)
+    if not tokens:
+        return None
+    positive = {"yes", "yeah", "yep", "correct", "right", "sure", "ok", "okay", "affirmative"}
+    negative = {"no", "nope", "wrong", "incorrect", "negative"}
+    if set(tokens) <= positive or tokens == ["that's", "right"]:
+        return "yes"
+    if set(tokens) <= negative:
+        return "no"
+    return None
+
+
 def _forms(word: str) -> set[str]:
     return {word, word + "s", word[:-1] if word.endswith("s") else word}
 
@@ -66,6 +84,8 @@ def clean_name(name: str | None, said: set[str]) -> str | None:
     tokens = words(text)
     if not tokens or len(tokens) > MAX_NAME_WORDS or not _in_transcript(text, said):
         return None
+    if _has_repeated_cvc(tokens):
+        return None
     if any(t.rstrip("s") in QUESTION_WORDS or t in QUESTION_WORDS for t in tokens):
         return None
     content = [t for t in tokens if t not in FILLER and t not in NUMBERS]
@@ -81,9 +101,21 @@ def clean_origin(origin: str | None, said: set[str]) -> str | None:
     tokens = words(text)
     if not tokens or len(tokens) > 5 or not _in_transcript(text, said):
         return None
+    if _has_repeated_cvc(tokens):
+        return None
     if tokens[0] in QUESTION_WORDS or all(t in FILLER for t in tokens):
         return None
     return UNKNOWN if text.lower() in ("unknown", "don't know") else text
+
+
+def _has_repeated_cvc(tokens: list[str]) -> bool:
+    """Flag an immediately repeated consonant-vowel-consonant fragment for clarification, without normalizing it."""
+    return any(_REPEATED_CVC.search(token) for token in tokens)
+
+
+def has_repeated_cvc_fragment(text: str) -> bool:
+    """Whether the raw transcript contains a repeated syllable-like artifact that needs clarification."""
+    return _has_repeated_cvc(words(text))
 
 
 def check_items(raw: list[dict], text: str) -> list[dict]:

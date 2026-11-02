@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>Explosion view</h1>
-  <p class="banner">Schematic layout. Layer order is what the operator confirmed; the spacing is layout only and implies no height, mounting point or assembly path. Dashed amber outlines are unconfirmed.</p>
+  <p class="banner">Image-derived outlines. Layer order is a proposal until the operator confirms it; spacing is layout only and implies no height, mounting point or assembly path. Dashed amber outlines are unconfirmed.</p>
   <p><a href="/" id="back-link">Back to the session</a> <span id="session-name"></span></p>
 </header>
 
@@ -72,9 +72,17 @@
         <p class="state" id="part-help-answer" role="status"></p>
         <ul id="part-help-details" class="note-list"></ul>
         <div id="part-help-link" hidden>
-          <label for="part-help-candidate">This drawing shows the recorded part</label>
-          <select id="part-help-candidate"></select>
-          <button type="button" id="part-help-link-button">Link drawing to this part</button>
+          <p class="hint" id="part-help-link-guidance"></p>
+          <label for="part-help-candidate">Choose a current recorded part</label>
+          <select id="part-help-candidate" required>
+            <option value="" selected>Choose a current recorded part…</option>
+            <option value="__no_current_match__">No current record matches — leave this drawing unlinked</option>
+          </select>
+          <label for="part-help-replace" class="inline" id="part-help-replace-label" hidden>
+            <input type="checkbox" id="part-help-replace"> Replace the stale drawing link with this current part
+          </label>
+          <p class="hint" id="part-help-link-state" role="status"></p>
+          <button type="button" id="part-help-link-button" disabled>Link drawing to selected current part</button>
         </div>
       </section>
     </div>

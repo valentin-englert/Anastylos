@@ -14,8 +14,8 @@ site inventory. Separately, the capture path has bounded physical
 validation: guided auto-shutter on Xiaomi (GUIDE-03), device
 calibration and camera gates (CAL-01, CAMERA-01/02), authenticated
 Receiver transfer (HARDWARE-03), and real-photo change-detection runs
-(HARDWARE-01/02). All other vision results below come from synthetic
-fixtures and unit tests.
+(HARDWARE-01/02). Drawing jobs also have bounded development-photo/model
+evidence in their status row. These records establish no general vision accuracy.
 
 HARDWARE-03 (`docs/integration/HARDWARE-03.md`, source `bcea6310`): real
 camera, seven ArUco IDs, positive pose age, persisted captures and authenticated
@@ -43,10 +43,10 @@ licensing or pending physical gates.
 - Stable tiers: `assembly-memory` and the capture validator are
   standard-library-only; vision modules use the pinned
   OpenCV + NumPy environment (`calibration/requirements.txt`).
-- Offline by default: product Python has no network imports except
-  the three isolated carve-outs documented under "Offline and future
-  AI-provider boundaries" (`sam-tracking` client, workstation
-  Receiver, `tools/live/providers/meta.py`); the capture PWA's only
+- Offline by default: product network access stays behind the existing
+  isolated clients documented under "Offline and future AI-provider
+  boundaries" (Meta/SAM, voice, guided capture and workstation Receiver);
+  this does not authorize additional network boundaries. The capture PWA's only
   network use is same-origin service-worker caching of its app shell
   plus paired-receiver transfer per `SYNC_PROTOCOL.md`.
 - Licensing is deliberately deferred: no root `LICENSE` file, no
@@ -111,6 +111,44 @@ flowchart TD
 
 ## Module / status index
 
+### 2026-11-02 product continuation
+
+Verified local and remote main: `f9c37dd94d68c332bdea37ce88f8cf5e958b372e`, including
+Northstar merge `9291afef`. Current fixes are on **`codex/mvp-lead`**, not main;
+no push or main merge was performed. `HANDOFF.md` is the current continuation record.
+
+The authoritative current source is **`video-20261102-173652-6b0b2e13`**, not the
+older FULL-01 drawing workspace. Its real video → processing → voice/dialogue →
+confirmed memory run is existing bounded evidence. The subsequent fixes have
+offline replay evidence on copied journal/memory prefixes (six targeted cases,
+before 0/6, after 6/6), not a fresh physical-phone acceptance.
+All 42 recorded inputs also passed a diagnostic replay with no write lacking an
+unambiguous affirmative; changed questions prevent interpreting that as full
+semantic acceptance of the entire historical conversation.
+
+Current branch checks: session UI **165 PASS**, live **87 PASS**, agent **119 PASS**,
+live integration **12 PASS**, drawing proof **47 PASS**, explosion **26 PASS**.
+Receiver lane check: **209 run, 206 PASS, 3 SKIP**. Browser checks cover selection,
+separate origin/storage, no-match and reload on synthetic fixtures, plus the real
+source-session drawing review page. They are not physical capture-loop acceptance.
+
+The existing Muse/SAM pipeline was run on the new source in separately bounded,
+logged batches: **8 Muse requests, 4 SAM operations**, no transport failures.
+Frame choice found separated assemblies, but developer visual inspection rejected
+the four resulting outlines. A complete real three-assembly explosion remains
+**PENDING_EVIDENCE**; do not replace it with synthetic geometry or request another
+owner capture merely to avoid diagnosing these segmentation results. No original
+session/memory bytes changed and no real drawing/part/layer confirmation was made.
+
+New enforced boundaries: unresolved-cell reconsideration creates a fresh revision;
+only an explicit read-back affirmative writes memory. Surplus detector questions
+are not retried. Capture follow-ups are session/request/revision/spec-bound and
+stop for recovery when a worker start is uncertain. Explosion proposals/composition
+exclude technical `NEEDS_CAPTURE` and `NEEDS_REVIEW` results. Part links require
+the linked memory snapshot to remain an exact byte prefix of the current log;
+reusing a part ID in another memory cannot transfer a link. No frozen E3-B file,
+evidence schema, calibration threshold or parser was modified.
+
 Status definitions (hygiene gate 01):
 
 - `implemented`: code and relevant isolated tests exist.
@@ -140,7 +178,7 @@ review items (8 SPDX annotations, grouped into 6 narrative items in
 `THIRD_PARTY_NOTICES.md`). No real-hardware validation reported.
 That record is historical and preserved as such.
 
-Consolidation baseline (2026-10-31, current main): the accepted
+Consolidation baseline (2026-10-31, historical): the accepted
 Android MVP (`integration/spatial-capture-v1` @ `b65cc0a0`) and Core
 ingestion MVP (`integration/core-ingest-v1` @ `66580106`) were merged
 into main via a tested staging branch
@@ -153,9 +191,9 @@ Android 443/461 (18 pre-existing `GuidanceViewModelTest` failures at
 the frozen checkpoint), lint/assemble clean, compliance 0 errors.
 Full record in [`INTEGRATION-STATUS.md`](INTEGRATION-STATUS.md).
 
-Test counts below are per-module
-(`python -m unittest discover -s tests` from the module directory
-unless noted) and match the current tree's test methods exactly.
+Test counts below are dated per-module records, not a claim that every suite
+was rerun on the current tree. Run `python -m unittest discover -s tests`
+from the module directory unless noted.
 
 | Module | Responsibility | Entry point | Status | Tests |
 |---|---|---|---|---|
@@ -464,6 +502,16 @@ never be set by analysis code:
 
 ## Offline and future AI-provider boundaries
 
+Northstar product paths (merged into main at `9291afef`, 2026-11-02) also use
+these existing boundaries: `tools/capture-control/control_client.py` for the
+paired guided receiver; `tools/live/providers/transcribe.py` for audio transcription;
+`tools/live/dialogue/executor.py` reuses the Meta transport for Muse's strict-JSON
+dialogue interpretation; and `tools/drawing-proof/` reuses the SAM client for
+Muse frame/box proposals and SAM masks. These are configured online product
+paths, not offline tests. Read-back confirmation, evidence checking and state
+transitions remain deterministic. The historical provider inventory below
+describes the earlier advisory seam; it is not an exhaustive current runtime map.
+
 - Product Python is offline except three explicit, isolated carve-outs:
   `sam-tracking/anastylos_sam/client.py` (outbound, stdlib `urllib`
   only, imported lazily by `sam.py` live paths alone) and
@@ -552,9 +600,12 @@ What "integrated" concretely means today — and does not:
   cross-module file contracts exercised (`assembly-memory` ⇄
   `change-detection` integration test; capture TS↔Python round-trip
   test), compliance inventory consistent.
-- Does not mean: a single runnable pipeline. There is no top-level
-  orchestrator on main, no shared runner, and no end-to-end
-  real-photo run. All recognizers write only to their own `--out`
+- Does not mean full MVP acceptance. Main has the `tools/agent/` product
+  orchestrator, `tools/session-ui/` video/dialogue/drawing/capture/selection
+  adapters and `tools/demo/start_stack.py`. The real phone-video and voice
+  development run is recorded in `HANDOFF.md`; physical capture-to-follow-up
+  and the real three-assembly explosion remain pending. Specialized recognizers
+  write only to their own `--out`
   dir and none writes to memory; wiring them into memory import is
   future work requiring per-module contract decisions — not a bulk
   edit. The producer paths into `memory.jsonl` today are
@@ -571,7 +622,9 @@ What "integrated" concretely means today — and does not:
   localhost offline session page; UI report export and capture-needs display
   wired, gap closure locked for lack of a technical image check). Fixture-
   and development-data-tested only; model-driven and physical end-to-end
-  validation pending. `new`/`phase`/`declare`/return checks stay CLI-only.
+  validation was pending at that checkpoint. Northstar subsequently added phone
+  video processing, model-first spoken cell interpretation and confirmed closing
+  declarations. Generic `new`/`phase`/return checks stay CLI-only.
 - `custody-ledger/` (real-video observer, adaptive discovery, linker)
   is in `main` since `eb9744a9` (2026-10-29), byte-identical to
   `feat/custody-v1.3` @ `45d7440d`. Frozen versions stay on their

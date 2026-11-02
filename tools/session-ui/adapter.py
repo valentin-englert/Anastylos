@@ -54,6 +54,7 @@ import selected_guide  # noqa: E402
 import selection  # noqa: E402
 import states as st  # noqa: E402  (tools/live)
 from lock import LockHeld  # noqa: E402
+from journal import Journal  # noqa: E402
 from state import SessionError, SessionState  # noqa: E402
 
 SELECTIONS_DIR = "selections"
@@ -169,6 +170,11 @@ def question_overview(root: Path, session_id: str) -> dict:
     """Per-question id, kind, phase and latest state; read-only (no prompt is opened)."""
     state = _load_state(root, session_id)
     states = ask_loop.question_states(state)
+    reasons = {}
+    journal = Journal(state.root / "live" / "journal.jsonl")
+    for record in journal.load():
+        if record.get("kind") == "question_state" and record.get("state"):
+            reasons[record["question_id"]] = record.get("reason")
     questions: dict[str, dict] = {}
     for phase in state.doc["phases"]:
         if phase["status"] != "done":
@@ -185,7 +191,7 @@ def question_overview(root: Path, session_id: str) -> dict:
             if qid:
                 questions[qid] = {"id": qid, "kind": question.get("kind"),
                                   "phase": phase["tag"], "cell": question.get("cell"),
-                                  "state": states.get(qid, "OPEN")}
+                                  "state": states.get(qid, "OPEN"), "reason": reasons.get(qid)}
     return {"questions": [questions[qid] for qid in sorted(questions)], "states": states}
 
 
@@ -380,7 +386,27 @@ def question_defer(root: Path, session_id: str, qid: str, reason: str) -> dict:
     return _stopped(step)
 
 
-def closing_write(root: Path, session_id: str, note_id: str, labels: list[str], location: str, said: str) -> dict:
+def question_reopen(root: Path, session_id: str, qid: str) -> dict:
+    """Reconsider a queued unresolved cell; no terminal op key or memory is changed."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            try:
+                return _prompt_payload(coordinator.reconsider(qid), qid)
+            except st.TransitionError as exc:
+                raise AdapterError(str(exc), 409) from exc
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
+def closing_write(root: Path, session_id: str, note_id: str, labels: list[str], location: str, said: str,
+                  *, origins: list[str | None] | None = None) -> dict:
     """Write operator-stated parts of the end-of-video questions after their read-back + yes (same writer path as answers)."""
     state = _load_state(root, session_id)
 
@@ -390,7 +416,7 @@ def closing_write(root: Path, session_id: str, note_id: str, labels: list[str], 
             if coordinator.stopped:
                 raise ask_loop.Stopped(coordinator.stopped)
             digest = hashlib.sha256(said.encode("utf-8")).hexdigest()
-            results = coordinator.write_operator_notes(note_id, labels, location, digest, said)
+            results = coordinator.write_operator_notes(note_id, labels, location, digest, said, origins=origins)
             ok = all(r["status"] in ("committed", "already_committed") for r in results)
             return {"status": "committed" if ok else "failed", "results": results}
         finally:

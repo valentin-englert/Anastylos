@@ -26,7 +26,7 @@ status shown. ``Handler.workspace_root`` is the workspace root, as for the other
 ``GET /api/parts/link-candidates?session=<id>&job=<job>`` -> ``link_candidates(root, session, job)``
     200 ``{"schema": "anastylos-drawing-part-candidates@1", "job", "spec_part", "drawing_sha256",
     "memory_sha256", "link": <part-link record> | null, "link_state": "none" | "linked" |
-    "stale_drawing" | "stale_part", "auto_link": false, "candidates": [{"part_id", "label",
+    "stale_drawing" | "stale_part" | "stale_memory", "auto_link": false, "candidates": [{"part_id", "label",
     "origin_description", "storage_location", "score", "matched_tokens", "suggested"}]}``.
     ``candidates`` lists every current declared part (best match first); ``suggested`` only marks a
     label that shares words with ``spec_part``. 404 unknown session/job.
@@ -72,8 +72,8 @@ LINK_FILE = "part-link.json"
 
 # ------------------------------------------------------------------ fixed operator-facing wording
 
-NEEDS_LINK = ("This drawing is not linked to a recorded part yet. Say which recorded part it shows; "
-              "the drawing alone does not prove it.")
+NEEDS_LINK = ("This drawing is not linked to a current recorded part. Which current part, if any, does it show? "
+              "Leave it unlinked when no current record matches.")
 LINK_STALE = ("The link between this drawing and its recorded part no longer holds ({reason}). "
               "Link the drawing to a part again.")
 COARSE_ORIGIN = ("The recorded origin is only a description of a place, not a specific screw boss, connector or "
@@ -116,7 +116,13 @@ def _read_memory(state) -> dict:
     except CorruptLogError as exc:
         raise AdapterError("The session memory has malformed or duplicate records; no part can be linked.", 409) from exc
     superseded = {e["supersedes"] for e in events if e.get("supersedes")}
-    return {"sha256": _sha256(data), "by_id": {e["id"]: e for e in events}, "superseded": superseded,
+    prefix = hashlib.sha256()
+    history_sha256 = set()
+    for line in data.splitlines(keepends=True):
+        prefix.update(line)
+        history_sha256.add(prefix.hexdigest())
+    return {"sha256": _sha256(data), "history_sha256": history_sha256,
+            "by_id": {e["id"]: e for e in events}, "superseded": superseded,
             "parts": [e for e in events if e.get("type") == "declared_removal" and e["id"] not in superseded],
             "storage": {e["target_id"]: e for e in events if e.get("type") == "storage_link"
                         and e["id"] not in superseded}}
@@ -167,6 +173,8 @@ def _link_state(link: dict | None, context: dict, memory: dict) -> tuple[str, st
         return "stale_drawing", "the drawing changed after it was linked"
     if link["part"]["id"] not in {e["id"] for e in memory["parts"]}:
         return "stale_part", "the recorded part was replaced or removed in memory"
+    if link.get("memory_sha256") not in memory["history_sha256"]:
+        return "stale_memory", "the session memory does not extend the snapshot used for this link"
     return "linked", None
 
 
@@ -214,7 +222,7 @@ def link_part(root: Path, session_id: str, job: str, part_id: str, supersede: bo
     if event is None:
         raise AdapterError(f"{part_id!r} is not a current declared part in the session memory.", 409)
     existing = _read_link(context["dir"])
-    if existing and existing["part"]["id"] == part_id and existing["drawing_sha256"] == context["drawing_sha256"]:
+    if existing and existing["part"]["id"] == part_id and _link_state(existing, context, memory)[0] == "linked":
         return {**existing, "already_recorded": True}
     if existing and not supersede:
         raise AdapterError(f"This drawing is already linked to “{existing['part']['label']}” ({existing['part']['id']}); "

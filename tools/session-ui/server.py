@@ -28,6 +28,7 @@ from typing import Callable
 import adapter
 import assembly_help
 import captures
+import dialogue_flow
 import drawings
 import explosion
 import videos
@@ -202,7 +203,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
                   "/api/explosion/layout": self._api_explosion_layout,
-                  "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save, "/api/videos/process": self._api_video_process}
+                  "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
+                  "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -245,6 +247,16 @@ class Handler(BaseHTTPRequestHandler):
         except dialogue_settings.SettingsError as exc:
             raise AdapterError(str(exc), 400) from None
         self._send_json(dialogue_settings.public_view(Handler.workspace_root))
+
+    def _api_dialogue_turn(self) -> None:
+        """One spoken turn of the question round (the phone voice path posts here): {session, command|text}."""
+        body = self._read_json()
+        session_id = str(body.get("session", ""))
+        command, text = body.get("command"), body.get("text")
+        if not session_id or (command is None and not isinstance(text, str)) or command not in (None, "next_question"):
+            raise AdapterError("Send session and either command next_question or text.", 400)
+        adapter.resolve_session(Handler.workspace_root, session_id)
+        self._mutate(session_id, lambda: dialogue_flow.flow_for(Handler.workspace_root, session_id, adapter).turn(command, text))
 
     def _api_video_process(self) -> None:
         """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""

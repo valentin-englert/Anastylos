@@ -1,15 +1,26 @@
 {
   "schema": "anastylos-question-catalog@1",
   "slots": {
-    "part_removed": ["where"],
+    "part_removed": [
+      "where"
+    ],
     "origin_unseen": [],
-    "part_stored": ["name", "where"],
+    "part_stored": [
+      "name",
+      "where"
+    ],
     "unclear_answer": [],
     "defer_to_desktop": [],
     "need_photo": [],
-    "read_back": ["core"],
+    "read_back": [
+      "core"
+    ],
     "recorded": [],
-    "ack": []
+    "ack": [],
+    "bundle_same": [
+      "where"
+    ],
+    "bundle_list": []
   },
   "phrases": {
     "part_removed": {
@@ -179,9 +190,64 @@
       ]
     },
     "ack": {
-      "serious": ["Okay.", "Understood.", "Got it.", "One moment."],
-      "playful": ["Okay!", "Got it.", "On it.", "One sec."],
-      "unhinged": ["Okay, buddy.", "Got it, boss.", "On it!", "Hold that thought."]
+      "serious": [
+        "Okay.",
+        "Understood.",
+        "Got it.",
+        "One moment."
+      ],
+      "playful": [
+        "Okay!",
+        "Got it.",
+        "On it.",
+        "One sec."
+      ],
+      "unhinged": [
+        "Okay, buddy.",
+        "Got it, boss.",
+        "On it!",
+        "Hold that thought."
+      ]
+    },
+    "bundle_same": {
+      "serious": [
+        "I see several small parts in {where}. Are they all the same?",
+        "There are several small parts in {where}. Are they all the same?",
+        "{where} holds several small parts. Are they all the same?",
+        "I count several parts in {where}. Are they all the same?"
+      ],
+      "playful": [
+        "I see several small parts in {where}. Are they all the same?",
+        "Whoa, a little crowd in {where}! Are they all the same?",
+        "{where} is getting busy with small parts. Are they all the same?",
+        "Several small parts hanging out in {where}. Are they all twins?"
+      ],
+      "unhinged": [
+        "I see several small parts in {where}. Are they all the same?",
+        "Buddy, {where} is a party of tiny parts! Are they all the same?",
+        "Look at that little gang in {where}. Are they all the same, you rascal?",
+        "{where} has a whole squad of small parts. Identical, or a mixed bag?"
+      ]
+    },
+    "bundle_list": {
+      "serious": [
+        "Please name them one by one, in the order you took them out.",
+        "Then please name them one by one, in the order you took them out.",
+        "Understood. Name each part in the order you took them out.",
+        "Please list them in the order you took them out."
+      ],
+      "playful": [
+        "Okay, then name them one by one, in the order you took them out.",
+        "Got it, a mixed bag! List them in the order you took them out.",
+        "Mixed crew, then. Name each one in the order you took them out.",
+        "Alright, introduce them one by one, in the order you took them out."
+      ],
+      "unhinged": [
+        "Okay, then name them one by one, in the order you took them out.",
+        "A mixed bag, my friend! List them in the order you took them out.",
+        "Fine, fine, introduce the whole gang one by one, in the order you took them out.",
+        "Roll call, buddy! Name each one in the order you took them out."
+      ]
     }
   }
 }

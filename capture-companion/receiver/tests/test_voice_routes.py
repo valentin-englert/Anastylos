@@ -74,7 +74,7 @@ class VoiceCase(GuidedCase):
             encoding="utf-8")
         self.state.voice_config = voice.VoiceConfig(
             transcriber=[sys.executable, "-B", str(script)], session_ui_port=self.ui.port,
-            bindings_path=self.data / voice.BINDINGS_FILE)
+            bindings_path=self.data / voice.BINDINGS_FILE, dialogue=False)
         self.source_id, self.token, _legacy = self.enroll_source()
         self.session_id = self.open_session(self.bootstrap(), self.source_id)["session_id"]
         (self.data / voice.BINDINGS_FILE).write_text(json.dumps({self.session_id: "demo-01"}), encoding="utf-8")
@@ -141,6 +141,24 @@ class InputTests(VoiceCase):
         self.assertEqual(self.say({"kind": "command", "command": "delete_memory"})[0], 400)
         self.assertEqual(self.say({"kind": "input", "operator_input": {"source": "typed", "text": "x"}})[0], 400)
         self.assertEqual(self.say({"kind": "shout"})[0], 400)
+
+    def test_dialogue_turn_is_relayed_and_unhandled_text_falls_back_to_the_guide(self):
+        self.state.voice_config.dialogue = True
+        said = {"text": "I see several small parts in cell 1. Are they all the same?", "kind": "question", "basis_ref": "k1"}
+        self.ui.replies = {"/api/dialogue/turn": {"handled": True, "speak": said}}
+        _, first, _ = self.say({"kind": "command", "command": "next_question"})
+        self.assertEqual(first["speak"], said)
+        self.assertEqual(self.ui.calls[0], ("/api/dialogue/turn", {"session": "demo-01", "command": "next_question"}))
+        _, again, _ = self.say({"kind": "command", "command": "repeat"})
+        self.assertEqual(again["speak"], said)
+        _, reply, _ = self.say(self.text("yes, all screws"))
+        self.assertEqual(self.ui.calls[1], ("/api/dialogue/turn", {"session": "demo-01", "text": "yes, all screws"}))
+        self.assertEqual(reply["speak"], said)
+        self.ui.replies = {"/api/dialogue/turn": {"handled": False},
+                           "/api/guide/ask": {"accepted": True, "text": "It goes into cell 4.", "package_sha256": "p"}}
+        _, guide, _ = self.say(self.text("where does it go"))
+        self.assertEqual(guide["speak"]["kind"], "guide_verified")
+        self.assertEqual([p for p, _ in self.ui.calls][-2:], ["/api/dialogue/turn", "/api/guide/ask"])
 
     def test_forwarding_table_question_read_back_commit_repeat(self):
         self.ui.replies = {

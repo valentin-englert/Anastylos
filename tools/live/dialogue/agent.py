@@ -99,14 +99,32 @@ class DialogueAgent:
             result = {**base, "forward": text.strip(), "operator_said": said, "intent": intent}
         elif intent in ("unsure", "skip"):
             result = {**base, **self._defer(event_id, state, text, f"operator {intent}")}
-        elif state["reasks"] < MAX_REASKS:
-            state["reasks"] += 1
-            result = {**base, "speak": self._say("unclear_answer", event_id)[0], "type": "unclear_answer"}
         else:
-            result = {**base, **self._defer(event_id, state, text, "answer not understood twice")}
+            result = {**base, **self.misunderstood(event_id, text)}
         result.update(source=source, dropped=dropped,
                       timing=self._timing(marks, arrived, acked, muse_done, self._clock()))
         return result
+
+    def misunderstood(self, event_id: str, text: str) -> dict:
+        """First time: the one re-ask. Second time: the defer line, an open item, and the event is closed."""
+        state = self._event(event_id)
+        if state["reasks"] < MAX_REASKS:
+            state["reasks"] += 1
+            return {"speak": self._say("unclear_answer", event_id)[0], "type": "unclear_answer", "closed": False}
+        return self._defer(event_id, state, text, "answer not understood twice")
+
+    def defer(self, event_id: str, text: str, reason: str) -> dict:
+        return self._defer(event_id, self._event(event_id), text, reason)
+
+    def reset_reasks(self, event_id: str) -> None:
+        """A new stage of the same event (e.g. the read-back after the answer) gets its own single re-ask."""
+        self._event(event_id)["reasks"] = 0
+
+    def say(self, kind: str, event_id: str, slots: dict | None = None) -> str:
+        return self._say(kind, event_id, slots)[0]
+
+    def set_persona(self, persona: str) -> None:
+        self._persona = persona
 
     def _defer(self, event_id: str, state: dict, text: str, reason: str) -> dict:
         state["status"] = "deferred"

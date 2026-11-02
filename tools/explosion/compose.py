@@ -33,7 +33,7 @@ OUTPUT_DIR = "explosion"
 MODES = ("exploded", "assembled")
 MARGIN, HEADER_H, LABEL_BAND, LAYER_GAP, LEGEND_W, LEGEND_ROW, FOOTER_H, MIN_CONTENT_W = 10.0, 33.0, 11.0, 22.0, 80.0, 24.0, 46.0, 90.0
 
-SCHEMATIC_NOTE = "SCHEMATIC EXPLOSION: layer order as set by the operator; spacing between layers is layout only."
+SCHEMATIC_NOTE = "EXPLOSION LAYOUT: layer order requires operator confirmation; spacing between layers is layout only."
 NO_CLAIM_NOTE = "No height, mounting point or assembly path is implied."
 SCALE_NOTE = "Outlines: mm on each drawing's own sheet plane, one uniform scale, not registered to each other; not part dimensions."
 ASSEMBLED_NOTE = "Assembled mode only centres the outlines on their bounding boxes; it is not an alignment."
@@ -77,6 +77,8 @@ def _layer_state(layer: dict, evidence: jobs.JobEvidence) -> tuple[str | None, l
         return evidence.outline_error or "no outline", []
     if evidence.state != "done":
         return f"drawing job state is {evidence.state}", []
+    if evidence.status not in jobs.DRAWABLE_STATUSES:
+        return f"drawing job requires technical review ({evidence.status})", []
     reasons = []
     if evidence.binding_state == "none":
         reasons.append("drawing not bound by operator")

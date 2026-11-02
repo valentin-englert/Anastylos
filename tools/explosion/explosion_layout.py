@@ -105,7 +105,8 @@ def _candidates(session_dir: Path) -> list[jobs.JobEvidence]:
     best: dict[tuple, jobs.JobEvidence] = {}
     for name in sorted(jobs.list_job_names(session_dir)):  # ascending: a later name (newer timestamp) replaces an earlier one
         evidence = jobs.read_job(session_dir, name)
-        if evidence.state != "done" or evidence.outline is None or evidence.binding_state == "rejected":
+        if (evidence.state != "done" or evidence.status not in jobs.DRAWABLE_STATUSES
+                or evidence.outline is None or evidence.binding_state == "rejected"):
             continue
         key = (evidence.part or _STAMP.sub("", name), evidence.scope)
         held = best.get(key)

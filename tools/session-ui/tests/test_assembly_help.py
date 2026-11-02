@@ -188,6 +188,27 @@ class LinkTest(HelpCase):
         self.assertEqual(renewed["drawing_sha256"], sha(job / "drawing.svg"))
         self.assertEqual(assembly_help.link_candidates(self.root, "s1", "front-1")["link_state"], "linked")
 
+    def test_replacing_memory_cannot_transfer_a_link_by_reusing_the_same_part_id(self):
+        self.job("front-1", "back screw")
+        self.link("front-1", "dec-0001")
+        replacement = [dict(event) for event in EVENTS]
+        next(event for event in replacement if event["id"] == "dec-0001")["operator_label"] = "different physical part"
+        self.memory.write_text("".join(json.dumps(event) + "\n" for event in replacement), encoding="utf-8")
+        self.assertEqual(assembly_help.link_candidates(self.root, "s1", "front-1")["link_state"], "stale_memory")
+        with self.assertRaisesRegex(AdapterError, "already linked"):
+            self.link("front-1", "dec-0001")
+        replaced = self.link("front-1", "dec-0001", supersede=True)
+        self.assertEqual(replaced["seq"], 2)
+        self.assertEqual(replaced["part"]["label"], "different physical part")
+
+    def test_appending_memory_preserves_a_link_to_the_unchanged_part(self):
+        self.job("front-1", "back screw")
+        self.link("front-1", "dec-0001")
+        event = {**EVENTS[0], "id": "phase-0002", "label": "P2"}
+        with self.memory.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(event) + "\n")
+        self.assertEqual(assembly_help.link_candidates(self.root, "s1", "front-1")["link_state"], "linked")
+
 
 class AskTest(HelpCase):
     def setUp(self):

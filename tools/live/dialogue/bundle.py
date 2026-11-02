@@ -77,3 +77,8 @@ def combined_read_back(where: str, names: list[str], origins: list[str]) -> str:
     """One sentence for the whole bundle; every part keeps its own name and origin wording."""
     parts = "; ".join(f"“{name}” from “{origin}”" for name, origin in zip(names, origins))
     return f"I will record {len(names)} parts in {where}: {parts}. Is that correct? Answer yes or no."
+
+
+def split_items(text: str) -> list[str]:
+    """The parts named in one list answer ('front shell, back shell and PCB'), each in the operator's words."""
+    return [part.strip(" .") for part in _SEPARATORS.split(text or "") if part.strip(" .")]

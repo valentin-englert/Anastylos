@@ -8,6 +8,7 @@ coordinator question and is committed individually after the combined read-back.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -18,7 +19,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
 
 from catalog.selector import where_words  # noqa: E402
-from dialogue import bundle, settings  # noqa: E402
+from dialogue import bundle, settings
+from dialogue.bundle import split_items as bundle_split  # noqa: E402
 from dialogue.agent import DialogueAgent  # noqa: E402
 from dialogue.executor import _NOISE, Executor, extract_by_rule  # noqa: E402
 
@@ -214,7 +216,8 @@ class DialogueFlow:
 
     # ------------------------------------------------------------------ end of the video's dialogue
     # What is said here has no coordinator question kind (the frozen answer plan knows only parts). It goes through
-    # the same read-back + "yes", then into ``dialogue-notes.jsonl`` as operator-said notes; memory is not written.
+    # the same read-back + "yes"; only then the coordinator's writer records each named part as operator-stated
+    # (``declared_removal`` + ``storage_link``, stable op key, write-ahead, recovery). ``dialogue-notes.jsonl`` keeps the audit line.
 
     def _closing_assemblies_ask(self) -> dict:
         self.current = {"mode": "closing", "stage": "assemblies", "event": "closing-assemblies"}
@@ -230,9 +233,17 @@ class DialogueFlow:
         self.current = None
         return _speak(f"{lead} {ALL_DONE}".strip(), "status")
 
+    def _write_note(self, kind: str, labels: list[str], location: str, said: dict) -> bool:
+        key = hashlib.sha256(json.dumps([kind, labels, location], ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+        reply = self.api.closing_write(self.root, self.session_id, f"CLOSE-{key}", labels, location, json.dumps(said, ensure_ascii=False))
+        if reply.get("status") != "committed":
+            return False
+        self._note(kind, said)
+        return True
+
     def _note(self, kind: str, said: dict) -> None:
         record = {"schema": "anastylos-dialogue-note@1", "kind": kind, "operator_said": said, "confirmed_by_operator": True,
-                  "memory_write": False, "wall_time": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
+                  "memory_write": True, "wall_time": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
         with open(self._notes, "a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -256,7 +267,9 @@ class DialogueFlow:
     def _closing_assemblies_confirm(self, text: str) -> dict:
         intent = extract_by_rule(text)["intent"]
         if intent == "yes":
-            self._note("assemblies_left", {"text": self.current["said"]})
+            labels = [re.sub(r"^(?:the|a|an)\s+", "", item, flags=re.I) for item in bundle_split(self.current["said"])]
+            if not self._write_note("assemblies_left", labels, "work area", {"text": self.current["said"]}):
+                return _speak(UNAVAILABLE, "status")
             return self._closing_missed_ask(self.agent.recorded_line("closing-assemblies"))
         if intent == "no":
             self.agent.reset_reasks("closing-assemblies")
@@ -299,7 +312,9 @@ class DialogueFlow:
     def _closing_missed_confirm(self, text: str) -> dict:
         intent = extract_by_rule(text)["intent"]
         if intent == "yes":
-            self._note("missed_part", {"cell": self.current["cell"], "part_name": self.current["name"]})
+            said = {"cell": self.current["cell"], "part_name": self.current["name"]}
+            if not self._write_note("missed_part", [self.current["name"]], f"cell-{self.current['cell']}", said):
+                return _speak(UNAVAILABLE, "status")
             return self._closing_finish(self.agent.recorded_line("closing-missed"))
         if intent == "no":
             self.current["stage"] = "missed_detail"

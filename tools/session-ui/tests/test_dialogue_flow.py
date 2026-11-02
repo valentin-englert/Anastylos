@@ -70,6 +70,10 @@ class FakeApi:
         return {"status": "asked_again", "stage": "answer", "question_id": qid, "op_key": qid, "text": "again?",
                 "screen_options": []}
 
+    def closing_write(self, root, sid, note_id, labels, location, said):
+        self.log.append(("closing_write", tuple(labels), location))
+        return {"status": "committed", "results": []}
+
     def question_defer(self, root, sid, qid, reason):
         self.log.append(("defer", qid, reason))
         self.state[qid] = "LEFT_UNRESOLVED"
@@ -183,7 +187,10 @@ class FlowTests(unittest.TestCase):
         read_back = self.say("the front shell and the back shell")
         self.assertIn("“the front shell and the back shell”", read_back)
         self.assertEqual(self.notes(), [])
+        self.assertEqual([c for c in self.api.log if c[0] == "closing_write"], [])  # nothing written before "yes"
         self.assertIn("miss", self.say("yes"))
+        self.assertEqual([c for c in self.api.log if c[0] == "closing_write"],
+                         [("closing_write", ("front shell", "back shell"), "work area")])
         self.assertIn("cell", self.say("yes"))
         read_back = self.say("it was in cell six, the start button")
         self.assertIn("missed in cell 6: “start button”", read_back)
@@ -191,7 +198,7 @@ class FlowTests(unittest.TestCase):
         notes = self.notes()
         self.assertEqual([n["kind"] for n in notes], ["assemblies_left", "missed_part"])
         self.assertEqual(notes[1]["operator_said"], {"cell": 6, "part_name": "start button"})
-        self.assertFalse(any(n["memory_write"] for n in notes))
+        self.assertEqual([c for c in self.api.log if c[0] == "closing_write"][1], ("closing_write", ("start button",), "cell-6"))
         self.assertIn("no more questions", self.say(command="next_question"))
         self.assertEqual([c for c in self.api.log if c[0] in ("answer", "confirm")], [])
 

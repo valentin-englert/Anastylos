@@ -59,7 +59,7 @@ have no proven cause (a peak/RMS log now exists, tag `AnastylosVoice`).
 - **Memory is append-only.** Corrections are new events with `supersedes`. Only operator confirmation confirms anything.
 - **Spoken output** is catalog or verified text only. A memory write needs a read-back and "yes".
 - **API tests:** bounded, logged batches with bounded retries; write the plan first; no silent retuning. A deviation from a plan is the owner's decision, and is recorded.
-- **Operator actions stay with the operator:** approving a phone pairing is a UI decision, never done by an agent. The owner also stops processes himself; the agent's permission classifier refused both.
+- **Operator actions stay with the operator:** approving a phone pairing is a UI decision, never done by an agent. The owner also stops processes; the agent's permission classifier refused both.
 
 ## 4. How the owner wants to work
 

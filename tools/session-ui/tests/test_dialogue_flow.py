@@ -28,7 +28,7 @@ class FakeApi:
     def __init__(self):
         self.cells = {"Q1": "cell-1", "Q2": "cell-1", "Q3": "cell-1", "Q4": "cell-2"}
         self.state = {q: "OPEN" for q in self.cells}
-        self.answers, self.log = {}, []
+        self.answers, self.log, self.write_origins, self.reasons = {}, [], [], {}
 
     def _next(self):
         for wanted in (("ASKED", "READ_BACK"), ("OPEN",)):
@@ -46,6 +46,20 @@ class FakeApi:
         self.state[q] = "ASKED"
         return {"stage": "answer", "question_id": q, "op_key": q, "text": f"Where did the part in {self.cells[q]} come from?",
                 "screen_options": []}
+
+    def question_overview(self, root, sid):
+        return {"questions": [{"id": q, "kind": "source_of_part", "cell": cell, "state": self.state[q],
+                               "reason": self.reasons.get(q)}
+                              for q, cell in self.cells.items()]}
+
+    def question_reopen(self, root, sid, qid):
+        if self.state[qid] != "LEFT_UNRESOLVED":
+            raise AssertionError(f"{qid} is not unresolved")
+        self.state[qid] = "ASKED"
+        revision = sum(1 for call in self.log if call[0] == "reopen" and call[1] == qid) + 2
+        self.log.append(("reopen", qid, revision))
+        return {"stage": "answer", "question_id": qid, "op_key": f"{qid}:{revision}",
+                "text": f"What is in {self.cells[qid]}?", "screen_options": []}
 
     def question_siblings(self, root, sid, qid):
         cell = self.cells[qid]
@@ -74,13 +88,15 @@ class FakeApi:
         return {"status": "asked_again", "stage": "answer", "question_id": qid, "op_key": qid, "text": "again?",
                 "screen_options": []}
 
-    def closing_write(self, root, sid, note_id, labels, location, said):
+    def closing_write(self, root, sid, note_id, labels, location, said, *, origins=None):
         self.log.append(("closing_write", tuple(labels), location))
+        self.write_origins.append(tuple(origins or [None] * len(labels)))
         return {"status": "committed", "results": []}
 
     def question_defer(self, root, sid, qid, reason):
         self.log.append(("defer", qid, reason))
         self.state[qid] = "LEFT_UNRESOLVED"
+        self.reasons[qid] = reason
         return {}
 
 
@@ -136,6 +152,13 @@ class ItemsTests(unittest.TestCase):
                          ["yes", "no", "empty", "meta", "meta", "incomplete", "unsure", "skip", "unclear"])
         self.assertIsNone(plain("two screws and a left button"))
 
+    def test_readback_confirmation_accepts_only_unhedged_agreement(self):
+        confirm = cell_items.classify_confirmation
+        self.assertEqual(confirm("right, yes,"), "yes")
+        self.assertEqual(confirm("that's right"), "yes")
+        for text in ("right, no", "yes, maybe", "I think yes", "yes, but no", "no, yes"):
+            self.assertIsNone(confirm(text), text)
+
     def test_names_must_be_real_words_the_operator_said(self):
         check = cell_items.check_items
         self.assertEqual(check([item("screw", 2)], "two screws"), [{"name": "screw", "count": 2, "origin": None}])
@@ -145,6 +168,14 @@ class ItemsTests(unittest.TestCase):
         self.assertEqual(check([item("washer", 1)], "two screws"), [])
         self.assertEqual(check([item("screw", 5)], "some screws")[0]["count"], None)  # a number must have been said
         self.assertEqual(check([item("screw", None, "the back shell")], "a screw from the back shell")[0]["origin"], "back shell")
+
+    def test_repeated_syllable_noise_is_rejected_without_normalization(self):
+        transcript = "front shell Dpadpad"
+        said = set(cell_items.words(transcript))
+        self.assertIsNone(cell_items.clean_origin("front shell Dpadpad", said))
+        self.assertEqual(cell_items.clean_origin("front shell D-pad", set(cell_items.words("front shell D-pad"))),
+                         "front shell D-pad")
+        self.assertEqual(cell_items.check_items([item("Dpadpad", 1)], "Dpadpad"), [])
 
     def test_rule_fallback_reads_lists_counts_and_origins(self):
         found = cell_items.rule_items("two screws and a left button from the back shell")
@@ -247,13 +278,23 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
         self.assertTrue(reply.endswith(tuple(selector.variants("cell_open", "serious")[0:1] + ["What's in cell 2?"])) or "cell 2" in reply)
 
-    def test_replay_the_whys_never_reach_memory(self):
+    def test_initially_unresolved_cells_are_reoffered_once_at_the_round_tail(self):
         self.with_model()
         self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
+        self.api.state["Q4"] = "COMMITTED"
         self.say(command="next_question")
         self.assertEqual(self.say("why"), self.flow.last_speak["text"])
-        self.assertIn("could you please repeat it?", self.say("it came from left and right button"))
-        self.assertEqual(self.coordinator_calls(), [])
+        self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
+        self.assertIn("work area", self.say("skip"))
+        self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
+        self.assertEqual(self.api.answers, {})
+        self.assertEqual(self.writes(), [])
+
+    def test_surplus_questions_from_a_confirmed_cell_are_not_reoffered(self):
+        self.api.state.update(Q1="COMMITTED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED", Q4="COMMITTED")
+        self.api.reasons.update(Q2=dialogue_flow.SURPLUS_REASON, Q3=dialogue_flow.SURPLUS_REASON)
+        self.assertIn("work area", self.say(command="next_question"))
+        self.assertEqual([call for call in self.api.log if call[0] == "reopen"], [])
 
     # -- mapping onto the detected questions
 
@@ -273,7 +314,7 @@ class FlowTests(unittest.TestCase):
         self.say("yes")
         self.assertEqual(sorted(self.api.answers.values()), ["left button from back shell", "screw from back shell", "screw from back shell"])
 
-    def test_an_empty_cell_leaves_everything_unresolved_without_asking_again(self):
+    def test_an_empty_cell_stays_unresolved_while_the_next_cell_opens(self):
         self.say(command="next_question")
         reply = self.say("nothing")
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
@@ -296,6 +337,49 @@ class FlowTests(unittest.TestCase):
         self.assertIn(self.say("screws"), selector.variants("cell_how_many", "serious"))
         self.assertIn(self.say("three"), selector.variants("cell_origin", "serious"))
         self.assertEqual(self.say("from the back shell"), "Cell 1: three screws, from back shell. Right?")
+
+    def test_last_origin_is_proposed_in_one_readback_and_right_yes_commits_it(self):
+        table = {**MODEL_TABLE, "the right button from the back shell": answer(item("right button", 1, "back shell")),
+                 "d-pad": answer(item("D-pad", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        self.say("the right button from the back shell")
+        self.say("yes")
+        proposal = self.say("d-pad")
+        self.assertIn("from back shell", proposal)
+        self.assertIn("Same origin as last time", proposal)
+        self.assertEqual(self.flow.current["stage"], "origin_confirm")
+        self.assertNotIn(("answer", "Q4", "D-pad from back shell"), self.api.log)
+        self.say("right, yes,")
+        self.assertEqual(self.api.answers["Q4"], "D-pad from back shell")
+
+    def test_rejecting_last_origin_keeps_the_name_and_requires_yes_after_correction(self):
+        table = {**MODEL_TABLE, "the right button from the back shell": answer(item("right button", 1, "back shell")),
+                 "d-pad": answer(item("D-pad", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        self.say("the right button from the back shell")
+        self.say("yes")
+        proposal = self.say("d-pad")
+        self.assertIn("Same origin as last time", proposal)
+        self.assertIn(self.say("no"), selector.variants("cell_origin", "serious"))
+        self.assertEqual(self.flow.current["items"], [item("D-pad", 1, None)])
+        read_back = self.say("from front shell")
+        self.assertIn("from front shell", read_back)
+        self.assertNotIn("Q4", self.api.answers)
+        self.say("yes")
+        self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
+
+    def test_asr_like_origin_noise_is_clarified_without_domain_normalization(self):
+        table = {**MODEL_TABLE, "rubber membrane": answer(item("rubber membrane", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        self.say("rubber membrane")
+        self.say("front shell Dpadpad")
+        self.assertIn("could you please repeat it?", self.flow.last_speak["text"])
+        self.assertEqual(self.flow.current["stage"], "origin")
+        self.assertNotIn("D-pad", self.flow.last_speak["text"])
+        self.assertEqual(self.api.answers, {})
 
     def test_no_asks_the_cell_again_and_a_correction_in_the_same_sentence_is_taken_directly(self):
         self.with_model({**MODEL_TABLE, "it's a right button from the back shell": answer(item("right button", 1, "back shell"))})
@@ -325,6 +409,32 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(self.flow.current["qids"], ["Q4"])
         result = self.flow.turn(None, "d-pad from the front shell")  # no command needed: still the question round
         self.assertTrue(result["handled"])
+
+    def test_newly_deferred_cell_returns_once_after_remaining_open_cells(self):
+        table = {**MODEL_TABLE, "d-pad": answer(item("D-pad", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        self.assertIn("cell 2", self.say("skip"))
+        self.say("d-pad")
+        self.say("from the front shell")
+        self.say("yes")
+        self.assertEqual(self.flow.current["cell"], "cell-1")
+        self.assertEqual(self.flow.current["qids"], ["Q1", "Q2", "Q3"])
+        self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
+        self.assertIn("Right?", self.say("two screws and a left button from the back shell"))
+        self.assertIn("work area", self.say("yes"))
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
+        self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
+
+    def test_tail_offer_marker_prevents_reopening_the_same_cell_after_restart(self):
+        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED", Q4="COMMITTED")
+        self.say(command="next_question")
+        self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
+        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
+        restarted = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(None))
+        restarted.turn("next_question", None)
+        self.assertNotEqual(restarted.current.get("cell"), "cell-1")
+        self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
 
     def test_model_is_used_first_for_real_answers_and_not_for_plain_yes_no(self):
         self.with_model()
@@ -373,7 +483,7 @@ class FlowTests(unittest.TestCase):
 
     def test_closing_questions_go_through_read_back_and_land_in_memory_only_after_yes(self):
         self.with_model({"the front shell, the back shell and the PCB": answer(item("front shell"), item("back shell"), item("PCB")),
-                         "in the start membrane": answer(item("start membrane"))})
+                         "in the start membrane from the front shell": answer(item("start membrane", 1, "front shell"))})
         self.finished()
         self.assertIn("work area", self.say(command="next_question"))
         self.assertEqual(self.say("the front shell, the back shell and the PCB"), "Still in the work area: front shell, back shell, PCB. Right?")
@@ -381,7 +491,8 @@ class FlowTests(unittest.TestCase):
         self.assertIn("miss", self.say("yes"))
         self.assertEqual(self.writes(), [("closing_write", ("front shell", "back shell", "PCB"), "work area")])
         self.assertIn("cell", self.say("yes"))
-        self.assertEqual(self.say("in cell six the start membrane"), "Missed in cell 6: start membrane. Right?")
+        self.assertEqual(self.say("in cell six the start membrane from the front shell"),
+                         "Missed in cell 6: start membrane, from front shell. Right?")
         self.assertIn("no more questions", self.say("yes"))
         self.assertEqual(self.writes()[1], ("closing_write", ("start membrane",), "cell-6"))
         self.assertIn("no more questions", self.say(command="next_question"))
@@ -392,6 +503,52 @@ class FlowTests(unittest.TestCase):
         self.assertIn("miss", self.say("nothing"))
         self.assertIn("no more questions", self.say("no, that's all"))
         self.assertEqual(self.writes(), [])
+
+    def test_closing_missed_negatives_finish_cleanly_in_both_states(self):
+        self.finished()
+        self.say(command="next_question")
+        self.say("nothing")
+        reply = self.say("now i don't think so")
+        self.assertIn("no more questions", reply.lower())
+        self.assertNotIn("resolve this later", reply.lower())
+        self.assertEqual(self.writes(), [])
+
+        other = FlowTests()
+        other.setUp()
+        other.finished()
+        other.say(command="next_question")
+        other.say("nothing")
+        other.say("yes")
+        reply = other.say("no,")
+        self.assertIn("no more questions", reply.lower())
+        self.assertNotIn("resolve this later", reply.lower())
+        self.assertEqual(other.writes(), [])
+
+    def test_closing_missed_cell_collects_count_and_origin_then_writes_only_after_yes(self):
+        self.with_model({"RGBY membranes": answer(item("RGBY membrane", None, None))})
+        self.finished()
+        self.say(command="next_question")
+        self.say("nothing")
+        self.say("yes")
+        self.assertIn(self.say("cell six, RGBY membranes"), selector.variants("cell_how_many", "serious"))
+        self.assertIn(self.say("four"), selector.variants("cell_origin", "serious"))
+        read_back = self.say("from the front shell")
+        self.assertIn("Missed in cell 6", read_back)
+        self.assertIn("four RGBY membranes", read_back)
+        self.assertIn("from front shell", read_back)
+        self.assertEqual(self.writes(), [])
+        self.assertEqual(self.notes(), [])
+
+        reply = self.say("right, yes,")
+        self.assertIn("no more questions", reply.lower())
+        self.assertEqual(self.writes(), [("closing_write", ("RGBY membrane",) * 4, "cell-6")])
+        self.assertEqual(self.api.write_origins[-1], ("front shell",) * 4)
+        note = self.notes()[-1]
+        self.assertTrue(note["confirmed_by_operator"])
+        self.assertEqual(note["operator_said"]["count"], 4)
+        self.assertEqual(note["operator_said"]["origin"], "front shell")
+        self.assertEqual(note["operator_said"]["location"], "cell-6")
+        self.assertIn("Right?", note["operator_said"]["read_back"])
 
     def test_finished_video_opens_the_dialogue_on_the_first_utterance(self):
         (self.root / "s1" / "dialogue-pending-open").write_text("x", encoding="utf-8")

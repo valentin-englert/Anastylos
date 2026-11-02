@@ -181,8 +181,9 @@ class DialogueFlow:
         group = self.api.question_siblings(self.root, self.session_id, prompt["question_id"])
         event = f"cell-{prompt['question_id']}"
         self.current = {"mode": "cell", "stage": "ask", "qids": group["qids"], "cell": group["cell"],
-                        "event": event, "label": where_words(group["cell"]), "items": [], "asked": prompt["text"]}
-        return _speak(prompt["text"], "question", prompt.get("op_key"))
+                        "event": event, "label": where_words(group["cell"]), "items": []}
+        self.current["asked"] = self._question()
+        return _speak(self.current["asked"], "question", prompt.get("op_key"))
 
     # ------------------------------------------------------------------ opening a cell
 
@@ -225,6 +226,8 @@ class DialogueFlow:
 
     def _understand(self, text: str) -> dict:
         """{kind, items, source}: yes/no/skip/unsure/empty/meta/incomplete by rule, else model first, rules on failure."""
+        if cell_items.has_repeated_cvc_fragment(text):
+            return {"kind": "unclear", "items": [], "source": "rule"}
         plain = cell_items.classify_plain(text)
         if plain not in (None, "unclear"):
             return {"kind": plain, "items": [], "source": "rule"}
@@ -302,6 +305,12 @@ class DialogueFlow:
 
     def _cell_origin(self, text: str) -> dict:
         cur = self.current
+        if cell_items.has_repeated_cvc_fragment(text):
+            self._trace.update(parser="unclear", source="rule")
+            again = self.agent.misunderstood(cur["event"], text)
+            if not again["closed"]:
+                return _speak(again["speak"], "status")
+            return self._leave_cell(text, "origin not understood twice", again["speak"], open_item=False)
         plain = cell_items.classify_plain(text)
         parsed = bundle.parse_origin(text)
         if parsed["kind"] == "origin":
@@ -333,6 +342,13 @@ class DialogueFlow:
 
     def _cell_origin_confirm(self, text: str) -> dict:
         cur = self.current
+        if cell_items.has_repeated_cvc_fragment(text):
+            cur["stage"] = "origin"
+            cur.pop("origin_proposal", None)
+            cur.pop("origin_proposal_prompt", None)
+            self.agent.reset_reasks(cur["event"])
+            self._trace.update(parser="unclear", source="rule")
+            return _speak(self.agent.say("cell_origin", cur["event"]), "question")
         proposal = cur["origin_proposal"]
         plain = cell_items.classify_plain(text)
         confirmation = cell_items.classify_confirmation(text)

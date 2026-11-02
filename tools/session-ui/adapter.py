@@ -380,6 +380,25 @@ def question_defer(root: Path, session_id: str, qid: str, reason: str) -> dict:
     return _stopped(step)
 
 
+def closing_write(root: Path, session_id: str, note_id: str, labels: list[str], location: str, said: str) -> dict:
+    """Write operator-stated parts of the end-of-video questions after their read-back + yes (same writer path as answers)."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if coordinator.stopped:
+                raise ask_loop.Stopped(coordinator.stopped)
+            digest = hashlib.sha256(said.encode("utf-8")).hexdigest()
+            results = coordinator.write_operator_notes(note_id, labels, location, digest, said)
+            ok = all(r["status"] in ("committed", "already_committed") for r in results)
+            return {"status": "committed" if ok else "failed", "results": results}
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
 # ------------------------------------------------------------------ guide (offline: L0 / cache / refusal only)
 
 def guide_build(root: Path, session_id: str) -> dict:

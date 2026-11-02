@@ -121,13 +121,13 @@ class Coordinator:
                     state.answer = record["answer"]
                 if "read_back" in record:
                     state.read_back = record["read_back"]
-            elif record["kind"] == "done":
+            elif record["kind"] == "done" and record["op_key"] in self.states:  # operator notes have no question state
                 self.states[record["op_key"]].state = st.COMMITTED
         # the intent is the durable confirmation: without its done record the write is still in flight
         done = {r["op_key"] for r in self.journal.of_kind("done")}
         intents = {r["op_key"] for r in self.journal.of_kind("intent")}
         for intent in self.journal.of_kind("intent"):
-            if intent["op_key"] not in done:
+            if intent["op_key"] not in done and intent["op_key"] in self.states:
                 self.states[intent["op_key"]].state = st.CONFIRMED
         # a CONFIRMED record without its intent is a confirmation that never became durable: nothing was
         # written, so the read-back is open again and the operator confirms once more
@@ -150,7 +150,8 @@ class Coordinator:
             except (RecoveryConflict, MemoryCallFailed, CorruptLogError) as exc:
                 self._stop(f"recovery of {intent['op_key']} stopped: {exc}")
                 return False
-            self._set(self.states[intent["op_key"]], st.COMMITTED, note="completed by recovery")
+            if intent["op_key"] in self.states:
+                self._set(self.states[intent["op_key"]], st.COMMITTED, note="completed by recovery")
         return True
 
     # ---------------------------------------------------------------- state bookkeeping
@@ -448,6 +449,39 @@ class Coordinator:
             return {"status": "failed", "message": str(exc)}
         self._set(state, st.COMMITTED)
         return {"status": "committed", "events": done["events"]}
+
+    def write_operator_notes(self, note_id: str, labels: list[str], location: str, input_sha256: str, said: str) -> list[dict]:
+        """Write parts the operator stated after a confirmed read-back (end-of-video questions: no observed event).
+
+        Same write path as an answered question (write-ahead intent, ``declared_removal`` then ``storage_link``, recovery
+        by op_key marker) and the same event kinds; the note says operator-stated, not observed. One stable op key per
+        label (``<live session>:<note_id>-<n>:1``), so repeating the call writes nothing twice. The caller has already
+        read the answer back and heard "yes".
+        """
+        self._require_running()
+        phase = next(iter(self.book.questions.values()))["memory_phase"]
+        done = {r["op_key"] for r in self.journal.of_kind("done")}
+        intents = {r["op_key"]: r for r in self.journal.of_kind("intent")}
+        results = []
+        for number, label in enumerate(labels):
+            op_key = st.make_op_key(self.live_session_id, f"{note_id}-{number}", 1)
+            if op_key in done:
+                results.append({"status": "already_committed", "op_key": op_key})
+                continue
+            try:
+                if op_key in intents:
+                    record = self.writer.recover(intents[op_key])
+                else:
+                    action = {"label": label, "source": None, "phase": phase, "location": location, "t_s": None,
+                              "note": f"live op_key={op_key}; operator-stated at the end of the video, not observed: {said}"}
+                    answer = {"label": label, "location": location, "operator_stated": True}
+                    record = self.writer.write(op_key, f"{note_id}-{number}", answer, action, input_sha256=input_sha256,
+                                               interpretation={"intent": "confirm", "source": "operator-stated note"})
+            except (MemoryCallFailed, CorruptLogError) as exc:
+                self._stop(f"operator note {op_key} failed; reopen to recover: {exc}")
+                return results + [{"status": "failed", "op_key": op_key, "message": str(exc)}]
+            results.append({"status": "committed", "op_key": op_key, "events": record["events"]})
+        return results
 
     def _resolved(self, qid: str, answer: dict) -> dict:
         """What the confirmed answer resolves (CONTRACT §3.4 ``resolved``), for the evaluation."""

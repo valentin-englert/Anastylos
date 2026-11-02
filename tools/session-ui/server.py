@@ -205,7 +205,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
-                  "/api/explosion/layout": self._api_explosion_layout,
+                  "/api/explosion/layout": self._api_explosion_layout, "/api/explosion/outlines": self._api_explosion_outlines,
                   "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
                   "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
                   "/api/phone/pair": lambda: self._send_json(phone.start_pairing(Handler.workspace_root)),
@@ -457,6 +457,12 @@ class Handler(BaseHTTPRequestHandler):
         body, content_type = explosion.explosion_bytes(Handler.workspace_root, self._session_param(query), query.get("name", ""),
                                                        query.get("job", ""), query.get("mode", "exploded"))
         self._send_bytes(body, content_type)
+
+    def _api_explosion_outlines(self) -> None:
+        session_id = self._read_json().get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: explosion.find_outlines(Handler.workspace_root, session_id))
 
     def _api_explosion_layout(self) -> None:
         body = self._read_json()

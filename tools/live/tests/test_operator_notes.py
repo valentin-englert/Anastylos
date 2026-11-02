@@ -57,6 +57,28 @@ class OperatorNotes(unittest.TestCase):
         reopened.write_operator_notes("CLOSE-a", LABELS, "work area", "0" * 64, "x")
         self.assertEqual(len(self.declared()), 2)
 
+    def test_stated_origin_is_stored_separately_from_destination_and_recovers_once(self):
+        c = self.coordinator(fault=crash_at("after_memory:declared_removal"))
+        with self.assertRaises(SimulatedCrash):
+            c.write_operator_notes("CLOSE-origin", ["rubber membrane"], "cell-6", "0" * 64,
+                                   "rubber membrane from front shell in cell 6", origins=["front shell"])
+        die(c)
+        recovered = self.coordinator()
+        result = recovered.write_operator_notes("CLOSE-origin", ["rubber membrane"], "cell-6", "0" * 64,
+                                                "rubber membrane from front shell in cell 6", origins=["front shell"])
+        self.assertEqual(result[0]["status"], "already_committed")
+        self.assertEqual([(e["operator_label"], e["source"]) for e in self.declared()], [("rubber membrane", "front shell")])
+        links = [e for e in memory_lines(self.ws) if e["type"] == "storage_link" and e["target_id"] == self.declared()[0]["id"]]
+        self.assertEqual([e["location"] for e in links], ["cell-6"])
+
+    def test_invalid_origin_list_writes_nothing(self):
+        c = self.coordinator()
+        before = memory_lines(self.ws)
+        for origins in ([], [""], [4], ["source", None]):
+            with self.subTest(origins=origins), self.assertRaises(ValueError):
+                c.write_operator_notes("CLOSE-invalid", ["part"], "cell-6", "0" * 64, "part", origins=origins)
+        self.assertEqual(memory_lines(self.ws), before)
+
     def test_a_crash_at_any_step_is_completed_once_by_recovery(self):
         for point in ("after_intent", "after_memory:declared_removal", "after_journal:declared_removal", "after_memory:storage_link"):
             with self.subTest(point=point):

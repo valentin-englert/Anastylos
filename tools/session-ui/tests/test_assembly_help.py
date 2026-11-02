@@ -188,6 +188,27 @@ class LinkTest(HelpCase):
         self.assertEqual(renewed["drawing_sha256"], sha(job / "drawing.svg"))
         self.assertEqual(assembly_help.link_candidates(self.root, "s1", "front-1")["link_state"], "linked")
 
+    def test_replacing_memory_cannot_transfer_a_link_by_reusing_the_same_part_id(self):
+        self.job("front-1", "back screw")
+        self.link("front-1", "dec-0001")
+        replacement = [dict(event) for event in EVENTS]
+        next(event for event in replacement if event["id"] == "dec-0001")["operator_label"] = "different physical part"
+        self.memory.write_text("".join(json.dumps(event) + "\n" for event in replacement), encoding="utf-8")
+        self.assertEqual(assembly_help.link_candidates(self.root, "s1", "front-1")["link_state"], "stale_memory")
+        with self.assertRaisesRegex(AdapterError, "already linked"):
+            self.link("front-1", "dec-0001")
+        replaced = self.link("front-1", "dec-0001", supersede=True)
+        self.assertEqual(replaced["seq"], 2)
+        self.assertEqual(replaced["part"]["label"], "different physical part")
+
+    def test_appending_memory_preserves_a_link_to_the_unchanged_part(self):
+        self.job("front-1", "back screw")
+        self.link("front-1", "dec-0001")
+        event = {**EVENTS[0], "id": "phase-0002", "label": "P2"}
+        with self.memory.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(event) + "\n")
+        self.assertEqual(assembly_help.link_candidates(self.root, "s1", "front-1")["link_state"], "linked")
+
 
 class AskTest(HelpCase):
     def setUp(self):
@@ -203,6 +224,15 @@ class AskTest(HelpCase):
         self.assertEqual(result["candidates"][0]["part_id"], "dec-0002")
         self.assertIn("not linked", result["message"])
         self.assertFalse((self.session_dir / "drawings" / "jobs" / "loose-1" / "part-link.json").exists())
+
+    def test_front_shell_with_no_current_memory_record_stays_unlinked(self):
+        job = self.job("front-shell-1", "front shell of the controller")
+        result = self.ask("front-shell-1", "where does this part belong?")
+        self.assertEqual(result["status"], "needs_link")
+        self.assertIsNone(result["answer"])
+        self.assertIn("if any", result["message"])
+        self.assertFalse(any(candidate["suggested"] for candidate in result["candidates"]))
+        self.assertFalse((job / "part-link.json").exists())
 
     def test_coarse_origin_gives_follow_up_and_no_install_point(self):
         result = self.ask("front-1", "where does this part belong?")
@@ -330,6 +360,37 @@ class AskTest(HelpCase):
         assembly_help.link_candidates(self.root, "s1", "loose-1")
         self.assertEqual(snapshot(self.session_dir), before)
         self.assertEqual(sha(self.memory), self.build["memory_sha256"])
+
+
+class BelongsHereTest(HelpCase):
+    def setUp(self):
+        super().setUp()
+        shell = {"type": "declared_removal", "id": "dec-0004", "session": SESSION, "timestamp": "2026-11-01T15:30:00Z",
+                 "operator_label": "back shell", "source": None, "phase": "phase-0001", "t_s": None, "observation_id": None,
+                 "declared_by": "operator (test)", "evidence_note": "closing answer", "supersedes": None}
+        near = {**shell, "id": "dec-0005", "operator_label": "clip", "source": "back shell corner"}
+        with self.memory.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(shell) + "\n" + json.dumps(near) + "\n")
+        adapter.guide_build(self.root, "s1")
+
+    def test_assembly_lists_exact_origin_matches_and_its_confirmed_layer(self):
+        self.job("outline-a", "part 1")
+        self.link("outline-a", "dec-0004")
+        (self.session_dir / "drawings" / "explosion.json").write_text(json.dumps({"layers": [
+            {"job": "outline-a", "label": "backshell", "confirmed_by_operator": True},
+            {"job": "other", "label": "pcb", "confirmed_by_operator": False}]}), encoding="utf-8")
+        result = self.ask("outline-a", "Where does this part belong?")
+        self.assertEqual(result["status"], "parts_belong_here")
+        self.assertEqual([(g["label"], g["count"], g["storage_location"]) for g in result["belongs_here"]], [("back screw", 1, "cell-1")])
+        self.assertEqual((result["layer"]["position"], result["layer"]["below"]), (1, "pcb"))
+        self.assertIsNone(result["answer"])
+
+    def test_candidates_use_the_operators_layer_name(self):
+        self.job("outline-a", "part 1")
+        (self.session_dir / "drawings" / "explosion.json").write_text(json.dumps({"layers": [
+            {"job": "outline-a", "label": "backshell", "confirmed_by_operator": True}]}), encoding="utf-8")
+        best = assembly_help.link_candidates(self.root, "s1", "outline-a")["candidates"][0]
+        self.assertEqual((best["part_id"], best["suggested"]), ("dec-0004", True))
 
 
 if __name__ == "__main__":

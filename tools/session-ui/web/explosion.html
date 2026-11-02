@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>Explosion view</h1>
-  <p class="banner">Schematic layout. Layer order is what the operator confirmed; the spacing is layout only and implies no height, mounting point or assembly path. Dashed amber outlines are unconfirmed.</p>
+  <p class="banner">Image-derived outlines. Layer order is a proposal until the operator confirms it; spacing is layout only and implies no height, mounting point or assembly path. Dashed amber outlines are unconfirmed.</p>
   <p><a href="/" id="back-link">Back to the session</a> <span id="session-name"></span></p>
 </header>
 
@@ -21,6 +21,7 @@
         <button type="button" id="mode-exploded" aria-pressed="true">Exploded</button>
         <button type="button" id="mode-assembled" aria-pressed="false">Assembled</button>
       </div>
+      <button type="button" id="outlines-button">Find parts on the sheet</button>
       <button type="button" id="propose-button">Propose layout from drawings</button>
       <p class="state" id="view-state" role="status"></p>
     </div>
@@ -40,6 +41,7 @@
         <div><dt>Binding</dt><dd id="part-binding"></dd></div>
         <div><dt>View side</dt><dd id="part-view-side"></dd></div>
         <div><dt>Mirrored</dt><dd id="part-flip"></dd></div>
+        <div><dt>Turned</dt><dd id="part-rotation"></dd></div>
         <div><dt>Part (job)</dt><dd id="part-part"></dd></div>
         <div><dt>Drawing sha256</dt><dd id="part-sha"></dd></div>
       </dl>
@@ -59,6 +61,7 @@
         <p class="hint">Confirming records that label, view side, mirroring and the layer's current position are right. Moving a layer withdraws its confirmation.</p>
         <button type="submit" id="confirm-button">Confirm layer</button>
         <button type="button" id="unconfirm-button">Withdraw confirmation</button>
+        <button type="button" id="rotate-button">Turn 90°</button>
         <button type="button" id="move-up">Move up</button>
         <button type="button" id="move-down">Move down</button>
       </form>
@@ -72,9 +75,17 @@
         <p class="state" id="part-help-answer" role="status"></p>
         <ul id="part-help-details" class="note-list"></ul>
         <div id="part-help-link" hidden>
-          <label for="part-help-candidate">This drawing shows the recorded part</label>
-          <select id="part-help-candidate"></select>
-          <button type="button" id="part-help-link-button">Link drawing to this part</button>
+          <p class="hint" id="part-help-link-guidance"></p>
+          <label for="part-help-candidate">Choose a current recorded part</label>
+          <select id="part-help-candidate" required>
+            <option value="" selected>Choose a current recorded part…</option>
+            <option value="__no_current_match__">No current record matches — leave this drawing unlinked</option>
+          </select>
+          <label for="part-help-replace" class="inline" id="part-help-replace-label" hidden>
+            <input type="checkbox" id="part-help-replace"> Replace the stale drawing link with this current part
+          </label>
+          <p class="hint" id="part-help-link-state" role="status"></p>
+          <button type="button" id="part-help-link-button" disabled>Link drawing to selected current part</button>
         </div>
       </section>
     </div>

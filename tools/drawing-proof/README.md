@@ -1,7 +1,13 @@
 # tools/drawing-proof — single-part technical drawing from one real frame (research)
 
-Research prototype on branch `research/drawing-proof`. It turns one hand-free video frame into a photo-checked
-part outline and a technical SVG. Not wired into the agent, guide, memory or session UI.
+The existing product drawing job uses Muse frame choice and boxes, hosted SAM 3.1 masks, deterministic gates,
+then SVG and photo overlay. It is wired into the session UI; operator binding remains separate from memory.
+See [`RESULTS.md`](RESULTS.md) for real-image/API validation and known failures. The classical proof below is
+the earlier offline baseline, not a replacement for Muse/SAM.
+
+When processing a copied session, set `ANASTYLOS_DRAWING_CACHE` to a separate writable cache folder before
+starting the UI or drawing worker. This redirects sampled frames and hash memos; the default remains the
+existing `C:\ANASTYLOS\data\drawing-cache`. Original videos and memories stay read-only.
 
 ## Pipeline
 
@@ -68,3 +74,7 @@ re-judges under the lock and writes `failed` only for the same still-running gen
 (`Superseded`) and stops. Resume (`start` on an existing job dir) first kills and verifies dead the previous worker
 (by recorded pid); if it will not die, no second worker is spawned. Residual risk: a recorded pid that the OS has
 reused for an unrelated process would be killed on resume. Tests: `tests/test_drawing_job.py` (fake clock and processes).
+
+## Offline outlines on the sheet
+
+`sheet_outlines.py` makes finished, unconfirmed drawing jobs for the large parts on the sheet from one video frame, with no provider call (`--session-dir`, `--video`, `--frame`, `--part NAME@X,Y`). It finds outlines, not identities: names are proposals and the operator confirms them. Parameters were set on one real view of the SNES controller; it is not validated on other objects, needs a bright sheet, and small or sheet-coloured parts may be missed. Use Muse box and SAM for those.

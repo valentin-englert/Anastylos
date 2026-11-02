@@ -80,6 +80,47 @@ class StatusTest(Workspace):
 
 
 class QuestionRoundTest(Workspace):
+    def test_overview_keeps_surplus_and_operator_deferral_reasons_distinct(self):
+        qid = adapter.question_next(self.root, self.session_id)["question_id"]
+        reason = "dialogue: left unresolved after the cell was described"
+        adapter.question_defer(self.root, self.session_id, qid, reason)
+        before = journal_lines(self.root / self.session_id)
+        overview = adapter.question_overview(self.root, self.session_id)
+        question = next(q for q in overview["questions"] if q["id"] == qid)
+        self.assertEqual((question["state"], question["reason"]), ("LEFT_UNRESOLVED", reason))
+        self.assertEqual(journal_lines(self.root / self.session_id), before)
+
+    def test_reconsider_unresolved_uses_new_revision_without_memory_write(self):
+        asked = adapter.question_next(self.root, self.session_id)
+        qid = asked["question_id"]
+        memory = self.root / self.session_id / "memory" / "memory.jsonl"
+        before = memory.read_bytes()
+        adapter.question_defer(self.root, self.session_id, qid, "dialogue: operator skip")
+        retried = adapter.question_reopen(self.root, self.session_id, qid)
+        self.assertNotEqual(retried["op_key"], asked["op_key"])
+        self.assertTrue(retried["op_key"].endswith(":2"))
+        self.assertEqual(memory.read_bytes(), before)
+        self.assertEqual(adapter.question_open(self.root, self.session_id, qid)["op_key"], retried["op_key"])
+        coordinator = adapter.ask_loop.open_coordinator(adapter.SessionState.load(self.root / self.session_id))
+        try:
+            stale = coordinator.receive(adapter.ask_loop.operator_input(asked["op_key"], {"text": "yes"}))
+            self.assertEqual(stale["status"], "stale")
+        finally:
+            coordinator.close()
+        with self.assertRaises(AdapterError):
+            adapter.question_reopen(self.root, self.session_id, qid)
+        self.assertEqual(memory.read_bytes(), before)
+
+    def test_reconsider_refuses_committed_question(self):
+        asked = adapter.question_next(self.root, self.session_id)
+        qid = asked["question_id"]
+        self.answer_current(self.script[qid]["answer"][0])
+        memory = self.root / self.session_id / "memory" / "memory.jsonl"
+        before = memory.read_bytes()
+        with self.assertRaises(AdapterError):
+            adapter.question_reopen(self.root, self.session_id, qid)
+        self.assertEqual(memory.read_bytes(), before)
+
     def test_answer_and_confirm_commits(self):
         asked = adapter.question_next(self.root, self.session_id)
         qid = asked["question_id"]

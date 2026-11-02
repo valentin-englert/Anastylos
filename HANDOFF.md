@@ -1,5 +1,165 @@
 # ANASTYLOS handoff
 
+## Current state, Claude, 2026-11-02 night (supersedes the sections below where they differ)
+
+- Explosion with three operator-confirmed assemblies and assembly help work on the session copy `video-20261102-173652-6b0b2e13-outlines`.
+- Outlines come from `tools/drawing-proof/sheet_outlines.py` (offline; button "Find parts on the sheet"), because Muse box + SAM failed on the full page. Set on one view of one object; not validated elsewhere.
+- Open: fidget toy hard test, capture loop with a real photo, part-help panel shows too much technical text, cells 2, 3, 6 and the membranes are incomplete in memory, `dec-0021` exists only on the copy.
+
+## Current continuation — Codex, 2026-11-02 late evening
+
+This section supersedes older status statements below; keep the historical evidence.
+The owner corrected the working source explicitly: **use `video-20261102-173652-6b0b2e13`**.
+That real session successfully ran through video processing and the voice/dialogue-to-memory
+pipeline. Do not confuse that existing success with the still-pending drawing/capture-loop acceptance.
+Do not fall back to old FULL-01 geometry or transfer IDs/bindings from its different memories.
+
+### Checkout and integration
+
+- Branch: `codex/mvp-lead`; worktree:
+  `C:\Users\HP\.codex\visualizations\2026\11\02\01a19de2-0a65-7dc2-80c8-8697aa87eff9\anastylos-codex-lead`.
+- Main was checked locally and with `git ls-remote`: both `f9c37dd94d68c332bdea37ce88f8cf5e958b372e`.
+  Therefore the old "nothing pushed" statement was already false at takeover.
+- Lanes started at that same base, using available `gpt-6-luna`, reasoning `xhigh`:
+  dialogue `f519557e` + `2cb6192d`; capture `4bbca0e2`; explosion/help `61309ea3`.
+  Each lane diff was reviewed and integrated sequentially with checks before its local merge commit.
+- Verified product-code checkpoint: `2086a5fdec0eb9e541cd79ef30843543565b3168`.
+  Use `git rev-parse codex/mvp-lead` for the final commit, including this handoff.
+- No push, main merge, branch/worktree cleanup, or original stack restart. The original root's
+  untracked logo and Northstar's `ui-inspo/` remain untouched.
+
+### Completed software changes
+
+- Unambiguous compound read-back affirmatives such as the observed right/yes response now work;
+  mixed/hedged answers do not authorize memory writes. Closing negatives finish correctly in
+  both `missed` and `missed_detail` states.
+- Deferred cells return once at the tail, with a durable offer record and a fresh coordinator
+  revision. Existing final-session deferrals are cells 2/3; surplus detector qids in already
+  described cells 8/9 are excluded, preventing duplicate parts.
+- Completely missed parts can be added at closing with count, cell and origin, after a read-back
+  and explicit yes. Origin is stored in `declared_removal.source`, storage in its own event.
+  Crash/recovery coverage checks these fields and exactly-once recording.
+- A last confirmed origin can be explicitly proposed in the next combined read-back, saving
+  a separate origin turn. Rejection asks for the actual origin. Repeated-fragment ASR noise
+  asks for clarification before model extraction; a model may not silently drop the noisy token.
+- Capture checks the guided session, enrolled source, request revision, unchanged source spec,
+  receipt and image hash. The follow-up has a durable request-bound ID. Uncertain starts become
+  `follow_up_pending_recovery`; the UI explains the pause instead of launching duplicate work.
+  Existing receiver loopback now covers actual request/package receipt/asset-fetch bytes through
+  follow-up initiation. It uses a generated image package and a fake worker seam, not a phone.
+- The part selector starts blank and offers no-match. Stale replacement requires an explicit
+  choice. Late answers cannot switch to another selected part. Origin/storage provenance stays
+  separate, and a different memory cannot inherit links merely by reusing an ID.
+- Explosion layout/selection survives reload; technical capture/review gates exclude a drawing
+  from both proposal and composition, including when a stale saved binding exists. The page
+  no longer calls an unconfirmed layer order operator-confirmed.
+- `ANASTYLOS_DRAWING_CACHE` isolates copied-session derived caches. Real browser review also
+  found and fixed review jobs mislabeled "Needs capture", an empty enabled start button and
+  a misleading empty-spec message despite existing jobs.
+
+### Verification and evidence
+
+All local evidence is outside Git:
+`C:\Users\HP\.codex\visualizations\2026\11\02\01a19de2-0a65-7dc2-80c8-8697aa87eff9\evidence`.
+
+`SUMMARY.json` summarizes the result. `evidence-manifest.json` hashes 631 local artifacts;
+manifest SHA-256: `c405d7c637885e47ca466ebfd138613e2a37db926d04d2ff813464b62948a9b3`.
+
+- `original-session-copy/` + `session-copy-manifest.json`: untouched source snapshot.
+- `replay_real_session.py`, `real-replay-before/replay.json`, `real-replay-final-full/replay.json`:
+  six state-anchored cases with the actual coordinator and copied real memory/journal prefixes,
+  recorded Muse proposals, no network; before 0/6 desired outcomes, after 6/6. The missed RGBY
+  description is a labelled synthetic extension from owner truth, not a fabricated historical reply.
+  All 42 recorded inputs were additionally replayed diagnostically, reconstructing the historical
+  process restart: no write without an unambiguous affirmative. Changed prompts and legacy bundle
+  states prevent treating that diagnostic as full semantic acceptance. No new live voice/model
+  semantics or physical dialogue run is claimed.
+- Final suites: session UI 165/165, live 87/87, agent 119/119, live integration 12/12,
+  drawing proof 47/47, explosion 26/26. Receiver lane: 209 run, 206 pass, 3 environment skips.
+  Compliance: 0 errors, 1 worktree-environment warning, 18 existing open reviews.
+- Sandbox failures were diagnosed: temporary AppData access, loopback socket permission,
+  and `taskkill` denial (isolated repro returned credential/access failure). Suites requiring
+  local sockets/own worker termination passed with scoped escalation; no timing failure was
+  declared green merely by retrying unchanged conditions.
+- `frozen-check.json`: all 20 E3-B Git blobs match their frozen SHA-256; checkout bytes also
+  match exactly in this worktree (0 CRLF differences). Frozen files were not normalized.
+- Browser: actual selection/help/no-match/reload tested on clearly synthetic internal fixtures;
+  that visible synthetic preview confused the owner and was closed. It is **not product geometry**.
+  The real source-session Drawings page was then actually opened/reloaded and status controls checked.
+  No real drawing binding, part link or layer order was confirmed by an agent.
+  Screenshot: `evidence/browser-real-source.jpg`; exact changed files: `evidence/changed-files.txt`.
+
+Run from the integration tree with the existing Python; each suite runs from its own directory:
+
+```powershell
+$py = 'C:/Users/HP/Documents/Anastylos/.venv/Scripts/python.exe'
+$env:TEMP = 'C:/Users/HP/.codex/visualizations/2026/11/02/01a19de2-0a65-7dc2-80c8-8697aa87eff9/evidence/lead-temp'
+$env:TMP = $env:TEMP
+# In tools/session-ui, tools/live, tools/agent, tools/live/integration,
+# tools/drawing-proof, tools/explosion, or capture-companion/receiver:
+& $py -B -m unittest discover -s tests
+# From repository root:
+& $py -B tools/compliance/check.py
+& $py -B 'C:/Users/HP/.codex/visualizations/2026/11/02/01a19de2-0a65-7dc2-80c8-8697aa87eff9/evidence/check_provenance.py' .
+```
+
+### Real drawing result — current unresolved product issue
+
+- Source copy: `evidence/video-source/video.mp4`, SHA-256
+  `6b0b2e1362f0ed66ffe7295b771b2938db2d86a20e35d71458a91aceb01ecb52`.
+  1080×1920, about 29.956 fps, 205.468 seconds. Candidate sheets/manifests are in
+  `evidence/new-session-geometry/`. Unlike the old FULL-01 material, this video DOES show
+  the separated shells and board. At f4316 / 144.078 s they are visible together.
+- Working copy: `evidence/product-workspace/video-20261102-173652-6b0b2e13/`.
+  Session video/run paths are rebased to this copy; all original session bytes were rechecked unchanged.
+- `REAL-SOURCE-BATCH.md` and frozen-input manifests precede inference. Batch 1: 6 Muse + 3 SAM;
+  Batch 2 context check: 2 Muse + 1 SAM, then stopped because the back-shell outline was still bad.
+  No retries/resumes or further two planned targets in Batch 2. Separate usage logs preserve all attempts.
+  Aggregate returned Muse usage: 12,433 input + 18,130 output tokens. Four SAM ledgers estimate
+  USD 0.01 at their stored rate; this is not a provider invoice or a new price verification.
+- Existing pipeline, prompts, parser and gates were used. Offline preflight corrected an old
+  `[58,50,254,177]` crop which clipped the new source: the full calibrated sheet includes the parts.
+  Initial preflight specs/sheets are preserved. Frame choice selected f4373 / 145.981 s.
+- **Do not confirm these four masks.** Full-page back-shell mask includes background; PCB mask
+  selects cable; front-shell mask is sparse; context back-shell mask is incomplete. PCB/front-shell
+  are `NEEDS_REVIEW`. Back-shell jobs pass limited plausibility checks and remain `NEEDS_CONFIRMATION`,
+  illustrating that those checks do not prove outline correctness. No decoder/placement bug was
+  demonstrated; masks were checked at their native returned raster/box coordinates.
+- No real three-assembly explosion was composed or accepted. Next engineering work is to diagnose
+  mask/box reliability on these preserved responses and source pixels, using existing tools. Do not
+  use synthetic geometry, invent missing rims, weaken gates, or ask the owner to repeat a capture
+  that is already adequate merely to avoid this software issue. A new API budget needs a separate plan.
+
+### Runtime and next owner action
+
+At takeover, original UI listeners were PID 22076 on 127.0.0.1:8079 and receiver PID 15204 on
+192.168.0.110:8443, from `Anastylos-northstar` @ `713b9b45` (clean tracked files, untracked `ui-inspo/`).
+Command-line/source evidence is in `existing-runtime-processes.json`; a live Python process's loaded
+module bytes cannot be proved solely from current files. Those original processes were not stopped.
+
+The isolated review page used port 8097 and only the copied real workspace. Its agent-started
+process and browser tab were closed after verification. Original 8079/8443 listeners stayed in place.
+Start the copied review explicitly when needed:
+
+```powershell
+$env:ANASTYLOS_DRAWING_CACHE = 'C:/Users/HP/.codex/visualizations/2026/11/02/01a19de2-0a65-7dc2-80c8-8697aa87eff9/evidence/new-source-drawing-cache'
+& 'C:/Users/HP/Documents/Anastylos/.venv/Scripts/python.exe' -B tools/session-ui/server.py `
+  --workspace-root 'C:/Users/HP/.codex/visualizations/2026/11/02/01a19de2-0a65-7dc2-80c8-8697aa87eff9/evidence/product-workspace' `
+  --host 127.0.0.1 --port 8097
+# http://127.0.0.1:8097/?session=video-20261102-173652-6b0b2e13#/drawings
+```
+
+The owner need not repeat the known dialogue bugs now. Next physical acceptance remains a real phone
+request → capture → checked receipt → one actual drawing worker → overlay/result, on a copied session
+with a newly armed guided session; loopback does not prove that. No real picture proves part identity.
+First resolve the preserved segmentation issue; then ask for specific view/layer/part confirmations on
+usable real output. Full MVP acceptance and submission preparation remain open. Android was unchanged
+and not rerun in this continuation. No new dependencies or licensing conclusions.
+
+---
+
+## Historical handoff — retained below
+
 Written 2026-11-02 evening by the Technical Lead agent (Claude), for any coding agent (Muse, Codex, Claude) that continues
 without prior context. Read this first, then `AGENTS.md`, then `ARCHITECTURE.md`. Where this file and the code disagree,
 believe the code and fix this file. `docs/submission/CLAUDE-HANDOFF.md` is older and historical.
@@ -46,7 +206,8 @@ have no proven cause (a peak/RMS log now exists, tag `AnastylosVoice`).
 ## 3. Repository and branches
 
 - `main` holds everything from `integration/northstar` at the time of this handoff. Continue on a new branch from `main`.
-- **Never push unless told to.** Nothing here has been pushed. Merging to `main` needs the owner's word each time.
+- **Never push unless told to.** Historical wording "nothing pushed" is superseded by the verified remote
+  `main @ f9c37dd9` above. Merging to `main` still needs the owner's word each time.
 - Do not merge `wave2`-named work: the audit found it is a duplicate of `main`.
 - Lane branches `claude/*` listed in section 5 are fully merged.
 

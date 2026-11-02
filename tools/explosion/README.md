@@ -24,7 +24,8 @@ the verdict on the earlier explosion work and the viewer routes are in
   **dashed amber with "UNCONFIRMED" and the reasons**.
 - Not drawn (listed on the sheet and in the manifest, never replaced by a
   placeholder shape): missing job, rejected binding, no/invalid outline, drawing
-  not in mm, job not `done`.
+  not in mm, job not `done`, or a result outside `drawn_unconfirmed` / `NEEDS_CONFIRMATION`.
+  Technical `NEEDS_CAPTURE` / `NEEDS_REVIEW` gates cannot be bypassed by a saved binding.
 - Nothing is written into job folders or memory.
 
 ## Layout spec `<session>/drawings/explosion.json` (anastylos-explosion-layout@1)

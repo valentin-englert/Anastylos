@@ -6,6 +6,7 @@
 
 const params = new URLSearchParams(window.location.search);
 const sessionId = params.get("session") || "";
+let requestedJob = params.get("job") || "";
 const state = { view: null, mode: "exploded", selected: null, busy: false };
 
 const $ = (id) => document.getElementById(id);
@@ -45,9 +46,18 @@ function announce() {
 }
 
 function select(job) {
-  state.selected = job;
+  state.selected = job && layerOf(job) ? job : null;
+  const url = new URL(window.location.href);
+  if (state.selected) {
+    url.searchParams.set("job", state.selected);
+    requestedJob = state.selected;
+  } else {
+    url.searchParams.delete("job");
+    requestedJob = "";
+  }
+  window.history.replaceState(null, "", url);
   for (const node of document.querySelectorAll(".ax-part, .ax-legend")) {
-    node.classList.toggle("ax-selected", node.dataset.job === job);
+    node.classList.toggle("ax-selected", node.dataset.job === state.selected);
   }
   renderPanel();
   announce();
@@ -105,6 +115,7 @@ function renderPanel() {
   $("part-binding").textContent = { confirmed: "confirmed by the operator", none: "not bound", stale: "stale (drawing changed)", unreadable: "unreadable", rejected: "rejected" }[layer.binding] || layer.binding;
   $("part-view-side").textContent = `${layer.view_side || "not set"}${layer.job_view_side && layer.job_view_side !== layer.view_side ? ` (drawing job: ${layer.job_view_side})` : ""}`;
   $("part-flip").textContent = layer.flip_horizontal ? "yes" : "no";
+  $("part-rotation").textContent = `${layer.rotation_deg || 0}°`;
   $("part-part").textContent = `${layer.part || "-"} (${layer.job})`;
   $("part-sha").textContent = (layer.inputs["drawing.svg"] || {}).sha256 || "-";
   for (const [id, name] of [["link-rectified", "rectified.png"], ["link-overlay", "overlay.jpg"], ["link-drawing", "drawing.svg"]]) {
@@ -150,6 +161,7 @@ async function load(view) {
   const open = manifest.layers.filter((l) => l.status !== "confirmed").length;
   setState(open ? `${open} of ${manifest.layers.length} layers unconfirmed.` : "All drawn layers confirmed.");
   if (state.selected && !layerOf(state.selected)) state.selected = null;
+  if (!state.selected && requestedJob && layerOf(requestedJob)) state.selected = requestedJob;
   select(state.selected);
 }
 
@@ -184,6 +196,18 @@ function wire() {
     $(`mode-${mode}`).addEventListener("click", () => { state.mode = mode; applyMode(); });
   }
   $("propose-button").addEventListener("click", () => act({ action: "propose" }));
+  $("rotate-button").addEventListener("click", () => act({ action: "rotate", job: state.selected }));
+  $("outlines-button").addEventListener("click", async () => {
+    $("outlines-button").disabled = true;
+    setState("Looking for parts on the sheet. This can take a minute.");
+    try {
+      await load(await call("/api/explosion/outlines", {}));
+    } catch (error) {
+      setState(error.message, true);
+    } finally {
+      $("outlines-button").disabled = false;
+    }
+  });
   $("confirm-form").addEventListener("submit", (event) => {
     event.preventDefault();
     act({ action: "confirm", job: state.selected, label: $("field-label").value, view_side: $("field-view-side").value,

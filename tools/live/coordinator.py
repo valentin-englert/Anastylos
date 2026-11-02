@@ -213,6 +213,19 @@ class Coordinator:
 
     # ---------------------------------------------------------------- asking
 
+    def reconsider(self, question_id: str) -> dict:
+        """Explicitly retry an unresolved cell with a fresh op key; old replies stay stale."""
+        self._require_running()
+        previous = self.state_of(question_id)
+        if previous.state != st.LEFT_UNRESOLVED or self.book.questions[question_id]["kind"] != "source_of_part":
+            raise st.TransitionError(f"{previous.op_key} cannot be reconsidered")
+        revision, fingerprint = self.book.revisions[question_id]
+        self.book.restore(question_id, revision + 1, fingerprint)
+        self._new_revision(question_id, revision + 1, fingerprint)
+        self.journal.append("ui_event", event="question_reconsidered", question_id=question_id,
+                            from_op_key=previous.op_key, op_key=self.op_key(question_id))
+        return self.ask(question_id)
+
     def ask(self, question_id: str) -> dict:
         """The question's prompt (L0, or a gated L1 wording). Asking again repeats the same prompt."""
         self._require_running()
@@ -450,7 +463,8 @@ class Coordinator:
         self._set(state, st.COMMITTED)
         return {"status": "committed", "events": done["events"]}
 
-    def write_operator_notes(self, note_id: str, labels: list[str], location: str, input_sha256: str, said: str) -> list[dict]:
+    def write_operator_notes(self, note_id: str, labels: list[str], location: str, input_sha256: str, said: str,
+                             *, origins: list[str | None] | None = None) -> list[dict]:
         """Write parts the operator stated after a confirmed read-back (end-of-video questions: no observed event).
 
         Same write path as an answered question (write-ahead intent, ``declared_removal`` then ``storage_link``, recovery
@@ -459,6 +473,11 @@ class Coordinator:
         read the answer back and heard "yes".
         """
         self._require_running()
+        if origins is None:
+            origins = [None] * len(labels)
+        if len(origins) != len(labels) or any(origin is not None and (not isinstance(origin, str) or not origin.strip())
+                                              for origin in origins):
+            raise ValueError("Each operator-stated label needs its own nonempty origin or None")
         phase = next(iter(self.book.questions.values()))["memory_phase"]
         done = {r["op_key"] for r in self.journal.of_kind("done")}
         intents = {r["op_key"]: r for r in self.journal.of_kind("intent")}
@@ -472,9 +491,9 @@ class Coordinator:
                 if op_key in intents:
                     record = self.writer.recover(intents[op_key])
                 else:
-                    action = {"label": label, "source": None, "phase": phase, "location": location, "t_s": None,
+                    action = {"label": label, "source": origins[number], "phase": phase, "location": location, "t_s": None,
                               "note": f"live op_key={op_key}; operator-stated at the end of the video, not observed: {said}"}
-                    answer = {"label": label, "location": location, "operator_stated": True}
+                    answer = {"label": label, "source": origins[number], "location": location, "operator_stated": True}
                     record = self.writer.write(op_key, f"{note_id}-{number}", answer, action, input_sha256=input_sha256,
                                                interpretation={"intent": "confirm", "source": "operator-stated note"})
             except (MemoryCallFailed, CorruptLogError) as exc:

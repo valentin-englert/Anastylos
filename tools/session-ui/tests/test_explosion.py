@@ -13,6 +13,7 @@ UI_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(UI_ROOT))
 
 import explosion  # noqa: E402
+import drawings  # noqa: E402
 from adapter import AdapterError  # noqa: E402
 
 POLYGONS = {"front-1": "M 5,5 L 65,5 L 65,45 L 5,45 Z", "pcb-1": "M 10,8 L 90,8 L 50,58 Z"}
@@ -21,6 +22,11 @@ POLYGONS = {"front-1": "M 5,5 L 65,5 L 65,45 L 5,45 Z", "pcb-1": "M 10,8 L 90,8 
 def drawing_svg(d: str) -> str:
     return ('<svg xmlns="http://www.w3.org/2000/svg" width="100mm" height="70mm" viewBox="0 0 100 70"><g id="observed_outline">'
             f'<path data-line-role="outline" d="{d}"/></g></svg>')
+
+
+class _Done:
+    def __init__(self, returncode=0, stderr=""):
+        self.returncode, self.stderr = returncode, stderr
 
 
 class ExplosionTest(unittest.TestCase):
@@ -58,12 +64,25 @@ class ExplosionTest(unittest.TestCase):
         self.assertTrue(all(l["status"] == "unconfirmed" for l in added["manifest"]["layers"]))
         confirmed = explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "label": "Front shell", "flip_horizontal": False})
         self.assertTrue(confirmed["layout"]["layers"][0]["confirmed_by_operator"])
-        self.assertEqual(confirmed["manifest"]["layers"][0]["reasons"], ["drawing not bound by operator"])
+        self.assertEqual(confirmed["manifest"]["layers"][0]["status"], "confirmed")  # one click binds the drawing too
         moved = explosion.layout_action(self.root, "s1", {"action": "reorder", "jobs": ["pcb-1", "front-1"]})
         self.assertEqual([l["job"] for l in moved["layout"]["layers"]], ["pcb-1", "front-1"])
         self.assertFalse(moved["layout"]["layers"][1]["confirmed_by_operator"])  # moved: confirmation withdrawn
         self.assertEqual(moved["files"]["pcb-1"], ["drawing.svg", "overlay.jpg", "rectified.png"])
         self.assertFalse((self.session / "memory").exists())
+
+    def test_saved_drawing_binding_and_layout_survive_a_fresh_view(self):
+        drawings.bind(self.root, "s1", "front-1", "confirm", "synthetic test binding")
+        explosion.layout_action(self.root, "s1", {"action": "propose"})
+        explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "label": "Front shell",
+                                                    "view_side": "interior"})
+
+        reloaded = explosion.explosion_view(self.root, "s1")
+
+        self.assertEqual([layer["job"] for layer in reloaded["layout"]["layers"]], ["front-1", "pcb-1"])
+        self.assertTrue(reloaded["layout"]["layers"][0]["confirmed_by_operator"])
+        self.assertEqual(reloaded["manifest"]["layers"][0]["binding"], "confirmed")
+        self.assertEqual(reloaded["manifest"]["layers"][0]["status"], "confirmed")
 
     def test_bad_actions_and_bodies_are_refused_with_a_status(self):
         cases = [({"action": "delete"}, 400), ({"action": "confirm", "job": "front-1"}, 409),  # no layout yet
@@ -109,6 +128,26 @@ class ExplosionTest(unittest.TestCase):
         view = explosion.explosion_view(self.root, "s1")
         self.assertIn("not valid JSON", view["error"])
         self.assertIsNone(view["manifest"])
+
+    def test_rotation_turns_the_drawing_and_clears_the_confirmation(self):
+        explosion.layout_action(self.root, "s1", {"action": "propose"})
+        view = explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "view_side": "inner"})
+        before = next(l for l in view["manifest"]["layers"] if l["job"] == "front-1")
+        self.assertEqual(before["outline_size_mm"], [60.0, 40.0])
+        view = explosion.layout_action(self.root, "s1", {"action": "rotate", "job": "front-1"})
+        after = next(l for l in view["manifest"]["layers"] if l["job"] == "front-1")
+        self.assertEqual((after["rotation_deg"], after["outline_size_mm"]), (90, [40.0, 60.0]))
+        self.assertFalse(after["confirmed_by_operator"])
+        self.assertIn("rotate(90 ", explosion.explosion_bytes(self.root, "s1", "explosion.svg")[0].decode("utf-8"))
+
+    def test_find_outlines_reports_a_tool_failure_and_needs_a_video(self):
+        with self.assertRaises(AdapterError) as missing:
+            explosion.find_outlines(self.root, "s1", run=lambda *a, **k: _Done())
+        self.assertEqual(missing.exception.status, 409)
+        (self.root / "s1" / "agent-session.json").write_text(json.dumps({"phases": [{"video": "v.mp4"}]}), encoding="utf-8")
+        with self.assertRaises(AdapterError) as failed:
+            explosion.find_outlines(self.root, "s1", run=lambda *a, **k: _Done(1, "no frame shows parts"))
+        self.assertIn("no frame shows parts", str(failed.exception))
 
 
 if __name__ == "__main__":

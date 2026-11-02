@@ -502,6 +502,7 @@ main > section[data-page="questions"] > .page-head { order: 0; }
 .drawing-job[data-state="paused"] { --job: var(--paused); }
 .drawing-job[data-state="failed"] { --job: var(--failed); }
 .drawing-job[data-status="NEEDS_CAPTURE"] { --job: var(--needs-capture); }
+.drawing-job[data-state="done"][data-status="NEEDS_REVIEW"]::before { content: "Needs review"; }
 .drawing-job[data-status="NEEDS_CONFIRMATION"], .drawing-job[data-status="drawn_unconfirmed"] { --job: var(--unconfirmed); }
 .drawing-job[data-state="confirmed"] { --job: var(--confirmed); }
 

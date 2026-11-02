@@ -27,9 +27,12 @@ session is ``/explosion.html?session=<id>``; it announces the selected part with
 
 from __future__ import annotations
 
+import json
+import subprocess
 import sys
 from pathlib import Path
 
+import drawings
 from adapter import AdapterError, resolve_session
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "explosion"))
@@ -37,9 +40,11 @@ import compose  # noqa: E402  (tools/explosion; stdlib only)
 import explosion_jobs  # noqa: E402
 import explosion_layout  # noqa: E402
 
+SHEET_OUTLINES = Path(__file__).resolve().parents[1] / "drawing-proof" / "sheet_outlines.py"
+OUTLINES_TIMEOUT_S = 300
 JOB_FILES = {"drawing.svg": "image/svg+xml", "overlay.jpg": "image/jpeg", "rectified.png": "image/png"}
 SVG_TYPE = "image/svg+xml"
-ACTIONS = ("propose", "confirm", "reorder")
+ACTIONS = ("propose", "confirm", "reorder", "rotate")
 
 
 def _session(root: Path, session_id: str) -> Path:
@@ -93,6 +98,23 @@ def explosion_bytes(root: Path, session_id: str, name: str, job: str = "", mode:
     return path.read_bytes(), JOB_FILES[name]
 
 
+def find_outlines(root: Path, session_id: str, run=subprocess.run) -> dict:
+    """The operator's click: outlines of the large parts in the session's video become unconfirmed drawings in the layout."""
+    session = _session(root, session_id)
+    if any(name.startswith("outline-") for name in explosion_jobs.list_job_names(session)):
+        raise AdapterError("This session already has outlines from the sheet.", 409)
+    try:
+        video = json.loads((session / "agent-session.json").read_text(encoding="utf-8"))["phases"][-1]["video"]
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
+        raise AdapterError("This session has no processed video.", 409) from None
+    done = run([sys.executable, "-B", str(SHEET_OUTLINES), "--session-dir", str(session), "--video", str(video), "--frame", "auto"],
+               capture_output=True, text=True, encoding="utf-8", timeout=OUTLINES_TIMEOUT_S)
+    if done.returncode:
+        reason = (done.stderr or "").strip().splitlines()
+        raise AdapterError(f"Could not find outlines: {reason[-1] if reason else 'the tool reported an error'}", 502)
+    return layout_action(root, session_id, {"action": "propose"})
+
+
 def layout_action(root: Path, session_id: str, body: dict) -> dict:
     """Apply one operator decision to the layout spec and return the refreshed view."""
     session = _session(root, session_id)
@@ -107,6 +129,11 @@ def layout_action(root: Path, session_id: str, body: dict) -> dict:
             explosion_layout.confirm_layer(session, _text(body, "job", required=True), label=_text(body, "label"),
                                            view_side=_text(body, "view_side"), flip_horizontal=_flag(body, "flip_horizontal"),
                                            confirmed=_flag(body, "confirmed", default=True))
+            if _flag(body, "confirmed", default=True):  # the panel shows outline and source, so one click decides both questions
+                layer = next(l for l in explosion_layout.load(session)["layers"] if l["job"] == body["job"])
+                drawings.bind(root, session_id, body["job"], "confirm", f"confirmed in the explosion view as {layer['label']}")
+        elif action == "rotate":
+            explosion_layout.rotate_layer(session, _text(body, "job", required=True))
         else:
             jobs = body.get("jobs")
             if not isinstance(jobs, list) or not all(isinstance(j, str) for j in jobs):

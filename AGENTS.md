@@ -121,8 +121,10 @@ unrelated changes. Cross-module work needs explicit task authorization.
 - Never invent license identifiers or close unresolved compliance
   reviews. `tools/compliance/check.py` must stay at 0 errors.
 - Never create a root `LICENSE` file. Project licensing is deferred.
-- Python stays offline (no network imports); the PWA adds no
-  third-party runtime code and no telemetry.
+- Python is offline by default. Existing isolated provider, capture-control,
+  receiver and voice paths are documented in `ARCHITECTURE.md`; this is not
+  permission to add another network boundary. The PWA adds no third-party
+  runtime code and no telemetry.
 
 ## Forbidden operations
 
@@ -147,17 +149,23 @@ unrelated changes. Cross-module work needs explicit task authorization.
 
 ## Known architectural limitations
 
-- Zero real-hardware validation anywhere; no end-to-end real-photo run.
-- No top-level orchestrator: recognizers are independent experiments,
-  none writes to memory yet (read-only consumers only).
-- Capture sync is design-only; provider seams (embeddings, SAM-style
-  segmentation, identification) are unimplemented interfaces.
+- Hardware evidence is bounded per capability: phone capture/transfer,
+  development-video processing and one real voice question round have
+  recorded evidence. See `ARCHITECTURE.md` and the current `HANDOFF.md`;
+  none establishes general recognition accuracy or full MVP acceptance.
+- `tools/agent/` and `tools/session-ui/` orchestrate product flows. The
+  specialized recognizers remain independent experiments and do not write
+  findings directly to memory.
+- Capture sync, guided requests, Muse dialogue and Muse/SAM drawing jobs
+  exist. Physical capture-to-follow-up acceptance and a real three-assembly
+  explosion remain pending. Unimplemented provider seams stay unimplemented.
 - Calibration needs native Cairo/poppler on Windows for 4 of 13 kit
   tests; `pixels_per_mm` vs `px_per_mm` spellings differ by module.
 
 ## Current priority
 
-Real-hardware validation and end-to-end demo readiness: print and
-measure the calibration sheets, photograph a real disassembly, score
-the per-module `eval` harnesses on labelled real photos, and run the
-capture manual checklist on a physical phone.
+Functional product MVP: document disassembly, let Muse obtain missing
+information, build image-derived explosion views, and help reassembly.
+Use the current `HANDOFF.md` for the active source and next milestone;
+`ARCHITECTURE.md` remains the status/contract index. Physical acceptance
+and metrology remain explicit gates, never inferred from offline tests.

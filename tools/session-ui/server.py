@@ -30,6 +30,7 @@ import assembly_help
 import captures
 import drawings
 import explosion
+import videos
 from adapter import AdapterError
 
 LOG = logging.getLogger("session-ui")
@@ -152,6 +153,7 @@ class Handler(BaseHTTPRequestHandler):
             "/shell.js": lambda: self._send_static("shell.js"),
             "/api/sessions": self._api_sessions, "/api/status": self._api_status,
             "/api/connection": self._api_connection,
+            "/api/videos": lambda: self._send_json(videos.list_videos(Handler.workspace_root)),
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
@@ -197,7 +199,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
                   "/api/explosion/layout": self._api_explosion_layout,
-                  "/api/voice/transcribe": self._api_voice_transcribe}
+                  "/api/voice/transcribe": self._api_voice_transcribe, "/api/videos/process": self._api_video_process}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -228,6 +230,11 @@ class Handler(BaseHTTPRequestHandler):
     def _mutate(self, session_id: str, func: Callable[[], dict]) -> None:
         with self._session_lock(session_id):
             self._send_json(func())
+
+    def _api_video_process(self) -> None:
+        """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""
+        body = self._read_json()
+        self._send_json(videos.start_processing(Handler.workspace_root, str(body.get("video", ""))))
 
     def _api_connection(self) -> None:
         """Whether the Muse key is set in this server's environment. The value is never read out or sent."""

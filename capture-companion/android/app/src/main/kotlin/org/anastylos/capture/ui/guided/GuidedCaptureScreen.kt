@@ -68,6 +68,13 @@ import org.anastylos.capture.ui.camera.onImage
 import org.anastylos.capture.ui.camera.MenuSection
 import org.anastylos.capture.ui.camera.Pill
 import android.content.res.Configuration
+import android.os.SystemClock
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.delay
+import org.anastylos.capture.video.RecordingController
+import org.anastylos.capture.video.RecordingState
+import org.anastylos.capture.video.SheetWatch
+import org.anastylos.capture.video.UploadProgress
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.platform.LocalConfiguration
@@ -172,6 +179,23 @@ fun GuidedCaptureScreen(
         if (id == INVALID_SESSION_QR) scanProblem = "That QR code does not hold a session id." else viewModel.attachRemote(id)
         onScannedConsumed()
     }
+    val recorder = viewModel.recording
+    val recordingState by (recorder?.recording ?: remember { kotlinx.coroutines.flow.MutableStateFlow<RecordingState>(RecordingState.Idle) }).collectAsState()
+    val uploadProgress by (recorder?.upload ?: remember { kotlinx.coroutines.flow.MutableStateFlow<UploadProgress?>(null) }).collectAsState()
+    DisposableEffect(recorder) {
+        container.voice.onRecordingCommand = { start -> if (start) recorder?.start() else recorder?.stop() }
+        onDispose { container.voice.onRecordingCommand = null }
+    }
+    val recordingNow = recordingState is RecordingState.Recording
+    var sheetWarning by remember { mutableStateOf(false) }
+    LaunchedEffect(recordingNow) {
+        val watch = SheetWatch()
+        sheetWarning = false
+        while (recordingNow) {
+            sheetWarning = watch.onSample(SystemClock.elapsedRealtime(), viewModel.state.value.registration == RegistrationState.ACQUIRED)
+            delay(1_000)
+        }
+    }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var wheel by remember { mutableStateOf<WheelKind?>(null) }
     var help by remember { mutableStateOf<HelpTopic?>(null) }
@@ -184,6 +208,13 @@ fun GuidedCaptureScreen(
             onBack = onBack,
             status = { compact -> StatusLabel(cold.remoteAttached, if (compact) null else voiceLabelOf(voiceState), compact) },
             barExtras = {
+                if (recorder != null) {
+                    BarIconButton(
+                        if (recordingNow) Glyph.Stop else Glyph.Record,
+                        if (recordingNow) "Stop recording" else "Record the disassembly",
+                        tint = Palette.Brick,
+                    ) { if (recordingNow) recorder.stop() else recorder.start() }
+                }
                 if (!cold.remoteAttached) BarIconButton(Glyph.Qr, "Scan the session QR code", onClick = onScanSession)
             },
             torchOn = cold.settings.torch,
@@ -192,6 +223,7 @@ fun GuidedCaptureScreen(
             onMenu = { menuOpen = true },
             actions = { compact -> ActionButtons(cold, viewModel, container.voice, voiceState, compact, onScanSession) },
             overlayTop = { isLandscape ->
+                RecordingLines(recordingState, uploadProgress, sheetWarning, recorder)
                 if (cold.remoteAttached) BannerText(statusBannerOf(state), isLandscape)
                 if (cold.remoteAttached && cold.remoteRequest == null && !isLandscape) CueList(state)
                 state.cameraError?.let { ErrorLine("Camera: $it") }
@@ -280,6 +312,43 @@ private fun Diagnostics(
     VoiceDetails(voice, voiceState)
     TargetPicker(cold, viewModel)
     QualityRow(state, viewModel)
+}
+
+/** Recording time, upload progress and the out-of-view warning; plain text, never blocking. */
+@Composable
+private fun RecordingLines(
+    recording: RecordingState,
+    upload: UploadProgress?,
+    sheetWarning: Boolean,
+    recorder: RecordingController?,
+) {
+    val elapsedSeconds by produceState(0L, recording) {
+        val started = (recording as? RecordingState.Recording)?.startedAtMs ?: return@produceState
+        while (true) {
+            value = (System.currentTimeMillis() - started) / 1000
+            delay(1_000)
+        }
+    }
+    when (recording) {
+        is RecordingState.Recording ->
+            Text("● Recording %d:%02d".format(elapsedSeconds / 60, elapsedSeconds % 60), color = Palette.Brick, style = MaterialTheme.typography.titleMedium.onImage())
+        is RecordingState.Failed -> {
+            ErrorLine(recording.message)
+            Text("Dismiss", color = Palette.Paper, style = MaterialTheme.typography.bodyMedium.onImage(), modifier = Modifier.clickable { recorder?.dismissFailure() })
+        }
+        RecordingState.Idle -> Unit
+    }
+    if (sheetWarning) Text("The sheet is out of view. Recording continues.", color = Palette.Ochre, style = MaterialTheme.typography.titleMedium.onImage())
+    when (upload) {
+        is UploadProgress.Sending -> Text("Sending video ${upload.sent} of ${upload.total}", color = Palette.Paper, style = MaterialTheme.typography.bodyMedium.onImage())
+        is UploadProgress.Waiting -> Text("Video saved. ${upload.reason} Retrying.", color = Palette.Paper, style = MaterialTheme.typography.bodyMedium.onImage())
+        UploadProgress.Done -> Text("Video sent to the workstation.", color = Palette.Sage, style = MaterialTheme.typography.bodyMedium.onImage())
+        is UploadProgress.Failed -> {
+            ErrorLine("Video not sent: ${upload.message}")
+            Text("Dismiss", color = Palette.Paper, style = MaterialTheme.typography.bodyMedium.onImage(), modifier = Modifier.clickable { recorder?.dismissFailure() })
+        }
+        null -> Unit
+    }
 }
 
 @Composable

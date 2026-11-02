@@ -243,6 +243,7 @@ class GuidanceViewModel(
     private val timing: TimingAccumulator = TimingAccumulator(),
     /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
     private val armDebounceMs: Long = 0L,
+    private val videoDir: java.io.File? = null,
     // Same monotonic domain as nanoClock (elapsedRealtime in production);
     // deriving it keeps one injectable clock, so JVM tests need no Android.
     private val armClock: () -> Long = { nanoClock() / 1_000_000L },
@@ -252,6 +253,21 @@ class GuidanceViewModel(
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
 
     private var camera: GuidedCamera? = null
+
+    /** The attached session's upload route for disassembly videos; null while detached. */
+    private var videoUpload: org.anastylos.capture.video.VideoUploadContext? = null
+
+    /** Disassembly recording and its upload; null in builds without a video folder. */
+    val recording: org.anastylos.capture.video.RecordingController? by lazy {
+        videoDir?.let { dir ->
+            org.anastylos.capture.video.RecordingController(
+                directory = dir,
+                camera = { camera as? org.anastylos.capture.camera.VideoCamera },
+                uploadContext = { videoUpload },
+                scope = viewModelScope,
+            )
+        }
+    }
     private var cameraOwner: LifecycleOwner? = null
     private var cameraPreview: PreviewView? = null
     private var settingsJob: Job? = null
@@ -942,6 +958,11 @@ class GuidanceViewModel(
             token = { (bundle.session.resolveToken() as? GuidedTokenOutcome.Ready)?.token },
             utcNow = { utcClock().toIsoUtc() },
         )
+        videoUpload = org.anastylos.capture.video.VideoUploadContext(
+            org.anastylos.capture.video.VideoUploadClient(org.anastylos.capture.sync.GuidedControlClient(transport)), sessionId,
+            token = { (bundle.session.resolveToken() as? GuidedTokenOutcome.Ready)?.token },
+        )
+        recording?.resumePending()
         bundle.session.attach(sessionId)
         bundle.session.startPolling()
         viewModelScope.launch { publishCapabilities(bundle.session) }
@@ -989,6 +1010,7 @@ class GuidanceViewModel(
     fun detachRemote() {
         sessionId = null
         voice?.link = org.anastylos.capture.voice.DetachedVoiceLink()
+        videoUpload = null
         remoteCollectJob?.cancel()
         remoteCollectJob = null
         try {

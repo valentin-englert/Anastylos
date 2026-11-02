@@ -62,6 +62,7 @@ import anastylos_capture_validate as validator  # noqa: E402  (sibling import by
 import anastylos_qr as qr_encode  # noqa: E402  (same directory by design)
 import anastylos_guided_routes as guided  # noqa: E402  (same directory by design)
 import anastylos_voice_routes as voice  # noqa: E402  (same directory by design)
+import anastylos_video_routes as video  # noqa: E402  (same directory by design)
 
 SERVICE_NAME = "anastylos-capture-receiver"
 API_VERSION = 1
@@ -723,8 +724,18 @@ class ReceiverHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(HTTPStatus.OK, {"duplicate": True, "report": report})
             return
+        if video.is_video_path(parsed.path):
+            if video.VideoRoutes(self).dispatch("GET", parsed):
+                return
         if parsed.path.startswith("/v1/guided/"):
             if guided.GuidedRoutes(self).dispatch_get(parsed):
+                return
+        self._error(HTTPStatus.NOT_FOUND, "not_found", "Unknown endpoint.")
+
+    def do_PUT(self) -> None:  # noqa: D102 (stdlib override)
+        parsed = urlparse(self.path)
+        if video.is_video_path(parsed.path):
+            if video.VideoRoutes(self).dispatch("PUT", parsed):
                 return
         self._error(HTTPStatus.NOT_FOUND, "not_found", "Unknown endpoint.")
 
@@ -744,6 +755,9 @@ class ReceiverHandler(BaseHTTPRequestHandler):
             return
         if voice.is_voice_path(parsed.path):
             if voice.VoiceRoutes(self).dispatch_post(parsed):
+                return
+        if video.is_video_path(parsed.path):
+            if video.VideoRoutes(self).dispatch("POST", parsed):
                 return
         if parsed.path.startswith("/v1/guided/"):
             if guided.GuidedRoutes(self).dispatch_post(parsed):

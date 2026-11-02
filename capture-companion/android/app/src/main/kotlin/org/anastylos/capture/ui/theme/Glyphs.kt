@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** Hand-drawn line icons on a 24-unit grid; no icon library dependency. */
-enum class Glyph { Menu, Bolt, Qr, Info, Close, Back, Switch }
+enum class Glyph { Menu, Bolt, Qr, Info, Close, Back, Switch, Record, Stop }
 
 @Composable
 fun GlyphIcon(glyph: Glyph, tint: Color, modifier: Modifier = Modifier, size: Dp = 24.dp, filled: Boolean = false) {
@@ -53,6 +53,14 @@ fun GlyphIcon(glyph: Glyph, tint: Color, modifier: Modifier = Modifier, size: Dp
                 drawCircle(tint, 9.5f * u, p(12f, 12f), style = stroke)
                 drawCircle(tint, 1.1f * u, p(12f, 7.6f))
                 drawLine(tint, p(12f, 11f), p(12f, 17f), 1.8f * u, StrokeCap.Round)
+            }
+            Glyph.Record -> {
+                drawCircle(tint, 9.5f * u, p(12f, 12f), style = stroke)
+                drawCircle(tint, 5.5f * u, p(12f, 12f))
+            }
+            Glyph.Stop -> {
+                drawCircle(tint, 9.5f * u, p(12f, 12f), style = stroke)
+                drawRect(tint, p(8.5f, 8.5f), Size(7f * u, 7f * u))
             }
             Glyph.Switch -> {
                 val a = Path().apply { moveTo(4f * u, 9f * u); lineTo(19f * u, 9f * u); lineTo(15.5f * u, 5.5f * u) }

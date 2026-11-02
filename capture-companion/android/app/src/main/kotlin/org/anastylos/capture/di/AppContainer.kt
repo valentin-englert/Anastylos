@@ -169,6 +169,7 @@ class AppContainer(context: Context) {
                     timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,
                     armDebounceMs = 1200L,
+                    videoDir = java.io.File(appContext.filesDir, "videos"),
                 ) as T
         }
 

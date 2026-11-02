@@ -273,10 +273,11 @@ section > .hint { display: none; }                       /* moved into the help 
 main { flex: 1 1 auto; }
 /* start screen: centred in the space below the top bar, nudged up for optical balance */
 main:has(> #home:not([hidden])) { display: flex; flex-direction: column; justify-content: center; padding-bottom: 10vh; }
+@media (max-height: 800px) { main:has(> #home:not([hidden])) { padding-top: 0; padding-bottom: 0; } }
 #home { width: 100%; padding-top: 0; text-align: center; }
 .home-status {
   display: inline-block;
-  margin: var(--s-3) 0 var(--s-6);
+  margin: var(--s-4) 0 clamp(1.5rem, 6vh, 4.5rem);
   padding: 0 var(--s-5);
   border: 1px solid var(--hairline);
   border-radius: var(--pill);

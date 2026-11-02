@@ -32,6 +32,7 @@ import dialogue_flow
 import drawings
 import explosion
 import phone
+import replay
 import videos
 from adapter import AdapterError
 
@@ -43,7 +44,8 @@ WEB = Path(__file__).resolve().parent / "web"
 STATIC = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
           "styles.css": "text/css; charset=utf-8", "shell.js": "text/javascript; charset=utf-8",
           "explosion.html": "text/html; charset=utf-8", "explosion.js": "text/javascript; charset=utf-8",
-          "explosion.css": "text/css; charset=utf-8", "part-help.js": "text/javascript; charset=utf-8"}
+          "explosion.css": "text/css; charset=utf-8", "part-help.js": "text/javascript; charset=utf-8",
+          "replay.js": "text/javascript; charset=utf-8"}
 ASSET_DIRS = ("assets", "fonts")
 ASSET_TYPES = {".woff2": "font/woff2", ".svg": "image/svg+xml", ".png": "image/png", ".txt": "text/plain; charset=utf-8"}
 MAX_BODY = 64 * 1024
@@ -167,11 +169,13 @@ class Handler(BaseHTTPRequestHandler):
             "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
             "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
             "/api/parts/link-candidates": self._api_parts_candidates,
+            "/api/replay": self._api_replay_moments, "/api/replay/file": self._api_replay_file,
             "/api/capture/qr": lambda: self._send_bytes(captures.session_qr_png(Handler.workspace_root), "image/png"),
             "/explosion.html": lambda: self._send_static("explosion.html"),
             "/explosion.js": lambda: self._send_static("explosion.js"),
             "/explosion.css": lambda: self._send_static("explosion.css"),
             "/part-help.js": lambda: self._send_static("part-help.js"),
+            "/replay.js": lambda: self._send_static("replay.js"),
             "/api/explosion": self._api_explosion, "/api/explosion/file": self._api_explosion_file,
         }
         path = urllib.parse.urlsplit(self.path).path
@@ -205,6 +209,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
+                  "/api/replay/prepare": self._api_replay_prepare,
                   "/api/explosion/layout": self._api_explosion_layout, "/api/explosion/outlines": self._api_explosion_outlines,
                   "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
                   "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
@@ -491,6 +496,24 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The session parameter is missing.", 400)
         self._send_json(assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""),
                                                      str(body.get("question", ""))))
+
+    def _api_replay_moments(self) -> None:
+        query = self._query()
+        parts = [p for p in query.get("parts", "").split(",") if p]
+        self._send_json(replay.replay_moments(Handler.workspace_root, self._session_param(query), parts))
+
+    def _api_replay_file(self) -> None:
+        query = self._query()
+        body, content_type = replay.replay_file(Handler.workspace_root, self._session_param(query), query.get("key", ""),
+                                                query.get("name", ""))
+        self._send_bytes(body, content_type)
+
+    def _api_replay_prepare(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: replay.replay_prepare(Handler.workspace_root, session_id, str(body.get("part", ""))))
 
     def _api_voice_transcribe(self) -> None:
         """Push-to-talk clip → transcript. The clip goes to the provider in a separate process and is not stored."""

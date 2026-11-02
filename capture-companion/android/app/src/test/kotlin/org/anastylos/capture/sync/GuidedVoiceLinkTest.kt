@@ -86,4 +86,10 @@ class GuidedVoiceLinkTest {
         l.transcribe(byteArrayOf(1))
         assertThat(sent.last().headers).doesNotContainKey("X-Asr-Keywords")
     }
+
+    @Test
+    fun theWakeNamesKeepTheConfiguredAgentNameForDisplay() = runTest {
+        replies += reply(200, """{"agent_name":"Herbert","wake_words":["herbert"],"asr_keywords":["Herbert"],"mishearings":[]}""")
+        assertThat(link().wakeNames()!!.displayName).isEqualTo("Herbert")
+    }
 }

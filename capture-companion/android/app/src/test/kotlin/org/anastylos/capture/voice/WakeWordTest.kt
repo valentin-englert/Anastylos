@@ -58,4 +58,11 @@ class WakeWordTest {
         assertThat(WakeWord.route("Meta, repeat", armed = false, names = WakeWord.Names.of(emptyList())))
             .isEqualTo(Route.Command(FixedCommand.REPEAT))
     }
+
+    @Test
+    fun namesCarryTheDisplayNameForTheStatusLine() {
+        assertThat(WakeWord.Names.DEFAULT.displayName).isEqualTo("Muse")
+        assertThat(WakeWord.Names.of(listOf("herbert"), "Herbert").displayName).isEqualTo("Herbert")
+        assertThat(WakeWord.Names.of(listOf("herbert"), " ").displayName).isEqualTo("Muse")
+    }
 }

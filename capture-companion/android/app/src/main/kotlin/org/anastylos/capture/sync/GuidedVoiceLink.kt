@@ -64,7 +64,7 @@ class GuidedVoiceLink(
         // Without a name the workstation keeps "Muse" and "Meta"; the phone does the same.
         if (parsed.agentName.isNullOrBlank()) return@withContext null
         keywords = parsed.asrKeywords
-        WakeWord.Names.of(parsed.wakeWords + parsed.mishearings)
+        WakeWord.Names.of(parsed.wakeWords + parsed.mishearings, parsed.agentName.orEmpty())
     }
 
     override suspend fun submit(input: VoiceLink.OperatorInput): VoiceLink.SpokenReply = withContext(ioDispatcher) {

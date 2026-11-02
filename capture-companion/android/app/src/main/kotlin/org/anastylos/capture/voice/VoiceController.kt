@@ -45,6 +45,15 @@ class VoiceController(
 
     /** What counts as the wake word: the workstation's agent name, or "Muse" / "Meta" without one or on failure. */
     @Volatile private var wakeNames: WakeWord.Names = WakeWord.Names.DEFAULT
+
+    private val conversation = ConversationWindow()
+    private var conversationJob: kotlinx.coroutines.Job? = null
+
+    /** The agent is audible until this time (its speech plus a short echo tail); nothing is heard before it. */
+    @Volatile private var deafUntilMs = 0L
+
+    /** True when the speech being played is a reply that should open the conversation window when it ends. */
+    @Volatile private var renewWhenDone = false
     data class State(
         val listening: Boolean = false,
         val pushToTalk: Boolean = false,
@@ -56,6 +65,8 @@ class VoiceController(
         val listeningSinceMs: Long? = null,
         /** Last addressed utterance, shown transiently; never persisted. */
         val heard: String? = null,
+        /** True while the operator may answer without the wake word (after the agent has spoken). */
+        val conversationOpen: Boolean = false,
     )
 
     private val appContext = context.applicationContext
@@ -85,6 +96,28 @@ class VoiceController(
             } catch (_: Exception) {
                 null
             } ?: WakeWord.Names.DEFAULT
+            _state.update { if (it.listening && it.status.startsWith(LISTENING_PREFIX)) it.copy(status = listeningStatus()) else it }
+        }
+    }
+
+    private fun listeningStatus() = "$LISTENING_PREFIX“${wakeNames.displayName}” …"
+
+    /** Speech just ended: the operator may answer for a while without the wake word. */
+    private fun openConversation() {
+        conversation.renew(SystemClock.elapsedRealtime())
+        _state.update { it.copy(conversationOpen = true, status = "Your turn: no “${wakeNames.displayName}” needed") }
+        conversationJob?.cancel()
+        conversationJob = scope.launch {
+            kotlinx.coroutines.delay(ConversationWindow.DURATION_MS)
+            if (!conversation.isOpen(SystemClock.elapsedRealtime())) closeConversation()
+        }
+    }
+
+    private fun closeConversation() {
+        conversation.close()
+        conversationJob?.cancel()
+        _state.update {
+            if (it.conversationOpen) it.copy(conversationOpen = false, status = if (it.listening) listeningStatus() else "") else it
         }
     }
 
@@ -95,7 +128,7 @@ class VoiceController(
         val thread = Thread({ readLoop() }, "anastylos-voice")
         reader = thread
         _state.update {
-            it.copy(listening = true, status = "Listening for “Muse” …", listeningSinceMs = SystemClock.elapsedRealtime(), segments = 0)
+            it.copy(listening = true, status = listeningStatus(), listeningSinceMs = SystemClock.elapsedRealtime(), segments = 0)
         }
         thread.start()
     }
@@ -103,7 +136,9 @@ class VoiceController(
     fun stopListening() {
         reader = null
         armedUntilMs = 0L
-        _state.update { it.copy(listening = false, pushToTalk = false, status = "", listeningSinceMs = null, heard = null) }
+        conversation.close()
+        conversationJob?.cancel()
+        _state.update { it.copy(listening = false, pushToTalk = false, status = "", listeningSinceMs = null, heard = null, conversationOpen = false) }
     }
 
     /** Push-to-talk fallback: start collecting regardless of the wake word. */
@@ -169,7 +204,7 @@ class VoiceController(
                 blocks++
                 synchronized(this) { pttSamples?.add(buffer.copyOf()) }
                 val s = _state.value
-                if (s.pushToTalk || s.speaking) {
+                if (s.pushToTalk || s.speaking || SystemClock.elapsedRealtime() < deafUntilMs) {
                     segmenter.reset()
                     continue
                 }
@@ -192,7 +227,10 @@ class VoiceController(
                             "ms=${segment.durationMs} bytes=${samples.size * 2} " +
                             "floor=${"%.4f".format(Locale.US, segmenter.backgroundRms)} disposition=$disposition",
                     )
-                    if (disposition == "processed") handleClip(segment, wakeRequired = true)
+                    if (disposition == "processed") {
+                        val open = conversation.isOpen(endMs)
+                        handleClip(segment, wakeRequired = !open, fromWindow = open)
+                    }
                 }
             }
         } finally {
@@ -208,7 +246,7 @@ class VoiceController(
         val durationMs: Long get() = samples.size * 1000L / SpeechSegmenter.SAMPLE_RATE
     }
 
-    private fun handleClip(segment: Segment, wakeRequired: Boolean) {
+    private fun handleClip(segment: Segment, wakeRequired: Boolean, fromWindow: Boolean = false) {
         _state.update { it.copy(busy = true) }
         val spokeEndMs = segment.endMs
         var next: Segment? = null
@@ -244,8 +282,16 @@ class VoiceController(
                         armedUntilMs = SystemClock.elapsedRealtime() + WakeWord.ARMED_MS
                         next = synchronized(this@VoiceController) { held.also { held = null } }
                         if (next != null) return@launch // already spoken: process it instead of asking
-                        _state.update { it.copy(status = "Yes? (listening for your command)") }
-                        speak(YES)
+                        // A bare wake word asks for the next question; "Yes?" only when there is nothing to say.
+                        showHeard("next question")
+                        val inputStart = SystemClock.elapsedRealtime()
+                        val answer = link.submit(VoiceLink.OperatorInput.Command(WakeWord.FixedCommand.NEXT_QUESTION))
+                        if (answer.text.isNullOrBlank()) {
+                            _state.update { it.copy(status = "Yes? (listening for your command)") }
+                            speak(YES)
+                        } else {
+                            reply(answer, spokeEndMs, transcribeMs, SystemClock.elapsedRealtime() - inputStart)
+                        }
                         return@launch
                     }
                     is WakeWord.Route.Command -> {
@@ -255,6 +301,10 @@ class VoiceController(
                         reply(answer, spokeEndMs, transcribeMs, SystemClock.elapsedRealtime() - inputStart)
                     }
                     is WakeWord.Route.Recording -> {
+                        // Recording commands always need the wake word, also inside the conversation window.
+                        if (fromWindow && WakeWord.route(transcript.text, armed = false, names = wakeNames) == WakeWord.Route.Discard) {
+                            return@launch
+                        }
                         showHeard(if (route.start) "start recording" else "stop recording")
                         onRecordingCommand?.invoke(route.start)
                         speak(if (route.start) RECORDING_STARTED else RECORDING_STOPPED)
@@ -298,7 +348,7 @@ class VoiceController(
         )
         val text = reply.text ?: return
         replySegmentEndMs = spokeEndMs
-        speak(text)
+        speak(text, opensConversation = true)
     }
 
     private fun statusLine(status: String): String = when (status) {
@@ -308,9 +358,10 @@ class VoiceController(
         else -> "Not understood ($status). Please try again or type."
     }
 
-    private fun speak(text: String) {
+    private fun speak(text: String, opensConversation: Boolean = false) {
         val engine = tts ?: return
         if (!ttsReady) return
+        renewWhenDone = opensConversation
         _state.update { it.copy(speaking = true) }
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "anastylos-${SystemClock.elapsedRealtime()}")
     }
@@ -328,9 +379,19 @@ class VoiceController(
                     replySegmentEndMs = null
                     Log.i(VOICE_LOG_TAG, "tts start ms after segment end=${SystemClock.elapsedRealtime() - since}")
                 }
-                override fun onDone(utteranceId: String?) = _state.update { it.copy(speaking = false) }
+                override fun onDone(utteranceId: String?) {
+                    // The agent must never hear itself: stay deaf a moment after the speech, then open the window.
+                    deafUntilMs = SystemClock.elapsedRealtime() + ECHO_TAIL_MS
+                    _state.update { it.copy(speaking = false) }
+                    if (renewWhenDone && _state.value.listening) openConversation()
+                    renewWhenDone = false
+                }
+
                 @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) = _state.update { it.copy(speaking = false) }
+                override fun onError(utteranceId: String?) {
+                    renewWhenDone = false
+                    _state.update { it.copy(speaking = false) }
+                }
             })
         }
     }
@@ -353,6 +414,8 @@ class VoiceController(
     private companion object {
         /** Fixed status sentence of the reference behaviour; never model text. */
         const val YES = "Yes?"
+        const val LISTENING_PREFIX = "Listening for "
+        const val ECHO_TAIL_MS = 400L
         const val RECORDING_STARTED = "Recording."
         const val RECORDING_STOPPED = "Recording stopped."
     }

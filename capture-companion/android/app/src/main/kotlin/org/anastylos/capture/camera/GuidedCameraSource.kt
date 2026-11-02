@@ -3,7 +3,11 @@ package org.anastylos.capture.camera
 import android.util.Size
 import android.util.Log
 import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.CaptureRequestOptions
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.CaptureRequest
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -126,6 +130,21 @@ class GuidedCameraSource(
                 evSteps = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_EXPOSURE_COMPENSATION),
             )
             lastFrameDurationNs = result.get(android.hardware.camera2.CaptureResult.SENSOR_FRAME_DURATION)
+            val observed = LockObservation(
+                aeLock = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_LOCK),
+                awbLock = result.get(android.hardware.camera2.CaptureResult.CONTROL_AWB_LOCK),
+                afState = result.get(android.hardware.camera2.CaptureResult.CONTROL_AF_STATE),
+                afMode = result.get(android.hardware.camera2.CaptureResult.CONTROL_AF_MODE),
+                aeState = result.get(android.hardware.camera2.CaptureResult.CONTROL_AE_STATE),
+                awbState = result.get(android.hardware.camera2.CaptureResult.CONTROL_AWB_STATE),
+            )
+            lastObservation = observed
+            // While a lock is held, log its state about once a second (numbers only) so it can be checked over adb.
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (lockConfig != null && now - lastLockLogMs >= 1_000L) {
+                lastLockLogMs = now
+                Log.i(CAMERA_LOG_TAG, "lock state aeLock=${observed.aeLock} awbLock=${observed.awbLock} afState=${observed.afState} afMode=${observed.afMode} focus=${lastApplied?.focusDiopters} aeState=${observed.aeState} awbState=${observed.awbState}")
+            }
         }
     }
 
@@ -144,6 +163,7 @@ class GuidedCameraSource(
         lastStillCaps = caps
         val cam = boundCamera ?: return false
         val ok = settingsApplier.apply(cam, settings, caps)
+        if (ok) holdLockAfterApply(cam)
         // The measured profile is bound to zoom AND focus: either change
         // re-keys (a new profile, never a silent reuse).
         val focusChanged = settings.focusMode != prevFocus.first ||
@@ -548,9 +568,21 @@ class GuidedCameraSource(
 
     // ---------- disassembly video ----------
 
+    private var preparedRecorder: androidx.camera.video.Recorder? = null
+
+    /** Held by [lockExposure]: re-added after every settings apply, which would otherwise replace it. */
+    @Volatile private var lockConfig: LockConfig? = null
+    @Volatile private var lastObservation: LockObservation? = null
+    private var lastLockLogMs = 0L
+
+    @ExperimentalCamera2Interop
+    override suspend fun prepareVideo(): Boolean = withContext(Dispatchers.Main.immediate) { prepareVideoOnMain() }
+
     @ExperimentalCamera2Interop
     override suspend fun startVideo(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean =
-        withContext(Dispatchers.Main.immediate) { startVideoOnMain(output, onEvent) }
+        withContext(Dispatchers.Main.immediate) {
+            if (preparedRecorder == null && !prepareVideoOnMain()) false else startRecordingOnMain(output, onEvent)
+        }
 
     /**
      * Preview + analysis + video is a guaranteed stream combination on every
@@ -558,10 +590,11 @@ class GuidedCameraSource(
      * returns afterwards. Focus and exposure are applied exactly as for stills.
      */
     @ExperimentalCamera2Interop
-    private fun startVideoOnMain(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean {
+    private fun prepareVideoOnMain(): Boolean {
         val cameraProvider = provider ?: return false
         val selector = boundSelector ?: return false
         if (activeRecording != null) return false
+        if (preparedRecorder != null) return true
         return try {
             val recorder = androidx.camera.video.Recorder.Builder()
                 .setQualitySelector(
@@ -581,7 +614,20 @@ class GuidedCameraSource(
             val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, capture)
             boundCamera = camera
             videoCapture = capture
+            preparedRecorder = recorder
             settingsApplier.apply(camera, lastStillSettings, lastStillCaps)
+            true
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "guided video prepare failed", e)
+            restoreStills()
+            false
+        }
+    }
+
+    @ExperimentalCamera2Interop
+    private fun startRecordingOnMain(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean {
+        val recorder = preparedRecorder ?: return false
+        return try {
             // No withAudioEnabled(): the recording carries no sound.
             activeRecording = recorder
                 .prepareRecording(context, androidx.camera.video.FileOutputOptions.Builder(output).build())
@@ -606,9 +652,115 @@ class GuidedCameraSource(
         activeRecording?.stop()
     }
 
+    /**
+     * CameraX 1.6.2 has no lock in its public API: [androidx.camera.core.FocusMeteringAction] offers regions,
+     * flags and auto-cancel only (checked in camera-core-1.6.2-api.jar). So the sheet is metered with auto-cancel
+     * off to converge AF, AE and AWB, and then CONTROL_AE_LOCK, CONTROL_AWB_LOCK and AF off at the
+     * measured lens distance (AUTO as fallback) go in through Camera2Interop, each only where the sensor offers it.
+     * What counts as locked is what the capture results report back, not what was requested.
+     */
+    @ExperimentalCamera2Interop
+    override suspend fun lockExposure(): ExposureLockResult = withContext(Dispatchers.Main.immediate) {
+        val camera = boundCamera ?: return@withContext ExposureLockResult.failed("the camera is not ready")
+        val settings = lastStillSettings
+        val caps = lastStillCaps
+        val notes = mutableListOf<String>()
+        val manualExposure = settings.exposureMode == ExposureMode.MANUAL && caps.supportsManualExposure
+        val manualFocus = settings.focusMode == FocusMode.MANUAL && caps.supportsManualFocus
+        val info = Camera2CameraInfo.from(camera.cameraInfo)
+        val aeAvailable = !manualExposure && info.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.CONTROL_AE_LOCK_AVAILABLE,
+        ) == true
+        val awbAvailable = info.getCameraCharacteristic(
+            android.hardware.camera2.CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE,
+        ) == true
+        if (!manualExposure && !aeAvailable) notes += "this camera cannot lock exposure"
+        if (!awbAvailable) notes += "this camera cannot lock white balance"
+        val wantAf = !manualFocus && caps.supportsAutoFocusModes
+        try {
+            val point = androidx.camera.core.SurfaceOrientedMeteringPointFactory(1f, 1f).createPoint(0.5f, 0.5f)
+            val action = androidx.camera.core.FocusMeteringAction.Builder(
+                point,
+                androidx.camera.core.FocusMeteringAction.FLAG_AF or androidx.camera.core.FocusMeteringAction.FLAG_AE or
+                    androidx.camera.core.FocusMeteringAction.FLAG_AWB,
+            ).disableAutoCancel().build()
+            val metered = kotlinx.coroutines.withTimeoutOrNull(METERING_TIMEOUT_MS) {
+                awaitListenableFuture(camera.cameraControl.startFocusAndMetering(action), DirectExecutor)
+            }
+            if (metered == null) notes += "the sheet did not come into focus in time"
+            else if (wantAf && !metered.isFocusSuccessful) notes += "focus on the sheet was not confirmed"
+            kotlinx.coroutines.delay(SETTLE_MS) // let AE and AWB finish converging on the final session
+            // Park the lens where the metering left it: AF off at the measured distance holds focus for the
+            // whole take and shows in the results; AUTO (no trigger) is the fallback without manual focus.
+            val parked = lastApplied?.focusDiopters
+            val config = LockConfig(
+                aeLock = aeAvailable,
+                awbLock = awbAvailable,
+                afMode = when {
+                    !wantAf -> null
+                    caps.supportsManualFocus && parked != null -> CameraMetadata.CONTROL_AF_MODE_OFF
+                    else -> CameraMetadata.CONTROL_AF_MODE_AUTO
+                },
+                focusDiopters = parked,
+            )
+            lockConfig = config
+            awaitListenableFuture(Camera2CameraControl.from(camera.cameraControl).addCaptureRequestOptions(optionsFor(config)), DirectExecutor)
+            kotlinx.coroutines.delay(VERIFY_MS) // a few frames so the results reflect the lock
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "exposure lock failed", e)
+            notes += "locking failed (${e.javaClass.simpleName})"
+        }
+        val result = judgeLock(lastObservation, wantAe = aeAvailable, wantAwb = awbAvailable, wantAf = wantAf, notes = notes)
+        Log.i(
+            CAMERA_LOG_TAG,
+            "exposure lock result ae=${result.aeLocked}(avail=$aeAvailable) awb=${result.awbLocked}(avail=$awbAvailable) " +
+                "af=${result.afLocked}(want=$wantAf) torch=${settings.torch} note=${result.note} observed=$lastObservation",
+        )
+        result
+    }
+
+    @ExperimentalCamera2Interop
+    override fun unlockExposure() {
+        if (lockConfig == null) return
+        lockConfig = null
+        val camera = boundCamera ?: return
+        try {
+            camera.cameraControl.cancelFocusAndMetering()
+            settingsApplier.apply(camera, lastStillSettings, lastStillCaps) // replaces the options, which drops the lock
+            Log.i(CAMERA_LOG_TAG, "exposure lock released")
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "exposure unlock failed", e)
+        }
+    }
+
+    @ExperimentalCamera2Interop
+    private fun optionsFor(config: LockConfig): CaptureRequestOptions {
+        val options = CaptureRequestOptions.Builder()
+        if (config.aeLock) options.setCaptureRequestOption(CaptureRequest.CONTROL_AE_LOCK, true)
+        if (config.awbLock) options.setCaptureRequestOption(CaptureRequest.CONTROL_AWB_LOCK, true)
+        config.afMode?.let { options.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, it) }
+        if (config.afMode == CameraMetadata.CONTROL_AF_MODE_OFF && config.focusDiopters != null) {
+            options.setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, config.focusDiopters)
+        }
+        return options.build()
+    }
+
+    /** The lock survives a settings change: [settingsApplier] replaces all interop options, so it goes in again. */
+    @ExperimentalCamera2Interop
+    private fun holdLockAfterApply(camera: Camera) {
+        val held = lockConfig ?: return
+        try {
+            Camera2CameraControl.from(camera.cameraControl).addCaptureRequestOptions(optionsFor(held))
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "could not hold the lock after a settings change", e)
+        }
+    }
+
     @ExperimentalCamera2Interop
     private fun restoreStills() {
         activeRecording = null
+        preparedRecorder = null
+        unlockExposure()
         val cameraProvider = provider ?: return
         try {
             videoCapture?.let { cameraProvider.unbind(it) }
@@ -700,3 +852,8 @@ class GuidedCameraSource(
         )
     }
 }
+
+/** How long the sheet gets to come into focus, then to settle, then to show the lock in the results. */
+private const val METERING_TIMEOUT_MS = 5_000L
+private const val SETTLE_MS = 700L
+private const val VERIFY_MS = 600L

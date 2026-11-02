@@ -154,7 +154,7 @@ def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, 
         _update(root, video_id, state="running", stage="creating the session folder")
         state = SessionState.create(root / folder, "Phone video", "workstation")
         _update(root, video_id, stage="running the session pipeline on the video")
-        counts = phases.run_phase(state, PHASE_TAG, PHASE_LABEL, video, runner, phases.vision_python(python))
+        counts = phases.run_phase(state, PHASE_TAG, PHASE_LABEL, video, runner, phases.vision_python(python or Path(sys.executable)))
         _update(root, video_id, state="done", stage="finished", counts=counts, finished_at=_now())
     except SessionError as exc:
         _update(root, video_id, state="failed", stage="failed", error=str(exc), finished_at=_now())

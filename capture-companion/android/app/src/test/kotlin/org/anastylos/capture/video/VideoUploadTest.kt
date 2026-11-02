@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.anastylos.capture.camera.ExposureLockResult
 import org.anastylos.capture.camera.VideoCamera
 import org.anastylos.capture.camera.VideoRecordingEvent
 import org.anastylos.capture.sync.GuidedControlClient
@@ -148,7 +149,19 @@ class RecordingControllerTest {
     private class FakeCamera(private val payload: ByteArray, var startOk: Boolean = true) : VideoCamera {
         var listener: ((VideoRecordingEvent) -> Unit)? = null
         var file: File? = null
+        val calls = mutableListOf<String>()
+        var lockResult = ExposureLockResult(aeLocked = true, awbLocked = true, afLocked = true)
+
+        override suspend fun prepareVideo(): Boolean = true.also { calls += "prepare" }
+
+        override suspend fun lockExposure(): ExposureLockResult = lockResult.also { calls += "lock" }
+
+        override fun unlockExposure() {
+            calls += "unlock"
+        }
+
         override suspend fun startVideo(output: File, onEvent: (VideoRecordingEvent) -> Unit): Boolean {
+            calls += "start"
             if (!startOk) return false
             file = output
             output.writeBytes(payload)
@@ -210,6 +223,38 @@ class RecordingControllerTest {
         advanceUntilIdle()
         assertThat(controller.upload.value).isEqualTo(UploadProgress.Done)
         assertThat(receiver.status).isEqualTo("complete")
+    }
+
+    @Test
+    fun theLockIsTakenBeforeRecordingStartsAndReleasedWhenItEnds() = runTest {
+        val camera = FakeCamera(payload)
+        val controller = controller(camera, FakeReceiver())
+        controller.start()
+        assertThat(controller.recording.value).isEqualTo(RecordingState.Preparing)
+        advanceUntilIdle()
+        assertThat(camera.calls).containsExactly("prepare", "lock", "start").inOrder()
+        val recording = controller.recording.value as RecordingState.Recording
+        assertThat(recording.lock!!.fullyLocked).isTrue()
+        assertThat(recording.emptySheetMs).isEqualTo(EMPTY_SHEET_MS)
+        controller.stop()
+        advanceUntilIdle()
+        assertThat(camera.calls.last()).isEqualTo("unlock")
+        val note = File(camera.file!!.parentFile, camera.file!!.name + ".take.json").readText()
+        assertThat(note).contains("\"empty_sheet_s\":5.0")
+        assertThat(note).contains("\"ae_locked\":true")
+    }
+
+    @Test
+    fun aLockThatFailsNeverBlocksRecordingAndTheNoteIsKept() = runTest {
+        val camera = FakeCamera(payload).apply {
+            lockResult = ExposureLockResult(aeLocked = false, awbLocked = true, afLocked = true, note = "this camera cannot lock exposure")
+        }
+        val controller = controller(camera, FakeReceiver())
+        controller.start()
+        advanceUntilIdle()
+        val recording = controller.recording.value as RecordingState.Recording
+        assertThat(recording.lock!!.fullyLocked).isFalse()
+        assertThat(recording.lock!!.note).contains("cannot lock exposure")
     }
 
     @Test

@@ -73,6 +73,8 @@ import android.os.SystemClock
 import androidx.compose.runtime.produceState
 import kotlinx.coroutines.delay
 import org.anastylos.capture.video.RecordingController
+import org.anastylos.capture.video.RecordingPhase
+import org.anastylos.capture.video.recordingPhase
 import org.anastylos.capture.video.RecordingState
 import org.anastylos.capture.video.SheetWatch
 import org.anastylos.capture.video.UploadProgress
@@ -188,6 +190,7 @@ fun GuidedCaptureScreen(
         onDispose { container.voice.onRecordingCommand = null }
     }
     val recordingNow = recordingState is RecordingState.Recording
+    val preparing = recordingState is RecordingState.Preparing
     var sheetWarning by remember { mutableStateOf(false) }
     LaunchedEffect(recordingNow) {
         val watch = SheetWatch()
@@ -216,7 +219,7 @@ fun GuidedCaptureScreen(
             onTorch = { viewModel.updateSettings { it.copy(torch = !it.torch) } },
             onMenu = { menuOpen = true },
             actions = { compact ->
-                ActionButtons(cold, viewModel, container.voice, voiceState, compact, onScanSession, recorder, recordingNow)
+                ActionButtons(cold, viewModel, container.voice, voiceState, compact, onScanSession, recorder, recordingNow, preparing)
             },
             overlayTop = { isLandscape ->
                 RecordingLines(recordingState, uploadProgress, sheetWarning, recorder)
@@ -326,8 +329,25 @@ private fun RecordingLines(
         }
     }
     when (recording) {
-        is RecordingState.Recording ->
-            Text("● Recording %d:%02d".format(elapsedSeconds / 60, elapsedSeconds % 60), color = Palette.Brick, style = MaterialTheme.typography.titleMedium.onImage())
+        RecordingState.Preparing -> {
+            Text("Empty sheet, please", color = Palette.Ochre, style = MaterialTheme.typography.headlineSmall.onImage())
+            Text("Locking focus, exposure and white balance…", color = Palette.Paper, style = MaterialTheme.typography.titleMedium.onImage())
+        }
+        is RecordingState.Recording -> {
+            when (val phase = recordingPhase(elapsedSeconds * 1000, recording.emptySheetMs)) {
+                is RecordingPhase.EmptySheet ->
+                    Text("Keep the sheet empty · ${phase.secondsLeft}", color = Palette.Ochre, style = MaterialTheme.typography.headlineSmall.onImage())
+                RecordingPhase.PlaceObject ->
+                    Text("Now place the object", color = Palette.Sage, style = MaterialTheme.typography.headlineSmall.onImage())
+                RecordingPhase.Normal ->
+                    Text("● Recording %d:%02d".format(elapsedSeconds / 60, elapsedSeconds % 60), color = Palette.Brick, style = MaterialTheme.typography.titleMedium.onImage())
+            }
+            recording.lock?.let { lock ->
+                if (!lock.fullyLocked) {
+                    Text("Exposure not fully locked: ${lock.note ?: "unknown reason"}. Recording continues.", color = Palette.Ochre, style = MaterialTheme.typography.bodyMedium.onImage())
+                }
+            }
+        }
         is RecordingState.Failed -> {
             ErrorLine(recording.message)
             Text("Dismiss", color = Palette.Paper, style = MaterialTheme.typography.bodyMedium.onImage(), modifier = Modifier.clickable { recorder?.dismissFailure() })
@@ -583,9 +603,10 @@ private fun ActionButton(text: String, short: String, primary: Boolean, compact:
 
 /** "Record disassembly": a labelled control with a red dot, turning into "Stop recording". */
 @Composable
-private fun RecordButton(recording: Boolean, compact: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun RecordButton(recording: Boolean, preparing: Boolean, compact: Boolean, modifier: Modifier, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
+        enabled = !preparing,
         modifier = modifier.height(if (compact) 44.dp else 56.dp),
         contentPadding = if (compact) PaddingValues(horizontal = 4.dp) else ButtonDefaults.ContentPadding,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Paper),
@@ -593,8 +614,8 @@ private fun RecordButton(recording: Boolean, compact: Boolean, modifier: Modifie
     ) {
         Box(Modifier.size(10.dp).background(Palette.Brick, if (recording) RoundedCornerShape(2.dp) else CircleShape))
         Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
-        if (compact) Text(if (recording) "Stop" else "Record", fontSize = 13.sp, maxLines = 1)
-        else Text(if (recording) "Stop recording" else "Record disassembly", style = MaterialTheme.typography.titleMedium)
+        if (compact) Text(if (recording) "Stop" else if (preparing) "Wait" else "Record", fontSize = 13.sp, maxLines = 1)
+        else Text(if (recording) "Stop recording" else if (preparing) "Locking…" else "Record disassembly", style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -609,6 +630,7 @@ private fun ActionButtons(
     onScanSession: () -> Unit,
     recorder: RecordingController?,
     recordingNow: Boolean,
+    preparing: Boolean,
 ) {
     val photoActions = state.remoteAttached && state.remoteRequest != null
     val buttons: @Composable (Modifier) -> Unit = { fill ->
@@ -635,13 +657,13 @@ private fun ActionButtons(
     if (compact) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             VoiceBadge(voice, voiceState, 44.dp)
-            if (recorder != null) RecordButton(recordingNow, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
+            if (recorder != null) RecordButton(recordingNow, preparing, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
             if (photoActions) photoButtons(Modifier.fillMaxWidth())
             buttons(Modifier.fillMaxWidth())
         }
     } else {
         if (photoActions) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { photoButtons(Modifier.weight(1f)) }
-        if (recorder != null) RecordButton(recordingNow, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
+        if (recorder != null) RecordButton(recordingNow, preparing, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             buttons(Modifier.weight(1f))
             VoiceBadge(voice, voiceState, 52.dp)

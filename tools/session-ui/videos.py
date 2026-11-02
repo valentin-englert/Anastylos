@@ -52,11 +52,21 @@ def _videos_dir(root: Path) -> Path | None:
     return Path(data_dir) / "videos" if isinstance(data_dir, str) and data_dir else None
 
 
+REPLACE_ATTEMPTS = 20
+
+
 def _write_atomic(path: Path, document: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     partial = path.with_name(path.name + ".partial")
     partial.write_text(json.dumps(document, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    os.replace(partial, path)
+    for attempt in range(REPLACE_ATTEMPTS):
+        try:
+            os.replace(partial, path)
+            return
+        except PermissionError:  # Windows refuses the replace while a poll has the job file open for a moment
+            if attempt == REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(0.05)
 
 
 def _job_path(root: Path, video_id: str) -> Path:

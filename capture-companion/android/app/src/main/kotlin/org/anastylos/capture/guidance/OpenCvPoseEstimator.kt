@@ -188,6 +188,12 @@ class OpenCvPoseEstimator(
             status = if (gated) WireRegistration.VALID else WireRegistration.AMBIGUOUS,
             sensorTimestampNs = input.sensorTimestampNs, monotonicNs = input.monotonicNs,
             cornersPx = cornersPx, frameQuality = quality,
+            maxResidualPx = maxResidual,
+            uncertainty = if (gated) {
+                PoseUncertainty.of(correspondences, solution.rvec, solution.tvec, intrinsics)
+            } else {
+                null
+            },
         )
     }
 

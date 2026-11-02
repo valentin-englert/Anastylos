@@ -55,6 +55,7 @@ import org.anastylos.capture.guidance.SessionState
 import org.anastylos.capture.guidance.WireRegistration
 import org.anastylos.capture.sync.EphemeralPairingStore
 import org.anastylos.capture.sync.GuidedAttemptInput
+import org.anastylos.capture.sync.GuidedCapabilities
 import org.anastylos.capture.sync.GuidedControlClient
 import org.anastylos.capture.sync.GuidedDelivery
 import org.anastylos.capture.sync.GuidedDeviceStatus
@@ -240,6 +241,13 @@ class GuidanceViewModelTest {
         override fun observeSessions(): Flow<List<CaptureSession>> = flowOf(sessions.values.toList())
         override fun observeSession(id: String): Flow<CaptureSession?> = flowOf(sessions[id])
         override suspend fun getSession(id: String): CaptureSession? = sessions[id]
+        override suspend fun ensureSession(id: String, name: String): CaptureSession =
+            sessions.getOrPut(id) {
+                CaptureSession(
+                    sessionId = id, name = name, createdAt = Instant.EPOCH, updatedAt = Instant.EPOCH,
+                    assemblyMemorySession = null, trayDefault = null,
+                )
+            }
         override suspend fun createSession(name: String): CaptureSession {
             val session = CaptureSession(
                 sessionId = "session-${++nextSession}", name = name,
@@ -383,7 +391,11 @@ class GuidanceViewModelTest {
 
     private var feedBaseNs = 0L
 
-    private suspend fun kotlinx.coroutines.test.TestScope.feedStableDwell(frames: Int = 15, stepMs: Long = 100L) {
+    private suspend fun kotlinx.coroutines.test.TestScope.feedStableDwell(
+        frames: Int = 15,
+        stepMs: Long = 100L,
+        center: List<Double> = listOf(198.0, 136.5, -450.0),
+    ) {
         // Flush the collector between emits so each estimate is
         // processed with its contemporaneous clock (production
         // processes frames in real time; without this every pose
@@ -392,7 +404,7 @@ class GuidanceViewModelTest {
         repeat(frames) { index ->
             val atNs = feedBaseNs + (index + 1) * stepMs * 1_000_000L
             nowNs = atNs + 40_000_000L
-            camera.estimateFlow.emit(validEstimate(atNs))
+            camera.estimateFlow.emit(validEstimate(atNs, center))
             advanceUntilIdle()
         }
         feedBaseNs += frames * stepMs * 1_000_000L
@@ -642,6 +654,12 @@ class GuidanceViewModelTest {
             return attemptOutcome
         }
 
+        val published = mutableListOf<GuidedCapabilities>()
+        override suspend fun publishCapabilities(caps: GuidedCapabilities): RemoteEventOutcome {
+            published += caps
+            return eventOutcome
+        }
+
         override suspend fun resolveToken(): GuidedTokenOutcome = token
 
         override fun buildEvent(
@@ -805,6 +823,19 @@ class GuidanceViewModelTest {
     }
 
     @Test
+    fun attachPublishesCapabilitiesWithoutInventingACalibration() = runTest(dispatcher) {
+        buildRemoteViewModel()
+        attachRemote()
+        val caps = remoteSession.published.single()
+        assertThat(caps.sourceId).isEqualTo("source-1")
+        assertThat(caps.targetKinds).containsExactly("pose")
+        assertThat(caps.qualityProfileIds).containsExactly("guidance-hypothesis-1", "guidance-hypothesis-2")
+        assertThat(caps.protocolVersion).isEqualTo(1)
+        // The fake camera has no measured profile, so no calibration id is offered.
+        assertThat(caps.calibrationIds).isEmpty()
+    }
+
+    @Test
     fun armConsentsThenAdoptsTheMappedRequest() = runTest(dispatcher) {
         buildRemoteViewModel()
         attachRemote()
@@ -828,6 +859,82 @@ class GuidanceViewModelTest {
         assertThat(state.target?.boardId).isEqualTo("surface_a3")
         assertThat(state.request).isEqualTo(RequestState.ACCEPTED)
         assertThat(remoteSession.events.map { it.kind }).containsAtLeast("armed", "accepted")
+    }
+
+    @Test
+    fun recordedRemoteRequestAutoShuttersThroughTheGatesAndBindsTheAttempt() = runTest(dispatcher) {
+        val wire = javaClass.classLoader!!.getResourceAsStream("remote-view-request-back-shell.json")!!
+            .bufferedReader().use { it.readText() }
+        val request = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            .decodeFromString(GuidedViewRequest.serializer(), wire)
+        buildRemoteViewModel()
+        attachRemote(request.sessionId)
+        remotePrefs.setBoardFrame(request.boardId, "surface_a3")
+        remoteViewModel.arm()
+        advanceUntilIdle()
+        remoteSession.backing.value = remoteSession.backing.value.copy(
+            session = SessionState.ACTIVE,
+            requests = mapOf(request.requestId to request),
+            activeRequestId = request.requestId,
+        )
+        advanceUntilIdle()
+
+        val card = requestCardOf(remoteViewModel.state.value)!!
+        assertThat(card.label).isEqualTo("Back shell, inner side up — hands off")
+        assertThat(card.outcome).isNull()
+        camera.geometry = GuidedCamera.StreamGeometry(1280, 720, 0, 1280, 720)
+
+        feedStableDwell(frames = 15)
+        advanceUntilIdle()
+
+        val state = remoteViewModel.state.value
+        assertThat(camera.stillsFired).isEqualTo(1)
+        assertThat(state.request).isEqualTo(RequestState.CAPTURED_LOCAL)
+        assertThat(state.captureResult!!.automatic).isTrue()
+        // Core accepts a guided package only when its manifest names the guided session.
+        assertThat(repo.getObservation(state.captureResult!!.observationId)!!.sessionId)
+            .isEqualTo(request.sessionId)
+        val bound = remoteAssociations.rows.getValue(state.captureResult!!.imageId)
+        assertThat(bound.requestId).isEqualTo(request.requestId)
+        assertThat(bound.requestRevision).isEqualTo(1)
+        assertThat(bound.attemptId).isEqualTo("attempt-1")
+        assertThat(remoteSession.events.map { it.kind }).containsAtLeast("accepted", "captured_local").inOrder()
+        assertThat(requestCardOf(state)!!.hint).isEqualTo("Captured.")
+    }
+
+    @Test
+    fun workstationRequestShootsWhenTrackedAndStillEvenOffTarget() = runTest(dispatcher) {
+        val wire = javaClass.classLoader!!.getResourceAsStream("remote-view-request-back-shell.json")!!
+            .bufferedReader().use { it.readText() }
+        val recorded = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            .decodeFromString(GuidedViewRequest.serializer(), wire)
+        // Workstation @ d4eec96b: wide tolerance around the part region.
+        val request = recorded.copy(
+            target = recorded.target.copy(translationToleranceMm = listOf(100.0, 100.0, 150.0), rotationToleranceDeg = 20.0),
+        )
+        buildRemoteViewModel()
+        attachRemote(request.sessionId)
+        remotePrefs.setBoardFrame(request.boardId, "surface_a3")
+        remoteViewModel.arm()
+        advanceUntilIdle()
+        remoteSession.backing.value = remoteSession.backing.value.copy(
+            session = SessionState.ACTIVE,
+            requests = mapOf(request.requestId to request),
+            activeRequestId = request.requestId,
+        )
+        advanceUntilIdle()
+        val target = remoteViewModel.state.value.target!!
+        assertThat(target.posTolMm).isEqualTo(org.anastylos.capture.guidance.Vec3(100.0, 100.0, 150.0))
+        assertThat(target.angTolDeg).isEqualTo(20.0)
+        camera.geometry = GuidedCamera.StreamGeometry(1280, 720, 0, 1280, 720)
+
+        // 250 mm beside the target: outside even the wide tolerance.
+        feedStableDwell(frames = 15, center = listOf(448.0, 136.5, -450.0))
+        advanceUntilIdle()
+
+        assertThat(remoteViewModel.state.value.cues).isNotEmpty()
+        assertThat(camera.stillsFired).isEqualTo(1)
+        assertThat(remoteViewModel.state.value.request).isEqualTo(RequestState.CAPTURED_LOCAL)
     }
 
     @Test

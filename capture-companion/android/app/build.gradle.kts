@@ -64,8 +64,11 @@ ksp {
 
 // Robolectric's FileDescriptor shadow reflects into jdk.internal.access.
 // AGP 9 runs Gradle on JDK 21+, where that package is closed by default.
+// Robolectric's SDK 36 sandbox needs Java 21: pin the test JVM so a
+// Gradle started on JDK 17 fails loudly instead of 4 sandbox errors.
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     jvmArgs("--add-opens", "java.base/jdk.internal.access=ALL-UNNAMED")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
 }
 
 dependencies {

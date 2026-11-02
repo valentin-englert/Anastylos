@@ -95,6 +95,8 @@ interface GuidedRemoteSession {
     suspend fun postEvent(event: GuidedSourceEvent): RemoteEventOutcome
     suspend fun postStatus(status: GuidedDeviceStatus): RemoteEventOutcome
     suspend fun reserveAttempt(input: GuidedAttemptInput): RemoteAttemptOutcome
+    /** What this source can fulfil, so Core can validate requests against it. */
+    suspend fun publishCapabilities(caps: GuidedCapabilities): RemoteEventOutcome
     suspend fun resolveToken(): GuidedTokenOutcome
     /** Builds a source event with fresh ids for a new occurrence. */
     fun buildEvent(
@@ -185,6 +187,9 @@ class GuidedSessionController(
         val sessionId = _state.value.sessionId
             ?: return RemoteConsentOutcome.Failed("no remote session attached")
         val token = guidedTokenOrNull() ?: return RemoteConsentOutcome.Failed(lastAuthError())
+        // Revision 0 means no snapshot yet (first arm right after attach): Core
+        // opens sessions at revision 1, so fetch it instead of a certain conflict.
+        if (_state.value.sessionRevision == 0) refreshSession(token, sessionId)
         val snapshot = _state.value
         val input = GuidedConsentInput(
             operationId = uuid(),
@@ -262,6 +267,21 @@ class GuidedSessionController(
             is GuidedOutcome.InvalidInput, is GuidedOutcome.Expired,
             is GuidedOutcome.RateLimited, is GuidedOutcome.Failed ->
                 RemoteEventOutcome.Failed(eventMessage(outcome))
+        }
+    }
+
+    override suspend fun publishCapabilities(caps: GuidedCapabilities): RemoteEventOutcome {
+        val token = guidedTokenOrNull() ?: return RemoteEventOutcome.Failed(lastAuthError())
+        return when (val outcome = client.publishCapabilities(token, caps)) {
+            is GuidedOutcome.Success -> RemoteEventOutcome.Sent(0, _state.value.sessionRevision)
+            is GuidedOutcome.Unauthorized -> {
+                _state.update { it.copy(authLost = true) }
+                RemoteEventOutcome.Failed("guided token rejected")
+            }
+            is GuidedOutcome.Conflict, is GuidedOutcome.NotFound,
+            is GuidedOutcome.InvalidInput, is GuidedOutcome.Expired,
+            is GuidedOutcome.RateLimited, is GuidedOutcome.Failed ->
+                RemoteEventOutcome.Failed("capabilities not published: ${eventMessage(outcome)}")
         }
     }
 

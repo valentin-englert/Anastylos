@@ -141,6 +141,76 @@ Source: `assembly-reconstruction/cad/PARAMETRIC-PROPOSAL.md:29-41`.
 - Without R9/R10 the acceptance “Muse, next question” → spoken question
   → spoken answer → “yes” → commit cannot be shown on the phone.
 
+## R11. Adapter discovers the grant the phone created (2026-11-01)
+
+- Problem: the phone mints the grant when the operator arms
+  (`POST .../consent`). The adapter that opened the session holds only
+  its `adapter_bootstrap` token and must `claim` that grant to get an
+  `adapter_session` token, but it cannot read the `grant_id`:
+  `GET /v1/guided/sessions/{id}` already returns `session.grant_id`,
+  yet `anastylos_guided_routes._get_session` admits only `source`,
+  `adapter_session` and `spatial`.
+- Proposal: `GET /v1/guided/sessions/{session_id}/grant` for the
+  `adapter_bootstrap` principal that opened this session (any other
+  principal gets the generic 404). Response
+  `{grant_id, consent_revision, expires_at, revoked, claimed}`; no
+  token, no camera id beyond what `claim` returns. Read-only, no
+  journal write.
+- Interim (TL): the workstation reads `control.db` read-only on the
+  same machine. No phone change either way.
+
+## R12. Quality grace capture: judge strictly, shoot leniently (2026-11-02)
+
+- Problem (Xiaomi runs 2026-11-01/02): image-quality gates block the
+  shutter itself. One remote request stayed on target with no photo
+  because sharpness fell under 0.7 of a reference set earlier under other
+  light; for the operator it looked like "on target, nothing happens".
+  The workstation got nothing, not even an image it could have used for
+  "where is the back shell". Qualification is already strict and
+  separate (validator → receipt); the shutter does not need to repeat it.
+- Proposal: a new profile version `guidance-hypothesis-2` (H1 stays
+  frozen and selectable). Only the shutter rule changes:
+  - Target, tracking, calibration and pose freshness keep blocking.
+  - Quality (sharpness, exposure, motion) blocks for a grace period
+    `QUALITY_GRACE_MS` (proposal 3000 ms on target). After it the phone
+    shoots once anyway, the sidecar reports the failing gates as they
+    were (`quality.overall = rejected`), and the card says
+    "Sent — not sharp, retake if you need measurements".
+  - Nothing else changes: thresholds, validator, receipts. A grace
+    capture can never become `qualified`; the workstation decides whether
+    `package_only` is enough or requests a retake.
+  - Precedent: the hackathon path already treats motion as warn-only.
+- Decision needed: (a) H2 with `QUALITY_GRACE_MS`, value; (b) whether
+  grace applies to remote requests only or also to local arming.
+- Related question, same profile: `MAX_MOTION_MEDIAN_PX` 0.7 /
+  `MAX_MOTION_P90_PX` 1.5 are applied unscaled at the 1920 px analysis
+  width, while RMS and max-residual gates are scaled from `REF_WIDTH_PX`
+  1280. Are the motion thresholds defined at 1280 px? If yes, the phone
+  is 1.5x too strict (run `42cc4b1b…`: p90 1.5001 px at 1920 = 1.0 px at
+  1280; quality rejected on motion alone). Phone and validator must use
+  the same answer.
+
+## R13. Pose-sample assets for `timestamp_interpolated` (2026-11-02)
+
+- Problem: the spatial validator accepts `solve_source =
+  timestamp_interpolated` only with two bracketing pose samples, each an
+  uploaded asset (`pose_asset.asset_id` + `sha256`). The receiver has no
+  route to upload such assets, so every phone sidecar stays
+  `UNKNOWN_SOLVE_SOURCE` (needs_review) and never `qualified`, even with
+  measured profile, measured board, 13 ms sample age and uncertainty
+  (run `42cc4b1b…`, see `CLAUDE-ANDROID-REVIEW.md` §15.4).
+- The phone already has what the samples need: the still's sensor
+  timestamp (in-memory capture) and the analysis poses on the same clock.
+- Proposal: `POST /v1/guided/attempts/{attempt_id}/pose-samples`
+  (source token, ≤ 2 per attempt, JSON `anastylos-pose-sample@1`:
+  `sample_id`, `sensor_ns`, `T_board_camera`, metrics) returning
+  `{asset_id, sha256}`; stored next to the attempt, hash-pinned, read by
+  the validator seam. Alternative without a route: `solve_source =
+  saved_image` by solving ArUco on the saved JPEG, which needs intrinsics
+  for the still resolution (only the 1920×1080 analysis profile is
+  measured).
+- Decision needed: route vs saved-image solve.
+
 ## Explicitly NOT Contract Owner scope (routed elsewhere)
 
 - Measured print scale for all 5 sheets + controller height

@@ -21,6 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -47,8 +50,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.anastylos.capture.di.AppContainer
-import org.anastylos.capture.guidance.CueAxis
-import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.PhoneRotation
 import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.RegistrationState
@@ -145,7 +146,15 @@ fun GuidedCaptureScreen(
                 }
             }
         }
-        TrackingBanner(state)
+        val card = requestCardOf(state)
+        if (card != null) RequestCardView(card) else TrackingBanner(state)
+        // The label is workstation-authored request text, spoken verbatim
+        // through the voice channel only when voice is on; never model text.
+        val requestId = cold.remoteRequest?.requestId
+        LaunchedEffect(requestId) {
+            val label = cold.remoteRequest?.targetLabel
+            if (requestId != null && !label.isNullOrBlank()) container.voice.speakVerified(label)
+        }
         VoiceRow(container.voice)
         Box(modifier = Modifier.fillMaxWidth()) {
             AndroidView(
@@ -154,33 +163,63 @@ fun GuidedCaptureScreen(
             )
             DetectionOverlay(state, Modifier.matchParentSize())
         }
-        CueList(state)
-        StateGrid(state)
-        TargetPicker(cold, viewModel)
-        CameraPicker(
-            cameras = cold.availableCameras,
-            effectiveId = cold.effectiveCameraId,
-            note = cold.cameraNote,
-            onSelect = { viewModel.selectCamera(it) },
-        )
-        CameraSettingsPanel(
-            settings = cold.settings,
-            caps = viewModel.capsFor(cold.effectiveCameraId),
-            profiles = SETTING_PROFILES,
-            activeProfile = cold.activeProfile,
-            appliedLine = cold.appliedLine,
-            settingsNote = cold.settingsNote,
-            analysisSelectable = true,
-            onUpdate = viewModel::updateSettings,
-            onProfile = { viewModel.selectProfile(it) },
-        )
+        if (card == null) CueList(state)
         ControlRow(cold, viewModel)
-        QualityRow(state, viewModel)
         RemoteSection(cold, viewModel)
         ResultCard(cold, viewModel)
         state.cameraError?.let { Text("Camera: $it", color = MaterialTheme.colorScheme.error) }
         state.captureError?.let { Text("Capture: $it", color = MaterialTheme.colorScheme.error) }
-        state.sessionReason?.let { Text("Session note: $it") }
+        var details by rememberSaveable { mutableStateOf(false) }
+        OutlinedButton(onClick = { details = !details }) {
+            Text(if (details) "Hide details" else "Show details")
+        }
+        if (details) {
+            StateGrid(state)
+            state.sessionReason?.let { Text("Session note: $it") }
+            RemoteDetails(cold)
+            TargetPicker(cold, viewModel)
+            CameraPicker(
+                cameras = cold.availableCameras,
+                effectiveId = cold.effectiveCameraId,
+                note = cold.cameraNote,
+                onSelect = { viewModel.selectCamera(it) },
+            )
+            CameraSettingsPanel(
+                settings = cold.settings,
+                caps = viewModel.capsFor(cold.effectiveCameraId),
+                profiles = SETTING_PROFILES,
+                activeProfile = cold.activeProfile,
+                appliedLine = cold.appliedLine,
+                settingsNote = cold.settingsNote,
+                analysisSelectable = true,
+                onUpdate = viewModel::updateSettings,
+                onProfile = { viewModel.selectProfile(it) },
+            )
+            QualityRow(state, viewModel)
+        }
+    }
+}
+
+/** The workstation's request, readable at arm's length. */
+@Composable
+private fun RequestCardView(card: RequestCard) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Requested by the workstation", style = MaterialTheme.typography.labelLarge)
+            Text(card.label, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(card.hint, style = MaterialTheme.typography.headlineSmall)
+            card.outcome?.let { outcome ->
+                Text(
+                    outcome.text,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = if (outcome.retake) MaterialTheme.colorScheme.error else Color(0xFF2E7D32),
+                )
+                outcome.note?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+            }
+        }
     }
 }
 
@@ -311,18 +350,6 @@ private fun CueList(state: GuidanceUiState) {
     }
 }
 
-private fun cueText(cue: MovementCue): String {
-    val magnitude = "%.0f".format(kotlin.math.abs(cue.magnitude))
-    return when (cue.axis) {
-        CueAxis.LATERAL -> if (cue.magnitude > 0) "→ Move right ${magnitude}mm" else "← Move left ${magnitude}mm"
-        CueAxis.VERTICAL -> if (cue.magnitude > 0) "↓ Move down ${magnitude}mm" else "↑ Move up ${magnitude}mm"
-        CueAxis.DEPTH -> if (cue.magnitude > 0) "⊕ Move back ${magnitude}mm" else "⊙ Move closer ${magnitude}mm"
-        CueAxis.YAW -> if (cue.magnitude > 0) "↻ Turn right ${magnitude}°" else "↺ Turn left ${magnitude}°"
-        CueAxis.PITCH -> if (cue.magnitude > 0) "↓ Tilt down ${magnitude}°" else "↑ Tilt up ${magnitude}°"
-        CueAxis.ROLL -> if (cue.magnitude > 0) "↻ Roll right ${magnitude}°" else "↺ Roll left ${magnitude}°"
-    }
-}
-
 @Composable
 private fun StateGrid(state: GuidanceUiState) {
     Text(
@@ -442,26 +469,8 @@ private fun RemoteSection(state: GuidanceUiState, viewModel: GuidanceViewModel) 
             ) { Text("Attach") }
         }
     } else {
-        Text(
-            "Session ${state.remoteSessionId?.take(8)}… · ${state.remoteSession ?: "…"}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        val request = state.remoteRequest
-        if (request == null) {
-            Text("Waiting for a Core request…", style = MaterialTheme.typography.bodySmall)
-        } else {
-            Text(
-                "Request ${request.targetLabel} · ${request.status} r${request.revision}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                "Board ${request.boardId.take(8)}… → ${state.boardId} · " +
-                    "calibration ${request.calibrationId.take(8)}…",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (state.boardId.isBlank()) {
-                Text("Map this board before navigating.", color = MaterialTheme.colorScheme.error)
-            }
+        if (state.remoteRequest == null) {
+            Text("Connected to the workstation. Waiting for a request…", style = MaterialTheme.typography.titleMedium)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { viewModel.detachRemote() }) { Text("Detach") }
@@ -469,20 +478,10 @@ private fun RemoteSection(state: GuidanceUiState, viewModel: GuidanceViewModel) 
                 onClick = { viewModel.selectRemoteBoard(state.boardId) },
                 enabled = state.boardId.isNotBlank(),
             ) { Text("Map board to current") }
+            if (!state.attemptReady && !state.reservingAttempt && state.remoteRequest != null) {
+                OutlinedButton(onClick = { viewModel.retryAttempt() }) { Text("Retry attempt") }
+            }
         }
-        if (state.reservingAttempt) Text("Reserving attempt…")
-        if (state.attemptReady) Text("Attempt reserved.")
-        if (!state.attemptReady && !state.reservingAttempt && state.remoteRequest != null) {
-            OutlinedButton(onClick = { viewModel.retryAttempt() }) { Text("Retry attempt") }
-        }
-        state.delivery?.let { link ->
-            Text(
-                "Delivery ${link.deliveryState}" +
-                    (link.receiptStatus?.let { " · receipt ${it.wire}" } ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        state.deliveryNote?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
     state.remoteError?.let { error ->
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -490,6 +489,32 @@ private fun RemoteSection(state: GuidanceUiState, viewModel: GuidanceViewModel) 
             OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
         }
     }
+}
+
+/** Ids, revisions and delivery internals: details view only. */
+@Composable
+private fun RemoteDetails(state: GuidanceUiState) {
+    if (!state.remoteAttached) return
+    Text(
+        "Session ${state.remoteSessionId?.take(8)}… · ${state.remoteSession ?: "…"}",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    state.remoteRequest?.let { request ->
+        Text(
+            "Request ${request.requestId.take(8)}… · ${request.status} r${request.revision} · " +
+                "board ${request.boardId.take(8)}… → ${state.boardId} · calibration ${request.calibrationId.take(8)}…",
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    if (state.reservingAttempt) Text("Reserving attempt…", style = MaterialTheme.typography.bodySmall)
+    if (state.attemptReady) Text("Attempt reserved.", style = MaterialTheme.typography.bodySmall)
+    state.delivery?.let { link ->
+        Text(
+            "Delivery ${link.deliveryState}" + (link.receiptStatus?.let { " · receipt ${it.wire}" } ?: ""),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    state.deliveryNote?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 }
 
 @Composable

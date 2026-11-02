@@ -11,9 +11,9 @@ import org.anastylos.capture.guidance.DeliveryState
 import org.anastylos.capture.guidance.ReceiptKind
 
 /**
- * Guided-delivery orchestration for one captured image: package +
- * upload over the legacy endpoint, attempt/asset binding, then the
- * spatial sidecar — recording every stage in the association row.
+ * Guided-delivery orchestration for one captured image: package,
+ * attempt/asset binding, guided upload (joins the receipt), then the
+ * spatial sidecar; manual captures use the legacy upload only — recording every stage in the association row.
  *
  * Idempotency: the package id is content-derived (stable across
  * retries and restarts); attempt and operation ids are generated
@@ -83,7 +83,6 @@ class GuidedDelivery(
             it.packageId == packageId && it.via == org.anastylos.capture.domain.Transport.SYNC
         }
         var current = association
-        var packageSha: String? = null
         val resolveOriginal: (String) -> ByteArray? = { imageId ->
             observation.images.firstOrNull { it.imageId == imageId }?.let { image ->
                 readOriginal(
@@ -92,60 +91,41 @@ class GuidedDelivery(
                 )
             }
         }
-        if (!alreadyMarked) {
-            val built = try {
-                buildFramePackage(session, listOf(observation), resolveOriginal, appVersion, packageId)
-            } catch (e: PackageBuildException) {
-                return DeliveryOutcome.Blocked(e.message ?: "export blocked")
-            }
-            packageSha = built.packageSha256
-            current = record(current.copy(deliveryState = DeliveryState.UPLOADING))
-            val uploaded = uploadWithRetry(input.legacyToken, built)
-            when (uploaded) {
-                is UploadStage.Staged -> {
-                    repo.markSynced(listOf(observation.observationId), packageId, clock())
-                    current = record(
-                        current.copy(packageId = packageId, deliveryState = DeliveryState.PACKAGE_ACCEPTED),
-                    )
-                }
-                is UploadStage.Rejected -> {
-                    record(current.copy(deliveryState = DeliveryState.REJECTED))
-                    return DeliveryOutcome.PackageRejected(uploaded.reason)
-                }
-                is UploadStage.AuthLost -> return DeliveryOutcome.AuthLost(uploaded.reason)
-                is UploadStage.Failed -> {
-                    record(current.copy(deliveryState = DeliveryState.RETRY_WAIT))
-                    return DeliveryOutcome.UploadFailed(uploaded.reason)
-                }
-            }
-        } else if (current.packageId == null || current.deliveryState == DeliveryState.PENDING_PACKAGE ||
-            current.deliveryState == DeliveryState.UPLOADING || current.deliveryState == DeliveryState.RETRY_WAIT
-        ) {
-            current = record(
-                current.copy(packageId = packageId, deliveryState = DeliveryState.PACKAGE_ACCEPTED),
-            )
-        }
-
-        // -- stage 2: attempt/asset binding (manual captures have no attempt) --
         val attemptId = current.attemptId
         if (attemptId == null) {
+            // -- manual capture: legacy upload, no attempt, no receipt --
+            if (!alreadyMarked) {
+                val built = try {
+                    buildFramePackage(session, listOf(observation), resolveOriginal, appVersion, packageId)
+                } catch (e: PackageBuildException) {
+                    return DeliveryOutcome.Blocked(e.message ?: "export blocked")
+                }
+                uploadStage(input.legacyToken, built, null, observation.observationId, current)
+                    .let { (stage, recorded) ->
+                        current = recorded
+                        stage?.let { return it }
+                    }
+            } else if (current.packageId == null || current.deliveryState == DeliveryState.PENDING_PACKAGE ||
+                current.deliveryState == DeliveryState.UPLOADING || current.deliveryState == DeliveryState.RETRY_WAIT
+            ) {
+                current = record(current.copy(packageId = packageId, deliveryState = DeliveryState.PACKAGE_ACCEPTED))
+            }
             return DeliveryOutcome.Delivered(
                 current.deliveryState, current.receiptStatus,
                 sidecarSkippedReason = "no attempt reserved (manual capture)",
             )
         }
+
+        // -- G0 order for an attempt: package → bind → guided upload → sidecar.
+        // The package bytes are deterministic, so a rebuild after a restart
+        // or an earlier legacy upload yields the same id and sha.
+        val built = try {
+            buildFramePackage(session, listOf(observation), resolveOriginal, appVersion, packageId)
+        } catch (e: PackageBuildException) {
+            return DeliveryOutcome.Blocked(e.message ?: "export blocked")
+        }
         val image = observation.images.firstOrNull { it.imageId == input.imageId }
             ?: return DeliveryOutcome.Blocked("unknown image ${input.imageId}")
-        // When the upload was skipped (already marked), the package
-        // sha comes from rebuilding the identical deterministic bytes.
-        if (packageSha == null) {
-            val rebuilt = try {
-                buildFramePackage(session, listOf(observation), resolveOriginal, appVersion, packageId)
-            } catch (e: PackageBuildException) {
-                return DeliveryOutcome.Blocked(e.message ?: "export blocked")
-            }
-            packageSha = rebuilt.packageSha256
-        }
         val binding = GuidedAssetBinding(
             operationId = uuid(),
             attemptId = attemptId,
@@ -153,13 +133,26 @@ class GuidedDelivery(
             observationId = observation.observationId,
             imageId = image.imageId,
             imageSha256 = image.sha256,
-            packageSha256 = packageSha,
+            packageSha256 = built.packageSha256,
         )
         val bound = bindWithRetry(input.guidedToken, binding)
         when (bound) {
             is BindStage.Bound -> Unit
             is BindStage.AuthLost -> return DeliveryOutcome.AuthLost(bound.reason)
             is BindStage.Failed -> return DeliveryOutcome.BindingFailed(bound.reason)
+        }
+        if (current.receiptStatus == null) {
+            val requestId = current.requestId
+            val requestRevision = current.requestRevision
+            if (requestId == null || requestRevision == null) {
+                return DeliveryOutcome.Blocked("attempt $attemptId has no request link")
+            }
+            val link = GuidedUploadLink(input.guidedSessionId, requestId, requestRevision, attemptId)
+            uploadStage(input.guidedToken, built, link, observation.observationId, current)
+                .let { (stage, recorded) ->
+                    current = recorded
+                    stage?.let { return it }
+                }
         }
 
         // -- stage 3: spatial sidecar (skipped without a pose) --
@@ -216,26 +209,64 @@ class GuidedDelivery(
         }
     }
 
+    /**
+     * Uploads [built] (guided when [link] is set) and records the outcome.
+     * Returns a terminal outcome to stop delivery, or null to continue.
+     */
+    private suspend fun uploadStage(
+        token: String,
+        built: BuiltFramePackage,
+        link: GuidedUploadLink?,
+        observationId: String,
+        association: org.anastylos.capture.data.GuidedAssociation,
+    ): Pair<DeliveryOutcome?, org.anastylos.capture.data.GuidedAssociation> {
+        var current = record(association.copy(deliveryState = DeliveryState.UPLOADING))
+        return when (val uploaded = uploadWithRetry(token, built, link)) {
+            is UploadStage.Staged -> {
+                repo.markSynced(listOf(observationId), built.packageId, clock())
+                val receipt = uploaded.receiptStatus?.let { wire -> ReceiptKind.entries.firstOrNull { it.wire == wire } }
+                current = record(
+                    current.copy(
+                        packageId = built.packageId,
+                        deliveryState = uploaded.receiptStatus?.let { mapReceiptToDelivery(it) }
+                            ?: DeliveryState.PACKAGE_ACCEPTED,
+                        receiptStatus = receipt ?: current.receiptStatus,
+                    ),
+                )
+                null to current
+            }
+            is UploadStage.Rejected -> {
+                record(current.copy(deliveryState = DeliveryState.REJECTED))
+                DeliveryOutcome.PackageRejected(uploaded.reason) to current
+            }
+            is UploadStage.AuthLost -> DeliveryOutcome.AuthLost(uploaded.reason) to current
+            is UploadStage.Failed -> {
+                current = record(current.copy(deliveryState = DeliveryState.RETRY_WAIT))
+                DeliveryOutcome.UploadFailed(uploaded.reason) to current
+            }
+        }
+    }
+
     private sealed interface UploadStage {
-        data object Staged : UploadStage
+        data class Staged(val receiptStatus: String?) : UploadStage
         data class Rejected(val reason: String) : UploadStage
         data class AuthLost(val reason: String) : UploadStage
         data class Failed(val reason: String) : UploadStage
     }
 
-    private suspend fun uploadWithRetry(token: String, pkg: BuiltFramePackage): UploadStage {
+    private suspend fun uploadWithRetry(token: String, pkg: BuiltFramePackage, link: GuidedUploadLink?): UploadStage {
         var attempt = 0
         while (true) {
             attempt++
             val outcome = try {
-                packages.uploadPackage(token, pkg)
+                packages.uploadPackage(token, pkg, link)
             } catch (_: TransportException) {
                 null
             } catch (_: Exception) {
                 null
             }
             when (outcome) {
-                is UploadOutcome.Staged -> return UploadStage.Staged
+                is UploadOutcome.Staged -> return UploadStage.Staged(outcome.receiptStatus)
                 is UploadOutcome.Rejected -> return UploadStage.Rejected("workstation refused the package")
                 is UploadOutcome.Unauthorized -> return UploadStage.AuthLost("unauthorized: ${outcome.message}")
                 is UploadOutcome.TooLarge -> return UploadStage.Rejected("package exceeds the size cap")

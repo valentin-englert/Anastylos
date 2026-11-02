@@ -8,7 +8,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import java.io.File
 import org.anastylos.capture.BuildConfig
+import org.anastylos.capture.camera.AssetBoardInstanceSource
 import org.anastylos.capture.camera.AssetMeasuredProfileSource
+import org.anastylos.capture.camera.BoardInstanceSource
 import org.anastylos.capture.camera.MeasuredProfileSource
 import org.anastylos.capture.camera.FrameSampler
 import org.anastylos.capture.data.CameraPrefs
@@ -109,6 +111,7 @@ class AppContainer(context: Context) {
     /** Opt-in voice mode; one microphone owner for the whole app. */
     val voice: VoiceController by lazy { VoiceController(appContext) }
     private val measuredProfiles: MeasuredProfileSource by lazy { AssetMeasuredProfileSource(appContext) }
+    private val boardInstances: BoardInstanceSource by lazy { AssetBoardInstanceSource(appContext) }
     private val poseEstimator: PoseEstimator by lazy {
         OpenCvPoseEstimator(TimingArucoBackend(OpenCvArucoBackend(), guideTiming))
     }
@@ -161,6 +164,7 @@ class AppContainer(context: Context) {
                     },
                     associations = repository as GuidedAssociationRepository,
                     measuredProfiles = measuredProfiles,
+                    boardInstances = boardInstances,
                     voice = voice,
                     timing = guideTiming,
                     appVersion = BuildConfig.VERSION_NAME,

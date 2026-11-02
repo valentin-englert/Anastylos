@@ -49,7 +49,12 @@ sealed interface EnrollOutcome {
     data class Failed(val message: String) : EnrollOutcome
 }
 
-private val GuidedJson = Json { ignoreUnknownKeys = true }
+// G0 bodies carry every field; an absent value is an explicit null. A default (0, "",
+// empty list, null) left out by the encoder fails receiver validation ("missing 'reason'").
+private val GuidedJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+}
 
 class GuidedControlClient(
     private val transport: HttpTransport,

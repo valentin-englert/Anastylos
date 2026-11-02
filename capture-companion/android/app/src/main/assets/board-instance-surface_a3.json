@@ -1,0 +1,16 @@
+{
+  "schema": "anastylos-board-instance@1",
+  "board_instance_id": "50462f3b-d954-4e96-8d3f-ae877e144f25",
+  "layout_sha256": "8fc326506052aa2dc9a264af168a3e0bd7ff5cf4afb7fc905cac4aaa06f846fe",
+  "board_frame_id": "surface_a3",
+  "measured_bars_mm": {
+    "horizontal_mm": 100.15,
+    "vertical_mm": 100.15,
+    "nominal_mm": 100.0,
+    "instrument": "Mahr caliper (Messschieber)",
+    "uncertainty_mm": 0.05,
+    "measured_by": "operator (owner), reported as approx. 100.15 mm each",
+    "measured_at": "2026-11-01T22:58:57Z"
+  },
+  "flatness": "unknown"
+}

@@ -80,6 +80,31 @@ class StatusTest(Workspace):
 
 
 class QuestionRoundTest(Workspace):
+    def test_reconsider_unresolved_uses_new_revision_without_memory_write(self):
+        asked = adapter.question_next(self.root, self.session_id)
+        qid = asked["question_id"]
+        memory = self.root / self.session_id / "memory" / "memory.jsonl"
+        before = memory.read_bytes()
+        adapter.question_defer(self.root, self.session_id, qid, "dialogue: operator skip")
+        retried = adapter.question_reopen(self.root, self.session_id, qid)
+        self.assertNotEqual(retried["op_key"], asked["op_key"])
+        self.assertTrue(retried["op_key"].endswith(":2"))
+        self.assertEqual(memory.read_bytes(), before)
+        self.assertEqual(adapter.question_open(self.root, self.session_id, qid)["op_key"], retried["op_key"])
+        with self.assertRaises(AdapterError):
+            adapter.question_reopen(self.root, self.session_id, qid)
+        self.assertEqual(memory.read_bytes(), before)
+
+    def test_reconsider_refuses_committed_question(self):
+        asked = adapter.question_next(self.root, self.session_id)
+        qid = asked["question_id"]
+        self.answer_current(self.script[qid]["answer"][0])
+        memory = self.root / self.session_id / "memory" / "memory.jsonl"
+        before = memory.read_bytes()
+        with self.assertRaises(AdapterError):
+            adapter.question_reopen(self.root, self.session_id, qid)
+        self.assertEqual(memory.read_bytes(), before)
+
     def test_answer_and_confirm_commits(self):
         asked = adapter.question_next(self.root, self.session_id)
         qid = asked["question_id"]

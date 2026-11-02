@@ -68,6 +68,12 @@ after interpretation. Voice therefore needs no second protocol: STT produces thi
 - States: `OPEN → ASKED → ANSWERED → READ_BACK → CONFIRMED → COMMITTED`, side states `DEFERRED`,
   `LEFT_UNRESOLVED`, `SUPERSEDED` (revision changed), `FAILED`. Only `CONFIRMED` (operator said yes to the
   read-back) can lead to a memory write.
+- Explicit dialogue reconsideration of an unresolved cell starts a fresh question revision even when its
+  fingerprint is unchanged. The previous `LEFT_UNRESOLVED` op key remains terminal; its replies stay stale.
+  The coordinator journals `ui_event.event=question_reconsidered` with both op keys. The dialogue owns the
+  once-at-round-end offer limit; reconsideration itself never writes memory.
+- Confirmed end-of-round operator notes may carry one operator-stated origin per label. This uses the existing
+  `declared_removal.source` field; the separately confirmed destination remains `storage_link.location`.
 - `slot` (CR-E4): the 1-based ordinal of a question-triggering event in detection order within one round
   (`docs/LIVE-01.md` §4.2). In a LIVE-01 round the coordinator reads the sealed die `live01-die@1` and takes
   arm (live/offline) and wording (L1/L0) per slot from it; it never derives them itself.

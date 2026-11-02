@@ -38,6 +38,13 @@ class VoiceController(
 ) {
     /** Swapped by the guided screen: the paired receiver link while a remote session is attached. */
     @Volatile var link: VoiceLink = link
+        set(value) {
+            field = value
+            refreshWakeNames()
+        }
+
+    /** What counts as the wake word: the workstation's agent name, or "Muse" / "Meta" without one or on failure. */
+    @Volatile private var wakeNames: WakeWord.Names = WakeWord.Names.DEFAULT
     data class State(
         val listening: Boolean = false,
         val pushToTalk: Boolean = false,
@@ -70,7 +77,19 @@ class VoiceController(
     /** Set by the guided screen: "Muse, start recording" / "Muse, stop recording". */
     @Volatile var onRecordingCommand: ((start: Boolean) -> Unit)? = null
 
+    private fun refreshWakeNames() {
+        val current = link
+        scope.launch {
+            wakeNames = try {
+                current.wakeNames()
+            } catch (_: Exception) {
+                null
+            } ?: WakeWord.Names.DEFAULT
+        }
+    }
+
     fun startListening() {
+        refreshWakeNames()
         if (reader != null) return
         ensureTts()
         val thread = Thread({ readLoop() }, "anastylos-voice")
@@ -214,9 +233,9 @@ class VoiceController(
                     return@launch
                 }
                 val route = if (wakeRequired) {
-                    WakeWord.route(transcript.text, armed = armed)
+                    WakeWord.route(transcript.text, armed = armed, names = wakeNames)
                 } else {
-                    WakeWord.route("muse " + transcript.text, armed = false)
+                    WakeWord.route(transcript.text, armed = true, names = wakeNames)
                 }
                 Log.i(VOICE_LOG_TAG, "segment id=${segment.id} route=${route::class.simpleName} armed=$armed wakeRequired=$wakeRequired")
                 when (route) {

@@ -48,6 +48,16 @@ class FakeSessionUi:
                 self.end_headers()
                 self.wfile.write(data)
 
+            def do_GET(self):  # noqa: N802
+                fake.calls.append((self.path, None))
+                reply = fake.replies.get(self.path)
+                data = json.dumps(reply or {}).encode("utf-8")
+                self.send_response(200 if reply is not None else 500)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
             def log_message(self, *args):
                 pass
 
@@ -198,3 +208,46 @@ class InputTests(VoiceCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SettingsAndKeywordTests(VoiceCase):
+    SETTINGS = {"schema": "anastylos-dialogue-settings@1", "persona": "serious", "agent_name": "Herbert",
+                "wake_words": ["herbert"], "asr_keywords": ["Herbert"], "mishearings": ["hurbert"], "personas": ["serious"]}
+
+    def get_settings(self, token=None):
+        return self.call("GET", f"/v1/guided/sessions/{self.session_id}/voice/settings", token=token or self.token)
+
+    def test_settings_are_relayed_without_the_extra_fields(self):
+        self.ui.replies["/api/dialogue/settings"] = self.SETTINGS
+        status, data, _ = self.get_settings()
+        self.assertEqual(status, 200, data)
+        view = json.loads(data)
+        self.assertEqual(view["agent_name"], "Herbert")
+        self.assertEqual(view["asr_keywords"], ["Herbert"])
+        self.assertNotIn("personas", view)
+        self.assertEqual(self.ui.calls[-1], ("/api/dialogue/settings", None))
+
+    def test_settings_need_the_session_token_and_a_reachable_session_ui(self):
+        self.assertEqual(self.call("GET", f"/v1/guided/sessions/{self.session_id}/voice/settings")[0], 401)
+        _other_id, other_token, _ = self.enroll_source("other-phone")
+        self.assertEqual(self.get_settings(token=other_token)[0], 404)
+        self.assertEqual(self.get_settings()[0], 502)  # the fake answers 500 without a scripted reply
+        self.assertIn('"route": "settings"', (self.data / "voice-journal.jsonl").read_text(encoding="utf-8"))
+
+    def test_keywords_header_reaches_the_transcriber_and_junk_is_dropped(self):
+        record = Path(self.tmp.name) / "argv.txt"
+        script = Path(self.tmp.name) / "argv_transcribe.py"
+        lines = [
+            "import json, sys",
+            "sys.stdin.buffer.read()",
+            f"open({str(record)!r}, 'w').write(' '.join(sys.argv[1:]))",
+            "print(json.dumps({'status': 'ok', 'transcript': 'x', 'latency_s': 0.1}))",
+        ]
+        script.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self.state.voice_config.transcriber = [sys.executable, "-B", str(script)]
+        status, _, _ = self.call("POST", f"/v1/guided/sessions/{self.session_id}/voice/transcribe", token=self.token, raw=wav(),
+                                 extra_headers={"Content-Type": "audio/wav", "X-Asr-Keywords": "Herbert, Muse;rm -rf, , Hey Bob"})
+        self.assertEqual(status, 200)
+        self.assertEqual(record.read_text(encoding="utf-8"), "--keyword Herbert --keyword Hey Bob")
+        self.assertEqual(voice.keywords_from(None), [])
+        self.assertEqual(len(voice.keywords_from(",".join("Name" + chr(97 + i) for i in range(9)))), voice.MAX_KEYWORDS)

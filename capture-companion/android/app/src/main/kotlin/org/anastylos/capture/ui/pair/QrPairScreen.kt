@@ -74,13 +74,17 @@ import org.anastylos.capture.sync.QrPairPayload
  * automatically; showing them would only invite mistyping.
  */
 @Composable
-fun QrPairRoute(viewModel: PairViewModel, onDone: () -> Unit) {
+fun QrPairRoute(viewModel: PairViewModel, onDone: () -> Unit, onSessionCode: (String) -> Unit) {
     val state by viewModel.state.collectAsState()
     QrPairScreen(
         screen = state.screen,
         onConnectClicked = { viewModel.onConnectClicked() },
         onCancelScan = { viewModel.onCancelScan() },
-        onQrText = { viewModel.onScanText(it) },
+        onQrText = { text ->
+            // One scanner for both code kinds: a session code attaches, anything else goes through pairing.
+            val kind = org.anastylos.capture.pairing.classifyScan(text)
+            if (kind is org.anastylos.capture.pairing.ScanKind.Session) onSessionCode(kind.id) else viewModel.onScanText(text)
+        },
         onRescan = { viewModel.onRescan() },
         onBackFromConfirm = { viewModel.onBackFromConfirm() },
         onConfirm = { viewModel.onConfirm() },

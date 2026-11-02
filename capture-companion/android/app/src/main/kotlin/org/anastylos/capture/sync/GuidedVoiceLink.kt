@@ -28,10 +28,13 @@ class GuidedVoiceLink(
     /** basis_ref of the last spoken question or read-back: the op_key of the answer. */
     @Volatile private var lastBasisRef: String = ""
 
+    /** ASR keywords from the workstation's settings (the agent's name); sent with every transcription. */
+    @Volatile private var keywords: List<String> = emptyList()
+
     override suspend fun transcribe(wav: ByteArray): VoiceLink.Transcript = withContext(ioDispatcher) {
         val bearer = token() ?: return@withContext VoiceLink.Transcript("not_enrolled", null, null)
         val response = try {
-            client.voiceTranscribe(bearer, sessionId, wav)
+            client.voiceTranscribe(bearer, sessionId, wav, keywords)
         } catch (_: TransportException) {
             return@withContext VoiceLink.Transcript("network_error", null, null)
         }
@@ -42,6 +45,26 @@ class GuidedVoiceLink(
             return@withContext VoiceLink.Transcript("invalid_response", null, null)
         }
         VoiceLink.Transcript(parsed.status ?: "invalid_response", parsed.transcript, parsed.latencyS)
+    }
+
+    override suspend fun wakeNames(): WakeWord.Names? = withContext(ioDispatcher) {
+        keywords = emptyList()
+        val bearer = token() ?: return@withContext null
+        val response = try {
+            client.voiceSettings(bearer, sessionId)
+        } catch (_: TransportException) {
+            return@withContext null
+        }
+        if (response.status != 200) return@withContext null
+        val parsed = try {
+            VoiceJson.decodeFromString(SettingsBody.serializer(), response.bodyText())
+        } catch (_: Exception) {
+            return@withContext null
+        }
+        // Without a name the workstation keeps "Muse" and "Meta"; the phone does the same.
+        if (parsed.agentName.isNullOrBlank()) return@withContext null
+        keywords = parsed.asrKeywords
+        WakeWord.Names.of(parsed.wakeWords + parsed.mishearings)
     }
 
     override suspend fun submit(input: VoiceLink.OperatorInput): VoiceLink.SpokenReply = withContext(ioDispatcher) {
@@ -90,6 +113,14 @@ class GuidedVoiceLink(
     } catch (_: Exception) {
         "http_${response.status}"
     }
+
+    @Serializable
+    private data class SettingsBody(
+        @SerialName("agent_name") val agentName: String? = null,
+        @SerialName("wake_words") val wakeWords: List<String> = emptyList(),
+        @SerialName("asr_keywords") val asrKeywords: List<String> = emptyList(),
+        val mishearings: List<String> = emptyList(),
+    )
 
     @Serializable
     private data class TranscriptBody(

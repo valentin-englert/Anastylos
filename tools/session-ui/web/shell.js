@@ -21,6 +21,7 @@
   const PAGES = [
     { id: "session", label: "Session", blurb: "Open your prepared session" },
     { id: "questions", label: "Questions", blurb: "Answer what the system asks" },
+    { id: "phone", label: "Phone", blurb: "Connect the phone and see its videos" },
     { id: "drawings", label: "Drawings", blurb: "Outline a part from the video" },
     { id: "guide", label: "Guide", blurb: "Ask where a part goes" },
     { id: "part", label: "Selected part", blurb: "Origin and storage of one part" },

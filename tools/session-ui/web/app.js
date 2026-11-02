@@ -923,6 +923,65 @@ async function loadVideos() {
   }
 }
 
+let pairTimer = null;
+
+async function loadPairRequests() {
+  clearTimeout(pairTimer);
+  try {
+    const view = await call("/api/phone/requests");
+    const list = $("pair-requests");
+    list.replaceChildren(...view.requests.map((request) => pairRequestCard(request, view.certificate_sha256)));
+    setText("pair-state", view.requests.length ? "" : "Waiting for the phone to scan the code…");
+    showError("pair-error", "");
+    if (!$("pair-qr-block").hidden || view.requests.length) pairTimer = setTimeout(loadPairRequests, 3000);
+  } catch (error) {
+    showError("pair-error", error.message);
+  }
+}
+
+function pairRequestCard(request, certificate) {
+  const card = document.createElement("div");
+  card.className = "drawing-job";
+  const head = document.createElement("p");
+  head.textContent = `${request.device} wants to connect (request ${request.short_id}, ${request.expires_in_s} s left).`;
+  card.append(head);
+  if (certificate) {
+    const detail = document.createElement("p");
+    detail.className = "hint";
+    detail.textContent = `Workstation certificate ${certificate.slice(0, 29)}…`;
+    card.append(detail);
+  }
+  for (const [decision, label] of [["approve", "Approve"], ["reject", "Reject"]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", async () => {
+      try {
+        const result = await post("/api/phone/decision", { request: request.id, decision }, button);
+        setText("pair-state", result.decision === "approved" ? "Phone approved and ready for guided capture." : "Request rejected.");
+        if (result.decision === "approved") { $("pair-qr-block").hidden = true; loadPhoneLink(true); }
+        await loadPairRequests();
+      } catch (error) {
+        showError("pair-error", error.message);
+      }
+    });
+    card.append(button);
+  }
+  return card;
+}
+
+async function startPairing(button) {
+  try {
+    const result = await post("/api/phone/pair", {}, button);
+    $("pair-qr").src = `/api/phone/pair-qr?t=${Date.now()}`;
+    setText("pair-caption", `Scan with the app. Valid for ${result.ttl_minutes} minutes.`);
+    $("pair-qr-block").hidden = false;
+    await loadPairRequests();
+  } catch (error) {
+    showError("pair-error", error.message);
+  }
+}
+
 async function loadDrawings() {
   if (!state.session) return;
   clearTimeout(drawingTimer);
@@ -1245,6 +1304,11 @@ $("export-form").addEventListener("submit", (event) => { event.preventDefault();
 $("phone-connect").addEventListener("click", () => loadPhoneLink(true));
 loadPhoneLink();
 loadVideos();
+$("pair-start").addEventListener("click", () => startPairing($("pair-start")));
+window.addEventListener("hashchange", () => {
+  /* Opening the Phone page opens the guided session and shows its QR without another click. */
+  if (location.hash === "#/phone") { loadPhoneLink(true); loadPairRequests(); }
+});
 $("drawing-form").addEventListener("submit", (event) => { event.preventDefault(); startDrawing($("drawing-start")); });
 $("evaluate-form").addEventListener("submit", (event) => { event.preventDefault(); evaluateGap($("evaluate-button")); });
 

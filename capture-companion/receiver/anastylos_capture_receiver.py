@@ -727,6 +727,9 @@ class ReceiverHandler(BaseHTTPRequestHandler):
         if video.is_video_path(parsed.path):
             if video.VideoRoutes(self).dispatch("GET", parsed):
                 return
+        if voice.is_voice_settings_path(parsed.path):
+            if voice.VoiceRoutes(self).dispatch_get(parsed):
+                return
         if parsed.path.startswith("/v1/guided/"):
             if guided.GuidedRoutes(self).dispatch_get(parsed):
                 return

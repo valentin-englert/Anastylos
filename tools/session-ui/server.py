@@ -31,6 +31,7 @@ import captures
 import dialogue_flow
 import drawings
 import explosion
+import phone
 import videos
 from adapter import AdapterError
 
@@ -158,6 +159,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/sessions": self._api_sessions, "/api/status": self._api_status,
             "/api/connection": self._api_connection, "/api/dialogue/settings": self._api_dialogue_settings,
             "/api/videos": lambda: self._send_json(videos.list_videos(Handler.workspace_root)),
+            "/api/phone/requests": lambda: self._send_json(phone.pending_requests(Handler.workspace_root)),
+            "/api/phone/pair-qr": lambda: self._send_bytes(phone.pairing_qr_png(Handler.workspace_root), "image/png"),
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
@@ -204,7 +207,9 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
                   "/api/explosion/layout": self._api_explosion_layout,
                   "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
-                  "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process}
+                  "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
+                  "/api/phone/pair": lambda: self._send_json(phone.start_pairing(Handler.workspace_root)),
+                  "/api/phone/decision": self._api_phone_decision}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -257,6 +262,11 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("Send session and either command next_question or text.", 400)
         adapter.resolve_session(Handler.workspace_root, session_id)
         self._mutate(session_id, lambda: dialogue_flow.flow_for(Handler.workspace_root, session_id, adapter).turn(command, text))
+
+    def _api_phone_decision(self) -> None:
+        """Approve or reject one pending phone; only ever called by the operator's click on the Phone page."""
+        body = self._read_json()
+        self._send_json(phone.decide(Handler.workspace_root, str(body.get("request", "")), str(body.get("decision", ""))))
 
     def _api_video_process(self) -> None:
         """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""

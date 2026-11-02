@@ -31,7 +31,7 @@ fun statusBannerOf(state: GuidanceUiState): StatusBanner {
     return when (state.session) {
         SessionState.ACTIVE -> StatusBanner("Waiting for a request", trackingDetail(state), BannerTone.WAITING)
         SessionState.PAUSED -> StatusBanner("Paused", "Resume to receive requests", BannerTone.NEUTRAL)
-        SessionState.DISARMED -> StatusBanner("Connected", "Press Start to receive requests", BannerTone.NEUTRAL)
+        SessionState.DISARMED -> StatusBanner("Connected", "Press “Start photo requests” to receive them", BannerTone.NEUTRAL)
         else -> StatusBanner("Session ended", "Start a new session", BannerTone.NEUTRAL)
     }
 }

@@ -352,3 +352,12 @@ discarded and the video is marked `failed`; declaring it again starts clean.
 A phone resumes after a dropped connection by reading `received` and sending
 only the missing chunks. `video-journal.jsonl` records route, status and byte
 counts only, never content. Tests: `tests/test_video_routes.py`.
+
+## Voice settings and ASR keywords
+
+`GET /v1/guided/sessions/{id}/voice/settings` (guided source token, session bound to that source) relays the session
+UI's `GET /api/dialogue/settings` and returns `agent_name`, `persona`, `wake_words`, `asr_keywords`, `mishearings`;
+502 `settings_unavailable` when the session UI cannot be reached. The phone matches those wake words (with no name it
+keeps "Muse" and "Meta") and sends the keywords with every transcription in the optional `X-Asr-Keywords` header
+(comma separated, letters/spaces/apostrophes/hyphens, at most 6); the receiver passes each as `--keyword` to the
+transcriber. Tests: `tests/test_voice_routes.py`.

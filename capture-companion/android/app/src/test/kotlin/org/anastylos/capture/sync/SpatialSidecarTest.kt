@@ -58,6 +58,7 @@ class SpatialSidecarTest {
             nominalDescriptor = "factory-fx800-fy800-cx640-cy360-dist0",
             layoutSha256 = "ef".repeat(32),
             boardInstanceId = if (calibrated) "00000000-0000-4000-8000-00000000000b" else "",
+            boardInstanceSha256 = if (calibrated) "b".repeat(64) else "",
             boardFrameId = "surface_a3",
             metricValidity = if (calibrated) "validated" else "nominal_only",
         ),

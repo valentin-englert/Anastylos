@@ -49,7 +49,12 @@ sealed interface EnrollOutcome {
     data class Failed(val message: String) : EnrollOutcome
 }
 
-private val GuidedJson = Json { ignoreUnknownKeys = true }
+// G0 bodies carry every field; an absent value is an explicit null. A default (0, "",
+// empty list, null) left out by the encoder fails receiver validation ("missing 'reason'").
+private val GuidedJson = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+}
 
 class GuidedControlClient(
     private val transport: HttpTransport,
@@ -445,6 +450,83 @@ class GuidedControlClient(
         } else {
             GuidedOutcome.Success(parsed)
         }
+    }
+
+    /**
+     * VOICE-01 R9: one WAV segment to the receiver's transcriber. Returns
+     * the raw exchange; [GuidedVoiceLink] owns the voice body formats.
+     */
+    fun voiceTranscribe(token: String, sessionId: String, wav: ByteArray, keywords: List<String> = emptyList()): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "POST", path = "/v1/guided/sessions/$sessionId/voice/transcribe",
+                headers = buildMap {
+                    put("Authorization", "Bearer $token")
+                    put("Content-Type", "audio/wav")
+                    if (keywords.isNotEmpty()) put("X-Asr-Keywords", keywords.joinToString(","))
+                },
+                body = wav,
+            ),
+        )
+    }
+
+    /** The agent name, wake words and ASR keywords the workstation relays from its dialogue settings. */
+    fun voiceSettings(token: String, sessionId: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "GET", path = "/v1/guided/sessions/$sessionId/voice/settings",
+                headers = mapOf("Authorization" to "Bearer $token"),
+            ),
+        )
+    }
+
+    /** VOICE-01 R10: one `{kind: input|command}` body; raw exchange as above. */
+    fun voiceInput(token: String, sessionId: String, json: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "POST", path = "/v1/guided/sessions/$sessionId/voice/input",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/json"),
+                body = json.toByteArray(Charsets.UTF_8),
+            ),
+        )
+    }
+
+    /** Video upload: declare `{sha256, size}`; raw exchange, [org.anastylos.capture.video.VideoUploadClient] reads it. */
+    fun videoDeclare(token: String, sessionId: String, json: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "POST", path = "/v1/guided/sessions/$sessionId/videos",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/json"),
+                body = json.toByteArray(Charsets.UTF_8),
+            ),
+        )
+    }
+
+    /** Video upload: which chunks the receiver holds. */
+    fun videoStatus(token: String, sessionId: String, videoId: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "GET", path = "/v1/guided/sessions/$sessionId/videos/$videoId",
+                headers = mapOf("Authorization" to "Bearer $token"),
+            ),
+        )
+    }
+
+    /** Video upload: one raw chunk, 0-based. */
+    fun videoPutChunk(token: String, sessionId: String, videoId: String, index: Int, bytes: ByteArray): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "PUT", path = "/v1/guided/sessions/$sessionId/videos/$videoId/chunks/$index",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/octet-stream"),
+                body = bytes,
+            ),
+        )
     }
 
     private fun guidedHeaders(token: String): Map<String, String> = mapOf(

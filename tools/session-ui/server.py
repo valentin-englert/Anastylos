@@ -15,6 +15,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
+import subprocess
+import sys
 import threading
 import urllib.parse
 from http import HTTPStatus
@@ -23,13 +26,30 @@ from pathlib import Path
 from typing import Callable
 
 import adapter
+import assembly_help
+import captures
+import dialogue_flow
+import drawings
+import explosion
+import phone
+import videos
 from adapter import AdapterError
+
+sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
+from dialogue import settings as dialogue_settings  # noqa: E402
 
 LOG = logging.getLogger("session-ui")
 WEB = Path(__file__).resolve().parent / "web"
 STATIC = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
-          "styles.css": "text/css; charset=utf-8"}
+          "styles.css": "text/css; charset=utf-8", "shell.js": "text/javascript; charset=utf-8",
+          "explosion.html": "text/html; charset=utf-8", "explosion.js": "text/javascript; charset=utf-8",
+          "explosion.css": "text/css; charset=utf-8", "part-help.js": "text/javascript; charset=utf-8"}
+ASSET_DIRS = ("assets", "fonts")
+ASSET_TYPES = {".woff2": "font/woff2", ".svg": "image/svg+xml", ".png": "image/png", ".txt": "text/plain; charset=utf-8"}
 MAX_BODY = 64 * 1024
+MAX_AUDIO_BODY = 4 * 1024 * 1024  # about 85 s of 24 kHz mono 16-bit WAV: push-to-talk clips only
+TRANSCRIBER = [sys.executable, "-B", str(Path(__file__).resolve().parents[1] / "live" / "providers" / "transcribe.py"), "--stdin"]
+TRANSCRIBE_DEADLINE_S = 200
 
 
 def is_loopback_host(host: str) -> bool:
@@ -38,6 +58,7 @@ def is_loopback_host(host: str) -> bool:
 
 class Handler(BaseHTTPRequestHandler):
     workspace_root: Path
+    transcriber: list[str] = TRANSCRIBER
     locks: dict[str, threading.Lock]
     locks_guard = threading.Lock()
 
@@ -64,6 +85,21 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", STATIC[name])
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_asset(self, path: str) -> None:
+        """Static files of the page itself: only web/assets and web/fonts, fixed extensions, no traversal."""
+        target = (WEB / urllib.parse.unquote(path).lstrip("/")).resolve()
+        content_type = ASSET_TYPES.get(target.suffix.lower())
+        if content_type is None or not target.is_file() or target.parent.parent != WEB.resolve()                 or target.parent.name not in ASSET_DIRS:
+            self._send_json({"error": "Unknown path."}, 404)
+            return
+        body = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "max-age=3600")
         self.end_headers()
         self.wfile.write(body)
 
@@ -119,13 +155,30 @@ class Handler(BaseHTTPRequestHandler):
         routes: dict[str, Callable[[], None]] = {
             "/": self._page, "/index.html": self._page, "/app.js": lambda: self._send_static("app.js"),
             "/styles.css": lambda: self._send_static("styles.css"),
+            "/shell.js": lambda: self._send_static("shell.js"),
             "/api/sessions": self._api_sessions, "/api/status": self._api_status,
+            "/api/connection": self._api_connection, "/api/dialogue/settings": self._api_dialogue_settings,
+            "/api/videos": lambda: self._send_json(videos.list_videos(Handler.workspace_root)),
+            "/api/phone/requests": lambda: self._send_json(phone.pending_requests(Handler.workspace_root)),
+            "/api/phone/pair-qr": lambda: self._send_bytes(phone.pairing_qr_png(Handler.workspace_root), "image/png"),
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
             "/api/report": self._api_report, "/api/gaps": self._api_gaps,
-            "/api/gaps/evidence": self._api_evidence,
+            "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
+            "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
+            "/api/parts/link-candidates": self._api_parts_candidates,
+            "/api/capture/qr": lambda: self._send_bytes(captures.session_qr_png(Handler.workspace_root), "image/png"),
+            "/explosion.html": lambda: self._send_static("explosion.html"),
+            "/explosion.js": lambda: self._send_static("explosion.js"),
+            "/explosion.css": lambda: self._send_static("explosion.css"),
+            "/part-help.js": lambda: self._send_static("part-help.js"),
+            "/api/explosion": self._api_explosion, "/api/explosion/file": self._api_explosion_file,
         }
-        route = routes.get(urllib.parse.urlsplit(self.path).path)
+        path = urllib.parse.urlsplit(self.path).path
+        if path.startswith(tuple(f"/{name}/" for name in ASSET_DIRS)):
+            self._send_asset(path)
+            return
+        route = routes.get(path)
         if route is None:
             self._send_json({"error": "Unknown path."}, 404)
             return
@@ -146,7 +199,17 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/questions/confirm": self._api_confirm, "/api/guide/build": self._api_guide_build,
                   "/api/guide/ask": self._api_guide_ask, "/api/select": self._api_select,
                   "/api/selected-ask": self._api_selected_ask, "/api/assembly/done": self._api_assembly_done,
-                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate}
+                  "/api/report/export": self._api_report_export, "/api/gaps/evaluate": self._api_gaps_evaluate,
+                  "/api/drawing/start": self._api_drawing_start, "/api/drawing/bind": self._api_drawing_bind,
+                  "/api/drawing/resume": self._api_drawing_resume,
+                  "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
+                  "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
+                  "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
+                  "/api/explosion/layout": self._api_explosion_layout,
+                  "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
+                  "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
+                  "/api/phone/pair": lambda: self._send_json(phone.start_pairing(Handler.workspace_root)),
+                  "/api/phone/decision": self._api_phone_decision}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -177,6 +240,42 @@ class Handler(BaseHTTPRequestHandler):
     def _mutate(self, session_id: str, func: Callable[[], dict]) -> None:
         with self._session_lock(session_id):
             self._send_json(func())
+
+    def _api_dialogue_settings(self) -> None:
+        """Persona, agent name (wake word), ASR keywords and mishearings; the phone reads this."""
+        self._send_json(dialogue_settings.public_view(Handler.workspace_root))
+
+    def _api_dialogue_settings_save(self) -> None:
+        body = self._read_json()
+        try:
+            dialogue_settings.save(Handler.workspace_root, body.get("persona"), body.get("agent_name"))
+        except dialogue_settings.SettingsError as exc:
+            raise AdapterError(str(exc), 400) from None
+        self._send_json(dialogue_settings.public_view(Handler.workspace_root))
+
+    def _api_dialogue_turn(self) -> None:
+        """One spoken turn of the question round (the phone voice path posts here): {session, command|text}."""
+        body = self._read_json()
+        session_id = str(body.get("session", ""))
+        command, text = body.get("command"), body.get("text")
+        if not session_id or (command is None and not isinstance(text, str)) or command not in (None, "next_question"):
+            raise AdapterError("Send session and either command next_question or text.", 400)
+        adapter.resolve_session(Handler.workspace_root, session_id)
+        self._mutate(session_id, lambda: dialogue_flow.flow_for(Handler.workspace_root, session_id, adapter).turn(command, text))
+
+    def _api_phone_decision(self) -> None:
+        """Approve or reject one pending phone; only ever called by the operator's click on the Phone page."""
+        body = self._read_json()
+        self._send_json(phone.decide(Handler.workspace_root, str(body.get("request", "")), str(body.get("decision", ""))))
+
+    def _api_video_process(self) -> None:
+        """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""
+        body = self._read_json()
+        self._send_json(videos.start_processing(Handler.workspace_root, str(body.get("video", ""))))
+
+    def _api_connection(self) -> None:
+        """Whether the Muse key is set in this server's environment. The value is never read out or sent."""
+        self._send_json({"muse_key_set": bool(os.environ.get("MODEL_API_KEY", "").strip())})
 
     def _api_status(self) -> None:
         session_id = self._session_param(self._query())
@@ -290,6 +389,123 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The file parameter is missing.", 400)
         body, content_type = adapter.evidence_bytes(Handler.workspace_root, session_id, name)
         self._send_bytes(body, content_type)
+
+    def _api_drawings(self) -> None:
+        self._send_json(drawings.list_drawings(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_drawing_status(self) -> None:
+        query = self._query()
+        self._send_json(drawings.drawing_status(Handler.workspace_root, self._session_param(query), query.get("job", "")))
+
+    def _api_drawing_file(self) -> None:
+        query = self._query()
+        body, content_type = drawings.drawing_bytes(Handler.workspace_root, self._session_param(query), query.get("job", ""),
+                                                    query.get("file", ""))
+        self._send_bytes(body, content_type)
+
+    def _api_drawing_start(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.start_drawing(Handler.workspace_root, session_id, body.get("spec", "")))
+
+    def _api_drawing_resume(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.resume_drawing(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_drawing_bind(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: drawings.bind(Handler.workspace_root, session_id, body.get("job", ""),
+                                                       body.get("decision", ""), str(body.get("note", ""))))
+
+    def _api_capture_connect(self) -> None:
+        self._read_json()
+        with self._session_lock("__capture_link__"):
+            self._send_json(captures.connect_phone(Handler.workspace_root))
+
+    def _api_capture_link(self) -> None:
+        self._read_json()
+        with self._session_lock("__capture_link__"):
+            self._send_json(captures.link_status(Handler.workspace_root))
+
+    def _api_capture_request(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: captures.request_capture(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_capture_poll(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: captures.capture_status(Handler.workspace_root, session_id, body.get("job", "")))
+
+    def _api_explosion(self) -> None:
+        self._send_json(explosion.explosion_view(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_explosion_file(self) -> None:
+        query = self._query()
+        body, content_type = explosion.explosion_bytes(Handler.workspace_root, self._session_param(query), query.get("name", ""),
+                                                       query.get("job", ""), query.get("mode", "exploded"))
+        self._send_bytes(body, content_type)
+
+    def _api_explosion_layout(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: explosion.layout_action(Handler.workspace_root, session_id, body))
+
+    def _api_parts_candidates(self) -> None:
+        query = self._query()
+        self._send_json(assembly_help.link_candidates(Handler.workspace_root, self._session_param(query), query.get("job", "")))
+
+    def _api_parts_link(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._mutate(session_id, lambda: assembly_help.link_part(Handler.workspace_root, session_id, body.get("job", ""),
+                                                                 body.get("part", ""), bool(body.get("supersede")),
+                                                                 str(body.get("note", ""))))
+
+    def _api_parts_ask(self) -> None:
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._send_json(assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""),
+                                                     str(body.get("question", ""))))
+
+    def _api_voice_transcribe(self) -> None:
+        """Push-to-talk clip → transcript. The clip goes to the provider in a separate process and is not stored."""
+        length = int(self.headers.get("Content-Length") or 0)
+        if self.headers.get("Content-Type", "").split(";")[0].strip() != "audio/wav":
+            self._discard_body()
+            raise AdapterError("Send the clip as audio/wav.", 415)
+        if not 0 < length <= MAX_AUDIO_BODY:
+            self.close_connection = True
+            raise AdapterError("The clip is empty or longer than about 85 seconds.", 413)
+        audio = self.rfile.read(length)
+        try:
+            keywords = [arg for word in dialogue_settings.public_view(Handler.workspace_root)["asr_keywords"] for arg in ("--keyword", word)]
+            done = subprocess.run(Handler.transcriber + keywords, input=audio, capture_output=True, timeout=TRANSCRIBE_DEADLINE_S)
+        except subprocess.TimeoutExpired:
+            raise AdapterError("Transcription did not finish in time.", 504) from None
+        if done.returncode:
+            LOG.error("transcriber failed: %s", done.stderr.decode("utf-8", "replace")[-300:])
+            raise AdapterError("Transcription failed.", 502)
+        result = json.loads(done.stdout)
+        self._send_json({k: result.get(k) for k in ("status", "transcript", "latency_s", "error")})
 
 
 def serve(workspace_root: Path, host: str = "127.0.0.1", port: int = 8071) -> ThreadingHTTPServer:

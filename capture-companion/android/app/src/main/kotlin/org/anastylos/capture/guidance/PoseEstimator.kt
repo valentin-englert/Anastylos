@@ -92,6 +92,10 @@ interface PoseEstimator {
         val cornersPx: List<MarkerCorners> = emptyList(),
         /** Luma quality of this frame, when measurable. */
         val frameQuality: FrameQuality.Measurement? = null,
+        /** Largest corner reprojection residual, px; null without a solve. */
+        val maxResidualPx: Double? = null,
+        /** 1 sigma camera-centre / rotation uncertainty ([PoseUncertainty]); null when not computable. */
+        val uncertainty: PoseUncertainty.Result? = null,
     )
 
     /**

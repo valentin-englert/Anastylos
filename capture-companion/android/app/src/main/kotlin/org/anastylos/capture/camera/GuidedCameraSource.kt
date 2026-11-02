@@ -17,7 +17,6 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import java.io.File
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -58,12 +57,17 @@ class GuidedCameraSource(
     private val settingsApplier: SettingsApplier = CameraXSettingsApplier(),
     private val measuredProfiles: MeasuredProfileSource = AssetMeasuredProfileSource(context),
     private val timing: TimingAccumulator = TimingAccumulator(),
-) : GuidedCamera {
+) : GuidedCamera, VideoCamera {
     data class GuidedStill(
         val bytes: ByteArray,
         val capturedAt: java.time.Instant,
         /** Nearest analyzer frame timestamp (monotonic ns), if any. */
         val nearestEstimateMonotonicNs: Long?,
+        /**
+         * Sensor exposure timestamp of the still (`ImageInfo.timestamp`), the
+         * same clock as the analysis frames; null when the HAL reports none.
+         */
+        val sensorTimestampNs: Long? = null,
         /** Honest association note; never a fabricated exposure link. */
         val associationNote: String,
     )
@@ -71,6 +75,9 @@ class GuidedCameraSource(
     private var provider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var boundPreview: Preview? = null
+    private var videoCapture: androidx.camera.video.VideoCapture<androidx.camera.video.Recorder>? = null
+    private var activeRecording: androidx.camera.video.Recording? = null
+    private var stashedStills: ImageCapture? = null
     private var boundAnalysis: ImageAnalysis? = null
     private var previewView: PreviewView? = null
     private var lensFacing: Int = CameraSelector.LENS_FACING_BACK
@@ -539,9 +546,88 @@ class GuidedCameraSource(
     }
 
 
+    // ---------- disassembly video ----------
+
+    @ExperimentalCamera2Interop
+    override suspend fun startVideo(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean =
+        withContext(Dispatchers.Main.immediate) { startVideoOnMain(output, onEvent) }
+
+    /**
+     * Preview + analysis + video is a guaranteed stream combination on every
+     * hardware level, so the still use case steps aside while recording and
+     * returns afterwards. Focus and exposure are applied exactly as for stills.
+     */
+    @ExperimentalCamera2Interop
+    private fun startVideoOnMain(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean {
+        val cameraProvider = provider ?: return false
+        val selector = boundSelector ?: return false
+        if (activeRecording != null) return false
+        return try {
+            val recorder = androidx.camera.video.Recorder.Builder()
+                .setQualitySelector(
+                    androidx.camera.video.QualitySelector.from(
+                        androidx.camera.video.Quality.FHD,
+                        androidx.camera.video.FallbackStrategy.lowerQualityOrHigherThan(androidx.camera.video.Quality.FHD),
+                    ),
+                )
+                .build()
+            val capture = androidx.camera.video.VideoCapture.withOutput(recorder)
+            previewView?.display?.rotation?.let { capture.targetRotation = it }
+            imageCapture?.let {
+                cameraProvider.unbind(it)
+                stashedStills = it
+                imageCapture = null
+            }
+            val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, capture)
+            boundCamera = camera
+            videoCapture = capture
+            settingsApplier.apply(camera, lastStillSettings, lastStillCaps)
+            // No withAudioEnabled(): the recording carries no sound.
+            activeRecording = recorder
+                .prepareRecording(context, androidx.camera.video.FileOutputOptions.Builder(output).build())
+                .start(androidx.core.content.ContextCompat.getMainExecutor(context)) { event ->
+                    if (event is androidx.camera.video.VideoRecordEvent.Finalize) {
+                        restoreStills()
+                        onEvent(
+                            if (event.hasError()) VideoRecordingEvent.Failed("camera error ${event.error}")
+                            else VideoRecordingEvent.Finished(output),
+                        )
+                    }
+                }
+            true
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "guided video start failed", e)
+            restoreStills()
+            false
+        }
+    }
+
+    override fun stopVideo() {
+        activeRecording?.stop()
+    }
+
+    @ExperimentalCamera2Interop
+    private fun restoreStills() {
+        activeRecording = null
+        val cameraProvider = provider ?: return
+        try {
+            videoCapture?.let { cameraProvider.unbind(it) }
+            videoCapture = null
+            val stills = stashedStills ?: return
+            stashedStills = null
+            val selector = boundSelector ?: return
+            boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, stills)
+            imageCapture = stills
+            boundCamera?.let { settingsApplier.apply(it, lastStillSettings, lastStillCaps) }
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "restoring stills after video failed", e)
+        }
+    }
+
     override fun unbind() {
         try {
-            val owned = listOfNotNull(boundPreview, boundAnalysis, imageCapture)
+            activeRecording?.stop()
+            val owned = listOfNotNull(boundPreview, boundAnalysis, imageCapture, videoCapture, stashedStills)
             if (owned.isNotEmpty()) {
                 provider?.unbind(*owned.toTypedArray())
             }
@@ -553,6 +639,9 @@ class GuidedCameraSource(
         }
         analysisExecutor = null
         imageCapture = null
+        videoCapture = null
+        stashedStills = null
+        activeRecording = null
         boundPreview = null
         boundAnalysis = null
         intrinsics = null
@@ -563,9 +652,9 @@ class GuidedCameraSource(
 
     /**
      * One full-resolution JPEG still. Throws on any camera failure.
-     * Exposure-time association is reported honestly: the nearest
-     * analyzer timestamp is informational only, and the sidecar
-     * stays explicitly unqualified until a real exposure link exists.
+     * Carries the still's sensor timestamp so the sidecar can pick the
+     * analysis pose exposed just before it; the solve still comes from
+     * a preview frame, never from the saved image.
      */
     override suspend fun takeGuidedStill(): GuidedStill {
         val capture = imageCapture ?: throw ImageCaptureException(
@@ -573,37 +662,41 @@ class GuidedCameraSource(
             "guided camera is not bound",
             null,
         )
-        val tmp = File.createTempFile("guided-", ".jpg", context.cacheDir)
-        try {
-            suspendCoroutine { cont ->
-                val options = ImageCapture.OutputFileOptions.Builder(tmp).build()
-                capture.takePicture(
-                    options,
-                    ContextCompat.getMainExecutor(context),
-                    object : ImageCapture.OnImageSavedCallback {
-                        override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                            cont.resumeWith(Result.success(Unit))
+        // In-memory capture: the JPEG bytes as the HAL encoded them, plus the
+        // sensor timestamp the file-save callback never exposes.
+        val (bytes, sensorNs) = suspendCoroutine<Pair<ByteArray, Long?>> { cont ->
+            capture.takePicture(
+                ContextCompat.getMainExecutor(context),
+                object : ImageCapture.OnImageCapturedCallback() {
+                    override fun onCaptureSuccess(image: ImageProxy) {
+                        val result = try {
+                            val buffer = image.planes[0].buffer
+                            val out = ByteArray(buffer.remaining())
+                            buffer.get(out)
+                            out to image.imageInfo.timestamp.takeIf { it > 0 }
+                        } finally {
+                            image.close()
                         }
+                        cont.resumeWith(Result.success(result))
+                    }
 
-                        override fun onError(exception: ImageCaptureException) {
-                            cont.resumeWithException(exception)
-                        }
-                    },
-                )
-            }
-            val nearest = lastEstimateNs
-            return GuidedStill(
-                bytes = tmp.readBytes(),
-                capturedAt = nowUtc(),
-                nearestEstimateMonotonicNs = nearest,
-                associationNote = if (nearest == null) {
-                    "no analyzer frame near shutter; spatial sidecar unqualified"
-                } else {
-                    "nearest analyzer frame is informational only; spatial sidecar unqualified"
+                    override fun onError(exception: ImageCaptureException) {
+                        cont.resumeWithException(exception)
+                    }
                 },
             )
-        } finally {
-            tmp.delete()
         }
+        val nearest = lastEstimateNs
+        return GuidedStill(
+            bytes = bytes,
+            capturedAt = nowUtc(),
+            nearestEstimateMonotonicNs = nearest,
+            associationNote = if (nearest == null) {
+                "no analyzer frame near shutter; spatial sidecar unqualified"
+            } else {
+                "nearest analyzer frame is informational only; spatial sidecar unqualified"
+            },
+            sensorTimestampNs = sensorNs,
+        )
     }
 }

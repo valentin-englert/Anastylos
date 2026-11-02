@@ -10,7 +10,9 @@ TLS trust is explicit: either a CA bundle (``ca_file``) or a SPKI pin
 
 from __future__ import annotations
 
+import functools
 import hashlib
+import http.client
 import json
 import ssl
 import urllib.error
@@ -41,9 +43,23 @@ class ControlClient:
         self.spki_pin = spki_pin_sha256
 
     def _context(self):
-        context = ssl.create_default_context(cafile=self.ca_file)
+        if self.spki_pin and not self.ca_file:
+            # The pin replaces CA trust for the receiver's self-signed certificate; it is checked right after the
+            # handshake, before any request (and its bearer token) is sent.
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+        else:
+            context = ssl.create_default_context(cafile=self.ca_file)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
         return context
+
+    def _open(self, request):
+        if self.base_url.startswith("https://") and self.spki_pin:
+            opener = urllib.request.build_opener(_PinnedHTTPSHandler(self._context(), self.spki_pin.lower()))
+            return opener.open(request, timeout=self.timeout)
+        context = self._context() if self.base_url.startswith("https://") else None
+        return urllib.request.urlopen(request, timeout=self.timeout, context=context)
 
     def _call(self, method, path, token, body=None, raw=None,
               content_type="application/json", extra_headers=None):
@@ -59,31 +75,25 @@ class ControlClient:
             headers["Content-Type"] = content_type
         request = urllib.request.Request(
             self.base_url + path, data=data, headers=headers, method=method)
-        context = (self._context()
-                   if self.base_url.startswith("https://") else None)
         try:
-            with urllib.request.urlopen(
-                    request, timeout=self.timeout,
-                    context=context) as response:
+            with self._open(request) as response:
                 payload = response.read()
-                if self.spki_pin and self.base_url.startswith("https://"):
-                    der = response.fp.raw._sock.getpeercert(binary_form=True)
-                    import hashlib as _h
-
-                    seen = _h.sha256(_spki_of(der)).hexdigest()
-                    if seen != self.spki_pin.lower():
-                        raise ControlClientError(
-                            0, "pin_mismatch", "SPKI pin mismatch")
                 return response.status, payload, dict(response.headers)
         except urllib.error.HTTPError as exc:
-            try:
-                error = json.loads(exc.read().decode("utf-8")).get(
-                    "error", {})
-            except ValueError:
-                error = {}
-            raise ControlClientError(
-                exc.code, error.get("code", "http_error"),
-                error.get("message", "request failed"))
+            self._raise_http(exc)
+        except urllib.error.URLError as exc:
+            if isinstance(exc.reason, PinMismatch):
+                raise ControlClientError(0, "pin_mismatch", "SPKI pin mismatch") from exc
+            raise
+
+    @staticmethod
+    def _raise_http(exc):
+        try:
+            error = json.loads(exc.read().decode("utf-8")).get("error", {})
+        except ValueError:
+            error = {}
+        raise ControlClientError(exc.code, error.get("code", "http_error"),
+                                 error.get("message", "request failed")) from exc
 
     def _json(self, method, path, token, body=None):
         _status, payload, _headers = self._call(method, path, token,
@@ -163,54 +173,58 @@ class ControlClient:
         return payload, digest
 
 
-def _spki_of(der_certificate):
-    """Extract the SubjectPublicKeyInfo bytes from a DER certificate."""
-    data = der_certificate
-    if data[0] != 0x30:
-        raise ValueError("not a DER certificate")
-    index = 2
-    if data[index] & 0x80:
-        index += 1 + (data[index] & 0x7F)
-    else:
-        index += 1
-    if data[index] != 0x30:
-        raise ValueError("not a DER certificate")
-    index += 1
-    length = data[index]
-    index += 1
+def _tlv(data, pos):
+    """One DER element at ``pos``: (tag, content start, end)."""
+    tag, length, head = data[pos], data[pos + 1], 2
     if length & 0x80:
         count = length & 0x7F
-        length = int.from_bytes(data[index:index + count], "big")
-        index += count
-    tbs = data[index:index + length]
-    pos = 0
-    if tbs[pos] == 0xA0:
-        pos += 1
-        size = tbs[pos]
-        pos += 1
-        if size & 0x80:
-            count = size & 0x7F
-            size = int.from_bytes(tbs[pos:pos + count], "big")
-            pos += count
-        pos += size
-    for _ in range(3):
-        pos += 1
-        size = tbs[pos]
-        pos += 1
-        if size & 0x80:
-            count = size & 0x7F
-            size = int.from_bytes(tbs[pos:pos + count], "big")
-            pos += count
-        pos += size
-    if tbs[pos] != 0x30:
+        length = int.from_bytes(data[pos + 2:pos + 2 + count], "big")
+        head += count
+    return tag, pos + head, pos + head + length
+
+
+def _spki_of(der_certificate):
+    """SubjectPublicKeyInfo element (header included) of a DER X.509 certificate."""
+    data = der_certificate
+    tag, cert_start, _ = _tlv(data, 0)
+    if tag != 0x30:
+        raise ValueError("not a DER certificate")
+    tag, pos, _ = _tlv(data, cert_start)  # tbsCertificate
+    if tag != 0x30:
+        raise ValueError("not a DER certificate")
+    if data[pos] == 0xA0:  # explicit version
+        pos = _tlv(data, pos)[2]
+    for _field in range(5):  # serialNumber, signature, issuer, validity, subject
+        pos = _tlv(data, pos)[2]
+    tag, _, end = _tlv(data, pos)
+    if tag != 0x30:
         raise ValueError("SPKI not found")
-    pos += 1
-    size = tbs[pos]
-    pos += 1
-    header = 2
-    if size & 0x80:
-        count = size & 0x7F
-        size = int.from_bytes(tbs[pos:pos + count], "big")
-        header += count
-        pos += count
-    return tbs[pos - header:pos + size]
+    return data[pos:end]
+
+
+class PinMismatch(OSError):
+    """The server's key is not the pinned one; raised before any request byte is sent."""
+
+
+class _PinnedHTTPSConnection(http.client.HTTPSConnection):
+    def __init__(self, *args, spki_pin, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._spki_pin = spki_pin
+
+    def connect(self):
+        super().connect()
+        der = self.sock.getpeercert(binary_form=True)
+        if der is None or hashlib.sha256(_spki_of(der)).hexdigest() != self._spki_pin:
+            self.close()
+            raise PinMismatch("SPKI pin mismatch")
+
+
+class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, context, spki_pin):
+        super().__init__(context=context)
+        self._pinned_context = context
+        self._spki_pin = spki_pin
+
+    def https_open(self, req):
+        return self.do_open(functools.partial(_PinnedHTTPSConnection, spki_pin=self._spki_pin), req,
+                            context=self._pinned_context)

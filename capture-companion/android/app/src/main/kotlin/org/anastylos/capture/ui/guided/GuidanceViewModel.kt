@@ -73,6 +73,7 @@ import org.anastylos.capture.guidance.DwellAccumulator
 import org.anastylos.capture.guidance.HackathonMvp
 import org.anastylos.capture.guidance.DwellState
 import org.anastylos.capture.guidance.GuidanceHypothesis1
+import org.anastylos.capture.guidance.GuidanceHypothesis2
 import org.anastylos.capture.guidance.ImageQualityInput
 import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.LateMark
@@ -80,6 +81,8 @@ import org.anastylos.capture.guidance.MovementCue
 import org.anastylos.capture.guidance.PhoneRotation
 import org.anastylos.capture.guidance.DeliveryState
 import org.anastylos.capture.guidance.PoseEstimator
+import org.anastylos.capture.guidance.StillPose
+import org.anastylos.capture.guidance.poseForStill
 import org.anastylos.capture.guidance.Vec3
 import org.anastylos.capture.guidance.remoteTargetView
 import org.anastylos.capture.guidance.RegistrationState
@@ -144,6 +147,8 @@ data class CaptureResult(
     val sha256: String,
     val automatic: Boolean,
     val associationNote: String,
+    /** An image gate failed when the shutter fired (H2 shoots anyway). */
+    val qualityLow: Boolean = false,
 )
 
 data class GuidanceUiState(
@@ -233,15 +238,36 @@ class GuidanceViewModel(
     private val appVersion: String = "0.1.0",
     private val uuid: () -> String = { UUID.randomUUID().toString() },
     private val measuredProfiles: MeasuredProfileSource? = null,
+    private val boardInstances: org.anastylos.capture.camera.BoardInstanceSource? = null,
+    private val voice: org.anastylos.capture.voice.VoiceController? = null,
     private val timing: TimingAccumulator = TimingAccumulator(),
     /** Ignores a second Next-request tap this soon after a successful arm. Tests leave this at 0. */
     private val armDebounceMs: Long = 0L,
-    private val armClock: () -> Long = { android.os.SystemClock.elapsedRealtime() },
+    private val videoDir: java.io.File? = null,
+    // Same monotonic domain as nanoClock (elapsedRealtime in production);
+    // deriving it keeps one injectable clock, so JVM tests need no Android.
+    private val armClock: () -> Long = { nanoClock() / 1_000_000L },
+    private val armLog: (String) -> Unit = { Log.i(ARM_LOG, it) },
 ) : ViewModel() {
     private val _state = MutableStateFlow(GuidanceUiState())
     val state: StateFlow<GuidanceUiState> = _state.asStateFlow()
 
     private var camera: GuidedCamera? = null
+
+    /** The attached session's upload route for disassembly videos; null while detached. */
+    private var videoUpload: org.anastylos.capture.video.VideoUploadContext? = null
+
+    /** Disassembly recording and its upload; null in builds without a video folder. */
+    val recording: org.anastylos.capture.video.RecordingController? by lazy {
+        videoDir?.let { dir ->
+            org.anastylos.capture.video.RecordingController(
+                directory = dir,
+                camera = { camera as? org.anastylos.capture.camera.VideoCamera },
+                uploadContext = { videoUpload },
+                scope = viewModelScope,
+            )
+        }
+    }
     private var cameraOwner: LifecycleOwner? = null
     private var cameraPreview: PreviewView? = null
     private var settingsJob: Job? = null
@@ -269,6 +295,10 @@ class GuidanceViewModel(
     private var lastMotion: Pair<Double, Double>? = null
     private var lastUiEstimateNs: Long? = null
     private var lastStillCallbackNs: Long? = null
+    /** Recent analysis poses, so a still can be paired with the frame exposed just before it. */
+    private val recentEstimates = ArrayDeque<PoseEstimator.Estimate>()
+    /** The pose paired with the last still; frames keep coming before the sidecar is built. */
+    private var stillPose: StillPose? = null
     private var remote: GuidedRemote? = null
     private var remoteCollectJob: Job? = null
     private var bindEpoch: String? = null
@@ -431,6 +461,8 @@ class GuidanceViewModel(
         lastCorners = emptyMap()
         lastCornersNs = null
         lastEstimate = null
+        recentEstimates.clear()
+        stillPose = null
         lastMotion = null
         lastAppliedSeen = null
         _state.update { it.copy(appliedLine = null) }
@@ -862,6 +894,7 @@ class GuidanceViewModel(
             try {
                 val still = source.takeGuidedStill()
                 lastStillCallbackNs = nanoClock()
+                stillPose = pairStill(still)
                 val stored = persistStill(still, automatic = false)
                 _state.update { it.copy(shutterBusy = false, captureResult = stored) }
             } catch (e: Exception) {
@@ -906,6 +939,7 @@ class GuidanceViewModel(
         val bundle = factory.create(transport)
         remote = bundle
         bindEpoch = uuid()
+        this.sessionId = null // captures now go to the guided session's local twin
         adoptedRequestIds.clear()
         pendingAttempt = null
         reservedAttemptId = null
@@ -919,8 +953,19 @@ class GuidanceViewModel(
                 delivery = null, deliveryNote = null,
             )
         }
+        voice?.link = org.anastylos.capture.sync.GuidedVoiceLink(
+            org.anastylos.capture.sync.GuidedControlClient(transport), sessionId,
+            token = { (bundle.session.resolveToken() as? GuidedTokenOutcome.Ready)?.token },
+            utcNow = { utcClock().toIsoUtc() },
+        )
+        videoUpload = org.anastylos.capture.video.VideoUploadContext(
+            org.anastylos.capture.video.VideoUploadClient(org.anastylos.capture.sync.GuidedControlClient(transport)), sessionId,
+            token = { (bundle.session.resolveToken() as? GuidedTokenOutcome.Ready)?.token },
+        )
+        recording?.resumePending()
         bundle.session.attach(sessionId)
         bundle.session.startPolling()
+        viewModelScope.launch { publishCapabilities(bundle.session) }
         remoteCollectJob?.cancel()
         remoteCollectJob = viewModelScope.launch {
             bundle.session.state.collect { rs ->
@@ -936,7 +981,36 @@ class GuidanceViewModel(
         }
     }
 
+    /**
+     * Publishes what this phone can fulfil. Only a measured profile's
+     * uuid is offered as a calibration id; factory intrinsics offer none.
+     */
+    private suspend fun publishCapabilities(session: GuidedRemoteSession) {
+        val source = session.resolveToken() as? GuidedTokenOutcome.Ready ?: return
+        val caps = org.anastylos.capture.sync.GuidedCapabilities(
+            sourceId = source.sourceId,
+            updatedAt = utcClock().toIsoUtc(),
+            stale = false,
+            cameraIds = _state.value.availableCameras.map { it.id }.take(8),
+            resolutionsPx = listOfNotNull(
+                _state.value.overlayGeometry?.let { listOf(it.analysisWidth, it.analysisHeight) },
+            ),
+            calibrationIds = listOfNotNull(measuredCalibrationId(_state.value.intrinsicsLabel)),
+            targetKinds = listOf("pose"),
+            qualityProfileIds = listOf(GuidanceHypothesis1.PROFILE_ID, GuidanceHypothesis2.PROFILE_ID),
+            appVersion = appVersion,
+            protocolVersion = 1,
+        )
+        when (val outcome = session.publishCapabilities(caps)) {
+            is RemoteEventOutcome.Sent -> Unit
+            is RemoteEventOutcome.Failed -> _state.update { it.copy(remoteError = outcome.message) }
+        }
+    }
+
     fun detachRemote() {
+        sessionId = null
+        voice?.link = org.anastylos.capture.voice.DetachedVoiceLink()
+        videoUpload = null
         remoteCollectJob?.cancel()
         remoteCollectJob = null
         try {
@@ -1214,6 +1288,12 @@ class GuidanceViewModel(
             else -> "camera:0"
         }
 
+    /** `measured:<uuid>[@WxH-scaled]` → `<uuid>`; factory intrinsics → null. */
+    private fun measuredCalibrationId(intrinsicsLabel: String?): String? {
+        val id = intrinsicsLabel?.removePrefix("measured:")?.substringBefore('@') ?: return null
+        return id.takeIf { intrinsicsLabel.startsWith("measured:") && isUuid(it) }
+    }
+
     private fun isUuid(value: String): Boolean =
         try {
             UUID.fromString(value)
@@ -1312,6 +1392,8 @@ class GuidanceViewModel(
                 motionMedianPx = motion?.first,
                 motionP90Px = motion?.second,
             ),
+            maxMotionMedianPx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX * motionGateScale(),
+            maxMotionP90Px = GuidanceHypothesis1.MAX_MOTION_P90_PX * motionGateScale(),
         )
         // Hackathon MVP: ArUco corner jitter is a warning. Exposure and
         // sharpness still reject. guidance-hypothesis-1 itself is unchanged.
@@ -1320,7 +1402,9 @@ class GuidanceViewModel(
         val qualityForGate = quality == ImageQualityVerdict.Accepted || motionWarning
         val calibrated = !_state.value.uncalibrated
         val poseFresh = ageMs in 0..GuidanceHypothesis1.POSE_AGE_MS
-        val aligned = orientationOk && distanceOk && qualityForGate && calibrated
+        // H2 (workstation requests): only tracking and stillness block the shutter.
+        val shootAnyway = shutterOnTrackingOnly()
+        val aligned = shootAnyway || (orientationOk && distanceOk && qualityForGate && calibrated)
         val gatesPass = _state.value.session == SessionState.ACTIVE &&
             registration == RegistrationState.ACQUIRED && aligned && poseFresh
         // A stale but still-acquired pose is not evidence either way.
@@ -1353,7 +1437,7 @@ class GuidanceViewModel(
             )
         }
         if (!ignoreStale) {
-            navigate(registration, cues, aligned && poseFresh)
+            navigate(registration, if (shootAnyway) emptyList() else cues, aligned && poseFresh)
         }
         noteDwell(
             before = beforeDwell,
@@ -1369,6 +1453,8 @@ class GuidanceViewModel(
             cues = cues.size,
         )
         lastEstimate = estimate
+        recentEstimates.addLast(estimate)
+        while (recentEstimates.size > RECENT_ESTIMATES) recentEstimates.removeFirst()
         lastMotion = motion
         _state.update {
             it.copy(
@@ -1385,6 +1471,17 @@ class GuidanceViewModel(
         maybeReserveAttempt()
         maybeFireShutter()
     }
+
+    /**
+     * Motion thresholds are pixels at [GuidanceHypothesis1.REF_WIDTH_PX], like the
+     * RMS gate (TL decision on R12): scale them to the analysis width.
+     */
+    private fun motionGateScale(): Double =
+        (_state.value.overlayGeometry?.analysisWidth ?: GuidanceHypothesis1.REF_WIDTH_PX).toDouble() /
+            GuidanceHypothesis1.REF_WIDTH_PX
+
+    /** `guidance-hypothesis-2` applies to an adopted workstation request; local arming stays H1. */
+    private fun shutterOnTrackingOnly(): Boolean = _state.value.remoteRequest != null
 
     private fun navigate(registration: RegistrationState, cues: List<MovementCue>, aligned: Boolean) {
         val request = _state.value.request
@@ -1466,9 +1563,7 @@ class GuidanceViewModel(
         else -> "counting"
     }
 
-    private fun logArm(message: String) {
-        Log.i(ARM_LOG, message)
-    }
+    private fun logArm(message: String) = armLog(message)
 
     private fun dwellSamples(state: DwellState): Int = when (state) {
         DwellState.Idle -> 0
@@ -1539,9 +1634,10 @@ class GuidanceViewModel(
                 session = snapshot.session, request = snapshot.request,
                 lateMark = snapshot.lateMark, registration = snapshot.registration,
                 poseAgeMs = snapshot.poseAgeMs, dwell = snapshot.dwell,
-                orientationOk = snapshot.orientationOk, distanceOk = snapshot.distanceOk,
+                orientationOk = snapshot.orientationOk || shutterOnTrackingOnly(),
+                distanceOk = snapshot.distanceOk || shutterOnTrackingOnly(),
                 qualityOk = snapshot.qualityVerdict == ImageQualityVerdict.Accepted ||
-                    snapshot.motionWarning,
+                    snapshot.motionWarning || shutterOnTrackingOnly(),
                 boardId = snapshot.boardId, targetBoardId = snapshot.target?.boardId,
                 profileId = snapshot.intrinsicsLabel,
                 requiredProfileId = null,
@@ -1589,11 +1685,14 @@ class GuidanceViewModel(
                     return@withLock
                 }
                 firedForArming = true
+                val qualityLowAtShutter = _state.value.qualityVerdict is ImageQualityVerdict.Rejected
                 try {
                     val source = camera ?: throw IllegalStateException("camera detached")
                     val still = source.takeGuidedStill()
                     lastStillCallbackNs = nanoClock()
+                    stillPose = pairStill(still)
                     val stored = persistStill(still, automatic = true)
+                        .copy(qualityLow = qualityLowAtShutter)
                     onRequestEvent(RequestEvent.JpegPersisted)
                     onRequestEvent(RequestEvent.VerifyPass)
                     _state.update { it.copy(shutterBusy = false, captureResult = stored) }
@@ -1763,7 +1862,8 @@ class GuidanceViewModel(
         still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill,
         imageSha: String,
     ): SpatialSidecar.Input? {
-        val estimate = lastEstimate ?: return null
+        val paired = stillPose ?: return null
+        val estimate = paired.estimate
         val snapshot = _state.value
         val sessionUuid = snapshot.remoteSessionId ?: return null
         val request = snapshot.remoteRequest ?: return null
@@ -1791,7 +1891,7 @@ class GuidanceViewModel(
             ExifInterface.ORIENTATION_NORMAL
         }
         val callbackNs = lastStillCallbackNs ?: return null
-        val sampleAgeMs = (callbackNs - estimate.monotonicNs) / 1_000_000.0
+        val sampleAgeMs = paired.sampleAgeMs
         val quality = estimate.frameQuality
         val motion = lastMotion
         val intrinsics = try {
@@ -1802,7 +1902,16 @@ class GuidanceViewModel(
         val nominalDescriptor = intrinsics?.let {
             "factory-fx${it.fx}-fy${it.fy}-cx${it.cx}-cy${it.cy}-w${it.width}-h${it.height}-dist${it.distortion.joinToString(",")}"
         } ?: "unresolved-factory-analysis-${geometry.analysisWidth}x${geometry.analysisHeight}"
+        // Cite the measured profile only when the pose was solved with its
+        // unscaled intrinsics; a scaled or factory solve stays nominal.
+        val profile = measuredCalibrationId(intrinsics?.profileId)
+            ?.takeIf { intrinsics?.profileId?.contains('@') == false }
+            ?.let { measuredProfiles?.reference(it) }
         val layoutDescriptor = canonicalBoardLayout(board)
+        val layoutSha = layoutDescriptor.toByteArray(Charsets.UTF_8).sha256Hex()
+        // A measured print is cited only together with a measured profile:
+        // `validated` needs both (SpatialSidecar honesty policy).
+        val boardInstance = profile?.let { boardInstances?.forBoard(board.boardId, layoutSha) }
         val goalBytes = try {
             Json.encodeToString(GuidedTarget.serializer(), request.target).toByteArray(Charsets.UTF_8)
         } catch (_: Exception) {
@@ -1829,19 +1938,24 @@ class GuidanceViewModel(
                 exifOrientation = exifOrientation,
             ),
             camera = SpatialSidecar.Camera(
-                cameraId = cameraIdForConsent(),
+                // The bare Camera2 id: the sidecar prefixes "camera:" itself for T_board_camera.
+                cameraId = snapshot.effectiveCameraId ?: return null,
                 lensFacing = when (geometry.lensFacing) {
                     CameraSelector.LENS_FACING_FRONT -> "front"
                     LENS_FACING_EXTERNAL -> "external"
                     else -> "back"
                 },
-                sensorMode = "default",
+                sensorMode = profile?.sensorMode ?: "default",
             ),
             calibration = SpatialSidecar.Calibration(
-                nominalDescriptor = nominalDescriptor,
-                layoutSha256 = layoutDescriptor.toByteArray(Charsets.UTF_8).sha256Hex(),
+                profileId = profile?.profileId ?: "",
+                profileSha256 = profile?.sha256 ?: "",
+                nominalDescriptor = if (profile == null) nominalDescriptor else "",
+                layoutSha256 = layoutSha,
+                boardInstanceId = boardInstance?.boardInstanceId ?: "",
+                boardInstanceSha256 = boardInstance?.sha256 ?: "",
                 boardFrameId = board.boardId,
-                metricValidity = "nominal_only",
+                metricValidity = if (boardInstance != null) "validated" else "nominal_only",
             ),
             analysisWidthPx = geometry.analysisWidth,
             analysisHeightPx = geometry.analysisHeight,
@@ -1856,12 +1970,17 @@ class GuidanceViewModel(
                 tBC = estimate.tBC,
                 estimatorStatus = estimate.status,
                 rmsPx = estimate.rmsPx,
+                maxResidualPx = estimate.maxResidualPx,
+                positionUncertaintyMm = estimate.uncertainty?.positionMm,
+                angleUncertaintyDeg = estimate.uncertainty?.angleDeg,
+                uncertaintyMethod = org.anastylos.capture.guidance.PoseUncertainty.METHOD,
                 detectedMarkerIds = estimate.markerIdsSeen,
                 residualReferenceWidthPx = geometry.analysisWidth,
                 sampleAgeMs = sampleAgeMs,
                 imageSha256 = imageSha,
             ),
-            calibrated = false,
+            calibrated = profile != null,
+            calibrationPixelFrameId = profile?.pixelFrameId,
             target = SpatialSidecar.Target(
                 goalBytes = goalBytes,
                 roiVerticesMm = boardRoiCorners(board),
@@ -1872,8 +1991,8 @@ class GuidanceViewModel(
                 rmsGatePx = GuidanceHypothesis1.LIVE_RMS_PX,
                 motionMedianPx = motion?.first,
                 motionP90Px = motion?.second,
-                motionMedianGatePx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX,
-                motionP90GatePx = GuidanceHypothesis1.MAX_MOTION_P90_PX,
+                motionMedianGatePx = GuidanceHypothesis1.MAX_MOTION_MEDIAN_PX * motionGateScale(),
+                motionP90GatePx = GuidanceHypothesis1.MAX_MOTION_P90_PX * motionGateScale(),
                 sharpness = quality?.sharpness,
                 sharpnessReference = snapshot.sharpnessReference,
                 sharpnessRatioGate = GuidanceHypothesis1.MIN_SHARPNESS_RATIO,
@@ -1920,10 +2039,33 @@ class GuidanceViewModel(
         )
     }
 
+    /**
+     * The analysis pose exposed last before the still, on the sensor clock.
+     * Without a still sensor timestamp the age falls back to the still callback,
+     * which overstates it by the capture latency (the gate then blocks the sidecar).
+     */
+    private fun pairStill(still: org.anastylos.capture.camera.GuidedCameraSource.GuidedStill): StillPose? {
+        val sensorNs = still.sensorTimestampNs
+        if (sensorNs != null) return poseForStill(recentEstimates.toList(), sensorNs)
+        val estimate = lastEstimate ?: return null
+        val callbackNs = lastStillCallbackNs ?: return null
+        return StillPose(estimate, (callbackNs - estimate.monotonicNs) / 1_000_000.0)
+    }
+
     private suspend fun ensureSession(): String {
         sessionId?.let { return it }
         // One dedicated session per guidance run: explicit and auditable.
-        val id = withContext(ioDispatcher) { repo.createSession("Guided capture").sessionId }
+        // Attached to a workstation, the local session is the guided session's
+        // twin: Core only accepts a guided package whose manifest names exactly
+        // that session.
+        val remoteId = _state.value.remoteSessionId
+        val id = withContext(ioDispatcher) {
+            if (remoteId != null) {
+                repo.ensureSession(remoteId, "Workstation session ${remoteId.take(8)}").sessionId
+            } else {
+                repo.createSession("Guided capture").sessionId
+            }
+        }
         sessionId = id
         return id
     }
@@ -1940,6 +2082,8 @@ class GuidanceViewModel(
 }
 
 private const val ARM_LOG = "AnastylosArm"
+/** About 3 s of analysis frames: covers the shutter-to-exposure latency. */
+private const val RECENT_ESTIMATES = 90
 
 private val TERMINAL_REQUESTS = setOf(
     RequestState.CAPTURED_LOCAL,

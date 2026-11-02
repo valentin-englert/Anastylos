@@ -327,3 +327,37 @@ resume/migration + fixtures), `tests/test_guided_routes.py` (9 live
 loopback incl. auth matrix + CLI). ANDROID consumes
 `tests/fixtures/guided-wire-*.json` read-only (synthetic,
 contract-tested); see `tests/fixtures/README.md`.
+
+## Disassembly video upload
+
+`anastylos_video_routes.py` adds chunked, resumable video upload on the
+existing TLS listener and guided source token (additive; no frozen G0
+contract file changes). Videos of a guided session are stored under
+`<data>/videos/<session_id>/<video_id>/` as `meta.json` plus, once complete,
+`video.mp4`.
+
+| Route | Auth | Effect |
+|---|---|---|
+| `POST /v1/guided/sessions/{id}/videos` | source | declare `{sha256, size}` (≤ 4 GB) → 201 new / 200 known; `video_id` is the first 32 hex chars of the SHA-256 |
+| `GET /v1/guided/sessions/{id}/videos` | source | list the session's videos with status |
+| `GET /v1/guided/sessions/{id}/videos/{video_id}` | source | `status` (`receiving`, `complete`, `failed`), `chunk_count`, `received` chunk indexes |
+| `PUT /v1/guided/sessions/{id}/videos/{video_id}/chunks/{n}` | source | one raw chunk, 0-based; every chunk is exactly 8 MiB except the last |
+
+Behaviour: a repeated chunk with identical bytes is a no-op (200); different
+bytes for a stored chunk are 409 `chunk_conflict`; a wrong length is 400. The
+chunk that completes the set triggers assembly under a `.part` name, the
+SHA-256 and size are verified, and only then is the file moved into place
+atomically (`complete`). A mismatch is 409 `hash_mismatch`, the chunks are
+discarded and the video is marked `failed`; declaring it again starts clean.
+A phone resumes after a dropped connection by reading `received` and sending
+only the missing chunks. `video-journal.jsonl` records route, status and byte
+counts only, never content. Tests: `tests/test_video_routes.py`.
+
+## Voice settings and ASR keywords
+
+`GET /v1/guided/sessions/{id}/voice/settings` (guided source token, session bound to that source) relays the session
+UI's `GET /api/dialogue/settings` and returns `agent_name`, `persona`, `wake_words`, `asr_keywords`, `mishearings`;
+502 `settings_unavailable` when the session UI cannot be reached. The phone matches those wake words (with no name it
+keeps "Muse" and "Meta") and sends the keywords with every transcription in the optional `X-Asr-Keywords` header
+(comma separated, letters/spaces/apostrophes/hyphens, at most 6); the receiver passes each as `--keyword` to the
+transcriber. Tests: `tests/test_voice_routes.py`.

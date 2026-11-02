@@ -39,6 +39,7 @@ class FrameSamplerTest {
         override fun observeSession(id: String): Flow<CaptureSession?> = flowOf(null)
         override suspend fun getSession(id: String): CaptureSession? = null
         override suspend fun createSession(name: String): CaptureSession = TODO()
+        override suspend fun ensureSession(id: String, name: String): CaptureSession = TODO()
         override suspend fun renameSession(id: String, name: String) = TODO()
         override suspend fun deleteSession(id: String) = TODO()
         override fun observeObservations(sessionId: String): Flow<List<ComponentObservation>> =

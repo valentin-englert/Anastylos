@@ -1,0 +1,18 @@
+{
+ "schema": "anastylos-drawing-api-batch@1",
+ "batch": "B1",
+ "variant": "frame choice (new) + frozen r4 box/SAM",
+ "attempts_per_job": 1,
+ "own_retries": 0,
+ "sam_adapter_retries": "adapter default (pre-body HTTP retries only)",
+ "expected_calls": {
+  "muse": 6,
+  "sam": 3
+ },
+ "evaluation": "separate from frozen r4 test-set results",
+ "jobs": [
+  "J1-back-shell",
+  "J2-pcb-cable",
+  "J3-front-shell"
+ ]
+}

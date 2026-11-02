@@ -29,7 +29,11 @@ class Interpretation(unittest.TestCase):
             self.assertEqual(english.interpret_read_back(typed(text))["intent"], "confirm", text)
         for text in ("no", "No!", "wrong", "incorrect"):
             self.assertEqual(english.interpret_read_back(typed(text))["intent"], "reject", text)
-        for text in ("ja", "nein", "maybe", "yes and no", ""):
+        for text in ("Yes, that is correct.", "yes that is correct", "That's correct."):  # transcribed speech
+            self.assertEqual(english.interpret_read_back(typed(text))["intent"], "confirm", text)
+        for text in ("No, that is not correct.", "That's not correct"):
+            self.assertEqual(english.interpret_read_back(typed(text))["intent"], "reject", text)
+        for text in ("ja", "nein", "maybe", "yes and no", "yes that is not correct", ""):
             self.assertEqual(english.interpret_read_back(typed(text))["intent"], "unclear", text)
         self.assertEqual(english.interpret_read_back({"source": "screen_choice", "choice": "yes"})["intent"], "confirm")
 

@@ -57,6 +57,7 @@ camerax-camera2-pipe = { group = "androidx.camera", name = "camera-camera2-pipe"
 camerax-core = { group = "androidx.camera", name = "camera-core", version.ref = "camerax" }
 camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+camerax-video = { group = "androidx.camera", name = "camera-video", version.ref = "camerax" }
 mlkit-barcode-scanning = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "mlkit-barcode" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "security-crypto" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

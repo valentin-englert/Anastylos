@@ -45,6 +45,8 @@ object CalibrationProfile {
         @SerialName("schema") val schema: String = "",
         @SerialName("profile_id") val profileId: String = "",
         @SerialName("camera_id") val cameraId: String = "",
+        @SerialName("sensor_mode") val sensorMode: String = "",
+        @SerialName("reference_pixel_frame_id") val referencePixelFrameId: String = "",
         @SerialName("camera_model") val cameraModel: String = "",
         @SerialName("metric_validity") val metricValidity: String = "",
         @SerialName("reference_image_size_px") val referenceSizePx: List<Int> = emptyList(),

@@ -310,3 +310,201 @@ installed and hash-verified on the Xiaomi; live log: `guided intrinsics
 measured profile=measured:e92c8ea1…`, `status=VALID`, RMS 1.21 px at
 1920×1080 (gate 1.8), 52/60 poses ≤ 150 ms, pose age avg 117 ms.
 Evidence: `claude-review-evidence/xcal-run4/` (SHA256SUMS).
+
+## 15. Addendum 2026-11-01 — Remote view request end to end on the Xiaomi
+
+Device Xiaomi `M2101K6G`, profile `measured:e92c8ea1-36a8-449f-8df9-50f0f3481548`,
+tripod over `surface_a3`. Workstation side: a scratch script in place of
+`tools/session-ui/captures.py`, using the TL client
+`integration/northstar` @ `7db24380` with SPKI pin `6c5f72a4…`. Grant read
+read-only from `control.db` (R11 open).
+
+Final run, APK `78630d4c8e4cd3d9dcfffb450e9f43201198043205f038daf115ef0a1f7fb744`
+(device `base.apk` hash equal), session `5bc9fe29-cad5-4a9c-aafb-54aed2548f41`:
+
+| Step | Evidence |
+|---|---|
+| Capabilities after attach | stored: cameras `0,1`, `[1920,1080]`, calibration `e92c8ea1…`, `pose`, `guidance-hypothesis-1`, protocol 1 |
+| First arm | one tap, no revision conflict; grant `865d8c10…` claimed |
+| Request | `5cb2d223-0ce5-4ee6-8c77-56830e1daca1`, label “Back shell, inner side up — hands off”, `board_id` `5a3a3a3a-0000-4000-8000-00000000a3a3` mapped once to `surface_a3`, `T_B_C.to` `board:surface_a3` |
+| Gates | NAVIGATING → ALIGNING → HOLD_STILL, dwell 5/5, then one shutter; no gate changed |
+| Local | `CAPTURED_LOCAL`, image `0d1e5ad3-f894-4241-9adb-369f6b05d1a5` |
+| Core | events `armed`, `accepted`, `captured_local`; attempt `e00fb4e0…` `asset_bound` |
+| Receipt | `package_only` (card: “Sent — image only, not spatially qualified”) |
+
+The request as recorded is the test vector
+`app/src/test/resources/remote-view-request-back-shell.json`; the only change is
+`status` restored to `QUEUED`.
+
+Defects found only against the live receiver (all fixed, each with a test on
+the bytes the phone sends):
+
+1. Wire bodies dropped fields at their default (`resolutions_px`,
+   `expected_session_revision`) and nulls (`reason`). G0 bodies carry every
+   field, nulls explicit. Fixtures only checked replies, which hid it.
+2. First arm sent revision 0: the phone now fetches the session first.
+3. Delivery uploaded on the legacy route before binding, so no receipt was
+   ever joined. Now G0 order: bind → guided upload (`X-Guided-*`, guided token)
+   → sidecar.
+4. Guided captures went to a local session with its own id; Core accepts a
+   guided package only when its manifest names the guided session. The local
+   session is now the guided session's twin.
+5. The sidecar used the newest pose instead of the pose at still time.
+
+Gate still blocking `qualified` (not loosened): the sidecar is skipped because
+`sample_age_ms` exceeds the 150 ms exposure-association gate. It is measured
+from the still callback (~0.9 s after the shutter request), because the file
+save path (`OnImageSavedCallback`) gives no sensor timestamp. Missing
+precondition: a still sensor timestamp (`OnImageCapturedCallback` /
+`ImageInfo.timestamp`), a capture-path change awaiting approval.
+
+Verification: `gradlew testDebugUnitTest lintDebug assembleDebug` with the test
+JVM pinned to JDK 21: 482 tests, 0 failures; lint passed.
+
+### 15.1 Still sensor timestamp (owner-approved capture-path change)
+
+`takeGuidedStill` now captures in memory (`OnImageCapturedCallback`): the HAL
+JPEG bytes unchanged, plus `ImageInfo.timestamp` on the analysis sensor clock.
+The sidecar pairs the still with the analysis frame exposed last at or before
+it (`guidance/StillPose.kt`, never a later frame); without a still timestamp it
+falls back to the callback age, which the gate blocks.
+
+Run on APK `2b813318c0bcdba878066fa8349c8d8c52df4a18fccb5ab14cd21be234a6e5e0`
+(device hash equal), session `4a486784-87d8-4735-a213-3a8b5f023be2`, request
+`428ee79c…`, image `c742ea5c…`:
+
+- `sample_age_ms` 13.3 (was ~900 from the callback); the 150 ms gate passes.
+- Sidecar stored (revision 1, `2f643588…`); receipt re-versioned with it.
+- JPEG keeps its EXIF orientation (6) in the in-memory path.
+- Receipt stays `package_only`. Not qualified because of two blockers outside
+  the capture path:
+  1. The receiver's spatial-validator seam is not delivered
+     (`unavailable by default: package_only, never qualified`).
+  2. The sidecar declares calibration `nominal_only` with the factory
+     descriptor even when the measured Xiaomi profile is active, and
+     `validated` needs a measured board instance (A3 print scale unmeasured).
+     Declaring the measured profile id and sha is a phone change that waits
+     for a TL decision.
+
+Verification: 485 tests, 0 failures, JDK 21 test JVM; lint passed.
+
+### 15.2 Sidecar cites the measured profile (step a)
+
+The sidecar now cites the measured profile when the pose was solved with its
+unscaled intrinsics: `profile_id`, `profile_sha256` (sha256 of the exact
+bundled asset bytes), the profile's `sensor_mode` and
+`calibration_pixel_frame_id`, and `calibrated = true` (pose `valid`, basis
+`geometric_measurement`). A scaled or factory solve stays nominal.
+`metric_validity` stays `nominal_only`: the A3 print scale is unmeasured.
+Fixed on the way: the sidecar used the consent spelling `camera:0` as
+`camera_id`, which made `T_board_camera.from` `camera:camera:0`; it now
+carries the bare Camera2 id.
+
+Workstation staging (done for this run): the profile bytes at
+`<receiver-data>/spatial/profiles/aeac1c7c130fb017e7ee42f94c907043c530ae452c3f55b1c2f82ac7f97537eb.json`.
+
+Run on APK `7c12e352a845c86c0fa4c4a0af3a893662835985c40a963bb4ce00e08cf76f4d`
+(device hash equal), session `6d27c352…`, request `e09f4268…`: receipt
+`package_only`. The validator, run with the receiver's own context builder:
+verdict `needs_review`, no rejects; profile bound, pose `valid`,
+`sample_age_ms` 13.3.
+
+Still between this and `qualified`:
+
+| Item | Kind | Owner |
+|---|---|---|
+| `CALIBRATION_NOT_VALIDATED` | A3 board instance: measured 100 mm bars, `anastylos-board-instance@1` record staged, its id in the sidecar | owner measures; phone + workstation wire the id |
+| `UNKNOWN_SOLVE_SOURCE` | `timestamp_interpolated` needs two bracketing pose samples uploaded as assets; the receiver has no route for them | contract request (TL) |
+| `NULL_MAX_RESIDUAL`, `NULL_UNCERTAINTY` | the estimator reports RMS only; max residual and pose uncertainty are null | phone (estimator) |
+| `QUALITY_NOT_ACCEPTED` | quality is `rejected` here (motion verdict; the hackathon gate only warns on motion) and is never `accepted` without validated calibration | follows the rows above; motion needs a still tripod |
+| `LAYOUT_CHECK_SKIPPED`, `EPOCH_CHECK_SKIPPED` | no layout / epochs staged on the workstation | workstation |
+
+A3 measurement (owner): print check per `calibration/README.md` step 5. With a
+steel ruler or caliper, read the horizontal and the vertical 100 mm line, end
+tick to end tick, to 0.1 mm. Record both values, the instrument, the
+uncertainty (ruler ±0.5 mm, caliper ±0.05 mm), who measured, the time (UTC)
+and whether the sheet lies flat. The validator rejects more than 0.5 % per axis
+(below 99.5 or above 100.5 mm): reprint at 100 % then.
+
+### 15.3 Measured A3 print (board instance)
+
+Owner measurement 2026-11-01 (reported 2026-11-02 00:00 local): both 100 mm
+check lines on the `surface_a3` print read about 100.15 mm with a Mahr caliper
+(+0.15 %, limit 0.5 %). Recorded as `anastylos-board-instance@1`
+`50462f3b-d954-4e96-8d3f-ae877e144f25` in
+`app/src/main/assets/board-instance-surface_a3.json` (uncertainty 0.05 mm,
+flatness `unknown` because it was not stated); `validate_board_instance`:
+accept. Staged on the workstation at
+`<receiver-data>/spatial/boards/b6f7da9a37124483cc72f7b5d7e7daa2b0a394f0730024f90786475225e1f5af.json`.
+Note for review: the earlier CAL-01 diagonal check (481.0 vs 480.98 mm, ±0.2,
+Hultafors Talmeter) implies about +0.004 %, the bars +0.15 %; both are inside
+the limit, but they disagree by more than their stated uncertainties.
+
+The phone cites the record (id + sha256 of its bytes) only together with the
+measured profile and only when the record's layout hash equals the phone's
+layout; then `metric_validity` is `validated`.
+
+The card no longer says "On target — hold still" while an image gate blocks:
+it names the blocking reason (sharpness, dark, saturated). Found in a run where
+sharpness blocked the shutter (gate unchanged); the next run captured.
+
+Run on APK `1d9d2596bf97dd11bc4c8f5da716c8ba7284ed1bfe88386613fb5ac00b9aa6d0`
+(device hash equal), session `c33c73e5…`, request `49ff251e…`: receipt
+`package_only`; validator `needs_review`, no rejects,
+`CALIBRATION_NOT_VALIDATED` gone. Remaining: `UNKNOWN_SOLVE_SOURCE` (contract
+route for pose-sample assets), `NULL_MAX_RESIDUAL` / `NULL_UNCERTAINTY`
+(estimator), `QUALITY_NOT_ACCEPTED` (quality `rejected` in this sidecar),
+layout and epochs not staged. `measured_print_scale` in
+`calibration/calibration-config.json` is not updated (calibration module,
+generated file).
+
+Verification: 488 tests, 0 failures, JDK 21 test JVM; lint passed.
+
+### 15.4 Pose metrics: max residual and uncertainty
+
+The estimator now hands on the max reprojection residual it already gated on,
+and computes a 1 sigma uncertainty for gated poses
+(`guidance/PoseUncertainty.kt`): Gauss-Newton covariance `s²(JᵀJ)⁻¹` at the
+solution, residual variance over `2N−6`, central-difference Jacobian through
+`PoseMath.projectPoints`, propagated to the camera centre in board mm (the
+frame the sidecar reports) and to the rotation angle in degrees. The sidecar
+writes `max_residual_px`, `position_uncertainty_mm`, `angle_uncertainty_deg`
+and the method string; `none` and nulls when not computable.
+
+Run on APK `78c581a4253f046745820041ace87788461619912ed087051345420579783556`
+(device hash equal), session `42cc4b1b…`, request `71ac5944…`: RMS 0.80 px,
+max residual 2.04 px, uncertainty (0.47, 0.57, 0.12) mm and 0.09°. Validator:
+`needs_review`, no rejects, the only review left is `UNKNOWN_SOLVE_SOURCE`.
+
+Quality is `rejected` on motion alone: p90 1.5001 px against 1.5 px (pose,
+focus and exposure pass). The phone applies the motion gate unscaled at the
+1920 px analysis width, while the RMS and max-residual gates are scaled from
+`REF_WIDTH_PX` 1280. Whether the frozen motion thresholds are also defined at
+1280 px is a TL question; nothing changed here.
+
+Verification: 490 tests, 0 failures, JDK 21 test JVM; lint passed.
+
+### 15.5 `guidance-hypothesis-2`: the phone takes the photo (TL decision on R12)
+
+For an adopted workstation request the shutter blocks only on tracking
+(registration acquired, fresh pose) and the 0.5 s stillness dwell. Target
+offset, sharpness, exposure and motion no longer block; they are still
+measured against the unchanged H1 thresholds and reported in the sidecar, so
+such a photo stays `package_only`. Local arming stays H1. Motion thresholds are
+now scaled to the analysis width like the RMS gate (live gate and sidecar).
+Card: "Photo sent", plus "a bit blurry — retake if the drawing looks wrong"
+when an image gate failed at the shutter. Capabilities list H1 and H2.
+
+Wide workstation tolerances (`integration/northstar` @ `d4eec96b`: ±100/±100/
+±150 mm, 20°) are adopted as sent (test
+`workstationRequestShootsWhenTrackedAndStillEvenOffTarget`, which also shows a
+shot 250 mm off target).
+
+Run on APK `f7a7d42bbabe057c51122624a94a335cbf92d0883f71f202d63a698fb4f89d8c`
+(device hash equal), session `b5751f5d…`, request `8161005f…`: posted
+23:51:39Z, adopted 23:51:41.3Z (2 s change poll), captured 23:51:42.9Z,
+receipt `package_only` 23:51:42Z, re-versioned with the sidecar 23:51:43Z.
+About 1.7 s from adoption to the photo at the workstation, about 4 s from the
+post. The first-arm revision fix is in since `3ad13126` (one tap, verified).
+
+Verification: 491 tests, 0 failures, JDK 21 test JVM; lint passed.

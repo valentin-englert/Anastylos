@@ -75,6 +75,8 @@ object SpatialSidecar {
         val layoutSha256: String,
         /** Measured board-instance uuid, or blank when nominal. */
         val boardInstanceId: String = "",
+        /** Hex64 over the measured board-instance record bytes, or blank. */
+        val boardInstanceSha256: String = "",
         val boardFrameId: String,
         val metricValidity: String,
         val reasons: List<String> = emptyList(),
@@ -84,6 +86,11 @@ object SpatialSidecar {
         val tBC: List<Double>?,
         val estimatorStatus: WireRegistration,
         val rmsPx: Double?,
+        val maxResidualPx: Double? = null,
+        /** 1 sigma camera centre in board mm and rotation in degrees, with how it was computed. */
+        val positionUncertaintyMm: List<Double>? = null,
+        val angleUncertaintyDeg: Double? = null,
+        val uncertaintyMethod: String = "none",
         val detectedMarkerIds: List<Int>,
         val residualReferenceWidthPx: Int,
         val sampleAgeMs: Double?,
@@ -145,6 +152,8 @@ object SpatialSidecar {
         val captureTime: CaptureTime,
         val pose: Pose,
         val calibrated: Boolean,
+        /** The measured profile's own pixel frame; null keeps the analysis-stream frame. */
+        val calibrationPixelFrameId: String? = null,
         val target: Target,
         val quality: Quality,
         val associationReason: String = "no custody observer linked",
@@ -308,7 +317,8 @@ object SpatialSidecar {
                 put("pixel_convention", PIXEL_CONVENTION)
                 put(
                     "calibration_pixel_frame_id",
-                    "analysis-${input.analysisWidthPx}x${input.analysisHeightPx}-rot${input.analysisRotationDeg}",
+                    input.calibrationPixelFrameId
+                        ?: "analysis-${input.analysisWidthPx}x${input.analysisHeightPx}-rot${input.analysisRotationDeg}",
                 )
                 put(
                     "reference_to_image",
@@ -464,6 +474,9 @@ object SpatialSidecar {
         if (!nominalBoard && !isUuid(input.boardInstanceId)) {
             blocked += "calibration.board_instance_id must be a uuid"
         }
+        if (!nominalBoard && !isSha256Hex(input.boardInstanceSha256)) {
+            blocked += "calibration.board_instance_sha256 must be hex64"
+        }
         if (input.metricValidity == "validated" && (nominalProfile || nominalBoard)) {
             blocked += "validated metric_validity requires measured profile and board instance"
         }
@@ -488,8 +501,8 @@ object SpatialSidecar {
             reasons += "nominal_board_instance_unmeasured: print scale not measured"
         } else {
             boardId = input.boardInstanceId
-            boardSha = input.boardInstanceId.toByteArray(Charsets.UTF_8).sha256Hex()
-            reasons += "measured board instance pinned by id hash"
+            boardSha = input.boardInstanceSha256
+            reasons += "measured board instance pinned by record hash"
         }
         return NominalCalibration(profileId, profileSha, boardId, boardSha, input.metricValidity, reasons)
     }
@@ -686,14 +699,19 @@ object SpatialSidecar {
                 put("detected_marker_ids", JsonArray(detected.map { JsonPrimitive(it) }))
                 put("inlier_marker_ids", JsonArray(detected.map { JsonPrimitive(it) }))
                 put("rms_px", pose.rmsPx?.let { JsonPrimitive(it) } ?: JsonNull)
-                put("max_residual_px", JsonNull)
+                put("max_residual_px", pose.maxResidualPx?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("residual_reference_width_px", pose.residualReferenceWidthPx)
                 put("inlier_ratio", ratio?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("alternate_solution_separation_mm", JsonNull)
                 put("alternate_solution_separation_deg", JsonNull)
-                put("uncertainty_method", "none")
-                put("position_uncertainty_mm", JsonNull)
-                put("angle_uncertainty_deg", JsonNull)
+                val uncertain = pose.positionUncertaintyMm != null && pose.angleUncertaintyDeg != null
+                put("uncertainty_method", if (uncertain) pose.uncertaintyMethod else "none")
+                put(
+                    "position_uncertainty_mm",
+                    pose.positionUncertaintyMm?.takeIf { uncertain }
+                        ?.let { v -> JsonArray(v.map { JsonPrimitive(it) }) } ?: JsonNull,
+                )
+                put("angle_uncertainty_deg", pose.angleUncertaintyDeg?.takeIf { uncertain }?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("corner_evidence", JsonNull)
             })
             put("reasons", JsonArray(emptyList()))

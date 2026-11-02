@@ -35,6 +35,18 @@ One reproducible command produces both artifacts:
 py -3.12 reconstruct.py build <memory.jsonl> [--results-dir <dir>] [--graph <assembly_graph.json>] [--embed-crops] --out <dir>
 ```
 
+Controller schematic sheet (three main assemblies; assembled inset +
+exploded main view from one package — not a second memory):
+
+```powershell
+py -3.12 reconstruct.py schematic <controller_schematic_package.json> [--explode-factor 1.0] --out <dir>
+```
+
+Writes `controller_schematic.svg`, `controller_schematic_assembled.svg`
+(factor 0), and `controller_schematic_provenance.json`. Schematic paper
+units are not calibrated sheet millimetres. Proposed memory assignments
+stay marked unconfirmed until an operator confirms them.
+
 Output: `<dir>/assembly_state.json` + `<dir>/exploded.svg`, plus a JSON
 summary on stdout with SHA-256 over both files. Exit 2 only when the
 log path itself is missing; corrupt or empty logs still produce an
@@ -64,11 +76,16 @@ builder over the same log (stdlib-only `anastylos_cable.graph` +
 ## Assembly State v1 (proposed)
 
 Specified in [`ASSEMBLY_STATE_V1.md`](ASSEMBLY_STATE_V1.md): one entry
-per live observation in log order (verbatim physical mm, cited region,
-existing rectified crops, tray links with basis, deterministic
-`layout_px` exploded coordinates), graph edges copied verbatim,
-provenance hashes over input bytes, and explicit missing-evidence
-records. No wall-clock timestamps: identical inputs, identical bytes.
+per live observation **and** declared removal in log order (verbatim
+physical mm when present, cited region, existing rectified crops, tray
+and storage links with basis, compatible-group membership,
+representation provenance for contours or labeled substitutes,
+deterministic `layout_px` exploded coordinates), graph edges copied
+verbatim, provenance hashes over input bytes, and explicit
+missing-evidence records. Operator labels stay under `declaration`
+and never become `identity`. No wall-clock timestamps: identical
+inputs, identical bytes. Projector version `1.1.0` (schema still
+`assembly-state-v1`).
 
 ## Terminology (read this before counting)
 
@@ -84,16 +101,23 @@ the existing confirmation channels.
 
 ## SVG layout
 
-- Header: status, memory SHA-256, observation count.
+- Header: status, memory SHA-256, component counts (observations +
+  declared).
+- Technical explosion sketch (first panel): black lines on white,
+  mask-derived silhouettes where available, labeled SUBSTITUTE cards
+  for declared parts without metric geometry, position balloons,
+  leader lines, evidence/storage captions, stable `id="part-…"` /
+  `data-event-id` attributes and internal balloon→part links.
+  Exploded offsets are layout-only.
 - Physical map per `source_view`: the labeled `before_rectified`
   frame as background where available (or an explicit note), verbatim
   mm boxes at a stated px/mm scale, centroid dots, same-frame tray
   cells, badge-linked observation ids.
-- Observation stack at the projected `layout_px` coordinates: one card
-  per observation with index badge, before/after crop thumbnails
-  beside the card (or an explicit "crop unavailable" placeholder),
-  evidence, tray/operator badges, and confirmed (solid) vs candidate
-  (dashed) dependency lanes.
+- Component stack at the projected `layout_px` coordinates: one card
+  per component with index badge, before/after crop thumbnails
+  beside observation cards (or an explicit "crop unavailable"
+  placeholder), declaration/storage/group badges, and confirmed
+  (solid) vs candidate (dashed) dependency lanes.
 - Notes + provenance footer: reassembly proposal with its NOT-verified
   warning, missing evidence, cycles, contradictions, input hashes,
   embedded-image count.
@@ -105,12 +129,16 @@ the existing confirmation channels.
 python -m unittest discover -s tests -v
 ```
 
-54 tests: projector contract (order, verbatim geometry, unknown
+61+ tests: projector contract (order, verbatim geometry, unknown
 identity, tray bases, verbatim relationships, provenance hashes,
-determinism, read-only inputs), provenance verification
+determinism, read-only inputs), declared-removal projection (null
+metric geometry, operator declaration fields, storage links,
+compatible groups, supersedes), mask-contour extraction from
+change-detection `mask.png`, provenance verification
 (match/mismatch/missing/malformed hashes, tampered-byte rejection),
 edge cases (missing/malformed/empty
-logs, ambiguous multi-links), renderer structure (valid XML, section
+logs, ambiguous multi-links), renderer structure (technical explosion
+sketch with balloons/leaders/stable part ids, valid XML, section
 separation, badges, honest labels), linked crops (browser-safe
 relative hrefs resolving to real files, underlay), embedded crops
 (no external refs, byte-exact base64, determinism), same-location

@@ -321,6 +321,84 @@ def question_confirm(root: Path, session_id: str, qid: str, text: str) -> dict:
     return _stopped(step)
 
 
+def question_siblings(root: Path, session_id: str, qid: str) -> dict:
+    """The questions that share ``qid``'s cell and are still waiting for an answer (``qid`` first, live order)."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            cell = coordinator.book.questions[qid].get("cell")
+            waiting = (st.OPEN, st.FAILED, st.ASKED)
+            order = [q for q in coordinator.book.live_order()
+                     if cell is not None and coordinator.book.questions[q].get("cell") == cell
+                     and coordinator.book.questions[q]["kind"] == "source_of_part"
+                     and coordinator.state_of(q).state in waiting]
+            return {"cell": cell, "qids": [qid] + [q for q in order if q != qid]}
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
+def question_open(root: Path, session_id: str, qid: str) -> dict:
+    """Ask a question without speaking it (a bundled answer addresses several at once); repeating is a no-op."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if coordinator.stopped:
+                raise ask_loop.Stopped(coordinator.stopped)
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            return _prompt_payload(coordinator.ask(qid), qid)
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
+def question_defer(root: Path, session_id: str, qid: str, reason: str) -> dict:
+    """Leave a question for the desktop: it is not asked again by voice and nothing is written."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if coordinator.stopped:
+                raise ask_loop.Stopped(coordinator.stopped)
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            coordinator.defer(qid, leave_unresolved=True, reason=reason)
+            return {"status": "left_unresolved", "question_id": qid}
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
+def closing_write(root: Path, session_id: str, note_id: str, labels: list[str], location: str, said: str) -> dict:
+    """Write operator-stated parts of the end-of-video questions after their read-back + yes (same writer path as answers)."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if coordinator.stopped:
+                raise ask_loop.Stopped(coordinator.stopped)
+            digest = hashlib.sha256(said.encode("utf-8")).hexdigest()
+            results = coordinator.write_operator_notes(note_id, labels, location, digest, said)
+            ok = all(r["status"] in ("committed", "already_committed") for r in results)
+            return {"status": "committed" if ok else "failed", "results": results}
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
 # ------------------------------------------------------------------ guide (offline: L0 / cache / refusal only)
 
 def guide_build(root: Path, session_id: str) -> dict:
@@ -398,6 +476,32 @@ def _selection_inputs(root: Path, session_id: str, binding_file: str):
 def select(root: Path, session_id: str, binding_file: str) -> dict:
     memory, package_path, binding = _selection_inputs(root, session_id, binding_file)
     return _stopped(selection.resolve, memory, package_path, binding)
+
+
+def fresh_selection_inputs(root: Path, session_id: str, event_id: str, drawing_element_id: str):
+    """``(memory, package_path, binding)`` for one declared part, bound to the session's current bytes.
+
+    The guide must be usable first (``guide.load``: recorded build hash, intact package, memory
+    unchanged since the build), so a stale or tampered package is refused instead of silently
+    re-bound. Unlike ``_selection_inputs`` the binding is not an operator file: it is derived
+    from the verified session bytes, and ``selection.resolve`` still checks every hash.
+    """
+    state = _load_state(root, session_id)
+    package, _raw = _stopped(guide.load, state)
+    memory = state.memory_dir / "memory.jsonl"
+    package_path = guide.guide_dir(state) / "session.json"
+    binding = {"schema": selection.SCHEMA, "drawing_element_id": drawing_element_id, "event_id": event_id,
+               "source": {"session": _memory_session(memory), "memory_path": str(memory.resolve())},
+               "memory_sha256": hashlib.sha256(memory.read_bytes()).hexdigest(), "guide_sha256": package.sha256}
+    return memory, package_path, binding
+
+
+def _memory_session(memory: Path) -> str:
+    sessions = {json.loads(line).get("session") for line in memory.read_text(encoding="utf-8").splitlines()
+                if line.strip()}
+    if len(sessions) != 1 or not next(iter(sessions)):
+        raise AdapterError("The session memory carries no single session value; no part can be bound.", 409)
+    return next(iter(sessions))
 
 
 def selected_ask(root: Path, session_id: str, binding_file: str, intent: str,

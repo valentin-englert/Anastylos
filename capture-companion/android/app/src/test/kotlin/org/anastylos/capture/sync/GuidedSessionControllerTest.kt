@@ -410,10 +410,20 @@ class GuidedSessionControllerTest {
     }
 
     @Test
-    fun `arm applies the ACTIVE session`() = runTest {
+    fun `first arm fetches the session revision and sends every consent field`() = runTest {
         val consentResponse = consentSessionFor(sessionId)
+        // Core opens a session DISARMED at revision 1, consent revision 0.
+        val opened = consentResponse.replace("\"revision\":3", "\"revision\":1")
+            .replace("\"consent_revision\":1", "\"consent_revision\":0")
+            .replace("\"state\":\"ACTIVE\"", "\"state\":\"DISARMED\"")
         withDetached(
-            handler = { okJson(consentResponse) },
+            handler = { request ->
+                if (request.path.endsWith("/consent")) {
+                    okJson(consentResponse)
+                } else {
+                    okJson("""{"session":$opened,"requests":[],"latest_status":null,"receipts":[]}""")
+                }
+            },
         ) { controller, transport ->
             val outcome = controller.arm(
                 cameraId = "camera:0", maxImages = 20,
@@ -423,11 +433,33 @@ class GuidedSessionControllerTest {
             assertThat(outcome.session).isEqualTo(SessionState.ACTIVE)
             assertThat(outcome.revision).isEqualTo(3)
             assertThat(controller.state.value.consentRevision).isEqualTo(1)
-            val sentBody = transport.requests.single().body!!.toString(Charsets.UTF_8)
-            val sentInput = json.decodeFromString(GuidedConsentInput.serializer(), sentBody)
-            assertThat(sentInput.consentRevision).isEqualTo(1)
-            assertThat(sentInput.expectedSessionRevision).isEqualTo(0)
+            assertThat(transport.requests.map { it.method }).containsExactly("GET", "POST").inOrder()
+            // The raw body, not a decode of it: decoding fills absent fields with
+            // defaults and hid that the encoder dropped them.
+            val sent = json.parseToJsonElement(transport.requests.last().body!!.toString(Charsets.UTF_8)).jsonObject
+            val frozen = json.parseToJsonElement(part("guided-wire-consent.json", "request")).jsonObject
+            assertThat(sent.keys).containsExactlyElementsIn(frozen.keys)
+            assertThat(sent.getValue("expected_session_revision").toString()).isEqualTo("1")
+            assertThat(sent.getValue("consent_revision").toString()).isEqualTo("1")
         }
+    }
+
+    @Test
+    fun `attempt and binding bodies carry every frozen field even at default values`() = runTest {
+        val transport = ScriptedTransport { HttpResponse(500, ByteArray(0)) }
+        val client = GuidedControlClient(transport, StandardTestDispatcher(testScheduler))
+        val attemptId = "00000000-0000-4000-8000-0000000000a1"
+        client.registerAttempt("guided-secret", sessionId, GuidedAttemptInput(sessionId = sessionId, attemptId = attemptId))
+        client.bindAsset("guided-secret", attemptId, GuidedAssetBinding(attemptId = attemptId))
+        val (attempt, binding) = transport.requests.map {
+            json.parseToJsonElement(it.body!!.toString(Charsets.UTF_8)).jsonObject.keys
+        }
+        assertThat(attempt).containsExactlyElementsIn(
+            json.parseToJsonElement(part("guided-wire-attempt.json", "request")).jsonObject.keys,
+        )
+        assertThat(binding).containsExactlyElementsIn(
+            json.parseToJsonElement(part("guided-wire-binding.json", "request")).jsonObject.keys,
+        )
     }
 
     @Test

@@ -1,0 +1,23 @@
+{
+  "schema": "anastylos-drawing-proof-sam-plan@1",
+  "written_before_any_sam_call": true,
+  "authorisation": "owner, 2026-11-01: Meta API calls approved for experiments (free credits)",
+  "model": "sam-3.1 (listed by GET /v1/models on 2026-11-01; capabilities not listed there)",
+  "adapter": "sam-tracking/sam.py segment-image (unchanged), box prompt via the official prompt builder",
+  "budget": {
+    "sam_image_calls_max": 10,
+    "estimated_usd_max": 0.025,
+    "muse_calls_max": 6,
+    "retries": "adapter default, counted"
+  },
+  "inputs": "the same rectified.png per target as the classical run (front f300 + T1..T5), same region",
+  "prompt": "one box = the full target region inset by 2 % on each side (the same information the classical run gets)",
+  "scoring": "the same quality gates (quality.GATES) and the same overlay; reference comparison once owner reference masks exist",
+  "recorded": [
+    "calls",
+    "latency per call",
+    "estimated cost",
+    "manual interventions (0 planned)"
+  ],
+  "not_done": "no video segmentation"
+}

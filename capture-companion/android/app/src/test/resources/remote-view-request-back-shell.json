@@ -1,0 +1,65 @@
+{
+  "_note": "Recorded 2026-11-01 from the live receiver (session snapshot) for the Xiaomi run that ended in receipt package_only. No tokens in a ViewRequest. Only change: status restored from CAPTURED_LOCAL to QUEUED, its value when the workstation posted it.",
+  "request_id": "5cb2d223-0ce5-4ee6-8c77-56830e1daca1",
+  "revision": 1,
+  "session_id": "5bc9fe29-cad5-4a9c-aafb-54aed2548f41",
+  "source_id": "a0b49e48-289f-4384-b531-63ef679ba742",
+  "operation_id": "0ff9baa2-2a7d-4626-b1e5-2b36ea1ae40c",
+  "created_at": "2026-11-01T22:21:37Z",
+  "expires_at": "2026-11-01T22:51:37Z",
+  "target_label": "Back shell, inner side up — hands off",
+  "board_id": "5a3a3a3a-0000-4000-8000-00000000a3a3",
+  "calibration_id": "e92c8ea1-36a8-449f-8df9-50f0f3481548",
+  "target": {
+    "kind": "pose",
+    "T_B_C": {
+      "from": "camera:0",
+      "to": "board:surface_a3",
+      "units": "mm",
+      "matrix": [
+        1,
+        0,
+        0,
+        198.0,
+        0,
+        1,
+        0,
+        136.5,
+        0,
+        0,
+        1,
+        -450.0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "translation_tolerance_mm": [
+      15,
+      15,
+      20
+    ],
+    "rotation_tolerance_deg": 5,
+    "roi": {
+      "min_B_mm": [
+        120,
+        80,
+        -80
+      ],
+      "max_B_mm": [
+        280,
+        200,
+        0
+      ],
+      "basis": "operator_declared",
+      "evidence_ids": []
+    }
+  },
+  "quality_profile_id": "guidance-hypothesis-1",
+  "status": "QUEUED",
+  "board_registration_epoch_id": "008a558e-bdce-4da7-9f24-654c07785f80",
+  "object_pose_epoch_id": "3ae34d9f-005d-4bd0-a259-9d459f94ad25",
+  "cad_context": null,
+  "reason": "Phone remote-request acceptance run (owner-approved)."
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "anastylos-dialogue-batch-cases@1",
+  "note": "Made-up answers about a flashlight and a radio, written before the run. Not fidget-toy data.",
+  "choice": [
+    {"id": "C1", "state": {"event_type": "part_removed", "recent_question": true, "seconds_since_last_question": 2}, "allowed": ["part_removed"], "expect": "none"},
+    {"id": "C2", "state": {"event_type": "part_removed", "recent_question": false, "seconds_since_last_question": 40}, "allowed": ["part_removed"], "expect": "part_removed"},
+    {"id": "C3", "state": {"event_type": "part_removed", "read_back_pending": true, "operator_just_answered": true}, "allowed": ["read_back", "part_removed"], "expect": "read_back"},
+    {"id": "C4", "state": {"event_type": "part_removed", "last_photo_stale": true, "no_current_photo": true}, "allowed": ["need_photo", "part_removed"], "expect": "need_photo"}
+  ],
+  "extract": [
+    {"id": "E1", "question_type": "part_removed", "text": "it's the battery cover", "expect": {"intent": "answer", "part_name": "battery cover", "origin": null, "storage": null}},
+    {"id": "E2", "question_type": "part_removed", "text": "that's a small screw from the left corner", "expect": {"intent": "answer", "part_name": "small screw", "origin": "left corner", "storage": null}},
+    {"id": "E3", "question_type": "part_removed", "text": "I call it the antenna, it came from the top", "expect": {"intent": "answer", "part_name": "antenna", "origin": "top", "storage": null}},
+    {"id": "E4", "question_type": "part_removed", "text": "the knob from the front panel, now in cell three", "expect": {"intent": "answer", "part_name": "knob", "origin": "front panel", "storage": "cell three"}},
+    {"id": "E5", "question_type": "read_back", "text": "yes", "expect": {"intent": "yes", "part_name": null, "origin": null, "storage": null}},
+    {"id": "E6", "question_type": "read_back", "text": "no, that's wrong", "expect": {"intent": "no", "part_name": null, "origin": null, "storage": null}},
+    {"id": "E7", "question_type": "origin_unseen", "text": "I don't know", "expect": {"intent": "unsure", "part_name": null, "origin": null, "storage": null}},
+    {"id": "E8", "question_type": "part_removed", "text": "hmm what", "expect": {"intent": "unclear", "part_name": null, "origin": null, "storage": null}},
+    {"id": "E9", "question_type": "part_removed", "text": "skip this one", "expect": {"intent": "skip", "part_name": null, "origin": null, "storage": null}},
+    {"id": "E10", "question_type": "part_removed", "text": "the lens ring, from the camera body", "expect": {"intent": "answer", "part_name": "lens ring", "origin": "camera body", "storage": null}}
+  ]
+}

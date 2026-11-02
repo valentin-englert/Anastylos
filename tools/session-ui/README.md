@@ -69,6 +69,24 @@ Mutating actions are serialized per session; while a request is in flight its
 button is disabled, and a repeated POST is a no-op on the new state (never a
 duplicate write). Every section has loading, empty, error and stale states.
 
+## Capture loop (part drawings ↔ phone)
+
+A drawing job that ends `NEEDS_CAPTURE` shows **Request this view on the phone**. The workstation posts one G0
+`ViewRequest` (top-down over the A3 sheet, label "<part>, <view side> up, on the sheet, hands off") into the guided
+session it drives; the phone adopts it and shoots through its normal gates. On delivery the still is fetched with its
+hash re-checked, stored under `drawings/captures/` with an evidence record, and a follow-up job
+`<job>-capture-<time>` draws from that still. Request, evidence and part binding stay separate records
+(`captures.py`); the photo never proves which part it shows — the operator confirms the follow-up drawing.
+
+One-time setup (not part of the normal flow): `<workspace>/capture-settings.json` with `receiver_url` (https),
+`spki_pin_sha256` or `ca_file`, `receiver_data_dir`, `source_id` (the enrolled phone), and the `board_id`,
+`calibration_id`, `board_frame` the phone accepts for the A3 sheet. Then **Connect phone** mints an adapter token
+via the receiver CLI, opens a guided session and waits until the operator arms it on the phone.
+
+Known bridge: the G0 contract gives the adapter's bootstrap token no read route for the grant the phone creates, so
+`captures._find_grant` reads the receiver's `control.db` read-only on the same workstation. A proper route is
+requested from the contract owner.
+
 ## API (JSON, localhost only)
 
 Reads: `GET /api/sessions /api/status /api/questions /api/guide
@@ -82,6 +100,13 @@ Writes (POST, foreign `Origin` refused with 403): `/api/questions/next`,
 
 Ids are plain names resolved inside the workspace root; paths from the browser
 are rejected. The server refuses non-loopback `--host` values.
+
+## Explosion view (adapter ready, routes not wired)
+
+`explosion.py` and `web/explosion.html|js|css` show the schematic explosion drawing composed by
+`tools/explosion` (click a part for its evidence, assembled/exploded toggle, operator layer
+confirmation). `server.py` does not serve them yet: the routes and exact signatures are in the
+`explosion.py` docstring and in `docs/integration/EXPLOSION-VIEW-01.md`.
 
 ## Stale demo (optional)
 
@@ -117,3 +142,21 @@ still-stale binding).
   camera control, no `request_view` is wired; see `INTEGRATION.md`.
 - Guide/selection/assembly answers are only as good as the session evidence;
   a selection is not a frame→record confirmation or assembly approval.
+
+## One-click start (no terminal)
+
+`launch\Create-Shortcuts.bat` puts an **Anastylos** and a **Stop Anastylos** icon on the desktop; double-click `launch\Start-Anastylos.bat` to start the page and open it in the browser. Optional environment variables: `ANASTYLOS_WORKSPACE` (session folder, default `C:\ANASTYLOS\data\session-ui-demo`) and `ANASTYLOS_PORT` (default 8071). The first start shows a welcome guide; the Muse key (`MODEL_API_KEY`) is explained there and never typed into the page. See `web/UI-NOTES.md` for the shell structure and open items.
+
+## Phone page (pairing without a terminal) and phone videos
+
+`phone.py` runs the receiver's own CLI as a subprocess on the data dir from `capture-settings.json`
+(`receiver_data_dir`, `receiver_url`, `receiver_cert`, optional `phone_host`): `pair-code --qr`, `pair-status --json`,
+`pair-approve` / `pair-reject`, `guided-enroll`. The **Phone** menu page shows the pairing QR (one click), pending
+requests with device name, request id and the workstation certificate fingerprint, and Approve / Reject buttons.
+Approval is only ever the operator's click (`POST /api/phone/decision`, same-origin guard, loopback server); it also
+enrols the phone for guided capture, writes the new `source_id` into `capture-settings.json` and drops the old
+guided link. Opening the page opens the guided session and shows its QR; the phone's videos are listed there too.
+
+Routes: `GET /api/phone/requests`, `GET /api/phone/pair-qr`, `POST /api/phone/pair`, `POST /api/phone/decision`
+`{request, decision: approve|reject}`; videos: `GET /api/videos`, `POST /api/videos/process {video}`.
+Tests: `tests/test_phone.py`, `tests/test_videos.py`.

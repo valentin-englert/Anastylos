@@ -1,0 +1,34 @@
+{
+  "schema": "anastylos-drawing-proof-plan@1",
+  "id": "EFF-1",
+  "written_before_any_run": true,
+  "date": "2026-11-02",
+  "authorisation": "owner 2026-11-02: test reasoning high for latency; anything that improves the pipeline is wanted",
+  "question": "Does reasoning effort high give the same part boxes as max, faster?",
+  "images": [
+    "F0-front-p3-f300",
+    "T1-front-p3-f240",
+    "T2-front-p3-f360",
+    "T3-front-empty-aftermath",
+    "T4-dpad-membrane-aftermath",
+    "T5-shoulder-piece-p3-f300"
+  ],
+  "arms": {
+    "max": "frozen r4.1",
+    "high": "identical request, reasoning.effort high"
+  },
+  "repeats": 2,
+  "order": "interleaved max/high per image",
+  "measures": [
+    "latency_s",
+    "output and reasoning tokens",
+    "valid/found/fully_visible",
+    "box IoU between repeats (consistency)",
+    "box IoU with the bounding box of the r3 SAM mask (reference; derived from max-arm boxes, so biased towards max)"
+  ],
+  "accept_high_if": "valid 12/12, median IoU with reference within 0.03 of max, repeat consistency not lower by more than 0.05, median latency lower",
+  "cache_test": "F0 request with prompt_cache_key sent 3 times (effort max): cached input tokens and latency per call",
+  "budget": {
+    "muse_calls": 27
+  }
+}

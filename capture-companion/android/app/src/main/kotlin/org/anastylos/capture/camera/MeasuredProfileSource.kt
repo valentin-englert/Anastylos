@@ -37,7 +37,22 @@ interface MeasuredProfileSource {
 
     /** Recorded optics of the validated profile for [cameraId], if any. */
     fun calibratedOptics(cameraId: String?): CalibratedOptics? = null
+
+    /** What a sidecar cites for the measured profile [profileId]; null when none is bundled. */
+    fun reference(profileId: String): ProfileReference? = null
 }
+
+/**
+ * A measured profile as evidence cites it: the sha256 of the exact bundled
+ * bytes (the workstation stages the same bytes under that hash) and the
+ * sensor mode and pixel frame the validator binds against.
+ */
+data class ProfileReference(
+    val profileId: String,
+    val sha256: String,
+    val sensorMode: String,
+    val pixelFrameId: String,
+)
 
 /** The fixed optics a measured profile was recorded with. */
 data class CalibratedOptics(
@@ -59,6 +74,7 @@ class AssetMeasuredProfileSource(
     private val appContext = context.applicationContext
 
     private val cache = mutableMapOf<String, CalibrationProfile.Document?>()
+    private val shas = mutableMapOf<String, String>()
 
     /**
      * Bundled profiles are bound to the physical phone they were
@@ -78,8 +94,10 @@ class AssetMeasuredProfileSource(
     private fun documentFor(name: String): CalibrationProfile.Document? = synchronized(cache) {
         cache.getOrPut(name) {
             try {
-                appContext.assets.open(name).use { stream ->
-                    CalibrationProfile.parse(stream.bufferedReader().readText())
+                val bytes = appContext.assets.open(name).use { it.readBytes() }
+                CalibrationProfile.parse(bytes.toString(Charsets.UTF_8))?.also {
+                    shas[name] = java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                        .joinToString("") { b -> "%02x".format(b) }
                 }
             } catch (_: Exception) {
                 null
@@ -139,6 +157,19 @@ class AssetMeasuredProfileSource(
             doc.focusDiopters?.let { focus ->
                 CalibratedOptics(focus.toFloat(), doc.referenceSizePx[0], doc.referenceSizePx[1])
             }
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    override fun reference(profileId: String): ProfileReference? = try {
+        assetNames.firstNotNullOfOrNull { name ->
+            val doc = documentFor(name)?.takeIf {
+                it.profileId == profileId && it.metricValidity == CalibrationProfile.VALIDITY_VALIDATED
+            } ?: return@firstNotNullOfOrNull null
+            val sha = synchronized(cache) { shas[name] } ?: return@firstNotNullOfOrNull null
+            ProfileReference(doc.profileId, sha, doc.sensorMode, doc.referencePixelFrameId)
+                .takeIf { it.sensorMode.isNotBlank() && it.pixelFrameId.isNotBlank() }
         }
     } catch (_: Exception) {
         null

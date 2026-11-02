@@ -1,0 +1,128 @@
+{
+  "schema": "anastylos-drawing-proof-testset@1",
+  "frozen_tool": "muse_sam.py r4",
+  "role": "untouched test set",
+  "development_images": [
+    "F0-front-p3-f300",
+    "T1-front-p3-f240",
+    "T2-front-p3-f360",
+    "T3-front-empty-aftermath",
+    "T4-dpad-membrane-aftermath",
+    "T5-shoulder-piece-p3-f300"
+  ],
+  "selection": "web: first 6 licence-verified Commons hits of a fixed category list, image content not viewed before the run; own: 3 FULL-01 frames never used, part phrase generic, frames not viewed",
+  "reporting": "all images reported, including failures",
+  "images": [
+    {
+      "id": "own_p1_f300",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\own\\own_p1_f300.png",
+      "part": "largest disassembled part lying inside the dashed work area",
+      "source": {
+        "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P1.mp4",
+        "frame_index": 300,
+        "region_mm": [
+          58,
+          50,
+          254,
+          177
+        ],
+        "px_per_mm": 6.0
+      },
+      "sha256": "5a3d95f802ca0e139537ecc32dff18fa41adb5ff9bd9a9faa3188b5e96eb679f"
+    },
+    {
+      "id": "own_p2_f150",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\own\\own_p2_f150.png",
+      "part": "largest disassembled part lying inside the dashed work area",
+      "source": {
+        "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P2.mp4",
+        "frame_index": 150,
+        "region_mm": [
+          58,
+          50,
+          254,
+          177
+        ],
+        "px_per_mm": 6.0
+      },
+      "sha256": "262d4f3757641113abaef58ac3c71a374daee704c193f4848dbbea0e7456c091"
+    },
+    {
+      "id": "own_p3_f1500",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\own\\own_p3_f1500.png",
+      "part": "largest disassembled part lying inside the dashed work area",
+      "source": {
+        "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P3.mp4",
+        "frame_index": 1500,
+        "region_mm": [
+          58,
+          50,
+          254,
+          177
+        ],
+        "px_per_mm": 6.0
+      },
+      "sha256": "9c6b8528d5ff33b6489ec0e2bceddcaffb65c8b176c8e3f12f47b5f2891ebdef"
+    },
+    {
+      "id": "pcb_dark_arduino_mega",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\web\\pcb_dark_arduino_mega.jpg",
+      "part": "blue printed circuit board",
+      "source": {
+        "file_page": "https://commons.wikimedia.org/wiki/File:Arduino_Mega_2560.jpg",
+        "license": "CC BY-SA 4.0, SimonWaldherr"
+      },
+      "sha256": "d4f3ec4572f7621594e7a89a66fea9700173bc7192c59f0d49f4673a014763d0"
+    },
+    {
+      "id": "pcb_light_adafruit_flora",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\web\\pcb_light_adafruit_flora.jpg",
+      "part": "round printed circuit board",
+      "source": {
+        "file_page": "https://commons.wikimedia.org/wiki/File:Adafruit_FLORA_Board.jpg",
+        "license": "CC BY-SA 3.0, Becky Stern"
+      },
+      "sha256": "787e3544afbad6ced6d8a065997895ba41a0f3fd969dd4f96b49a94c47de8a21"
+    },
+    {
+      "id": "gear_sprocket_campagnolo_28t",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\web\\gear_sprocket_campagnolo_28t.jpg",
+      "part": "bicycle sprocket cog",
+      "source": {
+        "file_page": "https://commons.wikimedia.org/wiki/File:Campagnolo_-_pignon_28_dents.jpg",
+        "license": "CC BY-SA 3.0, Ludovic Péron"
+      },
+      "sha256": "e894d21cb7483042fd6968bc5ac1bfab44f992b9dfdebeba1a2b54bf277d65e8"
+    },
+    {
+      "id": "screw_single_flickr",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\web\\screw_single_flickr.jpg",
+      "part": "single screw",
+      "source": {
+        "file_page": "https://commons.wikimedia.org/wiki/File:Screw_(3777309263).jpg",
+        "license": "CC BY 2.0, alcidesota"
+      },
+      "sha256": "d76d7e33dad9f376dd03a8a1d8342d6bf374a0eb157badd5e1acf9a22c7063f6"
+    },
+    {
+      "id": "keycap_cherry_b4vb_top",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\web\\keycap_cherry_b4vb_top.jpg",
+      "part": "single keyboard keycap",
+      "source": {
+        "file_page": "https://commons.wikimedia.org/wiki/File:Cherry-B4VB-5601-Keycap-1u-Top.JPG",
+        "license": "Public domain, Engicoder"
+      },
+      "sha256": "ba1f35ef74799cb2fd353749b08cd8ec0c957169b06d28b588d5c5299ac5bef8"
+    },
+    {
+      "id": "bearing_ball",
+      "path": "C:\\tmp\\anastylos-drawing-proof\\testset-r4\\web\\bearing_ball.jpg",
+      "part": "ball bearing",
+      "source": {
+        "file_page": "https://commons.wikimedia.org/wiki/File:Ball_bearing.jpg",
+        "license": "CC BY-SA 3.0, Solaris2006"
+      },
+      "sha256": "8bc146848ecbcd88229ae8d5118c1ce8338be3fba0ae1dcfe6ab104e5a1205d9"
+    }
+  ]
+}

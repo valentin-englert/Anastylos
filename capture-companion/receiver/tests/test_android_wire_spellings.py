@@ -138,6 +138,8 @@ class AndroidWireSpellingTests(unittest.TestCase):
             "/asset-binding",
             "/spatial",
             "/capture-set",
+            "/videos",
+            "/chunks/",
         )
         for literal in endpoints:
             self.assertIn(literal, text)

@@ -1,0 +1,606 @@
+{
+ "minimal": {
+  "passed": 14,
+  "total": 14,
+  "not_ok_status": [],
+  "rejected_by_check": [
+   "T3",
+   "T4",
+   "T5"
+  ],
+  "latency_median_s": 3.554,
+  "latency_p95_s": 7.797,
+  "rows": [
+   {
+    "id": "T1",
+    "text": "yeah five screws from the back shell.",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 5,
+       "name": "screw",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": 5,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 2.906
+   },
+   {
+    "id": "T2",
+    "text": "cell three are the right button of the uh back shell.",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "right button",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "right button",
+      "count": 1,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 3.859
+   },
+   {
+    "id": "T3",
+    "text": "in cell two there is only one part",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 1,
+       "name": "part",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [],
+    "ok": true,
+    "latency_s": 3.891
+   },
+   {
+    "id": "T4",
+    "text": "It came from left and right button",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "left and right button",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [],
+    "ok": true,
+    "latency_s": 7.797
+   },
+   {
+    "id": "T5",
+    "text": "it's only one part,",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 1,
+       "name": "part",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [],
+    "ok": true,
+    "latency_s": 3.25
+   },
+   {
+    "id": "T6",
+    "text": "it's the green button from the the front shell,",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "green button",
+       "origin": "the front shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "green button",
+      "count": 1,
+      "origin": "front shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 4.25
+   },
+   {
+    "id": "T7",
+    "text": "those are five screws from the back shell",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 5,
+       "name": "screw",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": 5,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 3.015
+   },
+   {
+    "id": "T8",
+    "text": "screws",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "screw",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": null,
+      "origin": null
+     }
+    ],
+    "ok": true,
+    "latency_s": 2.328
+   },
+   {
+    "id": "T9",
+    "text": "they came out of the back shell",
+    "status": "ok",
+    "output": {
+     "items": [],
+     "kind": "unclear"
+    },
+    "usable": [],
+    "ok": true,
+    "latency_s": 5.078
+   },
+   {
+    "id": "T10",
+    "text": "two screws and a left button from the back shell",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 2,
+       "name": "screw",
+       "origin": "back shell"
+      },
+      {
+       "count": 1,
+       "name": "left button",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": 2,
+      "origin": "back shell"
+     },
+     {
+      "name": "left button",
+      "count": 1,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 4.438
+   },
+   {
+    "id": "T11",
+    "text": "the D-pad and the four color buttons",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "D-pad",
+       "origin": null
+      },
+      {
+       "count": 4,
+       "name": "color button",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "D-pad",
+      "count": 1,
+      "origin": null
+     },
+     {
+      "name": "color button",
+      "count": 4,
+      "origin": null
+     }
+    ],
+    "ok": true,
+    "latency_s": 4.156
+   },
+   {
+    "id": "T12",
+    "text": "I think it's some kind of spring",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "spring",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "spring",
+      "count": 1,
+      "origin": null
+     }
+    ],
+    "ok": true,
+    "latency_s": 2.063
+   },
+   {
+    "id": "T13",
+    "text": "um two white membranes from the front shell",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 2,
+       "name": "white membrane",
+       "origin": "front shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "white membrane",
+      "count": 2,
+      "origin": "front shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 2.468
+   },
+   {
+    "id": "T14",
+    "text": "what do you mean",
+    "status": "ok",
+    "output": {
+     "items": [],
+     "kind": "meta"
+    },
+    "usable": [],
+    "ok": true,
+    "latency_s": 3.047
+   }
+  ]
+ },
+ "low": {
+  "passed": 9,
+  "total": 14,
+  "not_ok_status": [
+   "T3",
+   "T4",
+   "T5",
+   "T9",
+   "T10"
+  ],
+  "rejected_by_check": [],
+  "latency_median_s": 4.735,
+  "latency_p95_s": 7.234,
+  "rows": [
+   {
+    "id": "T1",
+    "text": "yeah five screws from the back shell.",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 5,
+       "name": "screw",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": 5,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 5.625
+   },
+   {
+    "id": "T2",
+    "text": "cell three are the right button of the uh back shell.",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "right button",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "right button",
+      "count": 1,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 6.36
+   },
+   {
+    "id": "T3",
+    "text": "in cell two there is only one part",
+    "status": "timeout",
+    "output": null,
+    "usable": [],
+    "ok": false,
+    "latency_s": 8.032
+   },
+   {
+    "id": "T4",
+    "text": "It came from left and right button",
+    "status": "timeout",
+    "output": null,
+    "usable": [],
+    "ok": false,
+    "latency_s": 8.015
+   },
+   {
+    "id": "T5",
+    "text": "it's only one part,",
+    "status": "timeout",
+    "output": null,
+    "usable": [],
+    "ok": false,
+    "latency_s": 8.031
+   },
+   {
+    "id": "T6",
+    "text": "it's the green button from the the front shell,",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "green button",
+       "origin": "the front shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "green button",
+      "count": 1,
+      "origin": "front shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 6.766
+   },
+   {
+    "id": "T7",
+    "text": "those are five screws from the back shell",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 5,
+       "name": "screw",
+       "origin": "back shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": 5,
+      "origin": "back shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 4.64
+   },
+   {
+    "id": "T8",
+    "text": "screws",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "screw",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "screw",
+      "count": null,
+      "origin": null
+     }
+    ],
+    "ok": true,
+    "latency_s": 3.25
+   },
+   {
+    "id": "T9",
+    "text": "they came out of the back shell",
+    "status": "timeout",
+    "output": null,
+    "usable": [],
+    "ok": false,
+    "latency_s": 8.032
+   },
+   {
+    "id": "T10",
+    "text": "two screws and a left button from the back shell",
+    "status": "timeout",
+    "output": null,
+    "usable": [],
+    "ok": false,
+    "latency_s": 8.015
+   },
+   {
+    "id": "T11",
+    "text": "the D-pad and the four color buttons",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "D-pad",
+       "origin": null
+      },
+      {
+       "count": 4,
+       "name": "color button",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "D-pad",
+      "count": 1,
+      "origin": null
+     },
+     {
+      "name": "color button",
+      "count": 4,
+      "origin": null
+     }
+    ],
+    "ok": true,
+    "latency_s": 4.735
+   },
+   {
+    "id": "T12",
+    "text": "I think it's some kind of spring",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": null,
+       "name": "spring",
+       "origin": null
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "spring",
+      "count": 1,
+      "origin": null
+     }
+    ],
+    "ok": true,
+    "latency_s": 4.203
+   },
+   {
+    "id": "T13",
+    "text": "um two white membranes from the front shell",
+    "status": "ok",
+    "output": {
+     "items": [
+      {
+       "count": 2,
+       "name": "white membrane",
+       "origin": "front shell"
+      }
+     ],
+     "kind": "answer"
+    },
+    "usable": [
+     {
+      "name": "white membrane",
+      "count": 2,
+      "origin": "front shell"
+     }
+    ],
+    "ok": true,
+    "latency_s": 7.234
+   },
+   {
+    "id": "T14",
+    "text": "what do you mean",
+    "status": "ok",
+    "output": {
+     "items": [],
+     "kind": "meta"
+    },
+    "usable": [],
+    "ok": true,
+    "latency_s": 2.906
+   }
+  ]
+ },
+ "calls_used": 28
+}

@@ -1,0 +1,60 @@
+{
+  "schema_version": "controller-schematic-v1",
+  "status": "draft_unconfirmed",
+  "title": "Synthetic three-assembly schematic fixture",
+  "sheet": {"width_mm": 420.0, "height_mm": 297.0, "kind": "landscape_A3"},
+  "assumptions": [
+    "Synthetic fixture for regression only — not FULL-01 evidence"
+  ],
+  "screw_group": {
+    "id": "grp-0001",
+    "label": "screws (group callout)",
+    "members": ["dec-0001", "dec-0002"],
+    "note": "group only"
+  },
+  "evidence": {},
+  "explode_axis": {"direction_sheet": "+Y"},
+  "long_axis": {"direction_sheet": "+X"},
+  "parts": [
+    {
+      "id": "assy-front-shell-button-group",
+      "label": "Front shell with button group",
+      "item_no": 1,
+      "profile_mm": [[0, 10], [20, 0], [80, 0], [100, 10], [100, 40], [80, 50], [20, 50], [0, 40], [0, 10]],
+      "size_mm": [100.0, 50.0],
+      "assembled": {"x": 0.0, "y": 0.0, "rotation_deg": 0.0},
+      "explode_offset_mm": {"x": 0.0, "y": 0.0},
+      "geometry_status": "schematic_from_observed",
+      "assignment_status": "composite_unconfirmed",
+      "memory_refs": {"kind": "composite"},
+      "evidence_key": "front_shell_button_group"
+    },
+    {
+      "id": "assy-pcb-with-cable",
+      "label": "PCB with cable",
+      "item_no": 2,
+      "profile_mm": [[0, 0], [70, 0], [70, 20], [0, 20], [0, 0]],
+      "size_mm": [70.0, 20.0],
+      "assembled": {"x": 15.0, "y": 15.0, "rotation_deg": 0.0},
+      "explode_offset_mm": {"x": 0.0, "y": 25.0},
+      "geometry_status": "schematic_from_partial_observed",
+      "assignment_status": "proposed_dec-0011_unconfirmed",
+      "memory_refs": {"proposed_event_id": "dec-0011"},
+      "evidence_key": "pcb_with_cable",
+      "cable_mm": [[0.0, 10.0], [-15.0, 10.0]]
+    },
+    {
+      "id": "assy-back-shell",
+      "label": "Back shell",
+      "item_no": 3,
+      "profile_mm": [[0, 10], [20, 0], [80, 0], [100, 10], [100, 40], [80, 50], [20, 50], [0, 40], [0, 10]],
+      "size_mm": [100.0, 50.0],
+      "assembled": {"x": 0.0, "y": 0.0, "rotation_deg": 0.0},
+      "explode_offset_mm": {"x": 0.0, "y": 50.0},
+      "geometry_status": "schematic_from_partial_observed",
+      "assignment_status": "proposed_dec-0006_unconfirmed",
+      "memory_refs": {"proposed_event_id": "dec-0006"},
+      "evidence_key": "back_shell"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "anastylos-drawing-proof-sam-plan@2",
+  "written_before_any_sam_call": true,
+  "authorisation": "owner, 2026-11-01: Meta API approved for experiments; owner later: ~100 USD free credits expiring, use them for real experiments",
+  "model": "sam-3.1 (listed by GET /v1/models on 2026-11-01; capabilities not listed there)",
+  "adapter": "sam-tracking/sam.py segment-image (unchanged), box prompt via the official prompt builder",
+  "budget": {
+    "sam_image_calls_max": 40,
+    "usd_ceiling_per_adapter_run": 2.0,
+    "muse_calls_max": 60
+  },
+  "inputs": "the same rectified.png per target as the classical run (front f300 + T1..T5), same region",
+  "prompt": "one box = the full target region inset by 2 % on each side (the same information the classical run gets)",
+  "scoring": "the same quality gates (quality.GATES) and the same overlay; reference comparison once owner reference masks exist",
+  "recorded": [
+    "calls",
+    "latency per call",
+    "estimated cost",
+    "manual interventions (0 planned)"
+  ],
+  "not_done": "no video segmentation",
+  "supersedes": "sam_plan_r1.json",
+  "arms": {
+    "box": "one box = target region inset 2 %",
+    "concept": "text concept written before the run (below); later chosen by Muse"
+  },
+  "concepts": {
+    "F0-front-p3-f300": "game controller shell",
+    "T1-front-p3-f240": "game controller shell",
+    "T2-front-p3-f360": "game controller shell",
+    "T3-front-empty-aftermath": "game controller shell",
+    "T4-dpad-membrane-aftermath": "white rubber button membrane",
+    "T5-shoulder-piece-p3-f300": "grey plastic shoulder button"
+  },
+  "r1_note": "r1 attempts sent no request: CLI flag order and objects-json shape errors (adapter refused locally)"
+}

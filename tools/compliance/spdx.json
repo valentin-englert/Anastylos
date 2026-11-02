@@ -6,10 +6,14 @@
   "documentNamespace": "https://anastylos.local/spdx/third-party-inventory-2026-10-26",
   "creationInfo": {
     "created": "2026-10-26T23:30:00Z",
-    "creators": ["Tool: anastylos-compliance-check"],
+    "creators": [
+      "Tool: anastylos-compliance-check"
+    ],
     "comment": "dataLicense CC0-1.0 covers this inventory document per the SPDX specification. It is not a license for ANASTYLOS itself, whose licensing is deliberately deferred."
   },
-  "documentDescribes": ["SPDXRef-Package-anastylos-source"],
+  "documentDescribes": [
+    "SPDXRef-Package-anastylos-source"
+  ],
   "packages": [
     {
       "SPDXID": "SPDXRef-Package-anastylos-source",
@@ -31,8 +35,21 @@
       "licenseConcluded": "BSD-3-Clause",
       "licenseDeclared": "BSD-3-Clause",
       "copyrightText": "Copyright (c) 2013-2019, Simon Sapin and contributors.",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/cairocffi@1.7.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info; used-by=calibration PDF/PNG rendering via CairoSVG"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cairocffi@1.7.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info; used-by=calibration PDF/PNG rendering via CairoSVG"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-cairosvg",
@@ -43,8 +60,21 @@
       "licenseConcluded": "LGPL-3.0-or-later",
       "licenseDeclared": "LGPL-3.0-or-later",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/cairosvg@2.9.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-direct; source=calibration/requirements.txt; evidence=License metadata field + full LGPL-3.0 text in installed dist-info; obligation=mandatory notice + LGPL compliance if redistributed; used-by=calibration PDF/PNG rendering"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cairosvg@2.9.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-direct; source=calibration/requirements.txt; evidence=License metadata field + full LGPL-3.0 text in installed dist-info; obligation=mandatory notice + LGPL compliance if redistributed; used-by=calibration PDF/PNG rendering"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-cffi",
@@ -55,8 +85,21 @@
       "licenseConcluded": "MIT-0",
       "licenseDeclared": "MIT-0",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/cffi@2.1.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + 'MIT No Attribution' license text in installed dist-info"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cffi@2.1.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + 'MIT No Attribution' license text in installed dist-info"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-cssselect2",
@@ -67,8 +110,21 @@
       "licenseConcluded": "BSD-3-Clause",
       "licenseDeclared": "BSD-3-Clause",
       "copyrightText": "Copyright (c) 2012-2018, Simon Sapin and contributors.",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/cssselect2@0.10.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cssselect2@0.10.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-defusedxml",
@@ -79,8 +135,21 @@
       "licenseConcluded": "PSF-2.0",
       "licenseDeclared": "PSF-2.0",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/defusedxml@0.7.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=PSFL metadata + 'PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2' header in installed dist-info"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/defusedxml@0.7.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=PSFL metadata + 'PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2' header in installed dist-info"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-numpy",
@@ -91,8 +160,21 @@
       "licenseConcluded": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
       "licenseDeclared": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
       "copyrightText": "Copyright (c) 2005-2025, NumPy Developers.",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/numpy@2.5.4"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + licenses/ directory in installed dist-info; note=bundled vendored components carry their own texts under numpy-2.5.4.dist-info/licenses/; used-by=change-detection, resistor-reader, tray-counter, pcb-ocr"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/numpy@2.5.4"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + licenses/ directory in installed dist-info; note=bundled vendored components carry their own texts under numpy-2.5.4.dist-info/licenses/; used-by=change-detection, resistor-reader, tray-counter, pcb-ocr"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-opencv-contrib-python",
@@ -103,8 +185,21 @@
       "licenseConcluded": "Apache-2.0 AND MIT AND LGPL-2.1-only",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/opencv-contrib-python@4.14.0.94"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-direct; source=calibration/requirements.txt; evidence=Apache-2.0 metadata + MIT packaging LICENSE.txt + cv2/LICENSE-3RD-PARTY.txt in installed wheel; bundles=LGPL-2.1 FFmpeg DLL plus other third-party binaries listed in LICENSE-3RD-PARTY.txt; obligation=mandatory Apache-2.0 NOTICE + LGPL compliance if the wheel/venv is redistributed; used-by=calibration, change-detection, resistor-reader, tray-counter, pcb-ocr"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/opencv-contrib-python@4.14.0.94"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-direct; source=calibration/requirements.txt; evidence=Apache-2.0 metadata + MIT packaging LICENSE.txt + cv2/LICENSE-3RD-PARTY.txt in installed wheel; bundles=LGPL-2.1 FFmpeg DLL plus other third-party binaries listed in LICENSE-3RD-PARTY.txt; obligation=mandatory Apache-2.0 NOTICE + LGPL compliance if the wheel/venv is redistributed; used-by=calibration, change-detection, resistor-reader, tray-counter, pcb-ocr"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-opencv-ffmpeg-dll",
@@ -115,7 +210,14 @@
       "licenseConcluded": "LGPL-2.1-only",
       "licenseDeclared": "LGPL-2.1-only",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: bundled native DLL observed at .venv/Lib/site-packages/cv2/opencv_videoio_ffmpeg4140_64.dll (30 MB); license section in cv2/LICENSE-3RD-PARTY.txt names LGPL-2.1. Exact FFmpeg version and build flags (GPL-free status) are unverifiable from local artifacts and need manual review before any redistribution of the environment."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: bundled native DLL observed at .venv/Lib/site-packages/cv2/opencv_videoio_ffmpeg4140_64.dll (30 MB); license section in cv2/LICENSE-3RD-PARTY.txt names LGPL-2.1. Exact FFmpeg version and build flags (GPL-free status) are unverifiable from local artifacts and need manual review before any redistribution of the environment."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pillow",
@@ -126,8 +228,21 @@
       "licenseConcluded": "MIT-CMU",
       "licenseDeclared": "MIT-CMU",
       "copyrightText": "Copyright 1997-2011 by Secret Labs AB; Copyright 1995-2011 by Fredrik Lundh and contributors (per local LICENSE header).",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/pillow@13.0.0"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: License-Expression declares MIT-CMU but the local LICENSE header shows PIL/HPND lineage (Secret Labs AB / Fredrik Lundh). Confirm the exact SPDX mapping with upstream before redistribution. Statically linked libs observed via PIL.features: libjpeg-turbo 3.2.0, zlib-ng 1.3.1, libtiff 4.7.2 (no separate DLLs on disk). category=runtime-python-transitive; source=calibration/requirements.txt"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pillow@13.0.0"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: License-Expression declares MIT-CMU but the local LICENSE header shows PIL/HPND lineage (Secret Labs AB / Fredrik Lundh). Confirm the exact SPDX mapping with upstream before redistribution. Statically linked libs observed via PIL.features: libjpeg-turbo 3.2.0, zlib-ng 1.3.1, libtiff 4.7.2 (no separate DLLs on disk). category=runtime-python-transitive; source=calibration/requirements.txt"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pillow-libjpeg-turbo",
@@ -138,7 +253,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: version observed via PIL.features; commonly documented as BSD-3-Clause AND IJG AND Zlib but not verified from a local artifact. Confirm before redistribution."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: version observed via PIL.features; commonly documented as BSD-3-Clause AND IJG AND Zlib but not verified from a local artifact. Confirm before redistribution."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pillow-zlib-ng",
@@ -149,7 +271,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: version observed via PIL.features; commonly documented as Zlib but not verified from a local artifact. Confirm before redistribution."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: version observed via PIL.features; commonly documented as Zlib but not verified from a local artifact. Confirm before redistribution."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pillow-libtiff",
@@ -160,7 +289,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: version observed via PIL.features; commonly documented as libtiff license but not verified from a local artifact. Confirm before redistribution."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: version observed via PIL.features; commonly documented as libtiff license but not verified from a local artifact. Confirm before redistribution."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pycparser",
@@ -171,8 +307,21 @@
       "licenseConcluded": "BSD-3-Clause",
       "licenseDeclared": "BSD-3-Clause",
       "copyrightText": "Copyright (c) 2008-2027, Eli Bendersky.",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/pycparser@3.12"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + LICENSE file in installed dist-info"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pycparser@3.12"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + LICENSE file in installed dist-info"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-tinycss2",
@@ -183,8 +332,21 @@
       "licenseConcluded": "BSD-3-Clause",
       "licenseDeclared": "BSD-3-Clause",
       "copyrightText": "Copyright (c) 2013-2020, Simon Sapin and contributors.",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/tinycss2@1.5.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/tinycss2@1.5.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-webencodings",
@@ -195,8 +357,21 @@
       "licenseConcluded": "BSD-3-Clause",
       "licenseDeclared": "BSD-3-Clause",
       "copyrightText": "Copyright (c) 2012, Simon Sapin.",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/webencodings@0.6.1"}],
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/webencodings@0.6.1"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=LICENSE header + License classifier in installed dist-info"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-cpython",
@@ -207,7 +382,14 @@
       "licenseConcluded": "PSF-2.0",
       "licenseDeclared": "PSF-2.0",
       "copyrightText": "Copyright Python Software Foundation (see local install LICENSE.txt).",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=platform-interpreter; evidence=sys.version 3.12.10 + LICENSE.txt in install dir; note=system install, not bundled or redistributed by this repo"}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=platform-interpreter; evidence=sys.version 3.12.10 + LICENSE.txt in install dir; note=system install, not bundled or redistributed by this repo"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-python3-gi",
@@ -218,8 +400,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/python3-gi@3.50.0-4?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt candidate observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/python3-gi@3.50.0-4?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt candidate observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-python3-gst-1-0",
@@ -230,8 +425,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/python3-gst-1.0@1.26.0-1?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt candidate observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/python3-gst-1.0@1.26.0-1?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt candidate observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-gstreamer-tools",
@@ -242,8 +450,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-tools@1.26.2-2?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi diagnostic package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-tools@1.26.2-2?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi diagnostic package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-gstreamer-plugins-base",
@@ -254,8 +475,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-plugins-base@1.26.2-1+rpt3+deb13u2?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-plugins-base@1.26.2-1+rpt3+deb13u2?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-gstreamer-plugins-good",
@@ -266,8 +500,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-plugins-good@1.26.2-1+deb13u2?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-plugins-good@1.26.2-1+deb13u2?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-gstreamer-plugins-bad",
@@ -278,8 +525,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-plugins-bad@1.26.2-3+rpt4+deb13u3?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-plugins-bad@1.26.2-3+rpt4+deb13u3?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-gstreamer-x",
@@ -290,8 +550,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-x@1.26.2-1+rpt3+deb13u2?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package providing Pango textoverlay; apt candidate observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/gstreamer1.0-x@1.26.2-1+rpt3+deb13u2?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi runtime package providing Pango textoverlay; apt candidate observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pi-v4l-utils",
@@ -302,8 +575,21 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:deb/raspbian/v4l-utils@1.30.1-1?arch=armhf"}],
-      "annotations": [{"annotationDate": "2026-10-30T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct MIC-NODE-01 Pi probe package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:deb/raspbian/v4l-utils@1.30.1-1?arch=armhf"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-30T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct MIC-NODE-01 Pi probe package; apt version observed on the Pi; debian/copyright not inspected; not bundled; verify notice before redistributing a configured image."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-pip",
@@ -314,7 +600,14 @@
       "licenseConcluded": "MIT",
       "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-tool; evidence=installed dist metadata; note=installer only, not imported by application code and not pinned"}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=development-tool; evidence=installed dist metadata; note=installer only, not imported by application code and not pinned"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-tesseract",
@@ -325,7 +618,14 @@
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "See AUTHORS file in install doc/ directory (lead: Ray Smith).",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=optional-system-tool; evidence=tesseract --version + Apache-2.0 doc/LICENSE + AUTHORS in install dir; note=invoked as CLI by pcb-ocr; installed tool, NOT bundled or redistributed; eng+osd tessdata shipped with it; see also pcb-ocr/THIRD_PARTY.md"}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=optional-system-tool; evidence=tesseract --version + Apache-2.0 doc/LICENSE + AUTHORS in install dir; note=invoked as CLI by pcb-ocr; installed tool, NOT bundled or redistributed; eng+osd tessdata shipped with it; see also pcb-ocr/THIRD_PARTY.md"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-tesseract-dll-set",
@@ -336,7 +636,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: about 50 DLLs observed in the Tesseract install dir (libleptonica-6, libtesseract-5, ICU 75, libcairo-2, fontconfig, freetype, glib, libpng, libtiff, libjpeg, libwebp, zlib1, gcc runtime, ...). No per-component license files ship with the install, so individual licenses are unverified. Installed tool dependency, not bundled. Review only if this toolset is ever redistributed."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: about 50 DLLs observed in the Tesseract install dir (libleptonica-6, libtesseract-5, ICU 75, libcairo-2, fontconfig, freetype, glib, libpng, libtiff, libjpeg, libwebp, zlib1, gcc runtime, ...). No per-component license files ship with the install, so individual licenses are unverified. Installed tool dependency, not bundled. Review only if this toolset is ever redistributed."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-cairo-native",
@@ -347,7 +654,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-26T23:30:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: NOT INSTALLED: absent from .venv and System32 (calibration PDF/PNG tests fail without it); upstream documents dual LGPL-2.1-only OR MPL-1.1 (secondary sources only, primary COPYING unavailable offline). The Tesseract install ships a private libcairo-2.dll that is not on PATH and not usable by cairocffi. Re-verify license and version if Cairo is ever installed or redistributed."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-26T23:30:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: NOT INSTALLED: absent from .venv and System32 (calibration PDF/PNG tests fail without it); upstream documents dual LGPL-2.1-only OR MPL-1.1 (secondary sources only, primary COPYING unavailable offline). The Tesseract install ships a private libcairo-2.dll that is not on PATH and not usable by cairocffi. Re-verify license and version if Cairo is ever installed or redistributed."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-npm-vite",
@@ -358,8 +672,21 @@
       "licenseConcluded": "MIT",
       "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/vite@8.3.5"}],
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/vite/package.json; note=dev server + production bundler; not shipped in the PWA bundle"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/vite@8.3.5"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/vite/package.json; note=dev server + production bundler; not shipped in the PWA bundle"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-npm-typescript",
@@ -370,8 +697,21 @@
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/typescript@7.0.2"}],
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/typescript/package.json; note=static type checking (tsc); not shipped in the PWA bundle"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/typescript@7.0.2"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/typescript/package.json; note=static type checking (tsc); not shipped in the PWA bundle"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-npm-vitest",
@@ -382,8 +722,21 @@
       "licenseConcluded": "MIT",
       "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/vitest@5.0.5"}],
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/vitest/package.json; note=unit test runner; not shipped in the PWA bundle"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/vitest@5.0.5"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/vitest/package.json; note=unit test runner; not shipped in the PWA bundle"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-npm-fake-indexeddb",
@@ -394,8 +747,21 @@
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/fake-indexeddb@6.2.6"}],
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/fake-indexeddb/package.json; note=IndexedDB emulation for storage tests only; not shipped in the PWA bundle"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/fake-indexeddb@6.2.6"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/fake-indexeddb/package.json; note=IndexedDB emulation for storage tests only; not shipped in the PWA bundle"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-npm-types-node",
@@ -406,8 +772,21 @@
       "licenseConcluded": "MIT",
       "licenseDeclared": "MIT",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/%40types/node@26.6.5"}],
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/@types/node/package.json; note=Node type declarations for tests/build scripts; not shipped in the PWA bundle"}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/node@26.6.5"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=development-frontend-devonly; source=capture-companion/app/package.json (exact pin) + package-lock.json; evidence=license field in installed node_modules/@types/node/package.json; note=Node type declarations for tests/build scripts; not shipped in the PWA bundle"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-npm-transitive",
@@ -418,7 +797,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: transitive npm packages of the five direct capture devDependencies (lockfile v3 closure recorded in capture-companion/app/package-lock.json) are not inventoried individually and their licenses are unverified. None ships in the PWA bundle. Confirm per-package licenses before redistributing node_modules."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: transitive npm packages of the five direct capture devDependencies (lockfile v3 closure recorded in capture-companion/app/package-lock.json) are not inventoried individually and their licenses are unverified. None ships in the PWA bundle. Confirm per-package licenses before redistributing node_modules."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-maven-mlkit-barcode-scanning",
@@ -429,8 +815,27 @@
       "licenseConcluded": "LicenseRef-MLKit-Terms",
       "licenseDeclared": "LicenseRef-MLKit-Terms",
       "copyrightText": "NOASSERTION",
-      "externalRefs": [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:maven/com.google.mlkit/barcode-scanning@17.3.0"}],
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=runtime-android-shipped; source=capture-companion/android/gradle/libs.versions.toml (exact pin mlkit-barcode = 17.3.0); evidence=<license><name>ML Kit Terms of Service</name> in cached barcode-scanning-17.3.0.pom; note=bundled on-device barcode model, runs offline, ships inside the APK"}, {"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: ML Kit Terms of Service (https://developers.google.com/ml-kit/terms) is a custom Google terms document, not an SPDX-listed license. A human must read the current terms and confirm redistribution, attribution, and data-processing obligations before the APK is shared beyond the developer workstation."}]
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:maven/com.google.mlkit/barcode-scanning@17.3.0"
+        }
+      ],
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=runtime-android-shipped; source=capture-companion/android/gradle/libs.versions.toml (exact pin mlkit-barcode = 17.3.0); evidence=<license><name>ML Kit Terms of Service</name> in cached barcode-scanning-17.3.0.pom; note=bundled on-device barcode model, runs offline, ships inside the APK"
+        },
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: ML Kit Terms of Service (https://developers.google.com/ml-kit/terms) is a custom Google terms document, not an SPDX-listed license. A human must read the current terms and confirm redistribution, attribution, and data-processing obligations before the APK is shared beyond the developer workstation."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-maven-android-closure",
@@ -441,7 +846,14 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "annotations": [{"annotationDate": "2026-10-27T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "REVIEW: direct + transitive Maven closure of capture-companion/android (libs.versions.toml: AndroidX Compose/CameraX/Room/DataStore/WorkManager/Navigation/Security, Kotlinx coroutines/serialization, test and build tooling). Per-artifact POM license fields are unverified; inventory each runtime-shipped artifact individually before M5 APK distribution."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-27T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "REVIEW: direct + transitive Maven closure of capture-companion/android (libs.versions.toml: AndroidX Compose/CameraX/Room/DataStore/WorkManager/Navigation/Security, Kotlinx coroutines/serialization, test and build tooling). Per-artifact POM license fields are unverified; inventory each runtime-shipped artifact individually before M5 APK distribution."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-vendored-metasam-parser",
@@ -452,7 +864,20 @@
       "licenseConcluded": "LicenseRef-SAM-License",
       "licenseDeclared": "LicenseRef-SAM-License",
       "copyrightText": "Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.",
-      "annotations": [{"annotationDate": "2026-10-28T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=vendored-source-committed; source=sam-tracking/vendor (meta-sam-parser 0.1.0 at commit 40318970a81301f31e97cdd7d605117293332b0f, per-file SHA-256 in sam-tracking/vendor/VENDOR.md); evidence=LICENSE.meta-sam shipped alongside per SAM License 1.b.i; used-by=sam-tracking SAM 3.1 wire-grammar parsing and mask decoding only; not a PyPI pin, no purl by design"}, {"annotationDate": "2026-10-29T00:00:00Z", "annotationType": "REVIEW", "annotator": "Person: valentin-englert (owner)", "comment": "HUMAN-REVIEWED: Human review 2026-10-29 by the owner (valentin-englert): SAM License of 19 November 2025 read; section 1.a permits reproduction, modification and distribution, 1.b.i requires redistribution under the same agreement with the license text, which ships as LICENSE.meta-sam; no prohibition on a private GitHub repository. Distribution approved for the private repository only. 1.b.ii (acknowledge SAM Materials in any research publication) stays a duty for any future publication. Caveat: commit 3e8cb59c and its descendants up to 89aad323 carry the vendored files without the COCO API notice; it was added forward-only, history is not rewritten. Earlier open item: REVIEW: SAM License (Last Updated November 19, 2025) is a custom Meta terms document, not an SPDX-listed license. A human must read sam-tracking/vendor/LICENSE.meta-sam and confirm redistribution, publication-acknowledgment, and termination obligations before this tree is shared beyond the developer workstation."}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-28T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=vendored-source-committed; source=sam-tracking/vendor (meta-sam-parser 0.1.0 at commit 40318970a81301f31e97cdd7d605117293332b0f, per-file SHA-256 in sam-tracking/vendor/VENDOR.md); evidence=LICENSE.meta-sam shipped alongside per SAM License 1.b.i; used-by=sam-tracking SAM 3.1 wire-grammar parsing and mask decoding only; not a PyPI pin, no purl by design"
+        },
+        {
+          "annotationDate": "2026-10-29T00:00:00Z",
+          "annotationType": "REVIEW",
+          "annotator": "Person: valentin-englert (owner)",
+          "comment": "HUMAN-REVIEWED: Human review 2026-10-29 by the owner (valentin-englert): SAM License of 19 November 2025 read; section 1.a permits reproduction, modification and distribution, 1.b.i requires redistribution under the same agreement with the license text, which ships as LICENSE.meta-sam; no prohibition on a private GitHub repository. Distribution approved for the private repository only. 1.b.ii (acknowledge SAM Materials in any research publication) stays a duty for any future publication. Caveat: commit 3e8cb59c and its descendants up to 89aad323 carry the vendored files without the COCO API notice; it was added forward-only, history is not rewritten. Earlier open item: REVIEW: SAM License (Last Updated November 19, 2025) is a custom Meta terms document, not an SPDX-listed license. A human must read sam-tracking/vendor/LICENSE.meta-sam and confirm redistribution, publication-acknowledgment, and termination obligations before this tree is shared beyond the developer workstation."
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-Package-vendored-coco-mask-port",
@@ -463,38 +888,207 @@
       "licenseConcluded": "BSD-2-Clause-Views",
       "licenseDeclared": "BSD-2-Clause-Views",
       "copyrightText": "Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin. All rights reserved.",
-      "annotations": [{"annotationDate": "2026-10-29T00:00:00Z", "annotationType": "OTHER", "annotator": "Tool: anastylos-compliance-check", "comment": "category=vendored-source-committed; source=sam-tracking/vendor/meta_sam_parser/_mask_conversion.py (port of common/maskApi.c and PythonAPI/pycocotools/_mask.pyx); evidence=sam-tracking/vendor/THIRD_PARTY_NOTICES.md sha256 119cb44600de2a1f2ce93bd9fc0adaa5382870b3bde2c09103531acd94608547, upstream meta-sam commit 40318970a81301f31e97cdd7d605117293332b0f, verbatim; BSD-2-Clause text plus the FreeBSD views clause; added forward-only 2026-10-29, absent in commits 3e8cb59c..89aad323"}]
+      "annotations": [
+        {
+          "annotationDate": "2026-10-29T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=vendored-source-committed; source=sam-tracking/vendor/meta_sam_parser/_mask_conversion.py (port of common/maskApi.c and PythonAPI/pycocotools/_mask.pyx); evidence=sam-tracking/vendor/THIRD_PARTY_NOTICES.md sha256 119cb44600de2a1f2ce93bd9fc0adaa5382870b3bde2c09103531acd94608547, upstream meta-sam commit 40318970a81301f31e97cdd7d605117293332b0f, verbatim; BSD-2-Clause text plus the FreeBSD views clause; added forward-only 2026-10-29, absent in commits 3e8cb59c..89aad323"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-font-khula",
+      "name": "Khula font (Latin subset, regular/semibold/bold TTF)",
+      "versionInfo": "1.002",
+      "downloadLocation": "https://www.npmjs.com/package/@fontsource/khula",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright (c) 2014, Erin McLaughlin (hello@erinmclaughlin.com). Digitized data copyright 2010, Google Corporation.",
+      "annotations": [
+        {
+          "annotationDate": "2026-11-02T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=android-bundled-font; source=capture-companion/android/app/src/main/res/font/khula_*.ttf; evidence: name table IDs 0 and 14 of the TTF (licence URL http://scripts.sil.org/OFL); bundled in the APK; the OFL text must accompany a redistributed APK; also tools/session-ui/web/fonts/ (woff2 with OFL text)"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-icons-lucide",
+      "name": "Lucide icons info and arrow-up-right (inline SVG paths)",
+      "versionInfo": "1.17.0",
+      "downloadLocation": "https://github.com/lucide-icons/lucide",
+      "filesAnalyzed": false,
+      "licenseConcluded": "ISC AND MIT",
+      "licenseDeclared": "ISC AND MIT",
+      "copyrightText": "Copyright (c) 2026 Lucide Icons and Contributors; Feather-derived icons Copyright (c) 2013-present Cole Bemis",
+      "annotations": [
+        {
+          "annotationDate": "2026-11-02T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=session-ui-inline-icons; source=tools/session-ui/web/index.html, shell.js; notices in tools/session-ui/web/assets/ICONS.md"
+        }
+      ]
     }
   ],
   "hasExtractedLicensingInfos": [
-    {"licenseId": "LicenseRef-MLKit-Terms", "name": "ML Kit Terms of Service", "extractedText": "Custom Google terms document declared by the com.google.mlkit:barcode-scanning POM (<name>ML Kit Terms of Service</name>) at https://developers.google.com/ml-kit/terms. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.", "seeAlsos": ["https://developers.google.com/ml-kit/terms"], "comment": "LicenseRef documents the POM-declared terms without inventing an SPDX identifier."},
-    {"licenseId": "LicenseRef-SAM-License", "name": "SAM License", "extractedText": "Custom Meta terms document (Last Updated November 19, 2025) shipped as sam-tracking/vendor/LICENSE.meta-sam. Grants use/reproduction/distribution/derivatives with a copy of the agreement (1.b.i); requires publication acknowledgment (1.b.ii); California governing law. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.", "seeAlsos": ["https://github.com/meta-models/meta-sam/blob/main/LICENSE"], "comment": "LicenseRef documents the shipped license text without inventing an SPDX identifier."}
+    {
+      "licenseId": "LicenseRef-MLKit-Terms",
+      "name": "ML Kit Terms of Service",
+      "extractedText": "Custom Google terms document declared by the com.google.mlkit:barcode-scanning POM (<name>ML Kit Terms of Service</name>) at https://developers.google.com/ml-kit/terms. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.",
+      "seeAlsos": [
+        "https://developers.google.com/ml-kit/terms"
+      ],
+      "comment": "LicenseRef documents the POM-declared terms without inventing an SPDX identifier."
+    },
+    {
+      "licenseId": "LicenseRef-SAM-License",
+      "name": "SAM License",
+      "extractedText": "Custom Meta terms document (Last Updated November 19, 2025) shipped as sam-tracking/vendor/LICENSE.meta-sam. Grants use/reproduction/distribution/derivatives with a copy of the agreement (1.b.i); requires publication acknowledgment (1.b.ii); California governing law. Not an SPDX-listed license; obligations unverified, see the package REVIEW annotation.",
+      "seeAlsos": [
+        "https://github.com/meta-models/meta-sam/blob/main/LICENSE"
+      ],
+      "comment": "LicenseRef documents the shipped license text without inventing an SPDX identifier."
+    }
   ],
   "relationships": [
-    {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-cairocffi"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-cairosvg"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-cffi"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-cssselect2"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-defusedxml"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-numpy"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-opencv-contrib-python"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-pillow"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-pycparser"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-tinycss2"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-webencodings"},
-    {"spdxElementId": "SPDXRef-Package-opencv-contrib-python", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-opencv-ffmpeg-dll"},
-    {"spdxElementId": "SPDXRef-Package-pillow", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-pillow-libjpeg-turbo"},
-    {"spdxElementId": "SPDXRef-Package-pillow", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-pillow-zlib-ng"},
-    {"spdxElementId": "SPDXRef-Package-pillow", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-pillow-libtiff"},
-    {"spdxElementId": "SPDXRef-Package-tesseract", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-tesseract-dll-set"},
-    {"spdxElementId": "SPDXRef-Package-npm-vite", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-npm-typescript", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-npm-vitest", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-npm-fake-indexeddb", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-npm-types-node", "relationshipType": "BUILD_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-anastylos-source"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-maven-mlkit-barcode-scanning"},
-    {"spdxElementId": "SPDXRef-Package-anastylos-source", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-vendored-metasam-parser"},
-    {"spdxElementId": "SPDXRef-Package-vendored-metasam-parser", "relationshipType": "CONTAINS", "relatedSpdxElement": "SPDXRef-Package-vendored-coco-mask-port"}
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-anastylos-source"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cairocffi"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cairosvg"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cffi"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-cssselect2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-defusedxml"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-numpy"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-opencv-contrib-python"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-pillow"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-pycparser"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-tinycss2"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-webencodings"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-opencv-contrib-python",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-opencv-ffmpeg-dll"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pillow",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-pillow-libjpeg-turbo"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pillow",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-pillow-zlib-ng"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-pillow",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-pillow-libtiff"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-tesseract",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-tesseract-dll-set"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-npm-vite",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-anastylos-source"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-npm-typescript",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-anastylos-source"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-npm-vitest",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-anastylos-source"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-npm-fake-indexeddb",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-anastylos-source"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-npm-types-node",
+      "relationshipType": "BUILD_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-anastylos-source"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-maven-mlkit-barcode-scanning"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-vendored-metasam-parser"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-vendored-metasam-parser",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-vendored-coco-mask-port"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-font-khula"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-icons-lucide"
+    }
   ]
 }

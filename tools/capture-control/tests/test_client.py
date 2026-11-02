@@ -156,5 +156,34 @@ class ClientFlowTests(ClientCase):
             ControlClient("http://192.168.1.20:8443")
 
 
+class SpkiPinTests(unittest.TestCase):
+    PEM = (CONTROL.parents[1] / "capture-companion" / "android" / "app" / "src" / "test" / "resources" / "tls"
+           / "workstation.pem")
+    # openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | sha256sum
+    PIN = "5b990e9c6186bf1163ff0c7d2cef2f156e92c57a3b4f3cdd43b98800977b9206"
+
+    def der(self):
+        import ssl
+        return ssl.PEM_cert_to_DER_cert(self.PEM.read_text())
+
+    def test_spki_matches_openssl(self):
+        import control_client
+        self.assertEqual(hashlib.sha256(control_client._spki_of(self.der())).hexdigest(), self.PIN)
+
+    def test_wrong_pin_fails_after_handshake_before_any_byte_is_sent(self):
+        from unittest import mock
+        import http.client
+        import control_client
+        sock = mock.Mock()
+        sock.getpeercert.return_value = self.der()
+        conn = control_client._PinnedHTTPSConnection("example.invalid", 443, spki_pin="0" * 64)
+        with mock.patch.object(http.client.HTTPSConnection, "connect", lambda self: setattr(self, "sock", sock)):
+            with self.assertRaises(control_client.PinMismatch):
+                conn.connect()
+            sock.sendall.assert_not_called()
+            conn2 = control_client._PinnedHTTPSConnection("example.invalid", 443, spki_pin=self.PIN)
+            conn2.connect()  # the right pin passes
+
+
 if __name__ == "__main__":
     unittest.main()

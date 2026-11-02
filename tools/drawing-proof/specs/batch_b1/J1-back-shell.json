@@ -1,0 +1,19 @@
+{
+ "region_mm": [
+  58,
+  50,
+  254,
+  177
+ ],
+ "px_per_mm": 6.0,
+ "stride_s": 0.5,
+ "candidates": 6,
+ "video": "C:\\ANASTYLOS\\incoming\\FULL-01-P2.mp4",
+ "t_range": [
+  0,
+  40
+ ],
+ "part": "back shell of the game controller",
+ "scope": "part",
+ "attachments": "cable and PCB excluded"
+}

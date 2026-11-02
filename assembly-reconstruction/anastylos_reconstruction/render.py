@@ -13,7 +13,11 @@ import math
 import os
 from xml.sax.saxutils import escape
 
-from anastylos_reconstruction.schema import PHYSICAL_SCALE, validate_state
+from anastylos_reconstruction.schema import (
+    PHYSICAL_SCALE,
+    TECH_LAYOUT,
+    validate_state,
+)
 
 LINE = 16.0
 THUMB_H = 120.0
@@ -22,6 +26,8 @@ PALETTE = [
     "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
 ]
 MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
+INK = "#000000"
+INK_LIGHT = "#666666"
 
 
 def _f(value) -> str:
@@ -141,13 +147,15 @@ class _Canvas:
 def _same_location_peers(state: dict) -> dict[str, list[str]]:
     """Observation ids sharing identical verbatim (view, bbox) coordinates.
 
-    A location match only -- never an identity claim."""
+    A location match only -- never an identity claim. Declared removals
+    without metric boxes are excluded."""
     groups: dict[tuple, list[str]] = {}
     for component in state["components"]:
         physical = component["physical"]
         box = physical.get("bbox_mm")
-        key = (physical.get("source_view"),
-               tuple(box) if _is_box(box, 4) else None)
+        if not _is_box(box, 4):
+            continue
+        key = (physical.get("source_view"), tuple(box))
         groups.setdefault(key, []).append(component["id"])
     peers: dict[str, list[str]] = {}
     for ids in groups.values():
@@ -183,8 +191,11 @@ def _physical_panels(state: dict, canvas: _Canvas, top: float,
     """One mm-faithful map per source view over its rectified underlay."""
     views: dict[str, list[dict]] = {}
     for component in state["components"]:
-        views.setdefault(component["physical"].get("source_view") or "?",
-                         []).append(component)
+        # Declared removals have no metric frame; keep them off the mm map.
+        view = component["physical"].get("source_view")
+        if not view:
+            continue
+        views.setdefault(view, []).append(component)
     y = top
     canvas.text(24, y, "Physical map (frame mm, verbatim — not to be confused "
                        "with the observation stack below)",
@@ -340,19 +351,21 @@ def _card_crops(canvas: _Canvas, component: dict, x: float, y: float,
 
 def _observation_stack(state: dict, canvas: _Canvas, top: float,
                        svg_path: str | None, embedded: dict[str, str]) -> float:
-    """One card per observation at the projected layout coordinates."""
+    """One card per component at the projected layout coordinates."""
     count = len(state["components"])
-    canvas.text(24, top, "Observation stack (layout-only positions in layout_px "
+    n_obs = sum(1 for c in state["components"] if c.get("kind", "observation") == "observation")
+    n_dec = count - n_obs
+    canvas.text(24, top, "Component stack (layout-only positions in layout_px "
                          "— no physical meaning; symbol size = 4 px per mm)",
                 **{"font-size": "14", "font-weight": "bold"})
     canvas.text(24, top + LINE,
-                f"{count} observations of removal evidence — not {count} "
-                "verified parts; no cross-observation identity asserted",
+                f"{count} components ({n_obs} observations, {n_dec} declared) — not "
+                f"{count} verified parts; no cross-event identity asserted",
                 **{"font-size": "11"})
     y0 = top + 2 * LINE + 4
     components = state["components"]
     if not components:
-        canvas.text(24, y0, "no observations", **{"font-size": "12"})
+        canvas.text(24, y0, "no components", **{"font-size": "12"})
         return y0 + LINE
     peers = _same_location_peers(state)
     base_x = 96.0
@@ -371,11 +384,21 @@ def _observation_stack(state: dict, canvas: _Canvas, top: float,
                     **{"stroke-width": "2"})
         anchors[component["id"]] = (x, y + h / 2)
         evidence = component["physical"].get("evidence") or {}
-        lines = [
-            f"{badge} {component['id']}  identity: unknown",
-            f"evidence {evidence.get('pair_id')}/{evidence.get('region')} "
-            f"@ {component['physical'].get('source_view')}",
-        ]
+        kind = component.get("kind", "observation")
+        if kind == "declared_removal":
+            declaration = component.get("declaration") or {}
+            lines = [
+                f"{badge} {component['id']}  kind: declared_removal  identity: unknown",
+                f"operator_label: {declaration.get('operator_label')} "
+                f"(declaration, not identity)",
+                f"source: {declaration.get('source')}  phase: {declaration.get('phase')}",
+            ]
+        else:
+            lines = [
+                f"{badge} {component['id']}  kind: observation  identity: unknown",
+                f"evidence {evidence.get('pair_id')}/{evidence.get('region')} "
+                f"@ {component['physical'].get('source_view')}",
+            ]
         tray = component.get("tray")
         if tray:
             basis = tray.get("basis") or {}
@@ -386,9 +409,25 @@ def _observation_stack(state: dict, canvas: _Canvas, top: float,
                 lines.append(f"tray {tray['tray'].get('number')} (evidence basis)")
         elif component.get("trays"):
             lines.append(f"{len(component['trays'])} tray links (ambiguous)")
-        else:
+        storage = component.get("storage")
+        if storage:
+            lines.append(f"storage: {storage.get('location')} "
+                         f"({(storage.get('basis') or {}).get('kind')})")
+        elif component.get("storages"):
+            lines.append(f"{len(component['storages'])} storage links (ambiguous)")
+        elif kind == "observation" and not tray and not component.get("trays"):
             lines.append("tray: unassigned")
-        if not component["physical"].get("region_resolved"):
+        if component.get("compatible_groups"):
+            lines.append(
+                "compatible_groups: "
+                + ", ".join(g["id"] for g in component["compatible_groups"])
+                + " (interchangeable; no per-hole assignment)"
+            )
+        representation = component.get("representation") or {}
+        if representation:
+            lines.append(f"representation: {representation.get('kind')} — "
+                         f"{(representation.get('note') or '')[:60]}")
+        if kind == "observation" and not component["physical"].get("region_resolved"):
             lines.append(f"evidence missing: {component['physical'].get('missing_reason')}")
         if component["id"] in peers:
             lines.append("same observed coordinates as "
@@ -459,19 +498,272 @@ def _notes_section(state: dict, canvas: _Canvas, top: float) -> float:
     return y + 4
 
 
+def _component_label(component: dict) -> str:
+    if component.get("kind") == "declared_removal":
+        declaration = component.get("declaration") or {}
+        return declaration.get("operator_label") or component["id"]
+    return component["id"]
+
+
+def _storage_text(component: dict) -> str:
+    storage = component.get("storage")
+    if storage:
+        return str(storage.get("location") or "storage unknown")
+    if component.get("storages"):
+        locs = [str(item.get("location")) for item in component["storages"]]
+        return "ambiguous storage: " + "; ".join(locs)
+    tray = component.get("tray")
+    if tray and tray.get("tray"):
+        return f"tray cell {tray['tray'].get('number')}"
+    if component.get("trays"):
+        return f"{len(component['trays'])} tray links (ambiguous)"
+    return "storage unassigned"
+
+
+def _tech_place(components: list[dict]) -> dict[str, dict]:
+    """Deterministic exploded layout slots for the technical sketch panel."""
+    # Group by declaration phase when present, else a single lane.
+    lanes: dict[str, list[dict]] = {}
+    for component in components:
+        declaration = component.get("declaration") or {}
+        phase = declaration.get("phase") or (
+            "observations" if component.get("kind") == "observation"
+            else "undeclared-phase")
+        lanes.setdefault(phase, []).append(component)
+    placements: dict[str, dict] = {}
+    lane_keys = sorted(lanes)
+    y_cursor = TECH_LAYOUT["origin_y"] - 40.0
+    for lane_index, phase in enumerate(lane_keys):
+        items = lanes[phase]
+        x = TECH_LAYOUT["lane_x0"] + lane_index * TECH_LAYOUT["lane_gap_x"]
+        y = y_cursor
+        for row, component in enumerate(items):
+            placements[component["id"]] = {
+                "x": x,
+                "y": y,
+                "phase": phase,
+                "lane": lane_index,
+                "row": row,
+                "position": component["timeline_index"] + 1,
+            }
+            y += TECH_LAYOUT["row_gap_y"]
+        y_cursor = max(y_cursor + TECH_LAYOUT["phase_gap_y"], y)
+    return placements
+
+
+def _scaled_contour_points(representation: dict, cx: float, cy: float,
+                           max_size: float) -> list[tuple[float, float]] | None:
+    points = representation.get("points_px") or []
+    if len(points) < 3:
+        return None
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    span = max(max_x - min_x, max_y - min_y, 1.0)
+    scale = max_size / span
+    mid_x = (min_x + max_x) / 2.0
+    mid_y = (min_y + max_y) / 2.0
+    return [
+        (cx + (px - mid_x) * scale, cy + (py - mid_y) * scale)
+        for px, py in points
+    ]
+
+
+def _draw_polyline(canvas: _Canvas, points: list[tuple[float, float]],
+                   **attrs) -> None:
+    if len(points) < 2:
+        return
+    pairs = " ".join(f"{_f(x)},{_f(y)}" for x, y in points)
+    extra = "".join(f' {key}="{_text(val)}"' for key, val in attrs.items())
+    canvas.add(f'<polyline points="{pairs}" fill="none"{extra}/>')
+
+
+def _technical_sketch(state: dict, canvas: _Canvas, top: float,
+                      svg_path: str | None, embedded: dict[str, str]) -> float:
+    """Black-on-white technical explosion: silhouettes, balloons, leaders."""
+    components = state.get("components") or []
+    canvas.text(24, top, "Technical explosion sketch (layout-only positions — "
+                         "not measured assembly vectors)",
+                **{"font-size": "14", "font-weight": "bold", "fill": INK})
+    canvas.text(24, top + LINE,
+                "Position numbers link to event ids. Contours from change-detection "
+                "masks; declared parts use labeled SUBSTITUTE cards. Identity stays unknown.",
+                **{"font-size": "11", "fill": INK})
+    y0 = top + 2 * LINE + 8
+    if not components:
+        canvas.text(24, y0, "no components", **{"font-size": "12", "fill": INK})
+        return y0 + LINE
+    placements = _tech_place(components)
+    ox, oy = TECH_LAYOUT["origin_x"], TECH_LAYOUT["origin_y"]
+    canvas.add(
+        f'<g id="assembly-origin" data-role="layout-origin">'
+        f'<circle cx="{_f(ox)}" cy="{_f(oy)}" r="4" fill="{INK}"/>'
+        f'<line x1="{_f(ox - 28)}" y1="{_f(oy)}" x2="{_f(ox + 28)}" y2="{_f(oy)}" '
+        f'stroke="{INK}" stroke-width="1"/>'
+        f'<line x1="{_f(ox)}" y1="{_f(oy - 28)}" x2="{_f(ox)}" y2="{_f(oy + 28)}" '
+        f'stroke="{INK}" stroke-width="1"/>'
+        f'</g>')
+    canvas.text(ox - 70, oy + 44, "origin (layout only)",
+                **{"font-size": "10", "fill": INK_LIGHT})
+    bottom = y0
+    # Legend anchors for internal links.
+    for component in components:
+        place = placements[component["id"]]
+        cx = place["x"]
+        cy = place["y"]
+        position = place["position"]
+        representation = component.get("representation") or {}
+        kind = component.get("kind", "observation")
+        storage = _storage_text(component)
+        label = _component_label(component)
+        group_note = ""
+        groups = component.get("compatible_groups") or []
+        if groups:
+            group_note = "group " + ", ".join(
+                f"{g.get('id')}({g.get('label') or 'unlabeled'})" for g in groups)
+        balloon_x = cx + TECH_LAYOUT["contour_max"] / 2 + 28
+        balloon_y = cy - TECH_LAYOUT["contour_max"] / 2 - 8
+        part_id = f"part-{component['id']}"
+        balloon_id = f"balloon-{component['id']}"
+        canvas.add(
+            f'<g id="{_text(part_id)}" data-event-id="{_text(component["id"])}" '
+            f'data-kind="{_text(kind)}" data-timeline-index="{position - 1}" '
+            f'data-storage="{_text(storage)}" '
+            f'data-representation="{_text(representation.get("kind"))}">')
+        # Leader from origin toward part (layout cue only).
+        canvas.line(ox, oy, cx, cy, stroke=INK_LIGHT, **{"stroke-width": "0.75",
+                    "stroke-dasharray": "2 3"})
+        if representation.get("kind") == "mask_contour":
+            pts = _scaled_contour_points(
+                representation, cx, cy, TECH_LAYOUT["contour_max"])
+            if pts:
+                _draw_polyline(canvas, pts, stroke=INK, **{"stroke-width": "1.5"})
+            else:
+                canvas.rect(cx - 30, cy - 20, 60, 40, fill="none", stroke=INK,
+                            **{"stroke-dasharray": "4 3"})
+                canvas.text(cx - 28, cy, "contour unavailable",
+                            **{"font-size": "9", "fill": INK})
+        elif representation.get("kind") == "evidence_crop":
+            crop = None
+            for item in component.get("crops") or []:
+                if item.get("image") == representation.get("source_image"):
+                    crop = item
+                    break
+            if crop is None and component.get("crops"):
+                crop = component["crops"][0]
+            w = TECH_LAYOUT["card_w"]
+            h = TECH_LAYOUT["card_h"]
+            canvas.rect(cx - w / 2, cy - h / 2, w, h, fill="none", stroke=INK,
+                        **{"stroke-dasharray": "5 3", "stroke-width": "1.25"})
+            if crop and _is_box(crop.get("clip_px"), 4) and _is_box(
+                    crop.get("image_size_px"), 2):
+                if crop["image"] in embedded:
+                    ref, use_embedded = embedded[crop["image"]], True
+                elif os.path.isfile(crop["image"]):
+                    ref, use_embedded = _href(crop["image"], svg_path), False
+                else:
+                    ref, use_embedded = None, False
+                if ref is not None:
+                    canvas.clip_view(cx - w / 2 + 4, cy - h / 2 + 4, w - 8, h - 20,
+                                     crop["clip_px"], ref, crop["image_size_px"],
+                                     use_embedded)
+            canvas.text(cx - w / 2 + 4, cy + h / 2 - 6, "SUBSTITUTE crop",
+                        **{"font-size": "9", "fill": INK})
+        else:
+            w = TECH_LAYOUT["card_w"]
+            h = TECH_LAYOUT["card_h"]
+            canvas.rect(cx - w / 2, cy - h / 2, w, h, fill="none", stroke=INK,
+                        **{"stroke-dasharray": "6 4", "stroke-width": "1.25"})
+            canvas.text(cx - w / 2 + 6, cy - 10, "SUBSTITUTE",
+                        **{"font-size": "10", "font-weight": "bold", "fill": INK})
+            canvas.text(cx - w / 2 + 6, cy + 6, label[:28],
+                        **{"font-size": "10", "fill": INK})
+            canvas.text(cx - w / 2 + 6, cy + 22, "no measured silhouette",
+                        **{"font-size": "9", "fill": INK_LIGHT})
+        # Balloon with internal link target.
+        canvas.add(
+            f'<a href="#{_text(part_id)}" id="{_text(balloon_id)}">'
+            f'<circle cx="{_f(balloon_x)}" cy="{_f(balloon_y)}" '
+            f'r="{_f(TECH_LAYOUT["balloon_r"])}" fill="white" stroke="{INK}" '
+            f'stroke-width="1.5"/>'
+            f'<text x="{_f(balloon_x)}" y="{_f(balloon_y + 4)}" text-anchor="middle" '
+            f'font-size="11" font-weight="bold" fill="{INK}">{position}</text></a>')
+        canvas.line(cx, cy - 8, balloon_x - TECH_LAYOUT["balloon_r"], balloon_y,
+                    stroke=INK, **{"stroke-width": "1"})
+        meta_y = cy + TECH_LAYOUT["contour_max"] / 2 + 14
+        canvas.text(cx - 40, meta_y, f"{position}. {component['id']}",
+                    **{"font-size": "10", "fill": INK})
+        canvas.text(cx - 40, meta_y + 12, f"label: {label}" if kind == "declared_removal"
+                    else "identity: unknown",
+                    **{"font-size": "9", "fill": INK_LIGHT})
+        canvas.text(cx - 40, meta_y + 24, f"storage: {storage}",
+                    **{"font-size": "9", "fill": INK_LIGHT})
+        evid = ""
+        if kind == "observation":
+            evidence = (component.get("physical") or {}).get("evidence") or {}
+            region = (component.get("physical") or {}).get("region") or {}
+            sha = (region.get("result_sha256_current")
+                   or evidence.get("result_sha256") or "")
+            evid = f"evidence {evidence.get('pair_id')}/{evidence.get('region')}"
+            if sha:
+                evid += f" sha256:{str(sha)[:12]}…"
+            if representation.get("source_sha256"):
+                evid += f" mask:{representation['source_sha256'][:12]}…"
+        else:
+            declaration = component.get("declaration") or {}
+            evid = (f"declared by {declaration.get('declared_by')} "
+                    f"phase {declaration.get('phase')}")
+        canvas.text(cx - 40, meta_y + 36, evid[:70],
+                    **{"font-size": "8", "fill": INK_LIGHT})
+        if group_note:
+            canvas.text(cx - 40, meta_y + 48, group_note[:70],
+                        **{"font-size": "8", "fill": INK_LIGHT})
+        canvas.add("</g>")
+        bottom = max(bottom, meta_y + 60)
+    # Compact bill of materials with internal references.
+    bom_x = 24.0
+    bom_y = bottom + LINE
+    canvas.text(bom_x, bom_y, "Parts index (event id → storage → representation)",
+                **{"font-size": "12", "font-weight": "bold", "fill": INK})
+    bom_y += LINE
+    for component in components:
+        place = placements[component["id"]]
+        representation = component.get("representation") or {}
+        line = (
+            f"[{place['position']}] {component['id']}  "
+            f"{_component_label(component)}  |  {_storage_text(component)}  |  "
+            f"{representation.get('kind')}"
+        )
+        canvas.add(
+            f'<a href="#part-{_text(component["id"])}">'
+            f'<text x="{_f(bom_x)}" y="{_f(bom_y)}" font-size="10" fill="{INK}">'
+            f"{_text(line)}</text></a>")
+        bom_y += LINE
+    canvas.text(bom_x, bom_y + 4,
+                "Exploded offsets are layout coordinates only. Removal order "
+                "structures the lanes; it does not prove mechanical dependence.",
+                **{"font-size": "10", "fill": INK_LIGHT})
+    return bom_y + 2 * LINE
+
+
 def _header(state: dict, canvas: _Canvas) -> float:
-    canvas.text(24, 28, "ANASTYLOS observation review (Assembly State v1 — proposed)",
+    canvas.text(24, 28, "ANASTYLOS technical explosion sketch (Assembly State v1 — proposed)",
                 **{"font-size": "16", "font-weight": "bold"})
     provenance = state.get("provenance", {})
     memory_sha = (provenance.get("memory_sha256") or "unreadable")[:12]
+    components = state.get("components") or []
+    n_obs = sum(1 for c in components if c.get("kind", "observation") == "observation")
+    n_dec = len(components) - n_obs
     canvas.text(24, 48, f"status {state.get('status')}"
                         + (f": {state.get('reason')}" if state.get("reason") else ""),
                 **{"font-size": "12"})
     canvas.text(24, 64, f"memory {provenance.get('memory')} sha256:{memory_sha}…  "
-                        f"observations: {len(state.get('components', []))}",
+                        f"components: {len(components)} "
+                        f"({n_obs} observations, {n_dec} declared)",
                 **{"font-size": "11"})
-    canvas.text(24, 80, "Every card: identity unknown — an observation is evidence "
-                        "of a removal event, not a verified part.",
+    canvas.text(24, 80, "Identity stays unknown. Operator labels are declarations. "
+                        "Exploded positions are layout-only.",
                 **{"font-size": "11"})
     if state.get("status") == "unavailable":
         canvas.text(24, 104, f"unavailable: {state.get('reason')}",
@@ -524,7 +816,10 @@ def render_svg(state: dict, svg_path: str | None = None,
     with browser-safe relative references."""
     validate_state(state)
     canvas = _Canvas()
-    width = 1100.0
+    components = state.get("components") or []
+    placements = _tech_place(components) if components else {}
+    lane_count = 1 + max((p["lane"] for p in placements.values()), default=0)
+    width = max(1100.0, TECH_LAYOUT["lane_x0"] + lane_count * TECH_LAYOUT["lane_gap_x"] + 80.0)
     pool = _pool(state)
     embedded: dict[str, str] = {}
     embed_notes: list[str] = []
@@ -532,7 +827,8 @@ def render_svg(state: dict, svg_path: str | None = None,
     if state.get("status") != "unavailable":
         if embed_crops and pool:
             embedded, embed_notes = _embed_defs(canvas, pool)
-        top = _physical_panels(state, canvas, top, svg_path, embedded)
+        top = _technical_sketch(state, canvas, top, svg_path, embedded)
+        top = _physical_panels(state, canvas, top + 8, svg_path, embedded)
         top = _observation_stack(state, canvas, top + 8, svg_path, embedded)
         top = _notes_section(state, canvas, top + 8)
     top = _footer(state, canvas, top + 8, embedded, embed_notes)

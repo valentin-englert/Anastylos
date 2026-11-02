@@ -170,6 +170,12 @@ class InputTests(VoiceCase):
         self.assertEqual(guide["speak"]["kind"], "guide_verified")
         self.assertEqual([p for p, _ in self.ui.calls][-2:], ["/api/dialogue/turn", "/api/guide/ask"])
 
+    def test_ignored_echo_is_relayed_as_no_speech(self):
+        self.state.voice_config.dialogue = True
+        self.ui.replies = {"/api/dialogue/turn": {"handled": True, "speak": None, "ignored": "echo"}}
+        _, reply, _ = self.say(self.text("is that right four screws"))
+        self.assertEqual(reply, {"status": "ignored", "speak": None})
+
     def test_forwarding_table_question_read_back_commit_repeat(self):
         self.ui.replies = {
             "/api/questions/next": {"done": False, "stage": "answer", "question_id": "Q-P1-01", "op_key": "k1",

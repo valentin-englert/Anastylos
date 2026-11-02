@@ -83,7 +83,16 @@ class FakeApi:
 class BundleParserTests(unittest.TestCase):
     def test_same_list_origin_and_unclear(self):
         same = bundle.parse("yes, all screws from the back shell", 3)
-        self.assertEqual((same["kind"], same["names"], same["origins"]), ("same", ["screws"] * 3, ["the back shell"] * 3))
+        self.assertEqual((same["kind"], same["names"], same["origins"]), ("same", ["screw"] * 3, ["back shell"] * 3))
+        for heard in ("there are all screws, it came from the back shell", "these are all screws. They came from the back shell",
+                      "they are all screws from it came from the back shell"):
+            got = bundle.parse(heard, 4)
+            self.assertEqual((got["kind"], got["names"][0], got["origins"][0]), ("same", "screw", "back shell"), heard)
+        self.assertEqual(bundle.parse("five screws from the back shell", 4)["count"], 5)
+        self.assertEqual(bundle.parse("these are all lens", 2)["names"], ["lens", "lens"])
+        self.assertEqual(bundle.parse("all of them are buttons", 2)["names"], ["button", "button"])
+        for noise in ("these are all", "there are", "it came from the back shell"):
+            self.assertEqual(bundle.parse(noise, 3)["kind"], "unclear", noise)
         listed = bundle.parse("screw, screw and left button", 3)
         self.assertEqual((listed["kind"], listed["names"]), ("list", ["screw", "screw", "left button"]))
         self.assertEqual(bundle.parse("no", 3)["kind"], "different")
@@ -95,7 +104,8 @@ class BundleParserTests(unittest.TestCase):
         self.assertEqual(bundle.parse("washers", 3, list_mode=True)["kind"], "same")
 
     def test_origin_answer(self):
-        self.assertEqual(bundle.parse_origin("from the left side"), {"kind": "origin", "origin": "the left side"})
+        self.assertEqual(bundle.parse_origin("from the left side"), {"kind": "origin", "origin": "left side"})
+        self.assertEqual(bundle.parse_origin("it came from the back shell")["origin"], "back shell")
         self.assertEqual(bundle.parse_origin("skip")["kind"], "skip")
         self.assertEqual(bundle.parse_origin("hmm")["kind"], "unclear")
 
@@ -117,9 +127,8 @@ class FlowTests(unittest.TestCase):
         self.assertIn("several small parts in cell 1. Are they all the same?", self.say(command="next_question"))
         self.assertIn("Where", self.say("screw, screw and left button") + "Where")
         read_back = self.say("from the back shell")
-        self.assertIn("I will record 3 parts in cell 1: “screw” from “the back shell”; “screw” from “the back shell”; "
-                      "“left button” from “the back shell”.", read_back)
-        self.assertEqual(self.api.answers["Q3"], "left button from the back shell")
+        self.assertEqual(read_back, "Two screws, one left button in cell 1, from back shell. Is that right?")
+        self.assertEqual(self.api.answers["Q3"], "left button from back shell")
         self.assertNotIn("COMMITTED", self.api.state.values())
         self.assertTrue(self.say("yes") in ("Recorded.", "Done, it is recorded.", "That is saved.", "Noted and recorded.", "In the books!", "Saved. Easy!", "Got it, all saved.", "Locked in, buddy!", "Chiseled in stone. Well, in memory.", "Done and dusted, my friend."))
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
@@ -129,8 +138,8 @@ class FlowTests(unittest.TestCase):
     def test_missing_origin_is_asked_once_for_all(self):
         self.say(command="next_question")
         self.assertIn("Where", self.say("all screws") or "")
-        self.assertIn("I will record 3 parts", self.say("from the left side"))
-        self.assertEqual(set(self.api.answers.values()), {"screws from the left side"})
+        self.assertEqual(self.say("from the left side"), "Three screws in cell 1, from left side. Is that right?")
+        self.assertEqual(set(self.api.answers.values()), {"screw from left side"})
 
     def test_no_to_the_read_back_asks_the_parts_one_by_one_and_writes_nothing(self):
         self.say(command="next_question")
@@ -162,8 +171,8 @@ class FlowTests(unittest.TestCase):
     def test_single_part_answer_read_back_yes(self):
         self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
         self.say(command="next_question")
-        self.assertIn("read back Q4", self.say("it's a D-pad from the front shell"))
-        self.assertEqual(self.api.answers["Q4"], "it's a D-pad from the front shell")
+        self.assertEqual(self.say("it's a D-pad from the front shell"), "read back Q4")
+        self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
         self.assertTrue(self.say("yes") in ("Recorded.", "Done, it is recorded.", "That is saved.", "Noted and recorded.", "In the books!", "Saved. Easy!", "Got it, all saved.", "Locked in, buddy!", "Chiseled in stone. Well, in memory.", "Done and dusted, my friend."))
 
     def test_persona_changes_the_wording_per_workspace(self):
@@ -172,6 +181,56 @@ class FlowTests(unittest.TestCase):
             if False else None
         text = self.say(command="next_question")
         self.assertIn("cell 1", text)
+
+    def writes(self):
+        return [c for c in self.api.log if c[0] == "closing_write"]
+
+    def test_owner_transcript_replay_one_short_sentence_one_yes_clean_names(self):
+        self.api.cells["Q5"] = "cell-1"
+        self.api.state["Q5"] = "OPEN"
+        self.say(command="next_question")
+        claim = self.say("there are all screws, it came from the back shell")
+        self.assertEqual(claim, "Four screws in cell 1, from back shell. Is that right?")
+        self.assertEqual(set(self.api.answers.values()), {"screw from back shell"})
+        self.assertEqual(claim.count("screw"), 1)
+        self.say("yes")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3", "Q5")], ["COMMITTED"] * 4)
+
+    def test_higher_count_is_claimed_again_and_the_extra_parts_are_written_as_operator_stated(self):
+        self.say(command="next_question")
+        self.say("all screws from the back shell")
+        self.assertEqual(self.say("five"), "Five screws in cell 1, from back shell. Is that right?")
+        self.assertEqual(self.writes(), [])
+        self.say("yes")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
+        self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
+        self.assertEqual([n for n in self.notes() if n["kind"] == "bundle_extra"][0]["operator_said"]["count_stated"], 5)
+
+    def test_lower_count_defers_the_surplus_to_the_desktop_and_deletes_nothing(self):
+        self.say(command="next_question")
+        self.say("all screws from the back shell")
+        self.assertEqual(self.say("two"), "Two screws in cell 1, from back shell. Is that right?")
+        self.say("yes")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED", "COMMITTED", "LEFT_UNRESOLVED"])
+        self.assertEqual(self.writes(), [])
+
+    def test_echo_of_the_agents_own_line_is_ignored_and_a_bare_wake_word_repeats_the_question(self):
+        first = self.say(command="next_question")
+        self.assertIsNone(self.flow.turn(None, first.rstrip("?."))["speak"])
+        self.assertEqual(self.api.log, [])
+        self.assertEqual(self.say(command="next_question"), first)
+        self.assertEqual(self.flow.current["stage"], "label")
+
+    def test_lead_in_only_on_the_first_single_question_and_read_backs_have_none(self):
+        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED", Q4="OPEN")
+        self.api.cells["Q6"] = "cell-5"
+        self.api.state["Q6"] = "OPEN"
+        first = self.say(command="next_question")
+        self.assertTrue(first.startswith(("I ", "A ", "Something", "Ooh", "Psst", "Bold", "Hold", "Okay")) and "Where did" in first and len(first) > 60)
+        self.say("D-pad from the front shell")
+        self.say("yes")
+        second = self.say(command="next_question")
+        self.assertEqual(second, "Where did the part in cell-5 come from?")
 
     def finished(self):
         for q in self.api.state:

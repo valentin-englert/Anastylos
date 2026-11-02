@@ -53,19 +53,37 @@ class DialogueFlow:
         self._closing_marker = self.root / session_id / "dialogue-closing-done"
         self._notes = self.root / session_id / "dialogue-notes.jsonl"
         self._marker = self.root / session_id / "dialogue-pending-open"  # written when a video finished processing
+        self.last_speak: dict | None = None
+        self._lead_given = False
 
     # ------------------------------------------------------------------ entry
 
     def turn(self, command: str | None, text: str | None) -> dict:
         """{handled, speak}; ``handled`` False means: not part of the question round (the guide may answer)."""
         self.agent.set_persona(settings.load(self.root)["persona"])
+        if text and self._is_echo(text):
+            return {"handled": True, "speak": None, "ignored": "echo of the agent's own last line"}
+        if command == "next_question" and self.current is not None and self.last_speak:
+            return {"handled": True, "speak": self.last_speak}  # a bare wake word while a question is open: say it again
         if command == "next_question" or (self.current is None and self._marker.exists() and text is not None):
             self._marker.unlink(missing_ok=True)
-            return {"handled": True, "speak": self._open_next()}
+            return self._said(self._open_next())
         if self.current is None:
             return {"handled": False}
         handler = getattr(self, f"_{self.current['mode']}_{self.current['stage']}")
-        return {"handled": True, "speak": handler(text or "")}
+        return self._said(handler(text or ""))
+
+    def _said(self, speak: dict) -> dict:
+        self.last_speak = speak
+        return {"handled": True, "speak": speak}
+
+    def _is_echo(self, text: str) -> bool:
+        """The microphone picked up the agent's own speech: three or more words, all from its last line."""
+        if not self.last_speak:
+            return False
+        said = set(re.findall(r"[a-z0-9']+", text.lower()))
+        spoken = set(re.findall(r"[a-z0-9']+", self.last_speak["text"].lower()))
+        return len(re.findall(r"[a-z0-9']+", text)) >= 3 and said <= spoken
 
     # ------------------------------------------------------------------ opening a question
 
@@ -90,7 +108,8 @@ class DialogueFlow:
                           result.get("op_key"))
         self.current = {"mode": "single", "stage": "answer", "qid": qid}
         lead = self.agent.next_question({"id": qid, "type": "part_removed", "cell": group["cell"]})["speak"]
-        text = f"{lead} {result['text']}" if lead else result["text"]
+        text = f"{lead} {result['text']}" if lead and not self._lead_given else result["text"]
+        self._lead_given = True
         if result.get("screen_options"):
             text += SCREEN_HINT
         return _speak(text, "question", result.get("op_key"))
@@ -104,7 +123,9 @@ class DialogueFlow:
             return self._left_for_desktop([qid], heard["speak"])
         if heard["speak"]:
             return _speak(heard["speak"], "status")
-        reply = self.api.question_answer(self.root, self.session_id, qid, heard["forward"], None)
+        name, origin = bundle.split_name_origin(heard["forward"])
+        forward = f"{name} from {origin}" if name and origin else heard["forward"]
+        reply = self.api.question_answer(self.root, self.session_id, qid, forward, None)
         if reply.get("status") == "read_back":
             self.current["stage"] = "confirm"
             self.agent.reset_reasks(qid)
@@ -150,6 +171,8 @@ class DialogueFlow:
         if kind == "unclear":
             return self._bundle_unclear(text)
         cur["names"], cur["origins"] = parsed["names"], parsed["origins"]
+        cur["count"] = parsed.get("count") if parsed["kind"] == "same" else None
+        cur["same"] = parsed["kind"] == "same"
         if any(origin is None for origin in cur["origins"]):
             cur["stage"] = "origin"
             self.agent.reset_reasks(cur["event"])
@@ -187,8 +210,11 @@ class DialogueFlow:
             return self._unbundle(cur["qids"], [r.get("status") == "read_back" for r in replies])
         cur["stage"] = "confirm"
         self.agent.reset_reasks(cur["event"])
-        core = bundle.combined_read_back(where_words(cur["cell"]), cur["names"], cur["origins"])
-        return _speak(self.agent.read_back_line(cur["event"], core), "read_back", replies[0].get("op_key"))
+        return _speak(self._bundle_claim(), "read_back", replies[0].get("op_key"))
+
+    def _bundle_claim(self) -> str:
+        cur = self.current
+        return bundle.combined_read_back(where_words(cur["cell"]), cur["names"], cur["origins"], cur.get("count"))
 
     def _unbundle(self, qids: list[str], in_read_back: list[bool]) -> dict:
         """The coordinator did not accept a bundled answer: nothing is kept, the parts are asked one by one."""
@@ -199,20 +225,43 @@ class DialogueFlow:
         return self._open_next()
 
     def _bundle_confirm(self, text: str) -> dict:
+        """yes: commit; a different count (same-name bundles only): claim again; no: one by one; else re-ask once."""
         cur = self.current
         intent = extract_by_rule(text)["intent"]
-        if intent == "yes":
-            done = [self.api.question_confirm(self.root, self.session_id, qid, "yes") for qid in cur["qids"]]
-            if all(r.get("status") in ("committed", "already_committed") for r in done):
-                self.current = None
-                return _speak(self.agent.recorded_line(cur["event"]), "status", done[0].get("op_key"))
-            return self._defer_bundle(text, "a part was not committed")
+        stated = bundle.parse_count(text)
+        claimed = cur.get("count") or len(cur["qids"])
+        if cur.get("same") and stated and intent != "yes" and stated != claimed:
+            cur["count"] = stated
+            self.agent.reset_reasks(cur["event"])
+            return _speak(self._bundle_claim(), "read_back")
+        if intent == "yes" or (cur.get("same") and stated and stated == claimed):
+            return self._bundle_commit(text)
         if intent == "no":
             self.unbundled.update(cur["qids"])
             for qid in cur["qids"]:
                 self.api.question_confirm(self.root, self.session_id, qid, "no")
             return self._open_next()
         return self._bundle_unclear(text)
+
+    def _bundle_commit(self, text: str) -> dict:
+        """Each detected part is confirmed on its own; a higher count adds operator-stated parts, a lower one leaves
+        the surplus questions for the desktop (nothing is deleted)."""
+        cur = self.current
+        qids, claimed = cur["qids"], cur.get("count") or len(cur["qids"])
+        keep, surplus = qids[:claimed], qids[claimed:]
+        done = [self.api.question_confirm(self.root, self.session_id, qid, "yes") for qid in keep]
+        ok = all(r.get("status") in ("committed", "already_committed") for r in done)
+        for qid in surplus:
+            self.api.question_defer(self.root, self.session_id, qid, "dialogue: operator counted fewer parts")
+        extra = claimed - len(qids)
+        if ok and extra > 0:
+            cell = f"cell-{str(cur['cell']).removeprefix('cell-')}"
+            said = {"count_stated": claimed, "detected": len(qids), "part_name": cur["names"][0], "origin": cur["origins"][0]}
+            ok = self._write_note("bundle_extra", [cur["names"][0]] * extra, cell, said, extra_key=str(claimed))
+        if not ok:
+            return self._defer_bundle(text, "a part was not committed")
+        self.current = None
+        return _speak(self.agent.recorded_line(cur["event"]), "status", done[0].get("op_key") if done else None)
 
     # ------------------------------------------------------------------ end of the video's dialogue
     # What is said here has no coordinator question kind (the frozen answer plan knows only parts). It goes through
@@ -233,8 +282,8 @@ class DialogueFlow:
         self.current = None
         return _speak(f"{lead} {ALL_DONE}".strip(), "status")
 
-    def _write_note(self, kind: str, labels: list[str], location: str, said: dict) -> bool:
-        key = hashlib.sha256(json.dumps([kind, labels, location], ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+    def _write_note(self, kind: str, labels: list[str], location: str, said: dict, extra_key: str = "") -> bool:
+        key = hashlib.sha256(json.dumps([kind, labels, location, extra_key], ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
         reply = self.api.closing_write(self.root, self.session_id, f"CLOSE-{key}", labels, location, json.dumps(said, ensure_ascii=False))
         if reply.get("status") != "committed":
             return False

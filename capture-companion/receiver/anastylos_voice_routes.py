@@ -290,6 +290,9 @@ class VoiceRoutes:
             if self.config.dialogue:
                 turn = {"session": agent_session, **({"command": command} if command else {"text": text})}
                 status, result = self._session_ui("/api/dialogue/turn", turn)
+                if status == 200 and isinstance(result, dict) and result.get("handled") and result.get("ignored"):
+                    self._journal(session_id, "/api/dialogue/turn", "ignored_echo", None, time.monotonic() - began)
+                    return self.h._send_json(HTTPStatus.OK, {"status": "ignored", "speak": None})
                 if status == 200 and isinstance(result, dict) and result.get("handled") and result.get("speak"):
                     voice.last_speak = result["speak"]
                     self._journal(session_id, "/api/dialogue/turn", "ok", None, time.monotonic() - began)

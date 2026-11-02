@@ -64,9 +64,10 @@ class DialogueAgent:
         return {"speak": text, "type": picked, "variant": index, "source": source,
                 "observed": {"event_type": event["type"], "cell": event.get("cell")}}
 
-    def read_back_line(self, event_id: str, core: str) -> str:
-        """The coordinator's own read-back (``core``, unchanged) behind a persona lead-in."""
-        return self._say("read_back", event_id, {"core": core})[0]
+    def read_back_line(self, event_id: str, core: str, lead: bool = False) -> str:
+        """The coordinator's own read-back (``core``, unchanged). A persona lead-in only when asked for: follow-up
+        turns stay short."""
+        return self._say("read_back", event_id, {"core": core})[0] if lead else core
 
     def recorded_line(self, event_id: str) -> str:
         self._event(event_id)["status"] = "done"

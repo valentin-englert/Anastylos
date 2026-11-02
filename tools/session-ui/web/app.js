@@ -1001,7 +1001,8 @@ async function loadDrawings() {
     const selected = picker.value;
     picker.replaceChildren(...view.specs.map((name) => new Option(name, name)));
     if (view.specs.includes(selected)) picker.value = selected;
-    setText("drawings-state", view.specs.length ? `${view.jobs.length} drawing job(s).` : "No drawing specs in this session.");
+    $("drawing-start").disabled = !view.specs.length;
+    setText("drawings-state", view.jobs.length ? `${view.jobs.length} drawing job(s).` : "No drawings in this session yet.");
     $("drawing-jobs").replaceChildren(...view.jobs.map(drawingCard));
     speakDrawingChanges(view.jobs);
     const waiting = await pollCaptures(view.jobs);

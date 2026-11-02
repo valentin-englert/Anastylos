@@ -46,4 +46,24 @@ class SpeechSegmenterTest {
         assertThat(out).isNotEmpty()
         assertThat(out[0].size).isAtMost(80 * SpeechSegmenter.BLOCK_SAMPLES + 3 * SpeechSegmenter.BLOCK_SAMPLES)
     }
+
+    @Test
+    fun aLongerHangKeepsASentenceTogetherAcrossAPause() {
+        val seg = SpeechSegmenter().apply { hangMs = SpeechSegmenter.CONVERSATION_HANG_MS }
+        run(seg, 30, 50)
+        assertThat(run(seg, 6000, 10)).isEmpty()
+        // A 1.0 s pause would have cut the sentence at the default 0.8 s hang.
+        assertThat(run(seg, 30, 10)).isEmpty()
+        assertThat(run(seg, 6000, 10)).isEmpty()
+        assertThat(run(seg, 30, 14)).hasSize(1)
+    }
+
+    @Test
+    fun theDefaultHangStillCutsAfterEightTenthsOfASecond() {
+        val seg = SpeechSegmenter()
+        run(seg, 30, 50)
+        run(seg, 6000, 10)
+        assertThat(run(seg, 30, 8)).hasSize(1)
+        assertThat(SpeechSegmenter.CONVERSATION_HANG_MS - SpeechSegmenter.DEFAULT_HANG_MS).isEqualTo(600.0)
+    }
 }

@@ -16,7 +16,8 @@ class SpeechSegmenter(
     private val blockSamples: Int = BLOCK_SAMPLES,
     private val startFactor: Double = 3.0,
     private val minFloor: Double = 0.004,
-    private val hangMs: Double = 800.0,
+    /** Quiet that ends a segment; the controller lengthens it inside the conversation window. */
+    var hangMs: Double = DEFAULT_HANG_MS,
     private val maxMs: Double = 8000.0,
     private val minMs: Double = 400.0,
     private val prerollBlocks: Int = 3,
@@ -81,6 +82,12 @@ class SpeechSegmenter(
 
     companion object {
         const val SAMPLE_RATE = 16_000
+
+        /** About one breath between two words of a sentence is shorter than this. */
+        const val DEFAULT_HANG_MS = 800.0
+
+        /** Inside the conversation window the operator talks in sentences: wait longer before cutting. */
+        const val CONVERSATION_HANG_MS = 1_400.0
         /** 100 ms at 16 kHz. */
         const val BLOCK_SAMPLES = 1_600
 

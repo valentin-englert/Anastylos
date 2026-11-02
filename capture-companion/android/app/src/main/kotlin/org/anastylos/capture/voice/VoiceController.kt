@@ -223,6 +223,11 @@ class VoiceController(
                     segmenter.reset()
                     continue
                 }
+                segmenter.hangMs = if (conversation.isOpen(SystemClock.elapsedRealtime())) {
+                    SpeechSegmenter.CONVERSATION_HANG_MS
+                } else {
+                    SpeechSegmenter.DEFAULT_HANG_MS
+                }
                 val samples = segmenter.feed(buffer)
                 if (blocks % 50 == 0L) _state.update { it.copy(backgroundRms = segmenter.backgroundRms) }
                 if (samples != null) {

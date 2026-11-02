@@ -24,6 +24,8 @@
     <button type="button" id="talk-button" aria-describedby="voice-hint">Hold to talk</button>
     <label><input type="checkbox" id="speak-toggle" checked> Speak</label>
     <label><input type="checkbox" id="wake-toggle"> Wake word</label>
+    <label>Name <input type="text" id="agent-name" maxlength="24" size="9" placeholder="Muse" autocomplete="off"></label>
+    <label>Style <select id="persona-select"><option value="serious">Serious</option><option value="playful">Playful</option><option value="unhinged">Unhinged</option></select></label>
     <span class="hint" id="voice-hint">Hold the button or the space bar, or switch on “Listen for Muse” and start with “Muse …” or “Meta …”. While listening, every spoken phrase in the room is sent to Muse Voice Transcribe; phrases without the wake word are discarded and nothing is stored.</span>
     <p class="state" id="voice-state" role="status"></p>
   </div>

@@ -1,0 +1,378 @@
+{
+ "none": {
+  "choice_correct": 0,
+  "choice_total": 4,
+  "extract_correct": 0,
+  "extract_total": 10,
+  "ungrounded_outputs": 0,
+  "not_ok_status": [
+   "C1",
+   "C2",
+   "C3",
+   "C4",
+   "E1",
+   "E2",
+   "E3",
+   "E4",
+   "E5",
+   "E6",
+   "E7",
+   "E8",
+   "E9",
+   "E10"
+  ],
+  "latency_median_s": null,
+  "latency_max_s": null,
+  "rows": [
+   {
+    "id": "C1",
+    "status": "provider_error",
+    "got": null,
+    "expect": "none",
+    "ok": false,
+    "latency_s": 1.0
+   },
+   {
+    "id": "C2",
+    "status": "provider_error",
+    "got": null,
+    "expect": "part_removed",
+    "ok": false,
+    "latency_s": 0.406
+   },
+   {
+    "id": "C3",
+    "status": "provider_error",
+    "got": null,
+    "expect": "read_back",
+    "ok": false,
+    "latency_s": 1.672
+   },
+   {
+    "id": "C4",
+    "status": "provider_error",
+    "got": null,
+    "expect": "need_photo",
+    "ok": false,
+    "latency_s": 0.782
+   },
+   {
+    "id": "E1",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 1.343
+   },
+   {
+    "id": "E2",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.625
+   },
+   {
+    "id": "E3",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.625
+   },
+   {
+    "id": "E4",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.657
+   },
+   {
+    "id": "E5",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 1.484
+   },
+   {
+    "id": "E6",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.766
+   },
+   {
+    "id": "E7",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.687
+   },
+   {
+    "id": "E8",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.438
+   },
+   {
+    "id": "E9",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.985
+   },
+   {
+    "id": "E10",
+    "status": "provider_error",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 0.968
+   }
+  ]
+ },
+ "low": {
+  "choice_correct": 4,
+  "choice_total": 4,
+  "extract_correct": 9,
+  "extract_total": 10,
+  "ungrounded_outputs": 0,
+  "not_ok_status": [
+   "E4"
+  ],
+  "latency_median_s": 3.688,
+  "latency_max_s": 5.86,
+  "rows": [
+   {
+    "id": "C1",
+    "status": "ok",
+    "got": "none",
+    "expect": "none",
+    "ok": true,
+    "latency_s": 3.688
+   },
+   {
+    "id": "C2",
+    "status": "ok",
+    "got": "part_removed",
+    "expect": "part_removed",
+    "ok": true,
+    "latency_s": 3.625
+   },
+   {
+    "id": "C3",
+    "status": "ok",
+    "got": "read_back",
+    "expect": "read_back",
+    "ok": true,
+    "latency_s": 5.094
+   },
+   {
+    "id": "C4",
+    "status": "ok",
+    "got": "need_photo",
+    "expect": "need_photo",
+    "ok": true,
+    "latency_s": 4.265
+   },
+   {
+    "id": "E1",
+    "status": "ok",
+    "got": {
+     "intent": "answer",
+     "origin": null,
+     "part_name": "battery cover",
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "answer",
+     "origin": null,
+     "part_name": "battery cover",
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 3.375
+   },
+   {
+    "id": "E2",
+    "status": "ok",
+    "got": {
+     "intent": "answer",
+     "origin": "left corner",
+     "part_name": "small screw",
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "answer",
+     "origin": "left corner",
+     "part_name": "small screw",
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 5.86
+   },
+   {
+    "id": "E3",
+    "status": "ok",
+    "got": {
+     "intent": "answer",
+     "origin": "the top",
+     "part_name": "antenna",
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "answer",
+     "origin": "the top",
+     "part_name": "antenna",
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 3.671
+   },
+   {
+    "id": "E4",
+    "status": "timeout",
+    "got": {},
+    "after_grounding": {},
+    "ungrounded": [],
+    "ok": false,
+    "latency_s": 6.032
+   },
+   {
+    "id": "E5",
+    "status": "ok",
+    "got": {
+     "intent": "yes",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "yes",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 2.953
+   },
+   {
+    "id": "E6",
+    "status": "ok",
+    "got": {
+     "intent": "no",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "no",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 4.312
+   },
+   {
+    "id": "E7",
+    "status": "ok",
+    "got": {
+     "intent": "unsure",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "unsure",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 3.641
+   },
+   {
+    "id": "E8",
+    "status": "ok",
+    "got": {
+     "intent": "unclear",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "unclear",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 4.437
+   },
+   {
+    "id": "E9",
+    "status": "ok",
+    "got": {
+     "intent": "skip",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "skip",
+     "origin": null,
+     "part_name": null,
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 3.688
+   },
+   {
+    "id": "E10",
+    "status": "ok",
+    "got": {
+     "intent": "answer",
+     "origin": "the camera body",
+     "part_name": "the lens ring",
+     "storage": null
+    },
+    "after_grounding": {
+     "intent": "answer",
+     "origin": "the camera body",
+     "part_name": "the lens ring",
+     "storage": null
+    },
+    "ungrounded": [],
+    "ok": true,
+    "latency_s": 5.125
+   }
+  ]
+ },
+ "calls_used": 28
+}

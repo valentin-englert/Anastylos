@@ -1,0 +1,187 @@
+{
+  "schema": "anastylos-question-catalog@1",
+  "slots": {
+    "part_removed": ["where"],
+    "origin_unseen": [],
+    "part_stored": ["name", "where"],
+    "unclear_answer": [],
+    "defer_to_desktop": [],
+    "need_photo": [],
+    "read_back": ["core"],
+    "recorded": [],
+    "ack": []
+  },
+  "phrases": {
+    "part_removed": {
+      "serious": [
+        "I noticed you moved a part to {where}. What do you call it?",
+        "A part was moved to {where}. What is its name?",
+        "I saw a part go to {where}. What do you call it?",
+        "Something was moved to {where}. What should I name it?",
+        "A part has been placed at {where}. What is it called?"
+      ],
+      "playful": [
+        "I noticed you moved a part to {where}. What do you call it?",
+        "Ooh, a part just landed on {where}! What's its name?",
+        "Something new on {where}. Who is this little guy?",
+        "I spotted a part heading to {where}. What do we call it?",
+        "A part showed up at {where}. Want to introduce it to me?"
+      ],
+      "unhinged": [
+        "I noticed you moved a part to {where}. What do you call it?",
+        "Psst, buddy, a part just snuck over to {where}. Name it, I dare you!",
+        "Bold move putting something on {where}. What's it called, you legend?",
+        "Hold on, my friend, that thing on {where} needs a name. Hit me!",
+        "Okay, you cheeky genius, what is that thing you parked on {where}?"
+      ]
+    },
+    "origin_unseen": {
+      "serious": [
+        "Your hand blocked my view. Where did that come from?",
+        "I could not see where that part came from. Where was it?",
+        "My view was blocked. Where did you take it from?",
+        "I missed where that part was removed. Where did it come from?"
+      ],
+      "playful": [
+        "Your hand blocked my view. Where did that come from?",
+        "Your hand photobombed me! Where did that part come from?",
+        "I blinked and missed it. Where did you take it from?",
+        "Sneaky hand, I lost sight of it. Where was the part before?"
+      ],
+      "unhinged": [
+        "Your hand blocked my view. Where did that come from?",
+        "Your big old hand was in the way, buddy! Where did it come from?",
+        "Magician hands! I missed the trick. Where did you pull it from?",
+        "I swear I was watching, but your hand won. Where was that part?"
+      ]
+    },
+    "part_stored": {
+      "serious": [
+        "Understood. {name} is stored {where}.",
+        "Noted: {name} is now stored {where}.",
+        "{name} is stored {where}.",
+        "I have {name} stored {where}."
+      ],
+      "playful": [
+        "Understood. {name} is stored {where}.",
+        "Tucked away! {name} is {where}.",
+        "{name} has found a home {where}.",
+        "Cozy! {name} sits {where} now."
+      ],
+      "unhinged": [
+        "Understood. {name} is stored {where}.",
+        "{name} is tucked in {where} like a baby, buddy.",
+        "Look at that, {name} {where}. Living its best life.",
+        "{name} {where}. Sleep tight, little fella."
+      ]
+    },
+    "unclear_answer": {
+      "serious": [
+        "I didn't quite catch that—could you please repeat it?",
+        "I didn't quite catch that—could you please repeat it?",
+        "I didn't quite catch that—could you please repeat it?",
+        "I didn't quite catch that—could you please repeat it?"
+      ],
+      "playful": [
+        "I didn't quite catch that—could you please repeat it?",
+        "Sorry, my ears glitched. Could you please repeat it?",
+        "That one slipped past me. Could you please repeat it?",
+        "Say that once more for me? Could you please repeat it?"
+      ],
+      "unhinged": [
+        "I didn't quite catch that—could you please repeat it?",
+        "Buddy, my ears took a coffee break. Could you please repeat it?",
+        "I heard words, but they were slippery. Could you please repeat it?",
+        "Once more with feeling, my friend? Could you please repeat it?"
+      ]
+    },
+    "defer_to_desktop": {
+      "serious": [
+        "Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Why don't we resolve this later on the desktop? I'll make a note of the uncertainty."
+      ],
+      "playful": [
+        "Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Let's not fight about it. Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Tricky one! Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Moving on for now. Why don't we resolve this later on the desktop? I'll make a note of the uncertainty."
+      ],
+      "unhinged": [
+        "Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "We're clearly not speaking the same language, buddy. Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Okay, that one beat us both. Why don't we resolve this later on the desktop? I'll make a note of the uncertainty.",
+        "Truce, my friend! Why don't we resolve this later on the desktop? I'll make a note of the uncertainty."
+      ]
+    },
+    "need_photo": {
+      "serious": [
+        "I need a photo of the sheet to continue. Please take one.",
+        "Please take a photo of the whole sheet so I can see it.",
+        "I have no current photo. Could you take one of the sheet?",
+        "A new photo of the sheet would help. Please take one."
+      ],
+      "playful": [
+        "I need a photo of the sheet to continue. Please take one.",
+        "Picture time! Please snap the whole sheet for me.",
+        "I'm flying blind here. Could you photograph the sheet?",
+        "Say cheese! One photo of the sheet, please."
+      ],
+      "unhinged": [
+        "I need a photo of the sheet to continue. Please take one.",
+        "Paparazzi mode, buddy! Snap the whole sheet for me.",
+        "I'm blind as a bat without a picture. Photo of the sheet, please!",
+        "Give the sheet its close-up, my friend. One photo, please."
+      ]
+    },
+    "read_back": {
+      "serious": [
+        "{core}",
+        "Let me confirm. {core}",
+        "Please check this. {core}",
+        "Before I write anything down. {core}",
+        "To be sure I understood. {core}"
+      ],
+      "playful": [
+        "{core}",
+        "Let me say it back. {core}",
+        "Quick check before I write it down. {core}",
+        "Did I get that right? {core}",
+        "Double-checking. {core}"
+      ],
+      "unhinged": [
+        "{core}",
+        "Let me say it back like a proud parrot. {core}",
+        "Okay buddy, truth time. {core}",
+        "Don't let me embarrass myself. {core}",
+        "Moment of truth, my friend. {core}"
+      ]
+    },
+    "recorded": {
+      "serious": [
+        "Recorded.",
+        "Done, it is recorded.",
+        "That is saved.",
+        "Noted and recorded."
+      ],
+      "playful": [
+        "Recorded.",
+        "Saved. Easy!",
+        "In the books!",
+        "Got it, all saved."
+      ],
+      "unhinged": [
+        "Recorded.",
+        "Locked in, buddy!",
+        "Chiseled in stone. Well, in memory.",
+        "Done and dusted, my friend."
+      ]
+    },
+    "ack": {
+      "serious": ["Okay.", "Understood.", "Got it.", "One moment."],
+      "playful": ["Okay!", "Got it.", "On it.", "One sec."],
+      "unhinged": ["Okay, buddy.", "Got it, boss.", "On it!", "Hold that thought."]
+    }
+  }
+}

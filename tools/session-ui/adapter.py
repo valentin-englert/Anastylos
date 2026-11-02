@@ -54,6 +54,7 @@ import selected_guide  # noqa: E402
 import selection  # noqa: E402
 import states as st  # noqa: E402  (tools/live)
 from lock import LockHeld  # noqa: E402
+from journal import Journal  # noqa: E402
 from state import SessionError, SessionState  # noqa: E402
 
 SELECTIONS_DIR = "selections"
@@ -169,6 +170,11 @@ def question_overview(root: Path, session_id: str) -> dict:
     """Per-question id, kind, phase and latest state; read-only (no prompt is opened)."""
     state = _load_state(root, session_id)
     states = ask_loop.question_states(state)
+    reasons = {}
+    journal = Journal(state.root / "live" / "journal.jsonl")
+    for record in journal.load():
+        if record.get("kind") == "question_state" and record.get("state"):
+            reasons[record["question_id"]] = record.get("reason")
     questions: dict[str, dict] = {}
     for phase in state.doc["phases"]:
         if phase["status"] != "done":
@@ -185,7 +191,7 @@ def question_overview(root: Path, session_id: str) -> dict:
             if qid:
                 questions[qid] = {"id": qid, "kind": question.get("kind"),
                                   "phase": phase["tag"], "cell": question.get("cell"),
-                                  "state": states.get(qid, "OPEN")}
+                                  "state": states.get(qid, "OPEN"), "reason": reasons.get(qid)}
     return {"questions": [questions[qid] for qid in sorted(questions)], "states": states}
 
 

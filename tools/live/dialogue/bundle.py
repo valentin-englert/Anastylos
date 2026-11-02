@@ -62,8 +62,10 @@ def _clean_name(text: str) -> str | None:
     text = re.sub(r"\s*\b(?:from|out of)$", "", text, flags=re.IGNORECASE).strip(" ,.;:-!?")
     text = _ARTICLE.sub("", text).strip()
     words = re.findall(r"[A-Za-z0-9'-]+", text)
-    if not words or len(words) > MAX_NAME_WORDS or set(w.lower() for w in words) <= _NOISE:
-        return None
+    numbers = set(NUMBER_WORDS)
+    if (not words or len(words) > MAX_NAME_WORDS or set(w.lower() for w in words) <= _NOISE
+            or all(w.lower() in numbers or w.isdigit() for w in words)):
+        return None  # a count alone is no name
     return text
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sys
 import threading
@@ -22,13 +23,20 @@ from catalog.selector import where_words  # noqa: E402
 from dialogue import bundle, settings
 from dialogue.bundle import split_items as bundle_split  # noqa: E402
 from dialogue.agent import DialogueAgent  # noqa: E402
-from dialogue.executor import _NOISE, Executor, extract_by_rule  # noqa: E402
+from dialogue.executor import _NOISE, Executor, MuseClient, extract_by_rule  # noqa: E402
 
 ALL_DONE = "There are no more questions."
 SCREEN_HINT = " Please look at the screen for the options."
 UNAVAILABLE = "The workstation could not handle that. Please use the screen."
 _FLOWS: dict[tuple[str, str], "DialogueFlow"] = {}
 _GUARD = threading.Lock()
+
+
+def _default_executor(root: Path, session_id: str) -> Executor:
+    """The model extracts only where the rules cannot tell; short timeout, no retries, no key in this process: rules only."""
+    if not os.environ.get("MODEL_API_KEY", "").strip():
+        return Executor(None)
+    return Executor(MuseClient(timeout_s=6.0, retries=0, usage_log=Path(root) / session_id / "dialogue-muse-usage.jsonl"), "low")
 
 
 def flow_for(root: Path, session_id: str, api) -> "DialogueFlow":
@@ -44,9 +52,9 @@ def _speak(text: str, kind: str, basis_ref: str | None = None) -> dict:
 
 
 class DialogueFlow:
-    def __init__(self, root: Path, session_id: str, api):
+    def __init__(self, root: Path, session_id: str, api, executor: Executor | None = None):
         self.root, self.session_id, self.api = Path(root), session_id, api
-        self.agent = DialogueAgent(settings.load(self.root)["persona"], Executor(None),
+        self.agent = DialogueAgent(settings.load(self.root)["persona"], executor or _default_executor(root, session_id),
                                    open_items_path=self.root / session_id / "dialogue-open-items.jsonl")
         self.current: dict | None = None
         self.unbundled: set[str] = set()
@@ -55,21 +63,45 @@ class DialogueFlow:
         self._marker = self.root / session_id / "dialogue-pending-open"  # written when a video finished processing
         self.last_speak: dict | None = None
         self._lead_given = False
+        self._trace: dict = {}
+        self._turns_log = self.root / session_id / "dialogue-turns.jsonl"
 
     # ------------------------------------------------------------------ entry
 
     def turn(self, command: str | None, text: str | None) -> dict:
-        """{handled, speak}; ``handled`` False means: not part of the question round (the guide may answer)."""
+        """{handled, speak}; ``handled`` False means: not part of the question round (the guide may answer).
+
+        Every turn is logged locally (``dialogue-turns.jsonl``: no audio, no key) so a failed exchange can be read back."""
+        stage = None if self.current is None else f"{self.current['mode']}/{self.current['stage']}"
+        self._trace = {}
+        result = self._turn(command, text)
+        self._log_turn(command, text, stage, result)
+        return result
+
+    def _log_turn(self, command, text, stage, result) -> None:
+        record = {"time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "stage": stage, "command": command, "transcript": text,
+                  **self._trace, "handled": result.get("handled"), "ignored": result.get("ignored"),
+                  "reply": (result.get("speak") or {}).get("text")}
+        try:
+            with open(self._turns_log, "a", encoding="utf-8", newline="\n") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+
+    def _turn(self, command: str | None, text: str | None) -> dict:
         self.agent.set_persona(settings.load(self.root)["persona"])
         if text and self._is_echo(text):
             return {"handled": True, "speak": None, "ignored": "echo of the agent's own last line"}
         if command == "next_question" and self.current is not None and self.last_speak:
             return {"handled": True, "speak": self.last_speak}  # a bare wake word while a question is open: say it again
-        if command == "next_question" or (self.current is None and self._marker.exists() and text is not None):
+        if command == "next_question":
             self._marker.unlink(missing_ok=True)
             return self._said(self._open_next())
         if self.current is None:
-            return {"handled": False}
+            # unresolved questions remain: speech continues the question round, it never falls through to the guide
+            self._marker.unlink(missing_ok=True)
+            speak = self._open_next(guide_ok=text is not None)
+            return {"handled": False} if speak is None else self._said(speak)
         handler = getattr(self, f"_{self.current['mode']}_{self.current['stage']}")
         return self._said(handler(text or ""))
 
@@ -87,13 +119,20 @@ class DialogueFlow:
 
     # ------------------------------------------------------------------ opening a question
 
-    def _open_next(self) -> dict:
+    def _advance(self, line: str) -> dict:
+        """The same turn goes on with the next question (or the closing questions) after a record or a deferral."""
+        following = self._open_next()
+        if following["kind"] == "status":
+            return _speak(f"{line} {following['text']}", "status")
+        return _speak(f"{line} Next: {following['text']}", following["kind"], following["basis_ref"])
+
+    def _open_next(self, guide_ok: bool = False) -> dict | None:
         result = self.api.question_next(self.root, self.session_id)
         if result.get("done"):
             if not self._closing_marker.exists():
                 return self._closing_assemblies_ask()
             self.current = None
-            return _speak(ALL_DONE, "status")
+            return None if guide_ok else _speak(ALL_DONE, "status")
         qid = result["question_id"]
         if result.get("stage") == "confirm":
             self.current = {"mode": "single", "stage": "confirm", "qid": qid}
@@ -119,6 +158,7 @@ class DialogueFlow:
     def _single_answer(self, text: str) -> dict:
         qid = self.current["qid"]
         heard = self.agent.on_answer(qid, text)
+        self._trace.update(parser=heard.get("intent") or ("closed" if heard["closed"] else "unclear"), source=heard.get("source"))
         if heard["closed"]:
             return self._left_for_desktop([qid], heard["speak"])
         if heard["speak"]:
@@ -141,7 +181,7 @@ class DialogueFlow:
         status = reply.get("status")
         if status in ("committed", "already_committed"):
             self.current = None
-            return _speak(self.agent.recorded_line(qid), "status", reply.get("op_key"))
+            return self._advance(self.agent.recorded_line(qid))
         if status == "asked_again":
             self.current = {"mode": "single", "stage": "answer", "qid": qid}
             self.agent.reset_reasks(qid)
@@ -155,13 +195,19 @@ class DialogueFlow:
         for qid in qids:
             self.api.question_defer(self.root, self.session_id, qid, "dialogue: left for the desktop")
         self.current = None
-        return _speak(line, "status")
+        return self._advance(line)
 
     # ------------------------------------------------------------------ several parts in one cell
 
     def _bundle_label(self, text: str) -> dict:
         cur = self.current
         parsed = bundle.parse(text, len(cur["qids"]), cur["list_mode"])
+        self._trace.update(parser=parsed["kind"], source="rule")
+        if parsed["kind"] == "unclear" and extract_by_rule(text)["intent"] == "yes" and not cur.get("asked_name"):
+            cur["asked_name"] = True  # "yes, the same": now the name
+            return _speak(self.agent.say("bundle_name", cur["event"]), "question")
+        if parsed["kind"] == "unclear":
+            parsed = self._model_label(text, len(cur["qids"])) or parsed
         kind = parsed["kind"]
         if kind in ("unsure", "skip"):
             return self._defer_bundle(text, f"operator {kind}")
@@ -179,9 +225,30 @@ class DialogueFlow:
             return _speak(self.agent.say("origin_unseen", cur["event"]), "question")
         return self._bundle_submit()
 
+    def _model_label(self, text: str, count: int) -> dict | None:
+        """Where the rules cannot parse a bundle answer: strict model output, checked against the transcript."""
+        fields, source, dropped = self.agent.extract(text, "bundle", tag=self.current["event"], need_name=True)
+        if source != "muse":
+            return None
+        self._trace.update(source="model", parser_model=fields["intent"], dropped=dropped)
+        if fields["intent"] in ("unsure", "skip"):
+            return {"kind": fields["intent"]}
+        name = bundle._clean_name(fields["part_name"] or "") if fields["intent"] == "answer" else None
+        if not name:
+            return None
+        origin = bundle._ARTICLE.sub("", fields["origin"] or "").strip() or None
+        return {"kind": "same", "names": [bundle.singular(name)] * count, "origins": [origin] * count, "count": fields["count"]}
+
     def _bundle_origin(self, text: str) -> dict:
         cur = self.current
         parsed = bundle.parse_origin(text)
+        self._trace.update(parser=parsed["kind"], source="rule")
+        if parsed["kind"] == "unclear":
+            fields, source, dropped = self.agent.extract(text, "origin", tag=cur["event"])
+            origin = bundle._ARTICLE.sub("", fields["origin"] or "").strip()
+            if source == "muse" and fields["intent"] == "answer" and origin:
+                parsed = {"kind": "origin", "origin": origin}
+                self._trace.update(source="model", dropped=dropped)
         if parsed["kind"] in ("unsure", "skip"):
             return self._defer_bundle(text, f"operator {parsed['kind']}")
         if parsed["kind"] == "unclear":
@@ -261,7 +328,7 @@ class DialogueFlow:
         if not ok:
             return self._defer_bundle(text, "a part was not committed")
         self.current = None
-        return _speak(self.agent.recorded_line(cur["event"]), "status", done[0].get("op_key") if done else None)
+        return self._advance(self.agent.recorded_line(cur["event"]))
 
     # ------------------------------------------------------------------ end of the video's dialogue
     # What is said here has no coordinator question kind (the frozen answer plan knows only parts). It goes through

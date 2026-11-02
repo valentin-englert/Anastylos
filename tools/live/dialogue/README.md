@@ -10,11 +10,12 @@ as `forward` text, the coordinator reads it back, and only its read-back plus "y
 - `settings.py`: persona and agent name per workspace (`dialogue-settings.json`); session UI `GET/POST /api/dialogue/settings`
   (also what the phone reads: `wake_words`, `asr_keywords`, `mishearings`, `persona`). `wake.py`: name -> keywords,
   mishearings, wake-word stripping. No name: "Muse" and "Meta".
-- `executor.py`: Muse (`choose_question`, `extract_fields`, effort `none`/`low`, strict JSON). Muse writes no text;
+- `executor.py`: Muse (`choose_question`, `extract_fields`, effort `minimal`/`low` (`none` is rejected by the API), strict JSON). Muse writes no text;
   chosen type must be allowed, extracted words must be words the operator said (`ground`). Any failure -> rules.
 - `agent.py`: catalog questions need no model call (Muse is asked only when a question was asked < 8 s ago or several
   types are allowed). One re-ask, then the defer line plus an open item (`open_items.jsonl`), no write, event closed.
   `on_answer` takes an `ack` callback (called before any model call) and returns per-stage timing.
-- `eval/`: pre-registered live batch (`PREREG.md`, `cases.json`, `run_batch.py`).
+- `eval/`: pre-registered live batch (`PREREG.md`, `cases.json`, `run_batch.py`, `RESULTS.md`). Result: `low` is accurate
+  but ~3.7 s per call, so the default wiring is rules only (`Executor(None)`); Muse stays advisory until a faster effort proves out.
 
 Tests: `python -m unittest discover -s tests` from `tools/live` (synthetic, fake model). Not validated on hardware.

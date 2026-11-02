@@ -21,7 +21,7 @@ from jsonschema_subset import validate  # noqa: E402
 from meta import ENDPOINT, KEY_ENV, TransportFailure, TransportTimeout, UrllibTransport, _retryable  # noqa: E402
 from provider_core import MODEL, _message_texts, make_error  # noqa: E402
 
-EFFORTS = ("none", "low")
+EFFORTS = ("minimal", "low")  # the API rejects "none" for this model (400, 2026-11-02 batch)
 CALL_TIMEOUT_S = 6.0
 INTENTS = ("answer", "yes", "no", "unsure", "skip", "unclear")
 FIELDS = ("part_name", "origin", "storage")

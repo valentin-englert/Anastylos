@@ -17,7 +17,8 @@ import explosion_jobs as jobs
 
 SCHEMA = "anastylos-explosion-layout@1"
 FILE = "explosion.json"
-LAYER_KEYS = {"job", "label", "view_side", "flip_horizontal", "confirmed_by_operator", "confirmed_at"}
+LAYER_KEYS = {"job", "label", "view_side", "flip_horizontal", "rotation_deg", "confirmed_by_operator", "confirmed_at"}
+ROTATIONS = (0, 90, 180, 270)
 MAX_TEXT = 120
 
 _FRONT = re.compile(r"\b(front|top|upper)\b", re.I)
@@ -62,7 +63,10 @@ def validate(doc) -> dict:
         for flag in ("flip_horizontal", "confirmed_by_operator"):
             if not isinstance(layer.get(flag), bool):
                 raise LayoutError(f"Layer {job}: {flag} must be true or false.")
+        if layer.get("rotation_deg", 0) not in ROTATIONS:
+            raise LayoutError(f"Layer {job}: rotation_deg must be one of {list(ROTATIONS)}.")
         entry = {"job": job, "label": _text(layer.get("label"), f"Layer {job}: label", allow_none=False),
+                 "rotation_deg": layer.get("rotation_deg", 0),
                  "view_side": _text(layer.get("view_side"), f"Layer {job}: view_side", allow_none=True),
                  "flip_horizontal": layer["flip_horizontal"], "confirmed_by_operator": layer["confirmed_by_operator"]}
         if layer.get("confirmed_at") is not None:
@@ -115,6 +119,12 @@ def _candidates(session_dir: Path) -> list[jobs.JobEvidence]:
     return sorted(best.values(), key=lambda e: (_rank(f"{e.part or ''} {e.job}"), e.job))
 
 
+def _landscape_rotation(evidence: jobs.JobEvidence) -> int:
+    """A proposal only: parts lie at any angle on the sheet, so a tall outline starts turned to lie like the others."""
+    x0, y0, x1, y1 = evidence.outline.bbox
+    return 90 if y1 - y0 > x1 - x0 else 0
+
+
 def propose(session_dir: Path) -> dict:
     """Write the skeleton from the existing drawn jobs; keep every layer (and confirmation) already in the spec.
 
@@ -133,7 +143,7 @@ def propose(session_dir: Path) -> dict:
         if evidence.job in known or (evidence.part or _STAMP.sub("", evidence.job), evidence.scope) in known_parts:
             continue
         layers.append({"job": evidence.job, "label": (evidence.part or evidence.job)[:MAX_TEXT], "view_side": evidence.view_side or None,
-                       "flip_horizontal": False, "confirmed_by_operator": False})
+                       "flip_horizontal": False, "rotation_deg": _landscape_rotation(evidence), "confirmed_by_operator": False})
         added.append(evidence.job)
     doc = {"schema": SCHEMA, "layers": layers,
            "note": (existing or {}).get("note") or "Proposed from the existing drawings; order, view side and flip need operator confirmation."}
@@ -153,6 +163,16 @@ def _require_layout(session_dir: Path) -> dict:
     if doc is None:
         raise LayoutError("There is no layout yet: propose one first.")
     return doc
+
+
+def rotate_layer(session_dir: Path, job: str) -> dict:
+    """Turn one layer by 90 degrees clockwise. The operator confirmed what was shown, so the layer needs confirming again."""
+    doc = _require_layout(session_dir)
+    layer = _layer(doc, job)
+    layer["rotation_deg"] = (layer.get("rotation_deg", 0) + 90) % 360
+    layer["confirmed_by_operator"] = False
+    layer.pop("confirmed_at", None)
+    return save(session_dir, doc)
 
 
 def confirm_layer(session_dir: Path, job: str, *, label: str | None = None, view_side: str | None = None,

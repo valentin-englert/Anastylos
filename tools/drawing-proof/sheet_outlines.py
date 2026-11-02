@@ -18,6 +18,7 @@ import cv2
 import numpy as np
 
 import draw
+import frames
 import segment
 import source
 from drawing_job import render_layered_svg
@@ -30,6 +31,9 @@ CLOSE_MM = 2.5
 OPEN_MM = 7.0  # wider than a cable, narrower than a part
 SEED_ERODE_MM = 3.5
 MIN_AREA_MM2 = 1000.0
+CANDIDATE_STRIDE_S = 1.0
+CANDIDATE_FRAMES = 12
+MAX_SKIN = 0.02
 
 
 def _ellipse(mm: float, ppm: float) -> np.ndarray:
@@ -116,6 +120,27 @@ def _named(masks: list[np.ndarray], parts: list[tuple[str, tuple[float, float]]]
     return named + [(f"part {i + 1}", m) for i, m in enumerate(masks) if i not in used]
 
 
+def best_view(video: Path) -> tuple[source.RectifiedFrame, int, list[np.ndarray]]:
+    """The candidate frame showing the most separate parts; hands are avoided first by the skin share, ties go to the least skin."""
+    sampled, _cache = frames.cached_sample(video, CANDIDATE_STRIDE_S, None)
+    area = tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM)
+    best = None
+    for candidate in frames.select(sampled, CANDIDATE_FRAMES):
+        if candidate.skin > MAX_SKIN:
+            continue
+        try:
+            _, rectified = source.rectify(video, candidate.frame_index, FULL_PAGE_MM, PX_PER_MM)
+        except source.SourceError:
+            continue
+        masks = find_outlines(rectified.image, area, PX_PER_MM)
+        score = (len(masks), -candidate.skin)
+        if masks and (best is None or score > best[0]):
+            best = (score, rectified, candidate.frame_index, masks)
+    if best is None:
+        raise SystemExit("no frame shows parts on the sheet without a hand")
+    return best[1], best[2], best[3]
+
+
 def _part(text: str) -> tuple[str, tuple[float, float]]:
     name, x, y = re.fullmatch(r"(.+)@([\d.]+),([\d.]+)", text).groups()
     return name, (float(x), float(y))
@@ -125,13 +150,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--session-dir", required=True, type=Path)
     parser.add_argument("--video", required=True, type=Path)
-    parser.add_argument("--frame", required=True, type=int)
+    parser.add_argument("--frame", required=True, help="video frame number, or auto")
     parser.add_argument("--part", action="append", type=_part, default=[], metavar="NAME@X,Y", help="proposed name and a sheet point (mm) inside it")
     args = parser.parse_args()
-    _, rectified = source.rectify(args.video, args.frame, FULL_PAGE_MM, PX_PER_MM)
-    area = tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM)
-    masks = find_outlines(rectified.image, area, PX_PER_MM)
-    origin = f"video frame {args.frame}"
+    if args.frame == "auto":
+        rectified, frame, masks = best_view(args.video)
+    else:
+        frame = int(args.frame)
+        _, rectified = source.rectify(args.video, frame, FULL_PAGE_MM, PX_PER_MM)
+        masks = find_outlines(rectified.image, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
+    origin = f"video frame {frame}"
     print(json.dumps([write_job(args.session_dir, rectified, mask, name, origin) for name, mask in _named(masks, args.part, PX_PER_MM)]))
 
 

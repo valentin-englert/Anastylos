@@ -21,6 +21,7 @@
         <button type="button" id="mode-exploded" aria-pressed="true">Exploded</button>
         <button type="button" id="mode-assembled" aria-pressed="false">Assembled</button>
       </div>
+      <button type="button" id="outlines-button">Find parts on the sheet</button>
       <button type="button" id="propose-button">Propose layout from drawings</button>
       <p class="state" id="view-state" role="status"></p>
     </div>
@@ -40,6 +41,7 @@
         <div><dt>Binding</dt><dd id="part-binding"></dd></div>
         <div><dt>View side</dt><dd id="part-view-side"></dd></div>
         <div><dt>Mirrored</dt><dd id="part-flip"></dd></div>
+        <div><dt>Turned</dt><dd id="part-rotation"></dd></div>
         <div><dt>Part (job)</dt><dd id="part-part"></dd></div>
         <div><dt>Drawing sha256</dt><dd id="part-sha"></dd></div>
       </dl>
@@ -59,6 +61,7 @@
         <p class="hint">Confirming records that label, view side, mirroring and the layer's current position are right. Moving a layer withdraws its confirmation.</p>
         <button type="submit" id="confirm-button">Confirm layer</button>
         <button type="button" id="unconfirm-button">Withdraw confirmation</button>
+        <button type="button" id="rotate-button">Turn 90°</button>
         <button type="button" id="move-up">Move up</button>
         <button type="button" id="move-down">Move down</button>
       </form>

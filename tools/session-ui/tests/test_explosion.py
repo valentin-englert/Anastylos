@@ -24,6 +24,11 @@ def drawing_svg(d: str) -> str:
             f'<path data-line-role="outline" d="{d}"/></g></svg>')
 
 
+class _Done:
+    def __init__(self, returncode=0, stderr=""):
+        self.returncode, self.stderr = returncode, stderr
+
+
 class ExplosionTest(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -123,6 +128,26 @@ class ExplosionTest(unittest.TestCase):
         view = explosion.explosion_view(self.root, "s1")
         self.assertIn("not valid JSON", view["error"])
         self.assertIsNone(view["manifest"])
+
+    def test_rotation_turns_the_drawing_and_clears_the_confirmation(self):
+        explosion.layout_action(self.root, "s1", {"action": "propose"})
+        view = explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "view_side": "inner"})
+        before = next(l for l in view["manifest"]["layers"] if l["job"] == "front-1")
+        self.assertEqual(before["outline_size_mm"], [60.0, 40.0])
+        view = explosion.layout_action(self.root, "s1", {"action": "rotate", "job": "front-1"})
+        after = next(l for l in view["manifest"]["layers"] if l["job"] == "front-1")
+        self.assertEqual((after["rotation_deg"], after["outline_size_mm"]), (90, [40.0, 60.0]))
+        self.assertFalse(after["confirmed_by_operator"])
+        self.assertIn("rotate(90 ", explosion.explosion_bytes(self.root, "s1", "explosion.svg")[0].decode("utf-8"))
+
+    def test_find_outlines_reports_a_tool_failure_and_needs_a_video(self):
+        with self.assertRaises(AdapterError) as missing:
+            explosion.find_outlines(self.root, "s1", run=lambda *a, **k: _Done())
+        self.assertEqual(missing.exception.status, 409)
+        (self.root / "s1" / "agent-session.json").write_text(json.dumps({"phases": [{"video": "v.mp4"}]}), encoding="utf-8")
+        with self.assertRaises(AdapterError) as failed:
+            explosion.find_outlines(self.root, "s1", run=lambda *a, **k: _Done(1, "no frame shows parts"))
+        self.assertIn("no frame shows parts", str(failed.exception))
 
 
 if __name__ == "__main__":

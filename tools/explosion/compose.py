@@ -115,7 +115,13 @@ def _part_svg(item: dict, mode: str) -> list[str]:
     translate = {"exploded": (ex - bcx, ey - bcy), "assembled": (ax - bcx, ay - bcy)}
     confirmed = item["status"] == "confirmed"
     fill, stroke, dash = ("#dfe6ee", "#1d2733", "") if confirmed else ("#fff4d6", "#8a5a00", ' stroke-dasharray="2 1.2"')
-    flip = f' transform="translate({_n(2 * bcx)} 0) scale(-1 1)"' if layer["flip_horizontal"] else ""
+    steps = []
+    if layer.get("rotation_deg"):
+        steps.append(f'rotate({layer["rotation_deg"]} {_n(bcx)} {_n(bcy)})')
+    if layer["flip_horizontal"]:
+        steps.append(f"translate({_n(2 * bcx)} 0) scale(-1 1)")
+    shape = f' transform="{" ".join(steps)}"' if steps else ""
+    top = bcy - item["size"][3] / 2  # the turned outline's top edge
     tag = "confirmed" if confirmed else "UNCONFIRMED: " + "; ".join(item["reasons"])
     title = f"{layer['label']} - {tag}"
     out = [f'<g id={_a("part-" + layer["job"])} class="ax-part" data-job={_a(layer["job"])} data-label={_a(layer["label"])} '
@@ -126,14 +132,14 @@ def _part_svg(item: dict, mode: str) -> list[str]:
            f'data-assembled-translate="{_n(translate["assembled"][0])},{_n(translate["assembled"][1])}" '
            f'transform="translate({_n(translate[mode][0])} {_n(translate[mode][1])})" tabindex="0" role="button" '
            f'aria-label={_a(title)}>', f"<title>{_t(title)}</title>",
-           f'<g class="ax-shape"{flip}>']
+           f'<g class="ax-shape"{shape}>']
     out += [f'<path class="ax-outline" d={_a(d)} fill="{fill}" fill-opacity="0.85" stroke="{stroke}" stroke-width="0.5" '
             f'stroke-linejoin="round"{dash}/>' for d in evidence.outline.paths]
     out.append("</g>")
     label_color = "#1d2733" if confirmed else "#8a5a00"
-    out.append(f'<g class="ax-exploded-only"><text x="{_n(bcx)}" y="{_n(y0 - 6.5)}" font-size="4" font-weight="bold" '
+    out.append(f'<g class="ax-exploded-only"><text x="{_n(bcx)}" y="{_n(top - 6.5)}" font-size="4" font-weight="bold" '
                f'text-anchor="middle" fill="#1d2733">{item["index"] + 1}  {_t(layer["label"], 70)}</text>'
-               f'<text x="{_n(bcx)}" y="{_n(y0 - 2.5)}" font-size="2.8" text-anchor="middle" fill="{label_color}">'
+               f'<text x="{_n(bcx)}" y="{_n(top - 2.5)}" font-size="2.8" text-anchor="middle" fill="{label_color}">'
                f'{_t(tag, 110)}</text></g>')
     out.append("</g>")
     return out
@@ -188,7 +194,7 @@ def compose(session_dir: Path, spec: dict | None = None, mode: str = "exploded")
             warnings.append(f"{entry['job']}: layer view side {entry['view_side']!r} differs from the drawing job's {evidence.view_side!r}.")
         x0, y0, x1, y1 = evidence.outline.bbox
         drawn.append({"index": index, "layer": entry, "evidence": evidence, "reasons": reasons,
-                      "status": "unconfirmed" if reasons else "confirmed", "size": (x0, y0, x1 - x0, y1 - y0),
+                      "status": "unconfirmed" if reasons else "confirmed", "size": (x0, y0, *((y1 - y0, x1 - x0) if entry.get("rotation_deg") in (90, 270) else (x1 - x0, y1 - y0))),
                       "drawing_sha256": evidence.files["drawing.svg"]["sha256"]})
 
     content_w = max([MIN_CONTENT_W] + [item["size"][2] for item in drawn])
@@ -248,7 +254,7 @@ def compose(session_dir: Path, spec: dict | None = None, mode: str = "exploded")
         "layers": [{
             "index": item["index"], "job": item["layer"]["job"], "label": item["layer"]["label"], "status": item["status"],
             "reasons": item["reasons"], "binding": item["evidence"].binding_state, "view_side": item["layer"]["view_side"],
-            "job_view_side": item["evidence"].view_side, "flip_horizontal": item["layer"]["flip_horizontal"],
+            "job_view_side": item["evidence"].view_side, "flip_horizontal": item["layer"]["flip_horizontal"], "rotation_deg": item["layer"].get("rotation_deg", 0),
             "confirmed_by_operator": item["layer"]["confirmed_by_operator"], "part": item["evidence"].part,
             "scope": item["evidence"].scope, "outline_size_mm": [round(item["size"][2], 2), round(item["size"][3], 2)],
             "placement": {"exploded_center": [round(c, 3) for c in item["exploded_center"]],

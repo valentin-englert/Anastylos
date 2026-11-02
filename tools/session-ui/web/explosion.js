@@ -115,6 +115,7 @@ function renderPanel() {
   $("part-binding").textContent = { confirmed: "confirmed by the operator", none: "not bound", stale: "stale (drawing changed)", unreadable: "unreadable", rejected: "rejected" }[layer.binding] || layer.binding;
   $("part-view-side").textContent = `${layer.view_side || "not set"}${layer.job_view_side && layer.job_view_side !== layer.view_side ? ` (drawing job: ${layer.job_view_side})` : ""}`;
   $("part-flip").textContent = layer.flip_horizontal ? "yes" : "no";
+  $("part-rotation").textContent = `${layer.rotation_deg || 0}°`;
   $("part-part").textContent = `${layer.part || "-"} (${layer.job})`;
   $("part-sha").textContent = (layer.inputs["drawing.svg"] || {}).sha256 || "-";
   for (const [id, name] of [["link-rectified", "rectified.png"], ["link-overlay", "overlay.jpg"], ["link-drawing", "drawing.svg"]]) {
@@ -195,6 +196,18 @@ function wire() {
     $(`mode-${mode}`).addEventListener("click", () => { state.mode = mode; applyMode(); });
   }
   $("propose-button").addEventListener("click", () => act({ action: "propose" }));
+  $("rotate-button").addEventListener("click", () => act({ action: "rotate", job: state.selected }));
+  $("outlines-button").addEventListener("click", async () => {
+    $("outlines-button").disabled = true;
+    setState("Looking for parts on the sheet. This can take a minute.");
+    try {
+      await load(await call("/api/explosion/outlines", {}));
+    } catch (error) {
+      setState(error.message, true);
+    } finally {
+      $("outlines-button").disabled = false;
+    }
+  });
   $("confirm-form").addEventListener("submit", (event) => {
     event.preventDefault();
     act({ action: "confirm", job: state.selected, label: $("field-label").value, view_side: $("field-view-side").value,

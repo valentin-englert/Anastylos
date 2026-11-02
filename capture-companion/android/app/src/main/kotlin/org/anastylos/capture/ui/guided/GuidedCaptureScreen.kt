@@ -7,6 +7,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
@@ -21,8 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -53,7 +57,6 @@ import org.anastylos.capture.di.AppContainer
 import org.anastylos.capture.guidance.PhoneRotation
 import org.anastylos.capture.guidance.ImageQualityVerdict
 import org.anastylos.capture.guidance.RegistrationState
-import org.anastylos.capture.guidance.RequestState
 import org.anastylos.capture.guidance.SessionState
 import org.anastylos.capture.ui.camera.CameraPicker
 import org.anastylos.capture.camera.SETTING_PROFILES
@@ -122,6 +125,16 @@ fun GuidedCaptureScreen(
         onDispose { viewModel.detachCamera() }
     }
 
+    val voiceState by container.voice.state.collectAsState()
+    // The label is workstation-authored request text, spoken verbatim
+    // through the voice channel only when voice is on; never model text.
+    val requestId = cold.remoteRequest?.requestId
+    LaunchedEffect(requestId) {
+        val label = cold.remoteRequest?.targetLabel
+        if (requestId != null && !label.isNullOrBlank()) container.voice.speakVerified(label)
+    }
+    var details by rememberSaveable { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -129,33 +142,19 @@ fun GuidedCaptureScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             OutlinedButton(onClick = onBack) { Text("Back") }
-            Text("Guided capture", style = MaterialTheme.typography.titleLarge)
-        }
-        if (state.uncalibrated) {
-            Text(
-                "UNCALIBRATED: factory intrinsics (${state.intrinsicsLabel ?: "none"}). " +
-                    "Poses are coarse; metric evidence is disabled until calibration.",
-                color = MaterialTheme.colorScheme.error,
+            Spacer(Modifier.weight(1f))
+            StatusPill(
+                if (cold.remoteAttached) "Connected" else "Not connected",
+                if (cold.remoteAttached) PillGreen else PillRed,
             )
-            cold.calibrationBlocker?.let { reason ->
-                Text("Calibrated profile not applied: $reason")
-                Button(onClick = { viewModel.applyCalibratedOptics() }) {
-                    Text("Use calibrated optics")
-                }
-            }
+            voiceLabelOf(voiceState)?.let { StatusPill(it, PillBlue) }
         }
-        val card = requestCardOf(state)
-        if (card != null) RequestCardView(card) else TrackingBanner(state)
-        // The label is workstation-authored request text, spoken verbatim
-        // through the voice channel only when voice is on; never model text.
-        val requestId = cold.remoteRequest?.requestId
-        LaunchedEffect(requestId) {
-            val label = cold.remoteRequest?.targetLabel
-            if (requestId != null && !label.isNullOrBlank()) container.voice.speakVerified(label)
-        }
-        VoiceRow(container.voice)
+        StatusBannerView(statusBannerOf(state))
         Box(modifier = Modifier.fillMaxWidth()) {
             AndroidView(
                 factory = { previewView },
@@ -163,20 +162,38 @@ fun GuidedCaptureScreen(
             )
             DetectionOverlay(state, Modifier.matchParentSize())
         }
-        if (card == null) CueList(state)
-        ControlRow(cold, viewModel)
-        RemoteSection(cold, viewModel)
-        ResultCard(cold, viewModel)
-        state.cameraError?.let { Text("Camera: $it", color = MaterialTheme.colorScheme.error) }
-        state.captureError?.let { Text("Capture: $it", color = MaterialTheme.colorScheme.error) }
-        var details by rememberSaveable { mutableStateOf(false) }
+        if (cold.remoteRequest == null) CueList(state)
+        MainControls(cold, viewModel)
+        VoiceToggle(container.voice, voiceState)
+        state.cameraError?.let { Text("Camera: $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) }
+        state.captureError?.let { Text("Capture: $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error) }
+        state.remoteError?.let { error ->
+            Text(error, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
+            OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
+        }
         OutlinedButton(onClick = { details = !details }) {
-            Text(if (details) "Hide details" else "Show details")
+            Text(if (details) "Hide details" else "Details")
         }
         if (details) {
+            if (state.uncalibrated) {
+                Text(
+                    "UNCALIBRATED: factory intrinsics (${state.intrinsicsLabel ?: "none"}). " +
+                        "Poses are coarse; metric evidence is disabled until calibration.",
+                    color = MaterialTheme.colorScheme.error,
+                )
+                cold.calibrationBlocker?.let { reason ->
+                    Text("Calibrated profile not applied: $reason")
+                    Button(onClick = { viewModel.applyCalibratedOptics() }) {
+                        Text("Use calibrated optics")
+                    }
+                }
+            }
             StateGrid(state)
             state.sessionReason?.let { Text("Session note: $it") }
             RemoteDetails(cold)
+            ResultDetails(cold, viewModel)
+            DetailControls(cold, viewModel)
+            VoiceDetails(container.voice, voiceState)
             TargetPicker(cold, viewModel)
             CameraPicker(
                 cameras = cold.availableCameras,
@@ -200,72 +217,96 @@ fun GuidedCaptureScreen(
     }
 }
 
-/** The workstation's request, readable at arm's length. */
+private val PillGreen = Color(0xFF1B5E20)
+private val PillRed = Color(0xFFB71C1C)
+private val PillBlue = Color(0xFF0D47A1)
+
 @Composable
-private fun RequestCardView(card: RequestCard) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+private fun StatusPill(text: String, color: Color) {
+    Text(
+        text,
+        color = Color.White,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .background(color, RoundedCornerShape(50))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+    )
+}
+
+/** The one current task, in large high-contrast type. */
+@Composable
+private fun StatusBannerView(banner: StatusBanner) {
+    val color = when (banner.tone) {
+        BannerTone.NEUTRAL -> Color(0xFF263238)
+        BannerTone.WAITING -> Color(0xFF0D47A1)
+        BannerTone.ACTION -> Color(0xFFBF360C)
+        BannerTone.SUCCESS -> Color(0xFF1B5E20)
+        BannerTone.PROBLEM -> Color(0xFFB71C1C)
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color, RoundedCornerShape(16.dp))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Requested by the workstation", style = MaterialTheme.typography.labelLarge)
-            Text(card.label, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(card.hint, style = MaterialTheme.typography.headlineSmall)
-            card.outcome?.let { outcome ->
-                Text(
-                    outcome.text,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (outcome.retake) MaterialTheme.colorScheme.error else Color(0xFF2E7D32),
-                )
-                outcome.note?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-            }
+        Text(
+            banner.title,
+            color = Color.White,
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        banner.detail?.let {
+            Text(it, color = Color.White, style = MaterialTheme.typography.titleLarge)
         }
     }
 }
 
 /**
  * Opt-in "Listen for Muse": a visible indicator while the microphone is
- * open, a hold-to-talk fallback, and the voice status line. Transcripts
- * are never shown here; only the status of the voice link.
+ * open. Transcripts are never shown on the main screen.
  */
 @Composable
-private fun VoiceRow(voice: VoiceController) {
+private fun VoiceToggle(voice: VoiceController, voiceState: VoiceController.State) {
     val context = LocalContext.current
-    val voiceState by voice.state.collectAsState()
     val micLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> if (granted) voice.startListening() }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(
-            selected = voiceState.listening,
-            onClick = {
-                when {
-                    voiceState.listening -> voice.stopListening()
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                        PackageManager.PERMISSION_GRANTED -> voice.startListening()
-                    else -> micLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            },
-            label = { Text("Listen for Muse") },
-        )
-        if (voiceState.listening) {
-            OutlinedButton(
-                onClick = {},
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures(onPress = {
-                        voice.pushToTalkDown()
-                        tryAwaitRelease()
-                        voice.pushToTalkUp()
-                    })
-                },
-            ) { Text(if (voiceState.pushToTalk) "Release to send" else "Hold to talk") }
-        }
-    }
+    FilterChip(
+        selected = voiceState.listening,
+        onClick = {
+            when {
+                voiceState.listening -> voice.stopListening()
+                ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                    PackageManager.PERMISSION_GRANTED -> voice.startListening()
+                else -> micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        },
+        label = {
+            Text(
+                if (voiceState.listening) "Microphone on — say “Muse…”" else "Voice off — tap to talk to Muse",
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        modifier = Modifier.heightIn(min = 48.dp),
+    )
+}
+
+/** Hold-to-talk fallback, last phrase heard and the voice link status. */
+@Composable
+private fun VoiceDetails(voice: VoiceController, voiceState: VoiceController.State) {
     if (voiceState.listening) {
-        Text(
-            "● MICROPHONE ON — only phrases starting with “Muse” or “Meta” are used",
-            color = MaterialTheme.colorScheme.error,
-        )
+        OutlinedButton(
+            onClick = {},
+            modifier = Modifier.pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    voice.pushToTalkDown()
+                    tryAwaitRelease()
+                    voice.pushToTalkUp()
+                })
+            },
+        ) { Text(if (voiceState.pushToTalk) "Release to send" else "Hold to talk") }
     }
     voiceState.heard?.let { Text("You said: “$it”", style = MaterialTheme.typography.bodySmall) }
     if (voiceState.status.isNotEmpty()) Text(voiceState.status, style = MaterialTheme.typography.bodySmall)
@@ -288,23 +329,6 @@ private fun GuidanceUiState.withoutPoseFields(): GuidanceUiState = copy(
     distanceOk = false,
     holdReason = null,
 )
-
-@Composable
-private fun TrackingBanner(state: GuidanceUiState) {
-    val (text, color) = when {
-        state.request == RequestState.HOLD_STILL && state.dwell is org.anastylos.capture.guidance.DwellState.Ready ->
-            "HOLD STILL — capturing…" to Color(0xFF2E7D32)
-        state.request == RequestState.HOLD_STILL ->
-            "HOLD STILL — keep the phone steady" to Color(0xFF2E7D32)
-        state.registration == RegistrationState.ACQUIRED -> "Tracking valid" to Color(0xFF2E7D32)
-        state.registration == RegistrationState.DEGRADED -> "Tracking degraded (no metric pose)" to Color(0xFFEF6C00)
-        state.registration == RegistrationState.LOST -> "Tracking lost — aim at the board" to Color(0xFFC62828)
-        state.registration == RegistrationState.BAD_CALIBRATION ->
-            "Bad calibration — check profile" to Color(0xFFC62828)
-        else -> "Searching for the board…" to Color.Gray
-    }
-    Text(text, color = color, style = MaterialTheme.typography.titleMedium)
-}
 
 @Composable
 private fun DetectionOverlay(
@@ -403,33 +427,67 @@ private fun TargetPicker(state: GuidanceUiState, viewModel: GuidanceViewModel) {
 }
 
 @Composable
-private fun ControlRow(state: GuidanceUiState, viewModel: GuidanceViewModel) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        when (state.session) {
-            SessionState.DISARMED -> Button(onClick = { viewModel.arm() }) { Text("Arm") }
-            SessionState.ACTIVE -> {
-                Button(onClick = { viewModel.arm() }) { Text("Next request") }
-                OutlinedButton(onClick = { viewModel.pause() }) { Text("Pause") }
-                OutlinedButton(onClick = { viewModel.disarm() }) { Text("Disarm") }
-            }
-            SessionState.PAUSED -> {
-                Button(onClick = { viewModel.resume() }) { Text("Resume") }
-                OutlinedButton(onClick = { viewModel.disarm() }) { Text("Disarm") }
-            }
-            else -> {
-                Button(onClick = { viewModel.newSession() }) { Text("New session") }
-            }
+private fun BigButton(text: String, primary: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+    val modifier = Modifier.fillMaxWidth().height(64.dp)
+    val label: @Composable () -> Unit = { Text(text, style = MaterialTheme.typography.titleLarge) }
+    if (primary) Button(onClick = onClick, enabled = enabled, modifier = modifier) { label() }
+    else OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier) { label() }
+}
+
+/** The few actions the operator needs during the flow; the rest lives in Details. */
+@Composable
+private fun MainControls(state: GuidanceUiState, viewModel: GuidanceViewModel) {
+    var sessionField by rememberSaveable { mutableStateOf(state.remoteSessionId ?: "") }
+    if (!state.remoteAttached) {
+        OutlinedTextField(
+            value = sessionField,
+            onValueChange = { sessionField = it.trim() },
+            label = { Text("Session id from the workstation") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        BigButton("Attach", primary = true, enabled = sessionField.isNotBlank()) {
+            viewModel.attachRemote(sessionField)
+        }
+        return
+    }
+    when (state.session) {
+        SessionState.DISARMED -> BigButton("Start", primary = true) { viewModel.arm() }
+        SessionState.ACTIVE -> {
+            BigButton("Next request", primary = true) { viewModel.arm() }
+            BigButton("Pause", primary = false) { viewModel.pause() }
+        }
+        SessionState.PAUSED -> BigButton("Resume", primary = true) { viewModel.resume() }
+        else -> BigButton("New session", primary = true) { viewModel.newSession() }
+    }
+    if (state.remoteRequest != null) {
+        BigButton("Take photo now", primary = false, enabled = !state.shutterBusy) { viewModel.captureManual() }
+        if (!state.attemptReady && !state.reservingAttempt) {
+            BigButton("Retry connection to workstation", primary = false) { viewModel.retryAttempt() }
         }
     }
+}
+
+/** Less common actions, kept out of the main flow. */
+@Composable
+private fun DetailControls(state: GuidanceUiState, viewModel: GuidanceViewModel) {
+    Text("Controls", style = MaterialTheme.typography.titleSmall)
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.horizontalScroll(rememberScrollState()),
     ) {
-        OutlinedButton(onClick = { viewModel.captureManual() }, enabled = !state.shutterBusy) {
-            Text("Capture now (manual)")
-        }
         OutlinedButton(onClick = { viewModel.cancelRequest() }) { Text("Cancel request") }
         OutlinedButton(onClick = { viewModel.cantReach() }) { Text("Can't reach") }
+        if (state.session == SessionState.ACTIVE || state.session == SessionState.PAUSED) {
+            OutlinedButton(onClick = { viewModel.disarm() }) { Text("Disarm") }
+        }
+        if (state.remoteAttached) {
+            OutlinedButton(onClick = { viewModel.detachRemote() }) { Text("Detach") }
+            OutlinedButton(
+                onClick = { viewModel.selectRemoteBoard(state.boardId) },
+                enabled = state.boardId.isNotBlank(),
+            ) { Text("Map board to current") }
+        }
     }
 }
 
@@ -443,51 +501,6 @@ private fun QualityRow(state: GuidanceUiState, viewModel: GuidanceViewModel) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { viewModel.setSharpnessReference() }) { Text("Calibrate sharpness") }
         OutlinedButton(onClick = { viewModel.clearSharpnessReference() }) { Text("Clear") }
-    }
-}
-
-@Composable
-private fun RemoteSection(state: GuidanceUiState, viewModel: GuidanceViewModel) {
-    var sessionField by rememberSaveable { mutableStateOf(state.remoteSessionId ?: "") }
-    Text("Core remote control", style = MaterialTheme.typography.titleSmall)
-    if (!state.remoteAttached) {
-        Text(
-            "Attach a guided session from the workstation to receive requests, reserve attempts, and deliver evidence.",
-            style = MaterialTheme.typography.bodySmall,
-        )
-        OutlinedTextField(
-            value = sessionField,
-            onValueChange = { sessionField = it.trim() },
-            label = { Text("Session id (uuid)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { viewModel.attachRemote(sessionField) },
-                enabled = sessionField.isNotBlank(),
-            ) { Text("Attach") }
-        }
-    } else {
-        if (state.remoteRequest == null) {
-            Text("Connected to the workstation. Waiting for a request…", style = MaterialTheme.typography.titleMedium)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { viewModel.detachRemote() }) { Text("Detach") }
-            OutlinedButton(
-                onClick = { viewModel.selectRemoteBoard(state.boardId) },
-                enabled = state.boardId.isNotBlank(),
-            ) { Text("Map board to current") }
-            if (!state.attemptReady && !state.reservingAttempt && state.remoteRequest != null) {
-                OutlinedButton(onClick = { viewModel.retryAttempt() }) { Text("Retry attempt") }
-            }
-        }
-    }
-    state.remoteError?.let { error ->
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(error, color = MaterialTheme.colorScheme.error)
-            OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
-        }
     }
 }
 
@@ -518,7 +531,7 @@ private fun RemoteDetails(state: GuidanceUiState) {
 }
 
 @Composable
-private fun ResultCard(state: GuidanceUiState, viewModel: GuidanceViewModel) {
+private fun ResultDetails(state: GuidanceUiState, viewModel: GuidanceViewModel) {
     val result = state.captureResult ?: return
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(

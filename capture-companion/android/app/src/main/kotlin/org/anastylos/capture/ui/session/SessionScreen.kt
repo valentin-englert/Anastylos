@@ -5,7 +5,12 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -72,75 +77,98 @@ fun SessionScreen(viewModel: SessionViewModel, onConnect: () -> Unit, onGuided: 
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("ANASTYLOS CAPTURE", style = MaterialTheme.typography.headlineSmall)
+        Text("ANASTYLOS", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+        val pairing = state.pairing
         Text(
-            "Sampled stills feed the active session. Nothing uploads without pairing.",
-            style = MaterialTheme.typography.bodyMedium,
+            if (pairing != null) "Connected to workstation" else "Not connected",
+            color = Color.White,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    if (pairing != null) Color(0xFF1B5E20) else Color(0xFFB71C1C),
+                    RoundedCornerShape(16.dp),
+                )
+                .padding(20.dp),
         )
-
-        if (!cameraGranted) {
-            Text("Camera access is needed to sample frames. Photos stay on this phone until you upload them.")
-            Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
-                Text("Grant camera access")
+        if (pairing == null) {
+            Button(onClick = onConnect, modifier = Modifier.fillMaxWidth().height(64.dp)) {
+                Text("Connect: scan the workstation QR", style = MaterialTheme.typography.titleLarge)
             }
-        } else {
-            CameraPreview(
-                onCapture = { viewModel.startSampling(it) },
-                sampling = state.sampling,
-                onStop = { viewModel.stopSampling() },
-                selectedCameraId = state.selectedCameraId,
-                onCamerasListed = viewModel::onCamerasListed,
+        }
+        Button(
+            onClick = onGuided,
+            modifier = Modifier.fillMaxWidth().height(64.dp),
+        ) {
+            Text("Start guided capture", style = MaterialTheme.typography.titleLarge)
+        }
+        var advanced by rememberSaveable { mutableStateOf(false) }
+        OutlinedButton(onClick = { advanced = !advanced }) {
+            Text(if (advanced) "Hide advanced" else "Advanced")
+        }
+        if (advanced) {
+            if (!cameraGranted) {
+                Text("Camera access is needed to sample frames. Photos stay on this phone until you upload them.")
+                Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                    Text("Grant camera access")
+                }
+            } else {
+                CameraPreview(
+                    onCapture = { viewModel.startSampling(it) },
+                    sampling = state.sampling,
+                    onStop = { viewModel.stopSampling() },
+                    selectedCameraId = state.selectedCameraId,
+                    onCamerasListed = viewModel::onCamerasListed,
+                    settings = state.settings,
+                    caps = viewModel.capsFor(state.effectiveCameraId),
+                    onSettingsApplied = viewModel::onSettingsApplied,
+                )
+            }
+
+            SessionSection(
+                state = state,
+                onCreate = { viewModel.createSession(it) },
+                onSelect = { viewModel.selectSession(it) },
+                onInterval = { viewModel.setInterval(it) },
+            )
+
+            CameraPicker(
+                cameras = state.availableCameras,
+                effectiveId = state.effectiveCameraId,
+                note = state.cameraNote,
+                onSelect = { viewModel.selectCamera(it) },
+            )
+
+            CameraSettingsPanel(
                 settings = state.settings,
                 caps = viewModel.capsFor(state.effectiveCameraId),
-                onSettingsApplied = viewModel::onSettingsApplied,
+                profiles = SETTING_PROFILES,
+                activeProfile = state.activeProfile,
+                appliedLine = null,
+                settingsNote = state.settingsNote,
+                analysisSelectable = false,
+                onUpdate = viewModel::updateSettings,
+                onProfile = { viewModel.selectProfile(it) },
             )
+
+            SamplingStatus(state)
+
+            PairingSection(
+                state = state,
+                onPair = { host, port, code, fingerprint ->
+                    viewModel.pair(host, port, code, fingerprint)
+                },
+                onUnpair = { viewModel.unpair() },
+                onScanQr = onConnect,
+            )
+
+            UploadSection(
+                state = state,
+                onUpload = { viewModel.uploadPending() },
+            )
+
         }
-
-        Button(onClick = onGuided) {
-            Text("Guided capture")
-        }
-
-        SessionSection(
-            state = state,
-            onCreate = { viewModel.createSession(it) },
-            onSelect = { viewModel.selectSession(it) },
-            onInterval = { viewModel.setInterval(it) },
-        )
-
-        CameraPicker(
-            cameras = state.availableCameras,
-            effectiveId = state.effectiveCameraId,
-            note = state.cameraNote,
-            onSelect = { viewModel.selectCamera(it) },
-        )
-
-        CameraSettingsPanel(
-            settings = state.settings,
-            caps = viewModel.capsFor(state.effectiveCameraId),
-            profiles = SETTING_PROFILES,
-            activeProfile = state.activeProfile,
-            appliedLine = null,
-            settingsNote = state.settingsNote,
-            analysisSelectable = false,
-            onUpdate = viewModel::updateSettings,
-            onProfile = { viewModel.selectProfile(it) },
-        )
-
-        SamplingStatus(state)
-
-        PairingSection(
-            state = state,
-            onPair = { host, port, code, fingerprint ->
-                viewModel.pair(host, port, code, fingerprint)
-            },
-            onUnpair = { viewModel.unpair() },
-            onScanQr = onConnect,
-        )
-
-        UploadSection(
-            state = state,
-            onUpload = { viewModel.uploadPending() },
-        )
 
         val error = state.error ?: state.pairingError
         if (error != null) {

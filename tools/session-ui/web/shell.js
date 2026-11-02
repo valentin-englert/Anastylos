@@ -38,12 +38,8 @@
 
   function buildMenu() {
     const nav = $("main-nav");
-    const home = make("a", "pill menu-link", "Home");
-    home.href = "#/";
-    home.dataset.page = "home";
-    nav.append(home);
     for (const page of PAGES) {
-      const link = make("a", "pill menu-link", page.label);
+      const link = make("a", "menu-link", page.label);
       link.href = `#/${page.id}`;
       link.dataset.page = page.id;
       nav.append(link);
@@ -52,7 +48,7 @@
     PAGES.forEach((page, index) => {
       const card = make("a", "card");
       card.href = `#/${page.id}`;
-      card.append(make("span", "card-number", String(index + 1)), make("span", "card-title", page.label),
+      card.append(make("span", "card-number", String(index + 1).padStart(2, "0")), make("span", "card-title", page.label),
                   make("span", "card-blurb", page.blurb));
       cards.append(card);
     });
@@ -135,7 +131,7 @@
       const response = await fetch("/api/connection");
       const { muse_key_set: ready } = await response.json();
       button.dataset.state = ready ? "ok" : "missing";
-      $("muse-status-text").textContent = ready ? "Muse connected" : "Connect Muse";
+      $("muse-status-text").textContent = ready ? "Connected" : "Connect Muse";
       return ready;
     } catch (error) {
       button.dataset.state = "unknown";
@@ -158,8 +154,8 @@
       "Nothing is saved until you press a button to confirm it." ] },
     { title: "Talk instead of typing", lines: [
       "Hold the “Hold to talk” button, or the space bar, and speak. Let go when you are done.",
-      "Switch on “Listen for Muse” to speak hands-free. Start with “Muse …”.",
-      "Switch off “Speak replies” if you prefer to read." ] },
+      "Switch on “Wake word” to speak hands-free. The wake words are “Muse” and “Meta”: start with one of them, for example “Muse, next question”.",
+      "Switch off “Speak” if you prefer to read the answers." ] },
     { title: "Connect Muse", connect: true, lines: [
       "Muse understands your voice and draws outlines of parts. It needs a personal key from Meta." ] },
     { title: "You are ready", lines: [
@@ -171,10 +167,19 @@
   function renderConnectStep(body) {
     const list = make("ol", "how-to");
     const item = (...nodes) => { const li = make("li"); li.append(...nodes); list.append(li); return li; };
-    const link = make("a", "pill primary inline", "Open dev.meta.ai");
+    const link = make("a", "cta-link", "dev.meta.ai");
     link.href = "https://dev.meta.ai/";
     link.target = "_blank";
     link.rel = "noopener";
+    const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    arrow.setAttribute("viewBox", "0 0 24 24");
+    arrow.setAttribute("aria-hidden", "true");
+    for (const d of ["M7 7h10v10", "M7 17 17 7"]) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      arrow.append(path);
+    }
+    link.append(arrow);
     item(make("span", "", "Sign in at "), link, make("span", "", ". Create an account if you do not have one."));
     item(make("span", "", "Open the Dashboard, create an API key and copy it."));
     const command = make("code", "command", KEY_COMMAND);
@@ -242,7 +247,7 @@
     return new Promise((resolve) => {
       const done = () => { launcher.classList.add("leaving"); setTimeout(() => { launcher.hidden = true; document.body.classList.remove("launching"); resolve(); }, 500); };
       launcher.addEventListener("click", done, { once: true });
-      setTimeout(done, 3400);
+      setTimeout(done, 4800);
     });
   }
 

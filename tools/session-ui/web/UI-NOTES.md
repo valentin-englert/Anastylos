@@ -5,7 +5,7 @@ a new `shell.js` and small additions to `server.py` changed. `app.js` is **untou
 still exists, so the capture-loop / voice / explosion lanes only conflict in `index.html` (structure) and `server.py`.
 
 ## What changed
-- **Shell:** top bar (logo + "Anastylos", voice pill, Muse status pill, help "i") and a horizontal pill menu;
+- **Shell:** one top row: logo + "Anastylos", plain text menu (8 pages, no pills), then voice pill, Muse status and a Lucide info icon on the right (below 1600 px the menu drops to a second row; icons: `web/assets/ICONS.md`, ISC/MIT);
   one page at a time (`#/questions`, `#/drawings`, …), Home = start screen with numbered cards, every page has a Back pill.
   `shell.js` only shows/hides the existing `<section data-page=…>` elements; routing is `location.hash`.
 - **Less text:** every `.hint`, the offline banner and the footer are hidden on the pages; `shell.js` moves their text into the

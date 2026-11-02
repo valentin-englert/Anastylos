@@ -15,7 +15,7 @@ PERSONAS = ("serious", "playful", "unhinged")
 DEFAULT_PERSONA = "serious"
 QUESTION_TYPES = ("part_removed", "origin_unseen", "part_stored", "unclear_answer", "defer_to_desktop",
                   "need_photo", "read_back", "recorded", "bundle_same", "bundle_list",
-                  "assemblies_left", "missed_anything", "missed_cell")
+                  "assemblies_left", "missed_anything", "missed_cell", "bundle_name")
 UNKNOWN_PLACE = "the sheet"
 RECENT_WINDOW = 3
 

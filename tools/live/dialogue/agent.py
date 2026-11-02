@@ -124,6 +124,10 @@ class DialogueAgent:
     def say(self, kind: str, event_id: str, slots: dict | None = None) -> str:
         return self._say(kind, event_id, slots)[0]
 
+    def extract(self, text: str, question_type: str, tag: str = "", need_name: bool = False) -> tuple[dict, str, list[str]]:
+        """Fields from a free answer: rules first, the model only where the rules cannot tell (see Executor)."""
+        return self._executor.extract(text, question_type, tag, need_name)
+
     def set_persona(self, persona: str) -> None:
         self._persona = persona
 

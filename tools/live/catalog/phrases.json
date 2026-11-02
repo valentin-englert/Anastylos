@@ -23,7 +23,8 @@
     "bundle_list": [],
     "assemblies_left": [],
     "missed_anything": [],
-    "missed_cell": []
+    "missed_cell": [],
+    "bundle_name": []
   },
   "phrases": {
     "part_removed": {
@@ -310,6 +311,26 @@
         "Ha, I knew it! Which cell, and what's its name, buddy?",
         "Name and cell number, my friend, go!",
         "Which cell is the rascal in, and what is it called?"
+      ]
+    },
+    "bundle_name": {
+      "serious": [
+        "What do you call them?",
+        "What are they called?",
+        "What is their name?",
+        "What should I call them?"
+      ],
+      "playful": [
+        "What do you call them?",
+        "And what are these little ones called?",
+        "What's the name for the gang?",
+        "What do we call them?"
+      ],
+      "unhinged": [
+        "What do you call them?",
+        "Name the gang, buddy!",
+        "What are these rascals called?",
+        "Go on, christen them!"
       ]
     }
   }

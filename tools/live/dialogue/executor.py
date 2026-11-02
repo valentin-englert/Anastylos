@@ -31,9 +31,10 @@ CHOOSE_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["
                  "properties": {"question_type": {"type": "string", "enum": [
                      "part_removed", "origin_unseen", "part_stored", "unclear_answer", "defer_to_desktop",
                      "need_photo", "read_back", "recorded", "none"]}}}
-EXTRACT_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["intent", *FIELDS],
+EXTRACT_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["intent", *FIELDS, "count"],
                   "properties": {"intent": {"type": "string", "enum": list(INTENTS)},
-                                 **{f: {"type": ["string", "null"]} for f in FIELDS}}}
+                                 **{f: {"type": ["string", "null"]} for f in FIELDS},
+                                 "count": {"type": ["integer", "null"]}}}
 SCHEMAS = {"choose_question": CHOOSE_SCHEMA, "extract_fields": EXTRACT_SCHEMA}
 
 _COMMON = ("You are a classifier inside a disassembly assistant. You never write sentences for the user. "
@@ -44,7 +45,8 @@ INSTRUCTIONS = {
     "extract_fields": _COMMON + " The operator answered a question. `intent`: answer (they name a part, origin or "
                       "storage), yes, no, unsure, skip, or unclear (you cannot tell). `part_name`, `origin`, `storage`: "
                       "copy the operator's own words only, shortened, never add or rephrase a word; null when not said. "
-                      "part_name is what the part is called, origin is where it came from, storage is where it was put.",
+                      "part_name is what the part is called, origin is where it came from, storage is where it was put. "
+                      "count: how many parts the operator says there are (digits or number words), else null.",
 }
 
 
@@ -187,7 +189,14 @@ def ground(fields: dict, answer_text: str) -> tuple[dict, list[str]]:
         if not words or len(value) > MAX_FIELD_CHARS or not set(words) <= said:
             kept[name] = None
             dropped.append(name)
-    if kept["intent"] == "answer" and not any(kept[f] for f in FIELDS):
+    count = kept.get("count")
+    number_words = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
+    ok_count = (isinstance(count, int) and not isinstance(count, bool) and 1 <= count <= 99
+                and (str(count) in said or (count <= 12 and number_words[count - 1] in said)))
+    kept["count"] = count if ok_count else None
+    if kept["count"] is None and count is not None:
+        dropped.append("count")
+    if kept["intent"] == "answer" and not any(kept[f] for f in FIELDS) and kept["count"] is None:
         kept["intent"] = "unclear"
     return kept, dropped
 
@@ -208,12 +217,17 @@ class Executor:
                 return picked, "muse"
         return choose_by_rule(allowed), "rule"
 
-    def extract(self, answer_text: str, question_type: str, tag: str = "") -> tuple[dict, str, list[str]]:
-        if self._client is not None:
-            result = self._client.call("extract_fields", {"question_type": question_type, "answer_text": answer_text},
-                                       self._effort, tag)
-            if result["status"] == "ok":
-                fields, dropped = ground(result["output"], answer_text)
-                return fields, "muse", dropped
+    def extract(self, answer_text: str, question_type: str, tag: str = "",
+                need_name: bool = False) -> tuple[dict, str, list[str]]:
+        """Rules first (no model call for a clear answer); Muse only where the rules say unclear. A model failure,
+        timeout or invalid output leaves the rule result (unclear), so the caller re-asks."""
         fields, dropped = ground(extract_by_rule(answer_text), answer_text)
+        rules_enough = fields["intent"] != "unclear" and not (need_name and fields["intent"] == "answer" and not fields["part_name"])
+        if rules_enough or self._client is None:
+            return fields, "rule", dropped
+        result = self._client.call("extract_fields", {"question_type": question_type, "answer_text": answer_text},
+                                   self._effort, tag)
+        if result["status"] == "ok":
+            model_fields, model_dropped = ground(result["output"], answer_text)
+            return model_fields, "muse", model_dropped
         return fields, "rule", dropped

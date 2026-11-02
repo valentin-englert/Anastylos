@@ -127,11 +127,22 @@ class ExecutorTests(unittest.TestCase):
         self.assertEqual(fields["intent"], "unclear")
 
     def test_muse_extraction_and_choice_are_validated(self):
-        good = {"intent": "answer", "part_name": "back shell", "origin": None, "storage": None}
-        fields, source, _ = Executor(client(good)).extract("the back shell", "part_removed")
+        good = {"intent": "answer", "part_name": "back shell", "origin": None, "storage": None, "count": None}
+        fields, source, _ = Executor(client(good)).extract("well I think that is the back shell really", "part_removed")
         self.assertEqual((source, fields["part_name"]), ("muse", "back shell"))
         self.assertEqual(Executor(client({"question_type": "need_photo"})).choose({}, ["part_removed"]), ("part_removed", "rule"))
         self.assertEqual(Executor(client({"question_type": "none"})).choose({}, ["part_removed"]), ("none", "muse"))
+
+    def test_the_model_is_asked_only_where_the_rules_cannot_tell(self):
+        transport = FakeTransport({"intent": "answer", "part_name": "x", "origin": None, "storage": None, "count": None})
+        muse = MuseClient(transport=transport, environ={"MODEL_API_KEY": "k"})
+        fields, source, _ = Executor(muse).extract("it's a back shell", "part_removed")
+        self.assertEqual((source, fields["part_name"], transport.posts), ("rule", "back shell", 0))
+
+    def test_a_stated_count_must_be_in_the_transcript(self):
+        said = {"intent": "answer", "part_name": "screws", "origin": None, "storage": None, "count": 5}
+        self.assertEqual(ground(dict(said), "five screws")[0]["count"], 5)
+        self.assertIsNone(ground(dict(said), "some screws")[0]["count"])
 
     def test_every_failure_falls_back_to_the_rule(self):
         for reply in (TransportTimeout("t"), TransportFailure("f"), 503, {"intent": "maybe"}):
@@ -143,7 +154,8 @@ class ExecutorTests(unittest.TestCase):
     def test_call_cap_and_usage_log_without_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp) / "usage.jsonl"
-            muse = client({"intent": "yes", "part_name": None, "origin": None, "storage": None}, max_calls=1, usage_log=log)
+            muse = client({"intent": "yes", "part_name": None, "origin": None, "storage": None, "count": None}, max_calls=1,
+                          usage_log=log)
             self.assertEqual(muse.call("extract_fields", {"answer_text": "yes"}, "none")["status"], "ok")
             self.assertEqual(muse.call("extract_fields", {"answer_text": "yes"}, "none")["status"], "budget_exhausted")
             text = log.read_text(encoding="utf-8")
@@ -152,7 +164,7 @@ class ExecutorTests(unittest.TestCase):
             self.assertIn('"input_tokens": 5', text)
 
     def test_invented_part_name_from_muse_is_dropped(self):
-        invented = {"intent": "answer", "part_name": "trigger spring", "origin": None, "storage": None}
+        invented = {"intent": "answer", "part_name": "trigger spring", "origin": None, "storage": None, "count": None}
         fields, source, _ = Executor(client(invented)).extract("uh the thing", "part_removed")
         self.assertEqual((source, fields["intent"], fields["part_name"]), ("muse", "unclear", None))
 
@@ -218,7 +230,7 @@ class AgentTests(unittest.TestCase):
         self.assertIsNone(agent.next_question({"id": "ev", "type": "part_removed", "cell": 4})["speak"])
 
     def test_muse_invention_counts_as_not_understood(self):
-        invented = {"intent": "answer", "part_name": "trigger spring", "origin": None, "storage": None}
+        invented = {"intent": "answer", "part_name": "trigger spring", "origin": None, "storage": None, "count": None}
         agent = self.agent(Executor(client(invented)))
         agent.next_question({"id": "ev", "type": "part_removed", "cell": 4})
         self.assertEqual(agent.on_answer("ev", "uh the thing")["speak"], REASK)

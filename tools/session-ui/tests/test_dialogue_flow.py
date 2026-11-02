@@ -12,6 +12,8 @@ UI_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(UI_ROOT))
 
 import dialogue_flow  # noqa: E402
+from dialogue.executor import Executor, MuseClient  # noqa: E402
+from meta import TransportTimeout  # noqa: E402
 import videos  # noqa: E402
 from dialogue import bundle, settings  # noqa: E402
 
@@ -117,7 +119,7 @@ class FlowTests(unittest.TestCase):
         self.root = Path(tmp.name)
         (self.root / "s1").mkdir()
         self.api = FakeApi()
-        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api)
+        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(None))
 
     def say(self, text=None, command=None):
         result = self.flow.turn(command, text)
@@ -130,7 +132,7 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(read_back, "Two screws, one left button in cell 1, from back shell. Is that right?")
         self.assertEqual(self.api.answers["Q3"], "left button from back shell")
         self.assertNotIn("COMMITTED", self.api.state.values())
-        self.assertTrue(self.say("yes") in ("Recorded.", "Done, it is recorded.", "That is saved.", "Noted and recorded.", "In the books!", "Saved. Easy!", "Got it, all saved.", "Locked in, buddy!", "Chiseled in stone. Well, in memory.", "Done and dusted, my friend."))
+        self.assertIn("Next:", self.say("yes"))
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
         self.assertEqual([c for c in self.api.log if c[0] == "confirm"], [("confirm", q, "yes") for q in ("Q1", "Q2", "Q3")])
         self.assertIn("Where did the part in cell-2 come from?", self.say(command="next_question"))
@@ -152,10 +154,12 @@ class FlowTests(unittest.TestCase):
     def test_bundle_answer_not_understood_twice_leaves_all_parts_for_the_desktop(self):
         self.say(command="next_question")
         self.assertIn("could you please repeat it?", self.say("mmm"))
-        self.assertIn(DEFER, self.say("uhh"))
+        reply = self.say("uhh")
+        self.assertIn(DEFER, reply)
+        self.assertIn("Next:", reply)  # the same turn goes on with the next cell
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
         self.assertNotIn("COMMITTED", self.api.state.values())
-        self.assertIsNone(self.flow.current)
+        self.assertEqual(self.flow.current["qid"], "Q4")
         items = (self.root / "s1" / "dialogue-open-items.jsonl").read_text(encoding="utf-8").splitlines()
         self.assertEqual(len(items), 1)
 
@@ -173,7 +177,7 @@ class FlowTests(unittest.TestCase):
         self.say(command="next_question")
         self.assertEqual(self.say("it's a D-pad from the front shell"), "read back Q4")
         self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
-        self.assertTrue(self.say("yes") in ("Recorded.", "Done, it is recorded.", "That is saved.", "Noted and recorded.", "In the books!", "Saved. Easy!", "Got it, all saved.", "Locked in, buddy!", "Chiseled in stone. Well, in memory.", "Done and dusted, my friend."))
+        self.assertIn("Next: What", self.say("yes"))  # recorded, and the closing questions follow in the same turn
 
     def test_persona_changes_the_wording_per_workspace(self):
         settings.save(self.root, persona="unhinged")
@@ -230,7 +234,81 @@ class FlowTests(unittest.TestCase):
         self.say("D-pad from the front shell")
         self.say("yes")
         second = self.say(command="next_question")
-        self.assertEqual(second, "Where did the part in cell-5 come from?")
+        self.assertTrue(second.endswith("Next: Where did the part in cell-5 come from?"))
+
+    def model_flow(self, reply):
+        transport = type("T", (), {"posts": 0})()
+
+        class Fake:
+            def post(inner, url, headers, body, timeout_s):
+                transport.posts += 1
+                if isinstance(reply, Exception):
+                    raise reply
+                text = json.dumps(reply)
+                return 200, json.dumps({"status": "completed", "model": "m", "output": [
+                    {"type": "message", "content": [{"type": "output_text", "text": text}]}]}).encode()
+
+        muse = MuseClient(transport=Fake(), environ={"MODEL_API_KEY": "k"})
+        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(muse))
+        return transport
+
+    def test_replay_five_screws_then_the_origin_then_yes_writes_the_extra_parts_after_the_read_back(self):
+        self.say(command="next_question")
+        self.assertIn("Where", self.say("five screws"))
+        self.assertEqual(self.say("they came out of the back shell"), "Five screws in cell 1, from back shell. Is that right?")
+        self.assertEqual(self.writes(), [])
+        self.say("yes")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
+        self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
+
+    def test_replay_those_are_five_screws_from_the_back_shell(self):
+        self.say(command="next_question")
+        self.assertEqual(self.say("those are five screws from the back shell"), "Five screws in cell 1, from back shell. Is that right?")
+
+    def test_replay_screws_then_five_then_yes(self):
+        self.say(command="next_question")
+        self.assertIn("Where", self.say("screws"))
+        self.assertEqual(self.say("from the back shell"), "Three screws in cell 1, from back shell. Is that right?")
+        self.assertEqual(self.say("five"), "Five screws in cell 1, from back shell. Is that right?")
+        self.say("yes")
+        self.assertEqual(len(self.writes()), 1)
+
+    def test_replay_a_bare_yes_asks_for_the_name_once(self):
+        self.say(command="next_question")
+        from catalog import selector
+        self.assertIn(self.say("yes"), selector.variants("bundle_name", "serious"))
+        self.assertEqual(self.flow.current["stage"], "label")
+        self.assertIn("could you please repeat it?", self.say("yes"))
+
+    def test_model_extracts_what_the_rules_cannot_and_the_read_back_still_gates_the_write(self):
+        sentence = "I would say these small things here are probably screws from the back shell"
+        transport = self.model_flow({"intent": "answer", "part_name": "screws", "origin": "back shell", "storage": None, "count": 4})
+        self.say(command="next_question")
+        self.assertEqual(self.say(sentence), "Three screws in cell 1, from back shell. Is that right?")
+        self.assertEqual(transport.posts, 1)
+        self.assertEqual([c for c in self.api.log if c[0] == "confirm"], [])
+        logged = [json.loads(line) for line in (self.root / "s1" / "dialogue-turns.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual((logged[-1]["transcript"], logged[-1]["source"], logged[-1]["stage"]), (sentence, "model", "bundle/label"))
+
+    def test_model_name_that_is_not_in_the_transcript_is_rejected_and_timeouts_re_ask(self):
+        sentence = "I would say these small things here are probably some parts from the back shell"
+        self.model_flow({"intent": "answer", "part_name": "washers", "origin": "back shell", "storage": None, "count": None})
+        self.say(command="next_question")
+        self.assertIn("could you please repeat it?", self.say(sentence))
+    def test_a_model_timeout_re_asks_instead_of_guessing(self):
+        sentence = "I would say these small things here are probably screws from the back shell"
+        self.model_flow(TransportTimeout("t"))
+        self.say(command="next_question")
+        self.assertIn("could you please repeat it?", self.say(sentence))
+        self.assertEqual([c for c in self.api.log if c[0] in ("answer", "confirm")], [])
+
+    def test_every_turn_is_logged_locally_with_the_transcript(self):
+        self.say(command="next_question")
+        self.say("mmm")
+        lines = [json.loads(line) for line in (self.root / "s1" / "dialogue-turns.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual([entry["transcript"] for entry in lines], [None, "mmm"])
+        self.assertEqual((lines[1]["stage"], lines[1]["parser"], lines[1]["source"]), ("bundle/label", "unclear", "rule"))
+        self.assertIn("repeat", lines[1]["reply"])
 
     def finished(self):
         for q in self.api.state:
@@ -276,7 +354,14 @@ class FlowTests(unittest.TestCase):
         self.assertIn(DEFER, reply)
         self.assertIn("miss", reply)
 
-    def test_text_outside_a_question_is_not_handled(self):
+    def test_speech_never_reaches_the_guide_while_questions_remain(self):
+        result = self.flow.turn(None, "where does it go")
+        self.assertTrue(result["handled"])
+        self.assertIn("several small parts", result["speak"]["text"])
+
+    def test_after_the_last_question_speech_goes_to_the_guide(self):
+        self.finished()
+        (self.root / "s1" / "dialogue-closing-done").write_text("done", encoding="utf-8")
         self.assertFalse(self.flow.turn(None, "where does it go")["handled"])
 
     def test_finished_video_opens_the_dialogue_on_the_first_utterance(self):

@@ -798,7 +798,9 @@ function drawingCard(job) {
 const CAPTURE_TEXT = {
   requested: "Waiting for the photo from the phone",
   delivered: "Photo received, checking it",
+  follow_up_starting: "Photo received; checking the drawing worker start",
   follow_up_started: "Photo received; drawing again from the new photo",
+  follow_up_pending_recovery: "Photo received; drawing paused for recovery. Check the existing follow-up job before resuming",
   failed: "The phone could not take this view",
 };
 
@@ -825,6 +827,12 @@ function captureBlock(job) {
   const phone = capture.phone_status ? ` (phone: ${capture.phone_status})` : "";
   line.textContent = `${capture.label}: ${CAPTURE_TEXT[capture.state] || capture.state}${phone}.`;
   block.append(line);
+  if (capture.state === "follow_up_pending_recovery" && capture.failure) {
+    const reason = document.createElement("p");
+    reason.className = "notice";
+    reason.textContent = capture.failure;
+    block.append(reason);
+  }
   if (capture.follow_up_job) {
     const follow = document.createElement("p");
     follow.className = "provenance";
@@ -845,7 +853,7 @@ async function requestCapture(job, button) {
 }
 
 async function pollCaptures(jobs) {
-  const open = jobs.filter((job) => job.capture && (job.capture.state === "requested" || job.capture.state === "delivered"));
+  const open = jobs.filter((job) => job.capture && ["requested", "delivered", "follow_up_starting"].includes(job.capture.state));
   for (const job of open) {
     const result = await post("/api/capture/poll", { session: state.session, job: job.job });
     if (result.state === "follow_up_started") speak("Photo received. I am drawing the part again.");

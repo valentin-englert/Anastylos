@@ -185,8 +185,39 @@ def _candidates(spec_part: str | None, memory: dict) -> list[dict]:
         label_words = _tokens(event.get("operator_label") or "")
         shared = sorted(wanted & label_words)
         score = round(len(shared) / len(label_words), 3) if label_words else 0.0
+        if label_words and "".join(_WORD.findall((spec_part or "").lower())) == "".join(_WORD.findall(event["operator_label"].lower())):
+            shared, score = sorted(label_words), 1.0  # "frontshell" and "front shell" are the same words
         out.append({**_part_summary(event, memory), "score": score, "matched_tokens": shared, "suggested": bool(shared)})
     return sorted(out, key=lambda c: (-c["score"], -len(c["matched_tokens"]), c["part_id"]))
+
+
+def _layer(job_dir: Path) -> dict | None:
+    """The drawing's layer in the explosion layout, with its neighbours; only an operator-confirmed layer counts."""
+    try:
+        layers = json.loads((job_dir.parents[1] / "explosion.json").read_text(encoding="utf-8"))["layers"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    index = next((i for i, layer in enumerate(layers) if layer.get("job") == job_dir.name), None)
+    if index is None or not layers[index].get("confirmed_by_operator"):
+        return None
+    return {"label": layers[index].get("label"), "position": index + 1, "of": len(layers),
+            "above": layers[index - 1].get("label") if index else None,
+            "below": layers[index + 1].get("label") if index + 1 < len(layers) else None}
+
+
+def _parts_of(label: str | None, event_id: str, memory: dict) -> list[dict]:
+    """Current parts whose stated origin is exactly this part's name, grouped by name and place. Near matches do not count."""
+    wanted = _tokens(label or "")
+    groups: dict[tuple, dict] = {}
+    for event in memory["parts"]:
+        if not wanted or event["id"] == event_id or _tokens(event.get("source") or "") != wanted:
+            continue
+        summary = _part_summary(event, memory)
+        group = groups.setdefault((summary["label"], summary["storage_location"]), {
+            "label": summary["label"], "storage_location": summary["storage_location"], "count": 0, "record_ids": []})
+        group["count"] += 1
+        group["record_ids"].append(event["id"])
+    return list(groups.values())
 
 
 def link_candidates(root: Path, session_id: str, job: str) -> dict:
@@ -196,10 +227,12 @@ def link_candidates(root: Path, session_id: str, job: str) -> dict:
     memory = _read_memory(state)
     link = _read_link(context["dir"])
     link_state, _reason = _link_state(link, context, memory)
+    layer = _layer(context["dir"])
+    wanted = layer["label"] if layer else context["summary"]["part"]
     return {"schema": CANDIDATES_SCHEMA, "job": job, "spec_part": context["summary"]["part"],
             "drawing_sha256": context["drawing_sha256"], "memory_sha256": memory["sha256"], "link": link,
             "link_state": link_state, "auto_link": False,
-            "candidates": _candidates(context["summary"]["part"], memory)}
+            "candidates": _candidates(wanted, memory)}
 
 
 def link_part(root: Path, session_id: str, job: str, part_id: str, supersede: bool = False, note: str = "") -> dict:
@@ -363,6 +396,8 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
     ``coarse_origin``       origin asked, but the stored origin names no install point: ``answer.text`` quotes the
                             stored place, ``message`` says it is too coarse, ``follow_up`` and ``evidence_to_show`` follow
     ``origin_unknown`` / ``storage_unknown``   nothing recorded: ``follow_up`` asks for it
+    ``parts_belong_here``   origin asked of an assembly with no origin of its own: ``belongs_here`` lists the parts whose
+                            stated origin is exactly its name, ``layer`` its operator-confirmed place in the layout
     ``needs_link`` / ``link_stale``   the drawing is not (validly) linked: ``candidates`` for the operator
     ``guide_unusable``      no fresh package bound to the memory hash: nothing is answered
     ``not_proven`` / ``selection_refused``   the verifier or the hash binding refused
@@ -409,10 +444,15 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
     follow_up = None
     if status == "storage_unknown":
         follow_up = _follow_up("storage_place", label, event_id, target["job"], "no storage record", None)
+    belongs_here = _parts_of(label, event_id, memory)
+    layer = _layer(context["dir"]) if context is not None else None
+    if status == "origin_unknown" and belongs_here:
+        total = sum(group["count"] for group in belongs_here)
+        status, message = "parts_belong_here", f"{total} recorded part(s) came from {label}; put them back here."
     elif status in ("coarse_origin", "origin_unknown"):
         follow_up = _follow_up("install_point", label, event_id, target["job"], origin["precision"], origin["description"])
     return _result(status, message, matched, target, link=link, package_sha256=asked["guide_sha256"],
-                   memory_sha256=asked["memory_sha256"], answer=_checked_text(asked), origin=origin, storage=storage,
-                   follow_up=follow_up,
+                   memory_sha256=asked["memory_sha256"], answer=None if status == "parts_belong_here" else _checked_text(asked), origin=origin, storage=storage,
+                   follow_up=follow_up, belongs_here=belongs_here, layer=layer,
                    evidence_to_show=_evidence_to_show(context, origin) if status in ("coarse_origin", "origin_unknown") else [],
                    answers={intent: _checked_text(answer) for intent, answer in answers.items()})

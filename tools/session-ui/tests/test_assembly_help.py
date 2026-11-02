@@ -362,5 +362,36 @@ class AskTest(HelpCase):
         self.assertEqual(sha(self.memory), self.build["memory_sha256"])
 
 
+class BelongsHereTest(HelpCase):
+    def setUp(self):
+        super().setUp()
+        shell = {"type": "declared_removal", "id": "dec-0004", "session": SESSION, "timestamp": "2026-11-01T15:30:00Z",
+                 "operator_label": "back shell", "source": None, "phase": "phase-0001", "t_s": None, "observation_id": None,
+                 "declared_by": "operator (test)", "evidence_note": "closing answer", "supersedes": None}
+        near = {**shell, "id": "dec-0005", "operator_label": "clip", "source": "back shell corner"}
+        with self.memory.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(shell) + "\n" + json.dumps(near) + "\n")
+        adapter.guide_build(self.root, "s1")
+
+    def test_assembly_lists_exact_origin_matches_and_its_confirmed_layer(self):
+        self.job("outline-a", "part 1")
+        self.link("outline-a", "dec-0004")
+        (self.session_dir / "drawings" / "explosion.json").write_text(json.dumps({"layers": [
+            {"job": "outline-a", "label": "backshell", "confirmed_by_operator": True},
+            {"job": "other", "label": "pcb", "confirmed_by_operator": False}]}), encoding="utf-8")
+        result = self.ask("outline-a", "Where does this part belong?")
+        self.assertEqual(result["status"], "parts_belong_here")
+        self.assertEqual([(g["label"], g["count"], g["storage_location"]) for g in result["belongs_here"]], [("back screw", 1, "cell-1")])
+        self.assertEqual((result["layer"]["position"], result["layer"]["below"]), (1, "pcb"))
+        self.assertIsNone(result["answer"])
+
+    def test_candidates_use_the_operators_layer_name(self):
+        self.job("outline-a", "part 1")
+        (self.session_dir / "drawings" / "explosion.json").write_text(json.dumps({"layers": [
+            {"job": "outline-a", "label": "backshell", "confirmed_by_operator": True}]}), encoding="utf-8")
+        best = assembly_help.link_candidates(self.root, "s1", "outline-a")["candidates"][0]
+        self.assertEqual((best["part_id"], best["suggested"]), ("dec-0004", True))
+
+
 if __name__ == "__main__":
     unittest.main()

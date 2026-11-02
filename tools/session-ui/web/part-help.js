@@ -93,6 +93,14 @@
     const answer = result.answer && result.answer.accepted ? result.answer.text : null;
     $("part-help-answer").textContent = answer || result.message || result.status;
     const details = [];
+    if (result.layer) {
+      const { position, of, above, below } = result.layer;
+      const around = [above ? `above it: ${above}` : null, below ? `below it: ${below}` : null].filter(Boolean).join(", ");
+      details.push(line(`Layer ${position} of ${of} in your confirmed order${around ? ` (${around})` : ""}.`));
+    }
+    for (const group of result.belongs_here || []) {
+      details.push(line(`Belongs here: ${group.count} × ${group.label}, now in ${group.storage_location || "an unrecorded place"}`));
+    }
     if (result.origin) {
       const origin = result.origin;
       details.push(line(`Came from: ${origin.description || "not recorded"} (${origin.precision || "precision unknown"})`));

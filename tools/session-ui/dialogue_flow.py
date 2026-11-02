@@ -36,7 +36,7 @@ def _default_executor(root: Path, session_id: str) -> Executor:
     """Muse extracts first; short timeout, no retries. Without a key in reach the rules answer alone."""
     if not model_key(os.environ):
         return Executor(None)
-    return Executor(MuseClient(timeout_s=6.0, retries=0, usage_log=Path(root) / session_id / "dialogue-muse-usage.jsonl"), "low")
+    return Executor(MuseClient(timeout_s=8.0, retries=0, usage_log=Path(root) / session_id / "dialogue-muse-usage.jsonl"), "minimal")
 
 
 def flow_for(root: Path, session_id: str, api) -> "DialogueFlow":

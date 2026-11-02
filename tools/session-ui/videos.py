@@ -149,6 +149,32 @@ def _update(root: Path, video_id: str, **changes) -> None:
     _write_atomic(_job_path(root, video_id), job)
 
 
+VOICE_BINDINGS = "guided-voice-bindings.json"
+OPEN_MARKER = "dialogue-pending-open"  # read and removed by dialogue_flow when the dialogue opens
+
+
+def _bind_voice(root: Path, video_id: str, folder: str) -> None:
+    """Point phone voice at the session built from this video: the guided session that uploaded it -> the new folder.
+
+    This is the one file the module writes into the receiver's data dir; it is the same file the receiver reads
+    to route voice input (``anastylos_voice_routes.BINDINGS_FILE``). A failure here never fails the processing job.
+    """
+    try:
+        meta, _directory = _find(root, video_id)
+        guided = meta.get("session_id")
+        data_dir = _videos_dir(root).parent
+        path = data_dir / VOICE_BINDINGS
+        try:
+            bindings = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            bindings = {}
+        if isinstance(guided, str) and guided and isinstance(bindings, dict):
+            bindings[guided] = folder
+            _write_atomic(path, bindings)
+    except (AdapterError, OSError, AttributeError):
+        pass
+
+
 def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, python: Path | None) -> None:
     try:
         _update(root, video_id, state="running", stage="creating the session folder")
@@ -156,6 +182,8 @@ def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, 
         _update(root, video_id, stage="running the session pipeline on the video")
         counts = phases.run_phase(state, PHASE_TAG, PHASE_LABEL, video, runner, phases.vision_python(python or Path(sys.executable)))
         _update(root, video_id, state="done", stage="finished", counts=counts, finished_at=_now())
+        _bind_voice(root, video_id, folder)
+        (root / folder / OPEN_MARKER).write_text("opens on the first voice turn", encoding="utf-8")
     except SessionError as exc:
         _update(root, video_id, state="failed", stage="failed", error=str(exc), finished_at=_now())
     except Exception as exc:  # noqa: BLE001 - a background job must always end in a visible state

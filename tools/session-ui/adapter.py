@@ -321,6 +321,65 @@ def question_confirm(root: Path, session_id: str, qid: str, text: str) -> dict:
     return _stopped(step)
 
 
+def question_siblings(root: Path, session_id: str, qid: str) -> dict:
+    """The questions that share ``qid``'s cell and are still waiting for an answer (``qid`` first, live order)."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            cell = coordinator.book.questions[qid].get("cell")
+            waiting = (st.OPEN, st.FAILED, st.ASKED)
+            order = [q for q in coordinator.book.live_order()
+                     if cell is not None and coordinator.book.questions[q].get("cell") == cell
+                     and coordinator.book.questions[q]["kind"] == "source_of_part"
+                     and coordinator.state_of(q).state in waiting]
+            return {"cell": cell, "qids": [qid] + [q for q in order if q != qid]}
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
+def question_open(root: Path, session_id: str, qid: str) -> dict:
+    """Ask a question without speaking it (a bundled answer addresses several at once); repeating is a no-op."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if coordinator.stopped:
+                raise ask_loop.Stopped(coordinator.stopped)
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            return _prompt_payload(coordinator.ask(qid), qid)
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
+def question_defer(root: Path, session_id: str, qid: str, reason: str) -> dict:
+    """Leave a question for the desktop: it is not asked again by voice and nothing is written."""
+    state = _load_state(root, session_id)
+
+    def step() -> dict:
+        coordinator = ask_loop.open_coordinator(state)
+        try:
+            if coordinator.stopped:
+                raise ask_loop.Stopped(coordinator.stopped)
+            if qid not in coordinator.book.questions:
+                raise AdapterError(f"Unknown question {qid!r}.", 404)
+            coordinator.defer(qid, leave_unresolved=True, reason=reason)
+            return {"status": "left_unresolved", "question_id": qid}
+        finally:
+            coordinator.close()
+
+    return _stopped(step)
+
+
 # ------------------------------------------------------------------ guide (offline: L0 / cache / refusal only)
 
 def guide_build(root: Path, session_id: str) -> dict:

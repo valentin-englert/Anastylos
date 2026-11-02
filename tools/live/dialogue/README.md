@@ -19,3 +19,13 @@ as `forward` text, the coordinator reads it back, and only its read-back plus "y
   but ~3.7 s per call, so the default wiring is rules only (`Executor(None)`); Muse stays advisory until a faster effort proves out.
 
 Tests: `python -m unittest discover -s tests` from `tools/live` (synthetic, fake model). Not validated on hardware.
+
+## Voice path (session UI + receiver)
+
+`tools/session-ui/dialogue_flow.py` runs the spoken question round: `POST /api/dialogue/turn {session, command: "next_question" | text}`
+-> `{handled, speak:{text,kind,basis_ref}}`. The receiver (`anastylos_voice_routes.py`, `VoiceConfig.dialogue`) relays input there and falls
+back to the legacy question/guide routes when the turn is not handled. Small parts of one cell are bundled into one question
+(`bundle.py`); every part stays its own coordinator question, gets its own read-back state, and one combined read-back + "yes" confirms them
+individually. "No" or a refused bundled answer returns to one-by-one questions; two misunderstandings leave the parts for the desktop
+(`LEFT_UNRESOLVED`, `dialogue-open-items.jsonl` in the session). When a video job finishes, `videos._bind_voice` writes the receiver's
+`guided-voice-bindings.json` (uploading guided session -> new session) and a `dialogue-pending-open` marker: the first voice utterance opens the dialogue.

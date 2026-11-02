@@ -60,6 +60,7 @@ class VoiceConfig:
     transcriber: list[str] | None = None
     session_ui_port: int | None = None
     bindings_path: Path | None = None
+    dialogue: bool = True  # route input through the session UI's dialogue agent (/api/dialogue/turn)
 
 
 @dataclass
@@ -246,6 +247,17 @@ class VoiceRoutes:
                 speak = voice.last_speak or {"text": NOTHING_TO_REPEAT, "kind": "status", "basis_ref": None}
                 self._journal(session_id, "repeat", "ok", None, time.monotonic() - began)
                 return self.h._send_json(HTTPStatus.OK, {"status": "ok", "speak": speak})
+            if self.config.dialogue:
+                turn = {"session": agent_session, **({"command": command} if command else {"text": text})}
+                status, result = self._session_ui("/api/dialogue/turn", turn)
+                if status == 200 and isinstance(result, dict) and result.get("handled") and result.get("speak"):
+                    voice.last_speak = result["speak"]
+                    self._journal(session_id, "/api/dialogue/turn", "ok", None, time.monotonic() - began)
+                    return self.h._send_json(HTTPStatus.OK, {"status": "ok", "speak": result["speak"]})
+                if status not in (200, 404):  # 404: an older session UI without the dialogue agent
+                    self._journal(session_id, "/api/dialogue/turn", f"session_ui_{status}", None, time.monotonic() - began)
+                    speak = {"text": UNAVAILABLE, "kind": "status", "basis_ref": None}
+                    return self.h._send_json(HTTPStatus.OK, {"status": "session_ui_error", "speak": speak})
             if command == "next_question":
                 route, path, payload = "question", "/api/questions/next", {"session": agent_session}
             elif voice.stage == "answer" and voice.question_id:

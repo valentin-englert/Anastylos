@@ -97,7 +97,7 @@ class LinkAndRequestTest(LoopbackCase):
         with self.assertRaises(AdapterError):
             captures.session_qr_png(self.root)
         captures.connect_phone(self.root, self.client, mint=self._mint)
-        self.assertTrue(captures.session_qr_png(self.root).startswith(b"PNG"))
+        self.assertEqual(captures.session_qr_png(self.root)[:4], bytes([0x89, 0x50, 0x4E, 0x47]))
 
     def test_request_needs_a_connected_phone_and_a_job_that_needs_a_capture(self):
         with self.assertRaises(AdapterError):

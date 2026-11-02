@@ -1,7 +1,13 @@
 # tools/drawing-proof — single-part technical drawing from one real frame (research)
 
-Research prototype on branch `research/drawing-proof`. It turns one hand-free video frame into a photo-checked
-part outline and a technical SVG. Not wired into the agent, guide, memory or session UI.
+The existing product drawing job uses Muse frame choice and boxes, hosted SAM 3.1 masks, deterministic gates,
+then SVG and photo overlay. It is wired into the session UI; operator binding remains separate from memory.
+See [`RESULTS.md`](RESULTS.md) for real-image/API validation and known failures. The classical proof below is
+the earlier offline baseline, not a replacement for Muse/SAM.
+
+When processing a copied session, set `ANASTYLOS_DRAWING_CACHE` to a separate writable cache folder before
+starting the UI or drawing worker. This redirects sampled frames and hash memos; the default remains the
+existing `C:\ANASTYLOS\data\drawing-cache`. Original videos and memories stay read-only.
 
 ## Pipeline
 

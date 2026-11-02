@@ -52,6 +52,7 @@ private fun trackingDetail(state: GuidanceUiState): String = when (state.registr
 fun voiceLabelOf(voice: VoiceController.State): String? = when {
     voice.speaking -> "Speaking"
     voice.busy -> "Thinking"
+    voice.conversationOpen -> "Your turn"
     voice.listening -> "Listening"
     else -> null
 }

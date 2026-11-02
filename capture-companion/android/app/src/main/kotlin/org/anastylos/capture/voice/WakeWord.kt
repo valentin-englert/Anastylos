@@ -14,19 +14,19 @@ object WakeWord {
      * The spellings that count as addressing the agent. "Muse", "Meta" and "Mews" apply until the
      * operator names the agent; then the workstation's wake words and likely mishearings apply instead.
      */
-    class Names private constructor(words: List<String>) {
+    class Names private constructor(words: List<String>, val displayName: String) {
         internal val pattern: Regex = Regex(
             """^\W*(?:hey\s+|ok(?:ay)?\s+)?(?:${words.joinToString("|") { spelling(it) }})\b[\s,.!?:-]*(.*)$""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
         )
 
         companion object {
-            val DEFAULT = Names(listOf("muse", "meta", "mews"))
+            val DEFAULT = Names(listOf("muse", "meta", "mews"), "Muse")
 
             /** Blank or empty falls back to [DEFAULT]. */
-            fun of(words: List<String>): Names {
+            fun of(words: List<String>, displayName: String = DEFAULT.displayName): Names {
                 val clean = words.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-                return if (clean.isEmpty()) DEFAULT else Names(clean)
+                return if (clean.isEmpty()) DEFAULT else Names(clean, displayName.ifBlank { DEFAULT.displayName })
             }
 
             private fun spelling(word: String) =

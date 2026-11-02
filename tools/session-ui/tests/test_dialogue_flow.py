@@ -172,7 +172,9 @@ class ItemsTests(unittest.TestCase):
     def test_repeated_syllable_noise_is_rejected_without_normalization(self):
         transcript = "front shell Dpadpad"
         said = set(cell_items.words(transcript))
+        self.assertTrue(cell_items.has_repeated_cvc_fragment(transcript))
         self.assertIsNone(cell_items.clean_origin("front shell Dpadpad", said))
+        self.assertFalse(cell_items.has_repeated_cvc_fragment("front shell D-pad"))
         self.assertEqual(cell_items.clean_origin("front shell D-pad", set(cell_items.words("front shell D-pad"))),
                          "front shell D-pad")
         self.assertEqual(cell_items.check_items([item("Dpadpad", 1)], "Dpadpad"), [])
@@ -282,7 +284,10 @@ class FlowTests(unittest.TestCase):
         self.with_model()
         self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
         self.api.state["Q4"] = "COMMITTED"
-        self.say(command="next_question")
+        reply = self.say(command="next_question")
+        self.assertIn(reply, rendered("cell_open", "serious"))
+        self.assertEqual(self.flow.last_speak["basis_ref"], "Q1:2")
+        self.assertEqual(self.flow.current["asked"], reply)
         self.assertEqual(self.say("why"), self.flow.last_speak["text"])
         self.assertEqual([call[1] for call in self.api.log if call[0] == "reopen"], ["Q1", "Q2", "Q3"])
         self.assertIn("work area", self.say("skip"))
@@ -380,6 +385,63 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(self.flow.current["stage"], "origin")
         self.assertNotIn("D-pad", self.flow.last_speak["text"])
         self.assertEqual(self.api.answers, {})
+
+    def test_muse_origin_subset_cannot_bypass_raw_asr_uncertainty(self):
+        table = {**MODEL_TABLE, "rubber membrane": answer(item("rubber membrane", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        self.say("rubber membrane")
+        calls = []
+
+        def scripted_extract(text, question_type, tag="", need_name=False):
+            calls.append((text, question_type))
+            # This is what Muse would return if raw uncertainty reached extraction.
+            return ({"intent": "answer", "part_name": None, "origin": "front shell", "storage": None, "count": None},
+                    "muse", [])
+
+        self.flow.agent.extract = scripted_extract
+        reply = self.say("front shell Dpadpad")
+        self.assertIn("could you please repeat it?", reply)
+        self.assertEqual(calls, [])
+        self.assertNotIn("Right?", reply)
+        self.assertEqual(self.flow.current["stage"], "origin")
+        self.assertEqual(self.api.answers, {})
+        self.assertEqual(self.writes(), [])
+
+    def test_muse_item_subset_cannot_bypass_raw_asr_uncertainty(self):
+        table = {**MODEL_TABLE, "front shell Dpadpad": answer(item("front shell", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        reply = self.say("front shell Dpadpad")
+        self.assertIn("could you please repeat it?", reply)
+        self.assertNotEqual(self.flow.current["stage"], "confirm")
+        self.assertEqual(self.model.posts, 0)
+        self.assertEqual(self.api.answers, {})
+        self.assertEqual(self.writes(), [])
+
+    def test_asr_noise_invalidates_a_proposed_origin_before_a_bare_yes(self):
+        table = {**MODEL_TABLE, "the right button from the back shell": answer(item("right button", 1, "back shell")),
+                 "d-pad": answer(item("D-pad", 1, None))}
+        self.with_model(table)
+        self.say(command="next_question")
+        self.say("the right button from the back shell")
+        self.say("yes")
+        self.say("d-pad")
+        self.assertEqual(self.flow.current["stage"], "origin_confirm")
+
+        reply = self.say("front shell Dpadpad")
+        self.assertEqual(self.flow.current["stage"], "origin")
+        self.assertIn(reply, selector.variants("cell_origin", "serious"))
+        self.assertNotIn("origin_proposal", self.flow.current)
+        self.assertEqual(self.say("yes"), self.flow.last_speak["text"])
+        self.assertNotIn("Q4", self.api.answers)
+        self.assertEqual(self.api.state["Q4"], "ASKED")
+        self.assertEqual(self.writes(), [])
+
+        self.say("from front shell")
+        self.assertIn("Right?", self.flow.last_speak["text"])
+        self.say("yes")
+        self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
 
     def test_no_asks_the_cell_again_and_a_correction_in_the_same_sentence_is_taken_directly(self):
         self.with_model({**MODEL_TABLE, "it's a right button from the back shell": answer(item("right button", 1, "back shell"))})

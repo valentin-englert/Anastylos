@@ -113,6 +113,11 @@ def _has_repeated_cvc(tokens: list[str]) -> bool:
     return any(_REPEATED_CVC.search(token) for token in tokens)
 
 
+def has_repeated_cvc_fragment(text: str) -> bool:
+    """Whether the raw transcript contains a repeated syllable-like artifact that needs clarification."""
+    return _has_repeated_cvc(words(text))
+
+
 def check_items(raw: list[dict], text: str) -> list[dict]:
     """Keep the proposed items that survive the transcript check; [] when any item fails (never a partial guess)."""
     said = set(words(text))

@@ -64,10 +64,15 @@ def _job_path(root: Path, video_id: str) -> Path:
 
 
 def _job(root: Path, video_id: str) -> dict | None:
-    try:
-        return json.loads(_job_path(root, video_id).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+    """The job file, read through a replace in progress (Windows briefly refuses a read while the file is swapped)."""
+    for attempt in range(5):
+        try:
+            return json.loads(_job_path(root, video_id).read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError):
+            time.sleep(0.02 * (attempt + 1))
+    return None
 
 
 def _stored(root: Path) -> list[tuple[dict, Path]]:

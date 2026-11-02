@@ -135,11 +135,16 @@ class TestProcess(VideoCase):
     def test_background_job_ends_in_a_visible_state(self):
         self.store()
         self.process(FakeRunner(), background=True)
-        for _ in range(100):
-            state = videos.list_videos(self.root)["videos"][0]["job"]["state"]
+        state = None
+        for _ in range(200):
+            job = videos.list_videos(self.root)["videos"][0]["job"]
+            state = job and job["state"]
             if state in ("done", "failed"):
                 break
             time.sleep(0.05)
+        for worker in threading.enumerate():
+            if worker.name.startswith("video-"):
+                worker.join(10)  # the temp folder must not disappear under a running job
         self.assertEqual(state, "done")
 
 

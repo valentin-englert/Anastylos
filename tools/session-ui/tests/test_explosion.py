@@ -13,6 +13,7 @@ UI_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(UI_ROOT))
 
 import explosion  # noqa: E402
+import drawings  # noqa: E402
 from adapter import AdapterError  # noqa: E402
 
 POLYGONS = {"front-1": "M 5,5 L 65,5 L 65,45 L 5,45 Z", "pcb-1": "M 10,8 L 90,8 L 50,58 Z"}
@@ -64,6 +65,19 @@ class ExplosionTest(unittest.TestCase):
         self.assertFalse(moved["layout"]["layers"][1]["confirmed_by_operator"])  # moved: confirmation withdrawn
         self.assertEqual(moved["files"]["pcb-1"], ["drawing.svg", "overlay.jpg", "rectified.png"])
         self.assertFalse((self.session / "memory").exists())
+
+    def test_saved_drawing_binding_and_layout_survive_a_fresh_view(self):
+        drawings.bind(self.root, "s1", "front-1", "confirm", "synthetic test binding")
+        explosion.layout_action(self.root, "s1", {"action": "propose"})
+        explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "label": "Front shell",
+                                                    "view_side": "interior"})
+
+        reloaded = explosion.explosion_view(self.root, "s1")
+
+        self.assertEqual([layer["job"] for layer in reloaded["layout"]["layers"]], ["front-1", "pcb-1"])
+        self.assertTrue(reloaded["layout"]["layers"][0]["confirmed_by_operator"])
+        self.assertEqual(reloaded["manifest"]["layers"][0]["binding"], "confirmed")
+        self.assertEqual(reloaded["manifest"]["layers"][0]["status"], "confirmed")
 
     def test_bad_actions_and_bodies_are_refused_with_a_status(self):
         cases = [({"action": "delete"}, 400), ({"action": "confirm", "job": "front-1"}, 409),  # no layout yet

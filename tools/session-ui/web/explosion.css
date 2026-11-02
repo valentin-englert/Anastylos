@@ -65,7 +65,7 @@ button {
 }
 button[aria-pressed="true"] { background: var(--accent); color: #0b0b0c; }
 button:disabled { opacity: 0.5; cursor: default; }
-button:focus-visible, input:focus-visible { outline: 3px solid #f5b800; outline-offset: 1px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #f5b800; outline-offset: 1px; }
 
 #svg-host { border: 1px solid var(--line); background: var(--wash); overflow: auto; }
 #svg-host svg { display: block; width: 100%; height: auto; min-width: 36rem; }
@@ -88,6 +88,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #f5b800; outline-
 form label { display: block; margin-top: 0.5rem; font-weight: 600; }
 form label.inline { font-weight: 400; }
 form input[type="text"], form input:not([type]) { width: 100%; padding: 0.3rem 0.4rem; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+form select { width: 100%; padding: 0.3rem 0.4rem; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); color: var(--ink); font: inherit; }
 form button { margin: 0.3rem 0.3rem 0 0; }
 
 #thumb-rectified { max-width: 100%; border: 1px solid var(--line); background: #fff; }

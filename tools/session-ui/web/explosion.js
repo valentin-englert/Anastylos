@@ -6,6 +6,7 @@
 
 const params = new URLSearchParams(window.location.search);
 const sessionId = params.get("session") || "";
+let requestedJob = params.get("job") || "";
 const state = { view: null, mode: "exploded", selected: null, busy: false };
 
 const $ = (id) => document.getElementById(id);
@@ -45,9 +46,18 @@ function announce() {
 }
 
 function select(job) {
-  state.selected = job;
+  state.selected = job && layerOf(job) ? job : null;
+  const url = new URL(window.location.href);
+  if (state.selected) {
+    url.searchParams.set("job", state.selected);
+    requestedJob = state.selected;
+  } else {
+    url.searchParams.delete("job");
+    requestedJob = "";
+  }
+  window.history.replaceState(null, "", url);
   for (const node of document.querySelectorAll(".ax-part, .ax-legend")) {
-    node.classList.toggle("ax-selected", node.dataset.job === job);
+    node.classList.toggle("ax-selected", node.dataset.job === state.selected);
   }
   renderPanel();
   announce();
@@ -150,6 +160,7 @@ async function load(view) {
   const open = manifest.layers.filter((l) => l.status !== "confirmed").length;
   setState(open ? `${open} of ${manifest.layers.length} layers unconfirmed.` : "All drawn layers confirmed.");
   if (state.selected && !layerOf(state.selected)) state.selected = null;
+  if (!state.selected && requestedJob && layerOf(requestedJob)) state.selected = requestedJob;
   select(state.selected);
 }
 

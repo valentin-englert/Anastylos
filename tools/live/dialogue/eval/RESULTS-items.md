@@ -10,4 +10,4 @@ The data favour `minimal` clearly (14/14, no timeouts); switching the flow to it
 and is left to the owner's decision (one constant: `_default_executor` in `tools/session-ui/dialogue_flow.py`).
 Raw: `results-items-2026-11-03.json`. Latencies are the model call alone; no call is made for plain yes/no, meta, empty or unfinished answers.
 
-Decision 2026-11-03: the owner chose effort `minimal` (timeout 8 s as in the batch), deviating from the pre-registered rule, under which `low` would have stayed because neither effort met p95 <= 6 s.
+Decision 2026-11-02: the owner chose effort `minimal` (timeout 8 s as in the batch), deviating from the pre-registered rule, under which `low` would have stayed because neither effort met p95 <= 6 s.

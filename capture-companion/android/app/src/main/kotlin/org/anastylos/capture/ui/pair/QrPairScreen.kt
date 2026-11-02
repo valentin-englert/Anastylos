@@ -289,7 +289,7 @@ private fun CenteredColumn(
 }
 
 @Composable
-private fun ScannerBody(onQrText: (String?) -> Unit, onCancel: () -> Unit) {
+internal fun ScannerBody(onQrText: (String?) -> Unit, onCancel: () -> Unit) {
     val context = LocalContext.current
     var cameraGranted by remember {
         mutableStateOf(

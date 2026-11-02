@@ -68,6 +68,7 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
+body { display: flex; flex-direction: column; }
 body.launching { overflow: hidden; }
 
 h1, h2, h3 { font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; margin: 0; }
@@ -269,10 +270,13 @@ section > .hint { display: none; }                       /* moved into the help 
 
 /* ------------------------------------------------------------------ start screen */
 
-#home { padding-top: 0; text-align: center; }
+main { flex: 1 1 auto; }
+/* start screen: centred in the space below the top bar, nudged up for optical balance */
+main:has(> #home:not([hidden])) { display: flex; flex-direction: column; justify-content: center; padding-bottom: 10vh; }
+#home { width: 100%; padding-top: 0; text-align: center; }
 .home-status {
   display: inline-block;
-  margin: var(--s-2) 0 var(--s-5);
+  margin: var(--s-3) 0 var(--s-6);
   padding: 0 var(--s-5);
   border: 1px solid var(--hairline);
   border-radius: var(--pill);

@@ -13,6 +13,9 @@ package org.anastylos.capture.voice
 interface VoiceLink {
     suspend fun transcribe(wav: ByteArray): Transcript
 
+    /** The wake words the workstation wants matched; null keeps the default "Muse" / "Meta". */
+    suspend fun wakeNames(): WakeWord.Names? = null
+
     /** Transcript or fixed command as operator input; returns text to speak. */
     suspend fun submit(input: OperatorInput): SpokenReply
 

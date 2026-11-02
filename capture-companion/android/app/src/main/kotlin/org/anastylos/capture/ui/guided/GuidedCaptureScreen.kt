@@ -68,6 +68,7 @@ import org.anastylos.capture.ui.camera.onImage
 import org.anastylos.capture.ui.camera.MenuSection
 import org.anastylos.capture.ui.camera.Pill
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.width
 import android.os.SystemClock
 import androidx.compose.runtime.produceState
 import kotlinx.coroutines.delay
@@ -110,6 +111,7 @@ fun GuidedCaptureScreen(
     onBack: () -> Unit,
     onScanSession: () -> Unit,
     scannedSessionId: String?,
+    scanProblem: String?,
     onScannedConsumed: () -> Unit,
     onReplayGuide: () -> Unit,
     viewModel: GuidanceViewModel = viewModel(factory = container.guidedViewModelFactory()),
@@ -173,10 +175,9 @@ fun GuidedCaptureScreen(
         val label = cold.remoteRequest?.targetLabel
         if (requestId != null && !label.isNullOrBlank()) container.voice.speakVerified(label)
     }
-    var scanProblem by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(scannedSessionId) {
         val id = scannedSessionId ?: return@LaunchedEffect
-        if (id == INVALID_SESSION_QR) scanProblem = "That QR code does not hold a session id." else viewModel.attachRemote(id)
+        viewModel.attachRemote(id)
         onScannedConsumed()
     }
     val recorder = viewModel.recording
@@ -208,20 +209,15 @@ fun GuidedCaptureScreen(
             onBack = onBack,
             status = { compact -> StatusLabel(cold.remoteAttached, if (compact) null else voiceLabelOf(voiceState), compact) },
             barExtras = {
-                if (recorder != null) {
-                    BarIconButton(
-                        if (recordingNow) Glyph.Stop else Glyph.Record,
-                        if (recordingNow) "Stop recording" else "Record the disassembly",
-                        tint = Palette.Brick,
-                    ) { if (recordingNow) recorder.stop() else recorder.start() }
-                }
                 if (!cold.remoteAttached) BarIconButton(Glyph.Qr, "Scan the session QR code", onClick = onScanSession)
             },
             torchOn = cold.settings.torch,
             torchAvailable = caps.flashAvailable,
             onTorch = { viewModel.updateSettings { it.copy(torch = !it.torch) } },
             onMenu = { menuOpen = true },
-            actions = { compact -> ActionButtons(cold, viewModel, container.voice, voiceState, compact, onScanSession) },
+            actions = { compact ->
+                ActionButtons(cold, viewModel, container.voice, voiceState, compact, onScanSession, recorder, recordingNow)
+            },
             overlayTop = { isLandscape ->
                 RecordingLines(recordingState, uploadProgress, sheetWarning, recorder)
                 if (cold.remoteAttached) BannerText(statusBannerOf(state), isLandscape)
@@ -576,6 +572,23 @@ private fun ActionButton(text: String, short: String, primary: Boolean, compact:
     }
 }
 
+/** "Record disassembly": a labelled control with a red dot, turning into "Stop recording". */
+@Composable
+private fun RecordButton(recording: Boolean, compact: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(if (compact) 44.dp else 56.dp),
+        contentPadding = if (compact) PaddingValues(horizontal = 4.dp) else ButtonDefaults.ContentPadding,
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Paper),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Palette.Brick),
+    ) {
+        Box(Modifier.size(10.dp).background(Palette.Brick, if (recording) RoundedCornerShape(2.dp) else CircleShape))
+        Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
+        if (compact) Text(if (recording) "Stop" else "Record", fontSize = 13.sp, maxLines = 1)
+        else Text(if (recording) "Stop recording" else "Record disassembly", style = MaterialTheme.typography.titleMedium)
+    }
+}
+
 /** The few actions the operator needs during the flow; the rest lives in the menu. */
 @Composable
 private fun ActionButtons(
@@ -585,6 +598,8 @@ private fun ActionButtons(
     voiceState: VoiceController.State,
     compact: Boolean,
     onScanSession: () -> Unit,
+    recorder: RecordingController?,
+    recordingNow: Boolean,
 ) {
     val photoActions = state.remoteAttached && state.remoteRequest != null
     val buttons: @Composable (Modifier) -> Unit = { fill ->
@@ -592,7 +607,7 @@ private fun ActionButtons(
             ActionButton("Scan session QR", "Scan", primary = true, compact = compact, modifier = fill, onClick = onScanSession)
         } else {
             when (state.session) {
-                SessionState.DISARMED -> ActionButton("Start", "Start", true, compact, fill) { viewModel.arm() }
+                SessionState.DISARMED -> ActionButton("Start photo requests", "Requests", true, compact, fill) { viewModel.arm() }
                 SessionState.ACTIVE -> {
                     ActionButton("Next request", "Next", true, compact, fill) { viewModel.arm() }
                     ActionButton("Pause", "Pause", false, compact, if (compact) fill else Modifier) { viewModel.pause() }
@@ -611,11 +626,13 @@ private fun ActionButtons(
     if (compact) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             MuseButton(voice, voiceState, 44.dp)
+            if (recorder != null) RecordButton(recordingNow, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
             if (photoActions) photoButtons(Modifier.fillMaxWidth())
             buttons(Modifier.fillMaxWidth())
         }
     } else {
         if (photoActions) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { photoButtons(Modifier.weight(1f)) }
+        if (recorder != null) RecordButton(recordingNow, compact, Modifier.fillMaxWidth()) { if (recordingNow) recorder.stop() else recorder.start() }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             buttons(Modifier.weight(1f))
             MuseButton(voice, voiceState, 52.dp)
@@ -698,6 +715,3 @@ private fun ResultDetails(state: GuidanceUiState, viewModel: GuidanceViewModel) 
         OutlinedButton(onClick = { viewModel.dismissResult() }) { Text("Dismiss") }
     }
 }
-
-/** Value passed back from the QR scanner when the code carries no session id. */
-const val INVALID_SESSION_QR = "invalid"

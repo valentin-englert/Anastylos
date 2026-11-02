@@ -224,14 +224,20 @@
     </div>
     <p class="error" id="gaps-error" role="alert" hidden></p>
   </section>
-  <section data-page="drawings" aria-labelledby="drawings-heading">
-    <h2 id="drawings-heading">Drawings</h2>
-    <p class="hint">Starts a background job that calls Muse and SAM (Meta API) on frames of the session video. The page stays usable while it runs. A drawing stays unconfirmed until you bind it; memory is never changed. Opening candidates are hidden in the SVG.</p>
-    <form id="drawing-form">
-      <label for="drawing-spec">Requested part</label>
-      <select id="drawing-spec" name="spec"></select>
-      <button type="submit" id="drawing-start">Start drawing job</button>
-    </form>
+  <section data-page="phone" aria-labelledby="phone-heading">
+    <h2 id="phone-heading">Phone</h2>
+    <div class="phone-pair">
+      <h3>Connect a new phone</h3>
+      <p class="hint">Show the code, scan it with the app (QR icon), then approve the phone here. You decide: nothing is approved on its own.</p>
+      <button type="button" id="pair-start">Show pairing code</button>
+      <figure id="pair-qr-block" hidden>
+        <img id="pair-qr" alt="QR code for pairing the phone with this workstation" width="240" height="240">
+        <figcaption id="pair-caption"></figcaption>
+      </figure>
+      <div id="pair-requests"></div>
+      <p class="state" id="pair-state" role="status"></p>
+      <p class="error" id="pair-error" role="alert" hidden></p>
+    </div>
     <div class="phone-link">
       <p class="state" id="phone-link-state" role="status">Phone: checking…</p>
       <button type="button" id="phone-connect">Connect phone</button>
@@ -246,6 +252,16 @@
       <div id="video-list"></div>
       <p class="error" id="videos-error" role="alert" hidden></p>
     </div>
+  </section>
+
+  <section data-page="drawings" aria-labelledby="drawings-heading">
+    <h2 id="drawings-heading">Drawings</h2>
+    <p class="hint">Starts a background job that calls Muse and SAM (Meta API) on frames of the session video. The page stays usable while it runs. A drawing stays unconfirmed until you bind it; memory is never changed. Opening candidates are hidden in the SVG.</p>
+    <form id="drawing-form">
+      <label for="drawing-spec">Requested part</label>
+      <select id="drawing-spec" name="spec"></select>
+      <button type="submit" id="drawing-start">Start drawing job</button>
+    </form>
     <p><a id="explosion-link" href="/explosion.html">Open the explosion view</a></p>
     <p class="state" id="drawings-state" role="status"></p>
     <div id="drawing-jobs"></div>

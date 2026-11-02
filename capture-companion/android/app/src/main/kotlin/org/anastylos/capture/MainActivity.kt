@@ -22,9 +22,12 @@ import org.anastylos.capture.ui.pair.QrPairRoute
 import org.anastylos.capture.ui.session.SamplingScreen
 import org.anastylos.capture.ui.session.SessionScreen
 import org.anastylos.capture.ui.guided.SessionQrScanScreen
+import org.anastylos.capture.ui.guided.UNKNOWN_CODE_MESSAGE
 import org.anastylos.capture.ui.launcher.LauncherScreen
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.anastylos.capture.ui.onboarding.OnboardingPrefs
 import org.anastylos.capture.ui.onboarding.OnboardingScreen
 import org.anastylos.capture.ui.theme.AnastylosTheme
@@ -65,8 +68,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private const val SCANNED_SESSION_KEY = "scanned_session_id"
-
 @Composable
 fun AnastylosApp(container: AppContainer) {
     val context = LocalContext.current
@@ -74,6 +75,11 @@ fun AnastylosApp(container: AppContainer) {
     AnastylosTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             val navController = rememberNavController()
+            // A scanned code hops between screens here: the session to attach, a pairing code to
+            // redeem and why the last scan was refused.
+            var pendingSession by remember { mutableStateOf<String?>(null) }
+            var pendingPairText by remember { mutableStateOf<String?>(null) }
+            var scanProblem by remember { mutableStateOf<String?>(null) }
             NavHost(navController = navController, startDestination = "launcher") {
                 composable("launcher") {
                     LauncherScreen(onFinished = {
@@ -113,21 +119,29 @@ fun AnastylosApp(container: AppContainer) {
                         onReplayGuide = { navController.navigate("onboarding") },
                     )
                 }
-                composable("guided") { entry ->
-                    val scanned by entry.savedStateHandle.getStateFlow<String?>(SCANNED_SESSION_KEY, null).collectAsState()
+                composable("guided") {
                     GuidedCaptureScreen(
                         container,
                         onBack = { navController.popBackStack() },
-                        onScanSession = { navController.navigate("scan-session") },
-                        scannedSessionId = scanned,
-                        onScannedConsumed = { entry.savedStateHandle[SCANNED_SESSION_KEY] = null },
+                        onScanSession = { scanProblem = null; navController.navigate("scan-session") },
+                        scannedSessionId = pendingSession,
+                        scanProblem = scanProblem,
+                        onScannedConsumed = { pendingSession = null; scanProblem = null },
                         onReplayGuide = { navController.navigate("onboarding") },
                     )
                 }
                 composable("scan-session") {
                     SessionQrScanScreen(
-                        onResult = { id ->
-                            navController.previousBackStackEntry?.savedStateHandle?.set(SCANNED_SESSION_KEY, id)
+                        onSession = { id ->
+                            pendingSession = id
+                            navController.popBackStack()
+                        },
+                        onPairingCode = { text ->
+                            pendingPairText = text
+                            navController.navigate("pair") { popUpTo("scan-session") { inclusive = true } }
+                        },
+                        onUnknown = {
+                            scanProblem = UNKNOWN_CODE_MESSAGE
                             navController.popBackStack()
                         },
                         onCancel = { navController.popBackStack() },
@@ -137,7 +151,22 @@ fun AnastylosApp(container: AppContainer) {
                     val pairViewModel: PairViewModel = viewModel(
                         factory = container.pairViewModelFactory(),
                     )
-                    QrPairRoute(pairViewModel, onDone = { navController.popBackStack() })
+                    LaunchedEffect(pendingPairText) {
+                        val text = pendingPairText ?: return@LaunchedEffect
+                        pendingPairText = null
+                        pairViewModel.onConnectClicked()
+                        pairViewModel.onScanText(text)
+                    }
+                    QrPairRoute(
+                        pairViewModel,
+                        onDone = { navController.popBackStack() },
+                        onSessionCode = { id ->
+                            pendingSession = id
+                            if (!navController.popBackStack("guided", false)) {
+                                navController.navigate("guided") { popUpTo("pair") { inclusive = true } }
+                            }
+                        },
+                    )
                 }
             }
         }

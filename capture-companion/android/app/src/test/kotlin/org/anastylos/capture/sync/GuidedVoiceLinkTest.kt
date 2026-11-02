@@ -59,4 +59,31 @@ class GuidedVoiceLinkTest {
         assertThat(link().submit(VoiceLink.OperatorInput.Speech("x"))).isEqualTo(VoiceLink.SpokenReply("not_bound", null))
         assertThat(link(token = null).transcribe(byteArrayOf())).isEqualTo(VoiceLink.Transcript("not_enrolled", null, null))
     }
+
+    @Test
+    fun wakeSettingsGiveTheNamesAndTheAsrKeywordsGoWithEveryTranscription() = runTest {
+        val l = link()
+        replies += reply(200, """{"agent_name":"Herbert","persona":"serious","wake_words":["herbert"],"asr_keywords":["Herbert"],"mishearings":["hurbert"]}""")
+        val names = l.wakeNames()!!
+        val settingsRequest = sent.single()
+        assertThat(settingsRequest.method).isEqualTo("GET")
+        assertThat(settingsRequest.path).isEqualTo("/v1/guided/sessions/$session/voice/settings")
+        assertThat(WakeWord.route("Hurbert next question", armed = false, names = names))
+            .isEqualTo(WakeWord.Route.Command(WakeWord.FixedCommand.NEXT_QUESTION))
+        replies += reply(200, """{"status":"ok","transcript":"herbert repeat","latency_s":1.0}""")
+        l.transcribe(byteArrayOf(1))
+        assertThat(sent.last().headers["X-Asr-Keywords"]).isEqualTo("Herbert")
+    }
+
+    @Test
+    fun withoutAnAgentNameOrOnFailureTheDefaultWakeWordsStay() = runTest {
+        val l = link()
+        replies += reply(200, """{"agent_name":"","wake_words":["muse","meta"],"asr_keywords":[],"mishearings":[]}""")
+        assertThat(l.wakeNames()).isNull()
+        replies += reply(502, """{"error":{"code":"settings_unavailable","message":"x"}}""")
+        assertThat(l.wakeNames()).isNull()
+        replies += reply(200, """{"status":"ok","transcript":"muse next","latency_s":1.0}""")
+        l.transcribe(byteArrayOf(1))
+        assertThat(sent.last().headers).doesNotContainKey("X-Asr-Keywords")
+    }
 }

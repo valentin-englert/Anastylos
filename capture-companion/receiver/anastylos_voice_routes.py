@@ -3,6 +3,7 @@
 
 R9  POST /v1/guided/sessions/{id}/voice/transcribe  audio/wav → {status, transcript, latency_s}
 R10 POST /v1/guided/sessions/{id}/voice/input       {kind: input|command} → {status, speak}
+R11 GET  /v1/guided/sessions/{id}/voice/settings     agent name, wake words, mishearings, ASR keywords (relayed)
 
 Same TLS, guided-token and session checks as the other guided routes
 (role ``source``, session bound to that source via the control journal).
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import subprocess
 import threading
 import time
@@ -83,6 +85,21 @@ def get_voice(state):
     return cached
 
 
+def is_voice_settings_path(path):
+    return path.startswith(PREFIX) and path.endswith("/voice/settings")
+
+
+KEYWORD_HEADER = "X-Asr-Keywords"
+_KEYWORD = re.compile(r"[A-Za-z][A-Za-z '\-]{0,23}")
+MAX_KEYWORDS = 6
+
+
+def keywords_from(header):
+    """ASR keywords the phone sends (the agent's name and wake words); anything unusual is dropped."""
+    words = [w.strip() for w in (header or "").split(",")]
+    return [w for w in words if _KEYWORD.fullmatch(w)][:MAX_KEYWORDS]
+
+
 def is_voice_path(path):
     return path.startswith(PREFIX) and (path.endswith("/voice/transcribe") or path.endswith("/voice/input"))
 
@@ -142,6 +159,27 @@ class VoiceRoutes:
         self.config = vars(self.state).get("voice_config") or VoiceConfig()
         self.runtime = get_voice(self.state)
 
+    def dispatch_get(self, parsed):
+        session_id = self.guided._session_id_from(parsed.path, "/voice/settings")
+        if session_id is None:
+            return False
+        record = self.guided._require_guided("source")
+        if record is None:
+            return True
+        _snapshot, exc = self.guided._journal_errors(self.guided.journal.get_session,
+                                                     session_id, record.get("source_id"))
+        if exc is not None:
+            return True
+        began = time.monotonic()
+        status, result = self._session_ui("/api/dialogue/settings", None)
+        if status != 200 or not isinstance(result, dict):
+            self._journal(session_id, "settings", f"session_ui_{status}", None, time.monotonic() - began)
+            return self._fail(HTTPStatus.BAD_GATEWAY, "settings_unavailable", "The workstation could not read the dialogue settings.") or True
+        view = {key: result.get(key) for key in ("agent_name", "persona", "wake_words", "asr_keywords", "mishearings")}
+        self._journal(session_id, "settings", "ok", None, time.monotonic() - began)
+        self.h._send_json(HTTPStatus.OK, view)
+        return True
+
     def dispatch_post(self, parsed):
         path = parsed.path
         suffix = "/voice/transcribe" if path.endswith("/voice/transcribe") else "/voice/input"
@@ -195,7 +233,9 @@ class VoiceRoutes:
         try:
             began = time.monotonic()
             try:
-                done = subprocess.run(self.config.transcriber, input=audio, capture_output=True,
+                keywords = [arg for word in keywords_from(self.h.headers.get(KEYWORD_HEADER))
+                            for arg in ("--keyword", word)]
+                done = subprocess.run(self.config.transcriber + keywords, input=audio, capture_output=True,
                                       timeout=TRANSCRIBE_DEADLINE_S)
             except subprocess.TimeoutExpired:
                 self._journal(session_id, "transcribe", "timeout", seconds, time.monotonic() - began)
@@ -289,8 +329,9 @@ class VoiceRoutes:
         if not port:
             return 503, None
         request = urllib.request.Request(
-            f"http://127.0.0.1:{port}{path}", data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}, method="POST")
+            f"http://127.0.0.1:{port}{path}",
+            data=None if payload is None else json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="GET" if payload is None else "POST")
         try:
             with urllib.request.urlopen(request, timeout=SESSION_UI_TIMEOUT_S) as response:
                 return response.status, json.loads(response.read().decode("utf-8"))

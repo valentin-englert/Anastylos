@@ -456,13 +456,28 @@ class GuidedControlClient(
      * VOICE-01 R9: one WAV segment to the receiver's transcriber. Returns
      * the raw exchange; [GuidedVoiceLink] owns the voice body formats.
      */
-    fun voiceTranscribe(token: String, sessionId: String, wav: ByteArray): HttpResponse {
+    fun voiceTranscribe(token: String, sessionId: String, wav: ByteArray, keywords: List<String> = emptyList()): HttpResponse {
         require(isUuid(sessionId)) { "session_id is not a UUID" }
         return transport.exchange(
             HttpRequest(
                 method = "POST", path = "/v1/guided/sessions/$sessionId/voice/transcribe",
-                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "audio/wav"),
+                headers = buildMap {
+                    put("Authorization", "Bearer $token")
+                    put("Content-Type", "audio/wav")
+                    if (keywords.isNotEmpty()) put("X-Asr-Keywords", keywords.joinToString(","))
+                },
                 body = wav,
+            ),
+        )
+    }
+
+    /** The agent name, wake words and ASR keywords the workstation relays from its dialogue settings. */
+    fun voiceSettings(token: String, sessionId: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "GET", path = "/v1/guided/sessions/$sessionId/voice/settings",
+                headers = mapOf("Authorization" to "Bearer $token"),
             ),
         )
     }

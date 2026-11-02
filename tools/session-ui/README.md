@@ -146,3 +146,17 @@ still-stale binding).
 ## One-click start (no terminal)
 
 `launch\Create-Shortcuts.bat` puts an **Anastylos** and a **Stop Anastylos** icon on the desktop; double-click `launch\Start-Anastylos.bat` to start the page and open it in the browser. Optional environment variables: `ANASTYLOS_WORKSPACE` (session folder, default `C:\ANASTYLOS\data\session-ui-demo`) and `ANASTYLOS_PORT` (default 8071). The first start shows a welcome guide; the Muse key (`MODEL_API_KEY`) is explained there and never typed into the page. See `web/UI-NOTES.md` for the shell structure and open items.
+
+## Phone page (pairing without a terminal) and phone videos
+
+`phone.py` runs the receiver's own CLI as a subprocess on the data dir from `capture-settings.json`
+(`receiver_data_dir`, `receiver_url`, `ca_file`, optional `phone_host`): `pair-code --qr`, `pair-status --json`,
+`pair-approve` / `pair-reject`, `guided-enroll`. The **Phone** menu page shows the pairing QR (one click), pending
+requests with device name, request id and the workstation certificate fingerprint, and Approve / Reject buttons.
+Approval is only ever the operator's click (`POST /api/phone/decision`, same-origin guard, loopback server); it also
+enrols the phone for guided capture, writes the new `source_id` into `capture-settings.json` and drops the old
+guided link. Opening the page opens the guided session and shows its QR; the phone's videos are listed there too.
+
+Routes: `GET /api/phone/requests`, `GET /api/phone/pair-qr`, `POST /api/phone/pair`, `POST /api/phone/decision`
+`{request, decision: approve|reject}`; videos: `GET /api/videos`, `POST /api/videos/process {video}`.
+Tests: `tests/test_phone.py`, `tests/test_videos.py`.

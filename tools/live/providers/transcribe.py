@@ -98,12 +98,15 @@ def transcribe(audio: bytes, transport=None, keywords=KEYWORDS, language: str = 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--keyword", action="append", default=[],
+                        help="agent name(s) for the ASR keyword list; replaces the default \"Muse\" keyword")
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--stdin", action="store_true", help="read the WAV clip from standard input")
     source.add_argument("--audio", type=Path)
     args = parser.parse_args()
     audio = sys.stdin.buffer.read() if args.stdin else args.audio.read_bytes()
-    print(json.dumps(transcribe(audio)))
+    keywords = tuple(args.keyword) + tuple(k for k in KEYWORDS if k != "Muse") if args.keyword else KEYWORDS
+    print(json.dumps(transcribe(audio, keywords=keywords)))
 
 
 if __name__ == "__main__":

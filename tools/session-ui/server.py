@@ -33,6 +33,9 @@ import explosion
 import videos
 from adapter import AdapterError
 
+sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
+from dialogue import settings as dialogue_settings  # noqa: E402
+
 LOG = logging.getLogger("session-ui")
 WEB = Path(__file__).resolve().parent / "web"
 STATIC = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
@@ -152,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
             "/styles.css": lambda: self._send_static("styles.css"),
             "/shell.js": lambda: self._send_static("shell.js"),
             "/api/sessions": self._api_sessions, "/api/status": self._api_status,
-            "/api/connection": self._api_connection,
+            "/api/connection": self._api_connection, "/api/dialogue/settings": self._api_dialogue_settings,
             "/api/videos": lambda: self._send_json(videos.list_videos(Handler.workspace_root)),
             "/api/questions": self._api_questions, "/api/guide": self._api_guide_view,
             "/api/selections": self._api_selections, "/api/assembly": self._api_assembly_view,
@@ -199,7 +202,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
                   "/api/explosion/layout": self._api_explosion_layout,
-                  "/api/voice/transcribe": self._api_voice_transcribe, "/api/videos/process": self._api_video_process}
+                  "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save, "/api/videos/process": self._api_video_process}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -230,6 +233,18 @@ class Handler(BaseHTTPRequestHandler):
     def _mutate(self, session_id: str, func: Callable[[], dict]) -> None:
         with self._session_lock(session_id):
             self._send_json(func())
+
+    def _api_dialogue_settings(self) -> None:
+        """Persona, agent name (wake word), ASR keywords and mishearings; the phone reads this."""
+        self._send_json(dialogue_settings.public_view(Handler.workspace_root))
+
+    def _api_dialogue_settings_save(self) -> None:
+        body = self._read_json()
+        try:
+            dialogue_settings.save(Handler.workspace_root, body.get("persona"), body.get("agent_name"))
+        except dialogue_settings.SettingsError as exc:
+            raise AdapterError(str(exc), 400) from None
+        self._send_json(dialogue_settings.public_view(Handler.workspace_root))
 
     def _api_video_process(self) -> None:
         """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""
@@ -460,7 +475,8 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The clip is empty or longer than about 85 seconds.", 413)
         audio = self.rfile.read(length)
         try:
-            done = subprocess.run(Handler.transcriber, input=audio, capture_output=True, timeout=TRANSCRIBE_DEADLINE_S)
+            keywords = [arg for word in dialogue_settings.public_view(Handler.workspace_root)["asr_keywords"] for arg in ("--keyword", word)]
+            done = subprocess.run(Handler.transcriber + keywords, input=audio, capture_output=True, timeout=TRANSCRIBE_DEADLINE_S)
         except subprocess.TimeoutExpired:
             raise AdapterError("Transcription did not finish in time.", 504) from None
         if done.returncode:

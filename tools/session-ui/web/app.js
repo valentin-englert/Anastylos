@@ -1109,7 +1109,24 @@ function routeTranscript(text) {
 /* Opt-in hands-free mode: a local energy detector cuts speech segments; each segment is transcribed and only
    segments that start with the wake word are acted on (or the one segment armed by a bare wake word, within
    VAD.armedMs). No segment is kept; silence is never sent. */
-const WAKE = /^\W*(?:hey\s+|ok(?:ay)?\s+)?(?:muse|meta|mews)\b[\s,.!?:-]*(.*)$/i;
+let WAKE = /^\W*(?:hey\s+|ok(?:ay)?\s+)?(?:muse|meta|mews)\b[\s,.!?:-]*(.*)$/i;
+
+/* The agent name is the wake word (stored per workspace, also read by the phone). Mishearings come from the server. */
+function applyDialogueSettings(view) {
+  const words = [...view.wake_words, ...view.mishearings]
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).sort((a, b) => b.length - a.length);
+  WAKE = new RegExp(`^\\W*(?:hey\\s+|ok(?:ay)?\\s+)?(?:${words.join("|")})\\b[\\s,.!?:-]*(.*)$`, "i");
+  $("agent-name").value = view.agent_name;
+  $("persona-select").value = view.persona;
+}
+async function saveDialogueSettings() {
+  try {
+    applyDialogueSettings(await post("/api/dialogue/settings", { agent_name: $("agent-name").value, persona: $("persona-select").value }));
+  } catch (error) { setText("voice-state", error.message); }
+}
+$("agent-name").addEventListener("change", saveDialogueSettings);
+$("persona-select").addEventListener("change", saveDialogueSettings);
+call("/api/dialogue/settings").then(applyDialogueSettings, () => {});
 const VAD = { blockMs: 0, startFactor: 3.0, minFloor: 0.004, hangMs: 800, maxMs: 8000, minMs: 400, prerollBlocks: 3, armedMs: 6000 };
 const listen = { on: false, stream: null, context: null, processor: null, source: null, floor: 0.01,
                  segment: null, quiet: 0, preroll: [], busy: false, armedUntil: 0 };
@@ -1131,7 +1148,7 @@ async function startListening() {
   listen.processor.connect(listen.context.destination);
   listen.on = true;
   listen.armedUntil = 0;
-  setText("voice-state", "Listening for “Muse” …");
+  setText("voice-state", `Listening for “${($("agent-name").value || "Muse")}” …`);
 }
 
 async function stopListening() {

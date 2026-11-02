@@ -77,3 +77,34 @@ class VoiceRouteTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DialogueSettingsRouteTest(VoiceRouteTest):
+    def send(self, path, body=None):
+        data = None if body is None else json.dumps(body).encode()
+        request = urllib.request.Request(self.base + path, data=data, method="GET" if body is None else "POST",
+                                         headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return response.status, json.loads(response.read())
+        except urllib.error.HTTPError as exc:
+            return exc.code, json.loads(exc.read())
+
+    def test_defaults_then_name_and_persona_are_stored_and_readable(self):
+        status, view = self.send("/api/dialogue/settings")
+        self.assertEqual((status, view["persona"], view["asr_keywords"]), (200, "serious", ["Muse", "Meta"]))
+        status, view = self.send("/api/dialogue/settings", {"agent_name": "Herbert", "persona": "playful"})
+        self.assertEqual((status, view["asr_keywords"], view["persona"]), (200, ["Herbert"], "playful"))
+        self.assertIn("hubert", view["mishearings"])
+        self.assertEqual(self.send("/api/dialogue/settings")[1]["agent_name"], "Herbert")
+
+    def test_invalid_input_is_refused(self):
+        self.assertEqual(self.send("/api/dialogue/settings", {"persona": "angry"})[0], 400)
+        self.assertEqual(self.send("/api/dialogue/settings", {"agent_name": "<b>"})[0], 400)
+
+    def test_agent_name_reaches_the_transcriber_as_keyword(self):
+        self.send("/api/dialogue/settings", {"agent_name": "Herbert"})
+        server.Handler.transcriber = [sys.executable, "-c", "import sys, json; sys.stdin.buffer.read(); "
+                                      "print(json.dumps({'status': 'ok', 'transcript': ' '.join(sys.argv[1:])}))"]
+        status, payload = self.post(wav_clip(), "audio/wav")
+        self.assertEqual((status, payload["transcript"]), (200, "--keyword Herbert"))

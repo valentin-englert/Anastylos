@@ -74,3 +74,7 @@ re-judges under the lock and writes `failed` only for the same still-running gen
 (`Superseded`) and stops. Resume (`start` on an existing job dir) first kills and verifies dead the previous worker
 (by recorded pid); if it will not die, no second worker is spawned. Residual risk: a recorded pid that the OS has
 reused for an unrelated process would be killed on resume. Tests: `tests/test_drawing_job.py` (fake clock and processes).
+
+## Offline outlines on the sheet
+
+`sheet_outlines.py` makes finished, unconfirmed drawing jobs for the large parts on the sheet from one video frame, with no provider call (`--session-dir`, `--video`, `--frame`, `--part NAME@X,Y`). It finds outlines, not identities: names are proposals and the operator confirms them. Parameters were set on one real view of the SNES controller; it is not validated on other objects, needs a bright sheet, and small or sheet-coloured parts may be missed. Use Muse box and SAM for those.

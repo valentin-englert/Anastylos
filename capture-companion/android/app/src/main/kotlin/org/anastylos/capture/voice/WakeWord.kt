@@ -25,6 +25,9 @@ object WakeWord {
         /** A fixed command handled on the phone path. */
         data class Command(val command: FixedCommand) : Route
 
+        /** "start recording" / "stop recording": handled on the phone, never sent to the workstation. */
+        data class Recording(val start: Boolean) : Route
+
         /** Operator input (anastylos-live-operator-input@1, source speech_transcript). */
         data class Input(val text: String) : Route
     }
@@ -41,6 +44,8 @@ object WakeWord {
         return when (normalize(command)) {
             "next question", "next" -> Route.Command(FixedCommand.NEXT_QUESTION)
             "repeat", "say that again" -> Route.Command(FixedCommand.REPEAT)
+            "start recording" -> Route.Recording(start = true)
+            "stop recording" -> Route.Recording(start = false)
             else -> Route.Input(command)
         }
     }

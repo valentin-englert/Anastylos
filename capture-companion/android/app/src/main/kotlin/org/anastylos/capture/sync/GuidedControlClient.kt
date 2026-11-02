@@ -479,6 +479,41 @@ class GuidedControlClient(
         )
     }
 
+    /** Video upload: declare `{sha256, size}`; raw exchange, [org.anastylos.capture.video.VideoUploadClient] reads it. */
+    fun videoDeclare(token: String, sessionId: String, json: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "POST", path = "/v1/guided/sessions/$sessionId/videos",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/json"),
+                body = json.toByteArray(Charsets.UTF_8),
+            ),
+        )
+    }
+
+    /** Video upload: which chunks the receiver holds. */
+    fun videoStatus(token: String, sessionId: String, videoId: String): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "GET", path = "/v1/guided/sessions/$sessionId/videos/$videoId",
+                headers = mapOf("Authorization" to "Bearer $token"),
+            ),
+        )
+    }
+
+    /** Video upload: one raw chunk, 0-based. */
+    fun videoPutChunk(token: String, sessionId: String, videoId: String, index: Int, bytes: ByteArray): HttpResponse {
+        require(isUuid(sessionId)) { "session_id is not a UUID" }
+        return transport.exchange(
+            HttpRequest(
+                method = "PUT", path = "/v1/guided/sessions/$sessionId/videos/$videoId/chunks/$index",
+                headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/octet-stream"),
+                body = bytes,
+            ),
+        )
+    }
+
     private fun guidedHeaders(token: String): Map<String, String> = mapOf(
         "Content-Type" to "application/json",
         "Authorization" to "Bearer $token",

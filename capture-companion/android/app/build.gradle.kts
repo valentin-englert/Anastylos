@@ -90,6 +90,7 @@ dependencies {
     implementation(libs.camerax.core)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
+    implementation(libs.camerax.video)
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.androidx.security.crypto)
     ksp(libs.androidx.room.compiler)

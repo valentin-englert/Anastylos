@@ -57,7 +57,7 @@ class GuidedCameraSource(
     private val settingsApplier: SettingsApplier = CameraXSettingsApplier(),
     private val measuredProfiles: MeasuredProfileSource = AssetMeasuredProfileSource(context),
     private val timing: TimingAccumulator = TimingAccumulator(),
-) : GuidedCamera {
+) : GuidedCamera, VideoCamera {
     data class GuidedStill(
         val bytes: ByteArray,
         val capturedAt: java.time.Instant,
@@ -75,6 +75,9 @@ class GuidedCameraSource(
     private var provider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var boundPreview: Preview? = null
+    private var videoCapture: androidx.camera.video.VideoCapture<androidx.camera.video.Recorder>? = null
+    private var activeRecording: androidx.camera.video.Recording? = null
+    private var stashedStills: ImageCapture? = null
     private var boundAnalysis: ImageAnalysis? = null
     private var previewView: PreviewView? = null
     private var lensFacing: Int = CameraSelector.LENS_FACING_BACK
@@ -543,9 +546,88 @@ class GuidedCameraSource(
     }
 
 
+    // ---------- disassembly video ----------
+
+    @ExperimentalCamera2Interop
+    override suspend fun startVideo(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean =
+        withContext(Dispatchers.Main.immediate) { startVideoOnMain(output, onEvent) }
+
+    /**
+     * Preview + analysis + video is a guaranteed stream combination on every
+     * hardware level, so the still use case steps aside while recording and
+     * returns afterwards. Focus and exposure are applied exactly as for stills.
+     */
+    @ExperimentalCamera2Interop
+    private fun startVideoOnMain(output: java.io.File, onEvent: (VideoRecordingEvent) -> Unit): Boolean {
+        val cameraProvider = provider ?: return false
+        val selector = boundSelector ?: return false
+        if (activeRecording != null) return false
+        return try {
+            val recorder = androidx.camera.video.Recorder.Builder()
+                .setQualitySelector(
+                    androidx.camera.video.QualitySelector.from(
+                        androidx.camera.video.Quality.FHD,
+                        androidx.camera.video.FallbackStrategy.lowerQualityOrHigherThan(androidx.camera.video.Quality.FHD),
+                    ),
+                )
+                .build()
+            val capture = androidx.camera.video.VideoCapture.withOutput(recorder)
+            previewView?.display?.rotation?.let { capture.targetRotation = it }
+            imageCapture?.let {
+                cameraProvider.unbind(it)
+                stashedStills = it
+                imageCapture = null
+            }
+            val camera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, capture)
+            boundCamera = camera
+            videoCapture = capture
+            settingsApplier.apply(camera, lastStillSettings, lastStillCaps)
+            // No withAudioEnabled(): the recording carries no sound.
+            activeRecording = recorder
+                .prepareRecording(context, androidx.camera.video.FileOutputOptions.Builder(output).build())
+                .start(androidx.core.content.ContextCompat.getMainExecutor(context)) { event ->
+                    if (event is androidx.camera.video.VideoRecordEvent.Finalize) {
+                        restoreStills()
+                        onEvent(
+                            if (event.hasError()) VideoRecordingEvent.Failed("camera error ${event.error}")
+                            else VideoRecordingEvent.Finished(output),
+                        )
+                    }
+                }
+            true
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "guided video start failed", e)
+            restoreStills()
+            false
+        }
+    }
+
+    override fun stopVideo() {
+        activeRecording?.stop()
+    }
+
+    @ExperimentalCamera2Interop
+    private fun restoreStills() {
+        activeRecording = null
+        val cameraProvider = provider ?: return
+        try {
+            videoCapture?.let { cameraProvider.unbind(it) }
+            videoCapture = null
+            val stills = stashedStills ?: return
+            stashedStills = null
+            val selector = boundSelector ?: return
+            boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, selector, stills)
+            imageCapture = stills
+            boundCamera?.let { settingsApplier.apply(it, lastStillSettings, lastStillCaps) }
+        } catch (e: Exception) {
+            Log.w(CAMERA_LOG_TAG, "restoring stills after video failed", e)
+        }
+    }
+
     override fun unbind() {
         try {
-            val owned = listOfNotNull(boundPreview, boundAnalysis, imageCapture)
+            activeRecording?.stop()
+            val owned = listOfNotNull(boundPreview, boundAnalysis, imageCapture, videoCapture, stashedStills)
             if (owned.isNotEmpty()) {
                 provider?.unbind(*owned.toTypedArray())
             }
@@ -557,6 +639,9 @@ class GuidedCameraSource(
         }
         analysisExecutor = null
         imageCapture = null
+        videoCapture = null
+        stashedStills = null
+        activeRecording = null
         boundPreview = null
         boundAnalysis = null
         intrinsics = null

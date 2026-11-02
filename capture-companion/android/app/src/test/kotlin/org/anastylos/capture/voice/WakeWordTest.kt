@@ -16,6 +16,15 @@ class WakeWordTest {
     }
 
     @Test
+    fun recordingCommandsAreAClosedSetHandledOnThePhone() {
+        assertThat(WakeWord.route("Muse, start recording.", armed = false)).isEqualTo(Route.Recording(start = true))
+        assertThat(WakeWord.route("hey Muse stop recording", armed = false)).isEqualTo(Route.Recording(start = false))
+        assertThat(WakeWord.route("Muse, please start recording now", armed = false))
+            .isEqualTo(Route.Input("please start recording now"))
+        assertThat(WakeWord.route("start recording", armed = false)).isEqualTo(Route.Discard)
+    }
+
+    @Test
     fun unaddressedSpeechIsDiscarded() {
         assertThat(WakeWord.route("screw from the back shell", armed = false)).isEqualTo(Route.Discard)
         assertThat(WakeWord.route("amuse me", armed = false)).isEqualTo(Route.Discard)

@@ -872,6 +872,57 @@ async function loadPhoneLink(connect = false) {
   }
 }
 
+let videoTimer = null;
+const announcedVideos = new Set();
+
+function videoCard(video) {
+  const card = document.createElement("div");
+  card.className = "drawing-job";
+  card.dataset.state = video.job ? video.job.state : video.status;
+  const size = video.size ? `${(video.size / 1048576).toFixed(0)} MB` : "";
+  const job = video.job;
+  const words = job
+    ? { queued: "waiting to start", running: `processing — ${job.stage || "starting"}`, done: `processed — open session ${job.session}`, failed: "processing failed" }[job.state]
+    : { complete: "uploaded, ready to process", receiving: "uploading from the phone…", failed: "upload failed, the phone will send it again" }[video.status];
+  const head = document.createElement("p");
+  head.textContent = `Video ${video.video.slice(0, 8)} · ${size} · ${words || video.status}`;
+  card.append(head);
+  if (job && job.error) {
+    const error = document.createElement("p");
+    error.className = "error";
+    error.textContent = job.error;
+    card.append(error);
+  }
+  if (video.status === "complete" && (!job || job.state === "failed")) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = job ? "Process again" : "Process";
+    button.addEventListener("click", async () => {
+      try { await post("/api/videos/process", { video: video.video }, button); await loadVideos(); }
+      catch (error) { showError("videos-error", error.message); }
+    });
+    card.append(button);
+  }
+  return card;
+}
+
+async function loadVideos() {
+  clearTimeout(videoTimer);
+  showError("videos-error", "");
+  try {
+    const view = await call("/api/videos");
+    setText("videos-state", !view.configured ? "Set up the capture receiver to list phone videos." : view.videos.length ? "" : "No videos from the phone yet.");
+    $("video-list").replaceChildren(...view.videos.map(videoCard));
+    const busy = view.videos.some((v) => v.status === "receiving" || (v.job && (v.job.state === "running" || v.job.state === "queued")));
+    const finished = view.videos.filter((v) => v.job && v.job.state === "done" && !announcedVideos.has(v.video));
+    if (finished.length) { finished.forEach((v) => announcedVideos.add(v.video)); loadSessions(); }
+    videoTimer = setTimeout(loadVideos, busy ? 3000 : 10000);
+  } catch (error) {
+    showError("videos-error", error.message);
+    videoTimer = setTimeout(loadVideos, 10000);
+  }
+}
+
 async function loadDrawings() {
   if (!state.session) return;
   clearTimeout(drawingTimer);
@@ -1176,6 +1227,7 @@ $("done-form").addEventListener("submit", (event) => { event.preventDefault(); c
 $("export-form").addEventListener("submit", (event) => { event.preventDefault(); exportReport($("export-button")); });
 $("phone-connect").addEventListener("click", () => loadPhoneLink(true));
 loadPhoneLink();
+loadVideos();
 $("drawing-form").addEventListener("submit", (event) => { event.preventDefault(); startDrawing($("drawing-start")); });
 $("evaluate-form").addEventListener("submit", (event) => { event.preventDefault(); evaluateGap($("evaluate-button")); });
 

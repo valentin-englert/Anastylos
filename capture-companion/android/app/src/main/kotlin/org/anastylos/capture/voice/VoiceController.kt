@@ -67,6 +67,9 @@ class VoiceController(
     /** Segment end of the utterance whose reply is about to be spoken (latency log only). */
     @Volatile private var replySegmentEndMs: Long? = null
 
+    /** Set by the guided screen: "Muse, start recording" / "Muse, stop recording". */
+    @Volatile var onRecordingCommand: ((start: Boolean) -> Unit)? = null
+
     fun startListening() {
         if (reader != null) return
         ensureTts()
@@ -232,6 +235,11 @@ class VoiceController(
                         val answer = link.submit(VoiceLink.OperatorInput.Command(route.command))
                         reply(answer, spokeEndMs, transcribeMs, SystemClock.elapsedRealtime() - inputStart)
                     }
+                    is WakeWord.Route.Recording -> {
+                        showHeard(if (route.start) "start recording" else "stop recording")
+                        onRecordingCommand?.invoke(route.start)
+                        speak(if (route.start) RECORDING_STARTED else RECORDING_STOPPED)
+                    }
                     is WakeWord.Route.Input -> {
                         showHeard(route.text)
                         val inputStart = SystemClock.elapsedRealtime()
@@ -326,5 +334,7 @@ class VoiceController(
     private companion object {
         /** Fixed status sentence of the reference behaviour; never model text. */
         const val YES = "Yes?"
+        const val RECORDING_STARTED = "Recording."
+        const val RECORDING_STOPPED = "Recording stopped."
     }
 }

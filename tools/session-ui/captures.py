@@ -30,6 +30,8 @@ from adapter import AdapterError, resolve_session
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "capture-control"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "drawing-proof"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "capture-companion" / "receiver"))
+import anastylos_qr  # noqa: E402  (stdlib only)
 import job_control  # noqa: E402
 from control_client import ControlClient, ControlClientError  # noqa: E402
 
@@ -132,6 +134,14 @@ def link_status(root: Path, client: ControlClient | None = None, find_grant=_fin
                     "token_expires_at": claimed["expires_at"], "bootstrap_token": None}
             _write_atomic(root / LINK, link)
     return {k: link.get(k) for k in ("state", "guided_session_id", "created_at", "token_expires_at")}
+
+
+def session_qr_png(root: Path) -> bytes:
+    """QR with the guided session id; the phone scans it to attach (it carries no token)."""
+    link = _read(root / LINK)
+    if link is None:
+        raise AdapterError("Connect the phone first.", 409)
+    return anastylos_qr.qr_png_bytes(anastylos_qr.encode_qr(link["guided_session_id"].encode("ascii")), scale=8)
 
 
 @phone_errors

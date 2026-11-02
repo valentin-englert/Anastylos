@@ -138,6 +138,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
             "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
             "/api/parts/link-candidates": self._api_parts_candidates,
+            "/api/capture/qr": lambda: self._send_bytes(captures.session_qr_png(Handler.workspace_root), "image/png"),
             "/explosion.html": lambda: self._send_static("explosion.html"),
             "/explosion.js": lambda: self._send_static("explosion.js"),
             "/explosion.css": lambda: self._send_static("explosion.css"),

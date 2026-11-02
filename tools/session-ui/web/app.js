@@ -845,11 +845,14 @@ async function loadPhoneLink(connect = false) {
     const link = await post(connect ? "/api/capture/connect" : "/api/capture/link", {}, connect ? $("phone-connect") : undefined);
     const text = {
       not_connected: "Phone: not connected.",
-      waiting_for_phone: "Phone: open the guided session on the phone and arm it.",
+      waiting_for_phone: "Phone: scan this code in the app and arm the session.",
       connected: "Phone: connected for capture requests.",
     };
     setText("phone-link-state", text[link.state] || `Phone: ${link.state}`);
     $("phone-connect").hidden = link.state === "connected";
+    const showQr = link.state === "waiting_for_phone";
+    if (showQr && $("phone-qr-block").hidden) $("phone-qr").src = `/api/capture/qr?session=${encodeURIComponent(link.guided_session_id)}`;
+    $("phone-qr-block").hidden = !showQr;
     if (link.state === "waiting_for_phone") setTimeout(loadPhoneLink, DRAWING_POLL_MS);
   } catch (error) {
     setText("phone-link-state", `Phone: ${error.message}`);

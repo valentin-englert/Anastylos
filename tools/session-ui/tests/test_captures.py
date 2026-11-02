@@ -93,6 +93,12 @@ class LinkAndRequestTest(LoopbackCase):
         self.assertEqual(again["request_id"], status["request_id"])
         self.assertEqual(len(self.client.get_session(link["adapter_token"], link["guided_session_id"])["requests"]), 1)
 
+    def test_session_qr_is_a_png_and_needs_a_link(self):
+        with self.assertRaises(AdapterError):
+            captures.session_qr_png(self.root)
+        captures.connect_phone(self.root, self.client, mint=self._mint)
+        self.assertTrue(captures.session_qr_png(self.root).startswith(b"PNG"))
+
     def test_request_needs_a_connected_phone_and_a_job_that_needs_a_capture(self):
         with self.assertRaises(AdapterError):
             captures.request_capture(self.root, "s1", "back-shell-1", self.client)

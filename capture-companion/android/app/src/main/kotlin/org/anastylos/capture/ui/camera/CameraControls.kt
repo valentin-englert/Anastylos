@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -29,9 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.anastylos.capture.camera.AwbMode
 import org.anastylos.capture.camera.CameraCapabilities
 import org.anastylos.capture.camera.CameraSettings
@@ -55,75 +56,60 @@ enum class WheelKind(val label: String, val help: HelpTopic) {
 
 private typealias Update = ((CameraSettings) -> CameraSettings) -> Unit
 
-/** Round icon button on a dark scrim, readable over any live image. */
+/** The settings this camera can actually change, in display order. */
+fun availableWheels(settings: CameraSettings, caps: CameraCapabilities): List<WheelKind> = buildList {
+    if (caps.supportsManualExposure) {
+        add(WheelKind.ISO)
+        add(WheelKind.SPEED)
+    }
+    if (caps.supportsEv && settings.exposureMode == ExposureMode.AUTO) add(WheelKind.EV)
+    if (caps.supportsManualFocus) add(WheelKind.FOCUS)
+    if (caps.awbModes.isNotEmpty()) add(WheelKind.WB)
+}
+
+/** Plain icon, no backdrop: the bars around the picture carry the contrast. */
 @Composable
-fun ScrimIconButton(glyph: Glyph, description: String, tint: Color = Palette.Paper, filled: Boolean = false, onClick: () -> Unit) {
+fun BarIconButton(glyph: Glyph, description: String, tint: Color = Palette.Paper, filled: Boolean = false, onClick: () -> Unit) {
     Box(
-        Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(Palette.Scrim)
-            .clickable(onClickLabel = description, onClick = onClick),
+        Modifier.size(48.dp).clickable(onClickLabel = description, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { GlyphIcon(glyph, tint, filled = filled) }
 }
 
-/** Flashlight switch and the menu button, top right of the camera. */
-@Composable
-fun CameraTopControls(torchOn: Boolean, torchAvailable: Boolean, onTorch: () -> Unit, onMenu: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (torchAvailable) {
-            ScrimIconButton(Glyph.Bolt, "Flashlight", tint = if (torchOn) Palette.Ochre else Palette.Paper, filled = torchOn, onClick = onTorch)
-        }
-        ScrimIconButton(Glyph.Menu, "More settings", onClick = onMenu)
-    }
-}
+/** Soft dark fade that lets the image show through; never a box. */
+fun Modifier.imageFade(): Modifier =
+    background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xB3000000))))
 
-/** ISO · SPEED · EV · FOCUS · WB, tappable; each value opens its wheel. */
+/** ISO · SPEED · EV · FOCUS · WB across the full width; tapping one opens its ruler. */
 @Composable
 fun SettingsReadout(settings: CameraSettings, caps: CameraCapabilities, active: WheelKind?, onSelect: (WheelKind) -> Unit) {
+    val wheels = availableWheels(settings, caps)
+    if (wheels.isEmpty()) return
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        wheels.forEach { kind ->
+            Column(
+                Modifier.clickable { onSelect(kind) }.padding(horizontal = 6.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(kind.label, color = if (kind == active) Palette.Paper else Palette.Ochre, fontSize = 12.sp)
+                Text(readoutValue(kind, settings, caps), color = if (kind == active) Palette.Paper else Palette.Ochre, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+private fun readoutValue(kind: WheelKind, settings: CameraSettings, caps: CameraCapabilities): String {
     val manualExposure = settings.exposureMode == ExposureMode.MANUAL
-    val evStep = caps.evStepSize
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(Palette.Scrim)
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        if (caps.supportsManualExposure) {
-            ReadoutToken(WheelKind.ISO, if (manualExposure) settings.iso.toString() else "AUTO", active, onSelect)
-            ReadoutToken(WheelKind.SPEED, if (manualExposure) formatExposure(settings.exposureNs) else "AUTO", active, onSelect)
-        }
-        if (caps.supportsEv && evStep != null && !manualExposure) {
-            ReadoutToken(WheelKind.EV, "%+.1f".format(java.util.Locale.US, settings.evSteps * evStep), active, onSelect)
-        }
-        if (caps.supportsManualFocus) {
-            val focus = if (settings.focusMode == FocusMode.MANUAL) formatFocus(settings.focusDiopters) else "AUTO"
-            ReadoutToken(WheelKind.FOCUS, focus, active, onSelect)
-        }
-        if (caps.awbModes.isNotEmpty()) ReadoutToken(WheelKind.WB, settings.awbMode.label.uppercase(), active, onSelect)
+    return when (kind) {
+        WheelKind.ISO -> if (manualExposure) settings.iso.toString() else "AUTO"
+        WheelKind.SPEED -> if (manualExposure) formatExposure(settings.exposureNs) else "AUTO"
+        WheelKind.EV -> "%+.1f".format(java.util.Locale.US, settings.evSteps * (caps.evStepSize ?: 0f))
+        WheelKind.FOCUS -> if (settings.focusMode == FocusMode.MANUAL) formatFocus(settings.focusDiopters) else "AUTO"
+        WheelKind.WB -> settings.awbMode.label.uppercase()
     }
 }
 
-@Composable
-private fun ReadoutToken(kind: WheelKind, value: String, active: WheelKind?, onSelect: (WheelKind) -> Unit) {
-    Row(
-        Modifier.clickable { onSelect(kind) }.padding(horizontal = 8.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Text(kind.label, color = Palette.Muted, style = MaterialTheme.typography.bodyMedium)
-        Text(
-            value,
-            color = if (kind == active) Palette.Paper else Palette.Ochre,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
-
-/** The wheel for one setting with Auto / Manual above it and an (i) button top left. */
+/** The ruler for one setting over a fading band: (i) top left, Auto/Manual tag left of the ruler. */
 @Composable
 fun SettingsWheelPanel(
     kind: WheelKind,
@@ -131,92 +117,91 @@ fun SettingsWheelPanel(
     caps: CameraCapabilities,
     onUpdate: Update,
     onInfo: (HelpTopic) -> Unit,
-    onClose: () -> Unit,
 ) {
-    Column(
-        Modifier.fillMaxWidth().background(Palette.Scrim).padding(top = 8.dp, bottom = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable(onClickLabel = "Explain ${kind.label}") { onInfo(kind.help) }, contentAlignment = Alignment.CenterStart) {
-                GlyphIcon(Glyph.Info, Palette.Paper)
-            }
-            Box(Modifier.weight(1f))
-            Box(Modifier.size(40.dp).clickable(onClickLabel = "Close") { onClose() }, contentAlignment = Alignment.CenterEnd) {
-                GlyphIcon(Glyph.Close, Palette.Paper)
-            }
+    Column(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(Modifier.padding(start = 12.dp).size(40.dp).clickable(onClickLabel = "Explain ${kind.label}") { onInfo(kind.help) }, contentAlignment = Alignment.Center) {
+            GlyphIcon(Glyph.Info, Palette.Paper, size = 22.dp)
         }
         when (kind) {
-            WheelKind.ISO, WheelKind.SPEED -> ExposureWheel(kind, settings, caps, onUpdate)
-            WheelKind.EV -> EvWheel(settings, caps, onUpdate)
-            WheelKind.FOCUS -> FocusWheel(settings, caps, onUpdate)
-            WheelKind.WB -> WhiteBalanceWheel(settings, caps, onUpdate)
+            WheelKind.ISO -> ExposureRuler(settings, caps, onUpdate, isoScale(caps), settings.iso) { v -> onUpdate { it.copy(iso = v) } }
+            WheelKind.SPEED -> ExposureRuler(settings, caps, onUpdate, shutterScale(caps), settings.exposureNs) { v -> onUpdate { it.copy(exposureNs = v) } }
+            WheelKind.EV -> EvRuler(settings, caps, onUpdate)
+            WheelKind.FOCUS -> FocusRuler(settings, caps, onUpdate)
+            WheelKind.WB -> WhiteBalanceStrip(settings, caps, onUpdate)
         }
     }
 }
 
 @Composable
-private fun AutoManualToggle(manual: Boolean, manualAvailable: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        ModeOption("A", "AUTO", selected = !manual, enabled = true) { onChange(false) }
-        ModeOption("M", "MANUAL", selected = manual, enabled = manualAvailable) { onChange(true) }
-    }
-}
-
-@Composable
-private fun ModeOption(letter: String, label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    val color = when {
-        !enabled -> Palette.Muted.copy(alpha = 0.5f)
-        selected -> Palette.Ochre
-        else -> Palette.Paper
-    }
-    Column(
-        Modifier.width(120.dp).clickable(enabled = enabled, onClick = onClick).padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(letter, color = color, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-        Text(label, color = color, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
-private fun ExposureWheel(kind: WheelKind, settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
+private fun <T> ExposureRuler(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update, scale: WheelScale<T>?, value: T, commit: (T) -> Unit) {
     val manual = settings.exposureMode == ExposureMode.MANUAL
-    AutoManualToggle(manual, caps.supportsManualExposure) { wantManual ->
-        onUpdate { it.copy(exposureMode = if (wantManual) ExposureMode.MANUAL else ExposureMode.AUTO) }
-    }
-    if (!manual) return
-    if (kind == WheelKind.ISO) {
-        val stops = isoStops(caps)
-        ControlWheel(stops, nearestStop(stops, settings.iso), { stop -> onUpdate { it.copy(iso = stop.value) } })
-    } else {
-        val stops = shutterStops(caps)
-        ControlWheel(stops, nearestStop(stops, settings.exposureNs), { stop -> onUpdate { it.copy(exposureNs = stop.value) } })
+    ModeRow(
+        tag = if (manual) "MANUAL" else "AUTO",
+        tagEnabled = caps.supportsManualExposure,
+        onToggle = { onUpdate { it.copy(exposureMode = if (manual) ExposureMode.AUTO else ExposureMode.MANUAL) } },
+    ) {
+        if (manual && scale != null) ContinuousWheel(scale, value, onCommit = commit)
+        else Text("Tap AUTO to adjust by hand", color = Palette.Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
     }
 }
 
 @Composable
-private fun EvWheel(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
-    val stops = evStops(caps)
-    ControlWheel(stops, nearestStop(stops, settings.evSteps), { stop -> onUpdate { it.copy(evSteps = stop.value) } })
+private fun EvRuler(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
+    val scale = evScale(caps) ?: return
+    ModeRow(tag = "EV", tagEnabled = false, onToggle = {}) {
+        ContinuousWheel(scale, settings.evSteps, onCommit = { v -> onUpdate { it.copy(evSteps = v) } })
+    }
 }
 
 @Composable
-private fun FocusWheel(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
+private fun FocusRuler(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
     val manual = settings.focusMode == FocusMode.MANUAL
-    AutoManualToggle(manual, caps.supportsManualFocus) { wantManual ->
-        onUpdate { it.copy(focusMode = if (wantManual) FocusMode.MANUAL else FocusMode.AUTO) }
+    val scale = focusScale(caps)
+    ModeRow(
+        tag = if (manual) "MANUAL" else "AUTO",
+        tagEnabled = caps.supportsManualFocus,
+        onToggle = { onUpdate { it.copy(focusMode = if (manual) FocusMode.AUTO else FocusMode.MANUAL) } },
+    ) {
+        if (manual && scale != null) ContinuousWheel(scale, settings.focusDiopters, onCommit = { v -> onUpdate { it.copy(focusDiopters = v) } })
+        else Text("Tap AUTO to adjust by hand", color = Palette.Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
     }
-    if (!manual) return
-    val stops = focusStops(caps)
-    ControlWheel(stops, nearestStop(stops, settings.focusDiopters), { stop -> onUpdate { it.copy(focusDiopters = stop.value) } })
 }
 
 @Composable
-private fun WhiteBalanceWheel(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
-    val stops = AwbMode.entries.filter { it.camera2 in caps.awbModes }.map { WheelStop(it.label, it) }
-    val index = stops.indexOfFirst { it.value == settings.awbMode }.coerceAtLeast(0)
-    ControlWheel(stops, index, { stop -> onUpdate { it.copy(awbMode = stop.value) } })
+private fun ModeRow(tag: String, tagEnabled: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.Bottom) {
+        Text(
+            tag,
+            color = if (tagEnabled) Palette.Paper else Palette.Muted,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(bottom = 6.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color(0x99000000))
+                .clickable(enabled = tagEnabled, onClick = onToggle)
+                .padding(horizontal = 8.dp, vertical = 5.dp),
+        )
+        Box(Modifier.weight(1f)) { content() }
+        Box(Modifier.width(52.dp))
+    }
+}
+
+@Composable
+private fun WhiteBalanceStrip(settings: CameraSettings, caps: CameraCapabilities, onUpdate: Update) {
+    val modes = AwbMode.entries.filter { it.camera2 in caps.awbModes }
+    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+        modes.forEach { mode ->
+            val selected = mode == settings.awbMode
+            Text(
+                mode.label,
+                color = if (selected) Palette.Ochre else Palette.Paper.copy(alpha = 0.8f),
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 15.sp,
+                modifier = Modifier.clickable { onUpdate { it.copy(awbMode = mode) } }.padding(10.dp),
+            )
+        }
+    }
 }
 
 /** Right-hand sandwich menu: everything that is not needed during a shot. */
@@ -245,19 +230,15 @@ fun CameraMenu(
             Modifier
                 .width(320.dp)
                 .fillMaxHeight()
-                .background(Palette.Ground.copy(alpha = 0.94f))
+                .background(Palette.Ground.copy(alpha = 0.96f))
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("More", style = MaterialTheme.typography.headlineSmall, color = Palette.Paper, modifier = Modifier.weight(1f))
-                Box(Modifier.size(40.dp).clickable(onClickLabel = "Explain this menu") { onInfo(HelpTopic.Menu) }, contentAlignment = Alignment.Center) {
-                    GlyphIcon(Glyph.Info, Palette.Paper)
-                }
-                Box(Modifier.size(40.dp).clickable(onClickLabel = "Close menu") { onClose() }, contentAlignment = Alignment.Center) {
-                    GlyphIcon(Glyph.Close, Palette.Paper)
-                }
+                BarIconButton(Glyph.Info, "Explain this menu") { onInfo(HelpTopic.Menu) }
+                BarIconButton(Glyph.Close, "Close menu", onClick = onClose)
             }
             extra()
             if (cameras.isNotEmpty()) {

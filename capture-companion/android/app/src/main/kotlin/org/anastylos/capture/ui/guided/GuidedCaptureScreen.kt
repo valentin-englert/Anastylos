@@ -61,10 +61,18 @@ import org.anastylos.capture.guidance.SessionState
 import org.anastylos.capture.camera.SETTING_PROFILES
 import org.anastylos.capture.R
 import org.anastylos.capture.ui.camera.CameraMenu
-import org.anastylos.capture.ui.camera.CameraTopControls
+import org.anastylos.capture.ui.camera.BarIconButton
+import org.anastylos.capture.ui.camera.CameraScaffold
+import org.anastylos.capture.ui.camera.availableWheels
+import org.anastylos.capture.ui.camera.onImage
 import org.anastylos.capture.ui.camera.MenuSection
 import org.anastylos.capture.ui.camera.Pill
-import org.anastylos.capture.ui.camera.ScrimIconButton
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import org.anastylos.capture.ui.camera.SettingsReadout
 import org.anastylos.capture.ui.camera.SettingsWheelPanel
 import org.anastylos.capture.ui.camera.WheelKind
@@ -93,7 +101,9 @@ import androidx.compose.ui.res.painterResource
 fun GuidedCaptureScreen(
     container: AppContainer,
     onBack: () -> Unit,
-    onPair: () -> Unit,
+    onScanSession: () -> Unit,
+    scannedSessionId: String?,
+    onScannedConsumed: () -> Unit,
     onReplayGuide: () -> Unit,
     viewModel: GuidanceViewModel = viewModel(factory = container.guidedViewModelFactory()),
 ) {
@@ -156,46 +166,53 @@ fun GuidedCaptureScreen(
         val label = cold.remoteRequest?.targetLabel
         if (requestId != null && !label.isNullOrBlank()) container.voice.speakVerified(label)
     }
+    var scanProblem by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(scannedSessionId) {
+        val id = scannedSessionId ?: return@LaunchedEffect
+        if (id == INVALID_SESSION_QR) scanProblem = "That QR code does not hold a session id." else viewModel.attachRemote(id)
+        onScannedConsumed()
+    }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     var wheel by remember { mutableStateOf<WheelKind?>(null) }
     var help by remember { mutableStateOf<HelpTopic?>(null) }
     var diagnostics by rememberSaveable { mutableStateOf(false) }
     val caps = viewModel.capsFor(cold.effectiveCameraId)
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Box(Modifier.fillMaxSize().background(Palette.Ground)) {
-        AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
-        DetectionOverlay(state, Modifier.fillMaxSize())
-        Column(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                ScrimIconButton(Glyph.Back, "Back", onClick = onBack)
-                ConnectionPill(cold.remoteAttached, voiceLabelOf(voiceState))
-                Spacer(Modifier.weight(1f))
-                if (!cold.remoteAttached) ScrimIconButton(Glyph.Qr, "Pair with the workstation", onClick = onPair)
-                CameraTopControls(
-                    torchOn = cold.settings.torch,
-                    torchAvailable = caps.flashAvailable,
-                    onTorch = { viewModel.updateSettings { it.copy(torch = !it.torch) } },
-                    onMenu = { menuOpen = true },
-                )
-            }
-            StatusBannerView(statusBannerOf(state))
-            if (cold.remoteRequest == null) CueList(state)
-            Spacer(Modifier.weight(1f))
-            state.cameraError?.let { ErrorLine("Camera: $it") }
-            state.captureError?.let { ErrorLine("Capture: $it") }
-            state.remoteError?.let { error ->
-                ErrorLine(error)
-                OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
-            }
-            SettingsReadout(cold.settings, caps, wheel) { kind -> wheel = if (wheel == kind) null else kind }
-            wheel?.let { kind ->
-                SettingsWheelPanel(kind, cold.settings, caps, viewModel::updateSettings, onInfo = { help = it }, onClose = { wheel = null })
-            }
-            MainControls(cold, viewModel, container.voice, voiceState)
-        }
+        CameraScaffold(
+            onBack = onBack,
+            status = { compact -> StatusLabel(cold.remoteAttached, if (compact) null else voiceLabelOf(voiceState), compact) },
+            barExtras = {
+                if (!cold.remoteAttached) BarIconButton(Glyph.Qr, "Scan the session QR code", onClick = onScanSession)
+            },
+            torchOn = cold.settings.torch,
+            torchAvailable = caps.flashAvailable,
+            onTorch = { viewModel.updateSettings { it.copy(torch = !it.torch) } },
+            onMenu = { menuOpen = true },
+            actions = { compact -> ActionButtons(cold, viewModel, container.voice, voiceState, compact, onScanSession) },
+            overlayTop = { isLandscape ->
+                if (cold.remoteAttached) BannerText(statusBannerOf(state), isLandscape)
+                if (cold.remoteAttached && cold.remoteRequest == null && !isLandscape) CueList(state)
+                state.cameraError?.let { ErrorLine("Camera: $it") }
+                state.captureError?.let { ErrorLine("Capture: $it") }
+                scanProblem?.let { ErrorLine(it) }
+                state.remoteError?.let { error ->
+                    ErrorLine(error)
+                    if (!isLandscape) OutlinedButton(onClick = { viewModel.clearRemoteError() }) { Text("Dismiss") }
+                }
+            },
+            overlayBottom = { isLandscape ->
+                if (!isLandscape) SettingsReadout(cold.settings, caps, wheel) { kind -> wheel = if (wheel == kind) null else kind }
+                wheel?.let { kind ->
+                    SettingsWheelPanel(kind, cold.settings, caps, viewModel::updateSettings, onInfo = { help = it })
+                }
+            },
+            preview = {
+                AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
+                DetectionOverlay(state, Modifier.fillMaxSize())
+            },
+        )
         if (menuOpen) {
             CameraMenu(
                 cameras = cold.availableCameras,
@@ -214,6 +231,15 @@ fun GuidedCaptureScreen(
                 onInfo = { help = it },
                 onClose = { menuOpen = false },
             ) {
+                if (landscape) {
+                    MenuSection("Exposure and focus") {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                            availableWheels(cold.settings, caps).forEach { kind ->
+                                Pill(kind.label, wheel == kind) { wheel = kind; menuOpen = false }
+                            }
+                        }
+                    }
+                }
                 MenuSection("Guide") {
                     Pill("How it works", selected = false, onClick = { menuOpen = false; onReplayGuide() })
                 }
@@ -258,85 +284,71 @@ private fun Diagnostics(
 
 @Composable
 private fun ErrorLine(text: String) {
-    Text(
-        text,
-        color = Palette.Brick,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.background(Palette.Scrim, RoundedCornerShape(12.dp)).padding(12.dp),
-    )
+    Text(text, color = Palette.Brick, style = MaterialTheme.typography.titleMedium.onImage())
 }
 
-/** Connected or not, plus the voice state while the microphone is in use. */
+/** Session attached or not (and the voice state in portrait); the first thing to read. */
 @Composable
-private fun ConnectionPill(connected: Boolean, voiceLabel: String?) {
-    Row(
-        modifier = Modifier.background(Palette.Scrim, RoundedCornerShape(50)).padding(horizontal = 14.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(9.dp).background(if (connected) Palette.Sage else Palette.Brick, CircleShape))
-        Text(if (connected) "Session attached" else "No session", color = Palette.Paper, style = MaterialTheme.typography.titleSmall)
-        voiceLabel?.let { Text(it, color = Palette.Muse, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+private fun StatusLabel(attached: Boolean, voiceLabel: String?, compact: Boolean) {
+    val dot = if (attached) Palette.Sage else Palette.Brick
+    val text = if (attached) (if (compact) "Attached" else "Session attached") else "No session"
+    if (compact) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Box(Modifier.size(9.dp).background(dot, CircleShape))
+            Text(text, color = Palette.Paper, fontSize = 11.sp)
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(9.dp).background(dot, CircleShape))
+            Text(text, color = Palette.Paper, style = MaterialTheme.typography.titleSmall)
+            voiceLabel?.let { Text(it, color = Palette.Muse, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
+        }
     }
 }
 
-/** The one current task, in large high-contrast type on a dark scrim. */
+/** The current task as plain text over the image; landscape keeps only the headline. */
 @Composable
-private fun StatusBannerView(banner: StatusBanner) {
+private fun BannerText(banner: StatusBanner, landscape: Boolean) {
     val color = when (banner.tone) {
         BannerTone.NEUTRAL, BannerTone.WAITING -> Palette.Paper
         BannerTone.ACTION -> Palette.Ochre
         BannerTone.SUCCESS -> Palette.Sage
         BannerTone.PROBLEM -> Palette.Brick
     }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xB3000000), RoundedCornerShape(16.dp))
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(banner.title, color = color, style = MaterialTheme.typography.headlineMedium)
-        banner.detail?.let { Text(it, color = Palette.Paper, style = MaterialTheme.typography.titleMedium) }
-    }
+    Text(
+        banner.title,
+        color = color,
+        style = (if (landscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall).onImage(),
+    )
+    if (!landscape) banner.detail?.let { Text(it, color = Palette.Paper, style = MaterialTheme.typography.titleMedium.onImage()) }
 }
 
 /**
- * Opt-in voice: the Muse mark with its blue wordmark. The mark shows
- * whether the microphone is open; transcripts never appear here.
+ * Opt-in voice: just the Muse mark. A blue ring shows the microphone
+ * is open; transcripts never appear here.
  */
 @Composable
-private fun MuseButton(voice: VoiceController, voiceState: VoiceController.State) {
+private fun MuseButton(voice: VoiceController, voiceState: VoiceController.State, size: Dp) {
     val context = LocalContext.current
     val micLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted -> if (granted) voice.startListening() }
-    Row(
+    Image(
+        painterResource(R.drawable.muse_logo),
+        contentDescription = if (voiceState.listening) "Turn the microphone off" else "Talk to Muse",
         modifier = Modifier
-            .height(60.dp)
-            .background(Palette.Scrim, RoundedCornerShape(50))
-            .clickable(onClickLabel = if (voiceState.listening) "Turn the microphone off" else "Talk to Muse") {
+            .size(size)
+            .clip(RoundedCornerShape(size / 4))
+            .border(if (voiceState.listening) 3.dp else 0.dp, Palette.Muse, RoundedCornerShape(size / 4))
+            .clickable {
                 when {
                     voiceState.listening -> voice.stopListening()
                     ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
                         PackageManager.PERMISSION_GRANTED -> voice.startListening()
                     else -> micLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
-            }
-            .padding(start = 8.dp, end = 18.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Image(
-            painterResource(R.drawable.muse_logo),
-            contentDescription = null,
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .border(if (voiceState.listening) 3.dp else 0.dp, Palette.Muse, RoundedCornerShape(12.dp)),
-        )
-        Text("Muse", color = Palette.Muse, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    }
+            },
+    )
 }
 
 /** Hold-to-talk fallback, last phrase heard and the voice link status. */
@@ -476,64 +488,69 @@ private fun TargetPicker(state: GuidanceUiState, viewModel: GuidanceViewModel) {
 }
 
 @Composable
-private fun BigButton(text: String, primary: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
-    val sized = modifier.height(60.dp)
-    val label: @Composable () -> Unit = { Text(text, style = MaterialTheme.typography.titleMedium) }
+private fun ActionButton(text: String, short: String, primary: Boolean, compact: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+    val sized = modifier.height(if (compact) 44.dp else 56.dp)
+    val label: @Composable () -> Unit = {
+        if (compact) Text(short, fontSize = 13.sp, maxLines = 1) else Text(text, style = MaterialTheme.typography.titleMedium)
+    }
+    val padding = if (compact) PaddingValues(horizontal = 4.dp) else ButtonDefaults.ContentPadding
     if (primary) {
-        Button(onClick = onClick, enabled = enabled, modifier = sized) { label() }
+        Button(onClick = onClick, enabled = enabled, modifier = sized, contentPadding = padding) { label() }
     } else {
         OutlinedButton(
             onClick = onClick,
             enabled = enabled,
             modifier = sized,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Paper, containerColor = Palette.Scrim),
+            contentPadding = padding,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Paper),
         ) { label() }
     }
 }
 
 /** The few actions the operator needs during the flow; the rest lives in the menu. */
 @Composable
-private fun MainControls(
+private fun ActionButtons(
     state: GuidanceUiState,
     viewModel: GuidanceViewModel,
     voice: VoiceController,
     voiceState: VoiceController.State,
+    compact: Boolean,
+    onScanSession: () -> Unit,
 ) {
-    var sessionField by rememberSaveable { mutableStateOf(state.remoteSessionId ?: "") }
-    if (!state.remoteAttached) {
-        OutlinedTextField(
-            value = sessionField,
-            onValueChange = { sessionField = it.trim() },
-            label = { Text("Session id from the workstation") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().background(Palette.Scrim, RoundedCornerShape(12.dp)),
-        )
-    }
-    if (state.remoteAttached && state.remoteRequest != null) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            BigButton("Take photo now", primary = false, modifier = Modifier.weight(1f), enabled = !state.shutterBusy) { viewModel.captureManual() }
-            if (!state.attemptReady && !state.reservingAttempt) {
-                BigButton("Retry connection", primary = false, modifier = Modifier.weight(1f)) { viewModel.retryAttempt() }
-            }
-        }
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+    val photoActions = state.remoteAttached && state.remoteRequest != null
+    val buttons: @Composable (Modifier) -> Unit = { fill ->
         if (!state.remoteAttached) {
-            BigButton("Attach", primary = true, modifier = Modifier.weight(1f), enabled = sessionField.isNotBlank()) {
-                viewModel.attachRemote(sessionField)
-            }
+            ActionButton("Scan session QR", "Scan", primary = true, compact = compact, modifier = fill, onClick = onScanSession)
         } else {
             when (state.session) {
-                SessionState.DISARMED -> BigButton("Start", primary = true, modifier = Modifier.weight(1f)) { viewModel.arm() }
+                SessionState.DISARMED -> ActionButton("Start", "Start", true, compact, fill) { viewModel.arm() }
                 SessionState.ACTIVE -> {
-                    BigButton("Next request", primary = true, modifier = Modifier.weight(1f)) { viewModel.arm() }
-                    BigButton("Pause", primary = false) { viewModel.pause() }
+                    ActionButton("Next request", "Next", true, compact, fill) { viewModel.arm() }
+                    ActionButton("Pause", "Pause", false, compact, if (compact) fill else Modifier) { viewModel.pause() }
                 }
-                SessionState.PAUSED -> BigButton("Resume", primary = true, modifier = Modifier.weight(1f)) { viewModel.resume() }
-                else -> BigButton("New session", primary = true, modifier = Modifier.weight(1f)) { viewModel.newSession() }
+                SessionState.PAUSED -> ActionButton("Resume", "Resume", true, compact, fill) { viewModel.resume() }
+                else -> ActionButton("New session", "New", true, compact, fill) { viewModel.newSession() }
             }
         }
-        MuseButton(voice, voiceState)
+    }
+    val photoButtons: @Composable (Modifier) -> Unit = { mod ->
+        ActionButton("Take photo now", "Photo", false, compact, mod, enabled = !state.shutterBusy) { viewModel.captureManual() }
+        if (!state.attemptReady && !state.reservingAttempt) {
+            ActionButton("Retry connection", "Retry", false, compact, mod) { viewModel.retryAttempt() }
+        }
+    }
+    if (compact) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            MuseButton(voice, voiceState, 44.dp)
+            if (photoActions) photoButtons(Modifier.fillMaxWidth())
+            buttons(Modifier.fillMaxWidth())
+        }
+    } else {
+        if (photoActions) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { photoButtons(Modifier.weight(1f)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            buttons(Modifier.weight(1f))
+            MuseButton(voice, voiceState, 52.dp)
+        }
     }
 }
 
@@ -612,3 +629,6 @@ private fun ResultDetails(state: GuidanceUiState, viewModel: GuidanceViewModel) 
         OutlinedButton(onClick = { viewModel.dismissResult() }) { Text("Dismiss") }
     }
 }
+
+/** Value passed back from the QR scanner when the code carries no session id. */
+const val INVALID_SESSION_QR = "invalid"

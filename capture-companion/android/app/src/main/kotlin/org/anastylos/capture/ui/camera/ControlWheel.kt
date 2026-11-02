@@ -1,113 +1,98 @@
 package org.anastylos.capture.ui.camera
 
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
-import kotlin.math.abs
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import org.anastylos.capture.ui.theme.Palette
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
-private val STOP_WIDTH = 64.dp
+/** How many screen widths of drag cover the whole range. */
+private const val RULER_SCREENS = 2.5f
+private const val MAJOR_EVERY = 5
 
 /**
- * Horizontal setting wheel: swipe left or right and the values lock
- * into place under the ochre marker. [onSettled] fires only once the
- * wheel has come to rest on a detent.
+ * Stepless setting ruler: drag left or right and the value follows
+ * the finger; the ochre marker stays fixed in the middle. The value
+ * is committed when the finger lifts.
  */
 @Composable
-fun <T> ControlWheel(
-    stops: List<WheelStop<T>>,
-    selectedIndex: Int,
-    onSettled: (WheelStop<T>) -> Unit,
+fun <T> ContinuousWheel(
+    scale: WheelScale<T>,
+    value: T,
+    onCommit: (T) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (stops.isEmpty()) return
-    val state = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex.coerceIn(0, stops.lastIndex))
+    var fraction by remember(value) { mutableFloatStateOf(scale.toFraction(value)) }
     val haptic = LocalHapticFeedback.current
-    val centered by remember { derivedStateOf { state.centeredIndex(stops.lastIndex) } }
-    LaunchedEffect(state, stops) {
-        snapshotFlow { state.isScrollInProgress to state.centeredIndex(stops.lastIndex) }
-            .filter { (scrolling, _) -> !scrolling }
-            .map { (_, index) -> index }
-            .distinctUntilChanged()
-            .collect { index -> if (index != selectedIndex) onSettled(stops[index]) }
-    }
-    LaunchedEffect(centered) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
-    BoxWithConstraints(modifier.fillMaxWidth().height(76.dp)) {
-        val side = (maxWidth - STOP_WIDTH) / 2
-        LazyRow(
-            state = state,
-            flingBehavior = rememberSnapFlingBehavior(state),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = side),
-            verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth(),
+    val currentScale by rememberUpdatedState(scale)
+    val currentCommit by rememberUpdatedState(onCommit)
+    var lastTick by remember { mutableFloatStateOf(Float.NaN) }
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            scale.format(scale.fromFraction(fraction)),
+            color = Palette.Ochre,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .pointerInput(Unit) {
+                    val tickPx = 10.dp.toPx()
+                    detectHorizontalDragGestures(
+                        onDragEnd = { currentCommit(currentScale.fromFraction(fraction)) },
+                        onDragCancel = { currentCommit(currentScale.fromFraction(fraction)) },
+                    ) { change, dragX ->
+                        change.consume()
+                        fraction = (fraction - dragX / (size.width * RULER_SCREENS)).coerceIn(0f, 1f)
+                        val tick = (fraction * size.width * RULER_SCREENS / tickPx).roundToInt().toFloat()
+                        if (tick != lastTick) {
+                            lastTick = tick
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                    }
+                },
         ) {
-            itemsIndexed(stops) { index, stop ->
-                Column(Modifier.width(STOP_WIDTH), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        stop.label,
-                        color = if (index == centered) Palette.Ochre else Palette.Paper.copy(alpha = 0.7f),
-                        fontSize = if (index == centered) 22.sp else 16.sp,
-                        fontWeight = if (index == centered) FontWeight.Bold else FontWeight.Normal,
-                    )
-                    Ticks(highlight = index == centered)
-                }
+            val tick = 10.dp.toPx()
+            val total = size.width * RULER_SCREENS
+            val center = size.width / 2f
+            val offset = fraction * total
+            val count = (total / tick).toInt()
+            for (i in 0..count) {
+                val x = center + i * tick - offset
+                if (x < -tick || x > size.width + tick) continue
+                val major = i % MAJOR_EVERY == 0
+                val fade = (1f - abs(x - center) / center).coerceIn(0.15f, 1f)
+                drawLine(
+                    Palette.Paper.copy(alpha = 0.75f * fade),
+                    Offset(x, size.height),
+                    Offset(x, size.height - (if (major) 22.dp.toPx() else 12.dp.toPx())),
+                    strokeWidth = 1.5.dp.toPx(),
+                    cap = StrokeCap.Round,
+                )
             }
+            drawLine(Palette.Ochre, Offset(center, size.height), Offset(center, size.height - 30.dp.toPx()), 3.dp.toPx(), StrokeCap.Round)
         }
     }
-}
-
-@Composable
-private fun Ticks(highlight: Boolean) {
-    Row(
-        Modifier.padding(top = 8.dp).fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        repeat(4) { tick ->
-            val major = tick == 0
-            Box(
-                Modifier
-                    .size(width = if (major && highlight) 3.dp else 1.5.dp, height = if (major) 22.dp else 12.dp)
-                    .background(if (major && highlight) Palette.Ochre else Palette.Paper.copy(alpha = 0.55f)),
-            )
-        }
-    }
-}
-
-/** The item whose middle is closest to the middle of the viewport. */
-private fun LazyListState.centeredIndex(lastIndex: Int): Int {
-    val info = layoutInfo
-    val viewportCenter = (info.viewportStartOffset + info.viewportEndOffset) / 2
-    val closest = info.visibleItemsInfo.minByOrNull { abs(it.offset + it.size / 2 - viewportCenter) }
-    return (closest?.index ?: 0).coerceIn(0, lastIndex)
 }

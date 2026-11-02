@@ -6,9 +6,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import org.anastylos.capture.R
 
 /** Editorial dark palette: near-black ground, warm paper text, one ochre accent. */
 object Palette {
@@ -44,12 +46,17 @@ private val scheme = darkColorScheme(
     onError = Palette.Ground,
 )
 
-private val headline = FontFamily.Serif
+private val khula = FontFamily(
+    Font(R.font.khula_regular, FontWeight.Normal),
+    Font(R.font.khula_semibold, FontWeight.Medium),
+    Font(R.font.khula_semibold, FontWeight.SemiBold),
+    Font(R.font.khula_bold, FontWeight.Bold),
+)
 
-private val typography = Typography(
-    headlineLarge = TextStyle(fontFamily = headline, fontWeight = FontWeight.Medium, fontSize = 34.sp, lineHeight = 38.sp, letterSpacing = (-0.5).sp),
-    headlineMedium = TextStyle(fontFamily = headline, fontWeight = FontWeight.Medium, fontSize = 28.sp, lineHeight = 32.sp, letterSpacing = (-0.3).sp),
-    headlineSmall = TextStyle(fontFamily = headline, fontWeight = FontWeight.Medium, fontSize = 22.sp, lineHeight = 28.sp),
+private val base = Typography(
+    headlineLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 34.sp, lineHeight = 38.sp, letterSpacing = (-0.5).sp),
+    headlineMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 28.sp, lineHeight = 32.sp, letterSpacing = (-0.3).sp),
+    headlineSmall = TextStyle(fontWeight = FontWeight.Medium, fontSize = 22.sp, lineHeight = 28.sp),
     titleLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 26.sp),
     titleMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp),
     titleSmall = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.6.sp),
@@ -58,6 +65,16 @@ private val typography = Typography(
     bodySmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
     labelLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 15.sp, letterSpacing = 0.4.sp),
 )
+
+private val typography = base.run {
+    fun TextStyle.khula() = copy(fontFamily = khula)
+    copy(
+        headlineLarge = headlineLarge.khula(), headlineMedium = headlineMedium.khula(), headlineSmall = headlineSmall.khula(),
+        titleLarge = titleLarge.khula(), titleMedium = titleMedium.khula(), titleSmall = titleSmall.khula(),
+        bodyLarge = bodyLarge.khula(), bodyMedium = bodyMedium.khula(), bodySmall = bodySmall.khula(),
+        labelLarge = labelLarge.khula(),
+    )
+}
 
 /** The app is dark by design; it never follows the system light theme. */
 @Composable

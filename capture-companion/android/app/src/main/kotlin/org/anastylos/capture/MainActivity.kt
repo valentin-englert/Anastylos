@@ -21,7 +21,10 @@ import org.anastylos.capture.ui.pair.PairViewModel
 import org.anastylos.capture.ui.pair.QrPairRoute
 import org.anastylos.capture.ui.session.SamplingScreen
 import org.anastylos.capture.ui.session.SessionScreen
+import org.anastylos.capture.ui.guided.SessionQrScanScreen
 import org.anastylos.capture.ui.launcher.LauncherScreen
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import org.anastylos.capture.ui.onboarding.OnboardingPrefs
 import org.anastylos.capture.ui.onboarding.OnboardingScreen
 import org.anastylos.capture.ui.theme.AnastylosTheme
@@ -61,6 +64,8 @@ class MainActivity : ComponentActivity() {
         return super.onKeyUp(keyCode, event)
     }
 }
+
+private const val SCANNED_SESSION_KEY = "scanned_session_id"
 
 @Composable
 fun AnastylosApp(container: AppContainer) {
@@ -108,12 +113,24 @@ fun AnastylosApp(container: AppContainer) {
                         onReplayGuide = { navController.navigate("onboarding") },
                     )
                 }
-                composable("guided") {
+                composable("guided") { entry ->
+                    val scanned by entry.savedStateHandle.getStateFlow<String?>(SCANNED_SESSION_KEY, null).collectAsState()
                     GuidedCaptureScreen(
                         container,
                         onBack = { navController.popBackStack() },
-                        onPair = { navController.navigate("pair") },
+                        onScanSession = { navController.navigate("scan-session") },
+                        scannedSessionId = scanned,
+                        onScannedConsumed = { entry.savedStateHandle[SCANNED_SESSION_KEY] = null },
                         onReplayGuide = { navController.navigate("onboarding") },
+                    )
+                }
+                composable("scan-session") {
+                    SessionQrScanScreen(
+                        onResult = { id ->
+                            navController.previousBackStackEntry?.savedStateHandle?.set(SCANNED_SESSION_KEY, id)
+                            navController.popBackStack()
+                        },
+                        onCancel = { navController.popBackStack() },
                     )
                 }
                 composable("pair") {

@@ -10,10 +10,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import android.content.res.Configuration
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -37,7 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import org.anastylos.capture.R
-import org.anastylos.capture.ui.camera.ScrimIconButton
+import org.anastylos.capture.ui.camera.BarIconButton
 import org.anastylos.capture.ui.theme.Glyph
 import org.anastylos.capture.ui.theme.Palette
 
@@ -59,40 +63,22 @@ fun SessionScreen(
     var manualPairing by remember { mutableStateOf(false) }
     val paired = state.pairing != null
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Palette.Ground)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(24.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(44.dp))
-            Spacer(Modifier.weight(1f))
-            if (!paired) ScrimIconButton(Glyph.Qr, "Pair with the workstation", onClick = onConnect)
-        }
-        Column(
-            Modifier.weight(1f).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text("ANASTYLOS", style = MaterialTheme.typography.headlineLarge, color = Palette.Paper)
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val info: @Composable ColumnScope.() -> Unit = {
+        Text("Anastylos", style = MaterialTheme.typography.headlineLarge, color = Palette.Paper)
+        Spacer(Modifier.height(8.dp))
+        Text("A workbench that remembers what you took apart.", style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
+        Spacer(Modifier.height(24.dp))
+        ConnectionStatus(paired)
+        if (!paired) {
             Spacer(Modifier.height(8.dp))
-            Text("A workbench that remembers what you took apart.", style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
-            Spacer(Modifier.height(28.dp))
-            ConnectionStatus(paired)
-            if (!paired) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Tap the QR icon and scan the code on the workstation.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Muted,
-                )
-                TextButton(onClick = { manualPairing = true }) { Text("Enter pairing details instead", color = Palette.Ochre) }
-            } else {
-                TextButton(onClick = { viewModel.unpair() }) { Text("Disconnect", color = Palette.Muted) }
-            }
+            Text("Tap the QR icon and scan the code on the workstation.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            TextButton(onClick = { manualPairing = true }) { Text("Enter pairing details instead", color = Palette.Ochre) }
+        } else {
+            TextButton(onClick = { viewModel.unpair() }) { Text("Disconnect", color = Palette.Muted) }
         }
+    }
+    val actions: @Composable ColumnScope.() -> Unit = {
         val error = state.error ?: state.pairingError
         if (error != null) {
             Text(error, color = Palette.Brick, style = MaterialTheme.typography.bodyMedium)
@@ -100,12 +86,7 @@ fun SessionScreen(
         }
         if (paired && state.pendingCount > 0) {
             Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "${state.pendingCount} photos waiting",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Palette.Paper,
-                    modifier = Modifier.weight(1f),
-                )
+                Text("${state.pendingCount} photos waiting", style = MaterialTheme.typography.bodyLarge, color = Palette.Paper, modifier = Modifier.weight(1f))
                 OutlinedButton(
                     onClick = { viewModel.uploadPending() },
                     enabled = !state.uploading && state.activeSessionId != null,
@@ -113,17 +94,39 @@ fun SessionScreen(
                 ) { Text(if (state.uploading) "Uploading…" else "Upload") }
             }
         }
-        Button(onClick = onGuided, modifier = Modifier.fillMaxWidth().height(64.dp)) {
+        Button(onClick = onGuided, modifier = Modifier.fillMaxWidth().height(60.dp)) {
             Text("Guided capture", style = MaterialTheme.typography.titleLarge)
         }
         Spacer(Modifier.height(12.dp))
         OutlinedButton(
             onClick = onSampling,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Paper),
         ) { Text("Timed photos", style = MaterialTheme.typography.titleMedium) }
         TextButton(onClick = onReplayGuide, modifier = Modifier.align(Alignment.CenterHorizontally)) {
             Text("How it works", color = Palette.Muted)
+        }
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Palette.Ground)
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .padding(24.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(44.dp))
+            Spacer(Modifier.weight(1f))
+            if (!paired) BarIconButton(Glyph.Qr, "Pair with the workstation", onClick = onConnect)
+        }
+        if (landscape) {
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(32.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), content = info)
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, content = actions)
+            }
+        } else {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, content = info)
+            actions()
         }
     }
     if (manualPairing) {

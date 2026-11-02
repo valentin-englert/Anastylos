@@ -14,38 +14,43 @@ class WheelValuesTest {
     )
 
     @Test
-    fun isoStopsStayInsideTheSupportedRange() {
-        assertThat(isoStops(caps).map { it.value }).containsExactly(50, 100, 200, 400, 800, 1600, 3200).inOrder()
-        assertThat(isoStops(CameraCapabilities())).isEmpty()
+    fun isoScaleIsLogarithmicAndStaysInRange() {
+        val scale = isoScale(caps)!!
+        assertThat(scale.fromFraction(0f)).isEqualTo(50)
+        assertThat(scale.fromFraction(1f)).isEqualTo(3200)
+        assertThat(scale.fromFraction(0.5f)).isEqualTo(400)
+        assertThat(scale.toFraction(400)).isWithin(0.01f).of(0.5f)
+        assertThat(isoScale(CameraCapabilities())).isNull()
     }
 
     @Test
-    fun shutterStopsAreFasterThanTheLongestExposure() {
-        val stops = shutterStops(caps.copy(maxFrameDurationNs = 50_000_000L))
-        assertThat(stops.first().label).isEqualTo("1/8000")
-        assertThat(stops.last().value).isAtMost(50_000_000L)
+    fun scalesRoundTripAnyValueThroughTheRuler() {
+        val iso = isoScale(caps)!!
+        assertThat(iso.fromFraction(iso.toFraction(777))).isEqualTo(777)
+        val shutter = shutterScale(caps)!!
+        assertThat(shutter.fromFraction(shutter.toFraction(20_000_000L))).isWithin(1000L).of(20_000_000L)
     }
 
     @Test
-    fun evStopsAreSignedInStopsOfTheDeviceStep() {
-        val stops = evStops(caps)
-        assertThat(stops.first().label).isEqualTo("-2.0")
-        assertThat(stops[4].label).isEqualTo("+0.0")
-        assertThat(stops.last().label).isEqualTo("+2.0")
+    fun shutterScaleNeverExceedsTheFrameDuration() {
+        val scale = shutterScale(caps.copy(maxFrameDurationNs = 50_000_000L))!!
+        assertThat(scale.fromFraction(1f)).isAtMost(50_000_000L)
     }
 
     @Test
-    fun focusStopsRunFromInfinityToTheNearestDistance() {
-        val stops = focusStops(caps)
-        assertThat(stops.first().label).isEqualTo("∞")
-        assertThat(stops.last().value).isEqualTo(10f)
-        assertThat(focusStops(CameraCapabilities())).isEmpty()
+    fun evScaleCommitsTheNearestDeviceStep() {
+        val scale = evScale(caps)!!
+        assertThat(scale.fromFraction(0.5f)).isEqualTo(0)
+        assertThat(scale.fromFraction(0.56f)).isEqualTo(0)
+        assertThat(scale.fromFraction(1f)).isEqualTo(4)
+        assertThat(scale.format(-2)).isEqualTo("-1.0")
     }
 
     @Test
-    fun nearestStopPicksTheClosestDetent() {
-        val stops = isoStops(caps)
-        assertThat(nearestStop(stops, 380)).isEqualTo(3)
-        assertThat(nearestStop(emptyList<WheelStop<Int>>(), 100)).isEqualTo(0)
+    fun focusScaleRunsFromInfinityToTheNearestDistance() {
+        val scale = focusScale(caps)!!
+        assertThat(scale.format(scale.fromFraction(0f))).isEqualTo("∞")
+        assertThat(scale.fromFraction(1f)).isEqualTo(10f)
+        assertThat(focusScale(CameraCapabilities())).isNull()
     }
 }

@@ -1,6 +1,10 @@
 package org.anastylos.capture.ui.onboarding
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,7 +51,7 @@ private enum class Hero { Mark, Qr, Request, Wheel, Bolt, Muse }
 private data class Page(val hero: Hero, val title: String, val body: String)
 
 private val PAGES = listOf(
-    Page(Hero.Mark, "Welcome to ANASTYLOS", "This phone is the camera at your workbench. It sends sharp, labelled photos to the workstation, so every removed part is remembered."),
+    Page(Hero.Mark, "Welcome to Anastylos", "This phone is the camera at your workbench. It sends sharp, labelled photos to the workstation, so every removed part is remembered."),
     Page(Hero.Qr, "1 · Connect", HelpTopic.Connect.body),
     Page(Hero.Request, "2 · Take the photos it asks for", HelpTopic.Requests.body),
     Page(Hero.Wheel, "3 · Tune the picture", "Tap ISO, SPEED, EV, FOCUS or WB along the bottom of the camera. A wheel opens: swipe left or right and the values click into place. Tap the (i) above any wheel for an explanation."),
@@ -65,21 +69,33 @@ fun OnboardingScreen(initialShowAtLaunch: Boolean, onFinish: (showAtLaunch: Bool
     var showAgain by remember { mutableStateOf(initialShowAtLaunch) }
     val page = PAGES[index]
     val last = index == PAGES.lastIndex
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     Column(
-        Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding().navigationBarsPadding().padding(24.dp),
+        Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding().navigationBarsPadding().padding(if (landscape) 16.dp else 24.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             TextButton(onClick = { onFinish(showAgain) }) { Text("Skip", color = Palette.Muted) }
         }
-        Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            HeroArt(page.hero)
-            Spacer(Modifier.height(36.dp))
-            Text(page.title, style = MaterialTheme.typography.headlineMedium, color = Palette.Paper)
-            Spacer(Modifier.height(14.dp))
-            Text(page.body, style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
+        if (landscape) {
+            Row(Modifier.weight(1f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+                HeroArt(page.hero)
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    Text(page.title, style = MaterialTheme.typography.headlineMedium, color = Palette.Paper)
+                    Spacer(Modifier.height(10.dp))
+                    Text(page.body, style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
+                }
+            }
+        } else {
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                HeroArt(page.hero)
+                Spacer(Modifier.height(36.dp))
+                Text(page.title, style = MaterialTheme.typography.headlineMedium, color = Palette.Paper)
+                Spacer(Modifier.height(14.dp))
+                Text(page.body, style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
+            }
         }
         Dots(count = PAGES.size, current = index)
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(if (landscape) 8.dp else 20.dp))
         if (last) {
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 12.dp),

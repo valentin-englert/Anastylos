@@ -81,7 +81,7 @@ fun LauncherScreen(onFinished: () -> Unit) {
             }
         }
         Text(
-            "ANASTYLOS",
+            "Anastylos",
             style = MaterialTheme.typography.headlineLarge,
             color = Palette.Paper,
             textAlign = TextAlign.Center,

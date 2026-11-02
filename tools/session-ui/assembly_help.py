@@ -72,8 +72,8 @@ LINK_FILE = "part-link.json"
 
 # ------------------------------------------------------------------ fixed operator-facing wording
 
-NEEDS_LINK = ("This drawing is not linked to a recorded part yet. Say which recorded part it shows; "
-              "the drawing alone does not prove it.")
+NEEDS_LINK = ("This drawing is not linked to a current recorded part. Which current part, if any, does it show? "
+              "Leave it unlinked when no current record matches.")
 LINK_STALE = ("The link between this drawing and its recorded part no longer holds ({reason}). "
               "Link the drawing to a part again.")
 COARSE_ORIGIN = ("The recorded origin is only a description of a place, not a specific screw boss, connector or "

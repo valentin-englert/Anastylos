@@ -204,6 +204,15 @@ class AskTest(HelpCase):
         self.assertIn("not linked", result["message"])
         self.assertFalse((self.session_dir / "drawings" / "jobs" / "loose-1" / "part-link.json").exists())
 
+    def test_front_shell_with_no_current_memory_record_stays_unlinked(self):
+        job = self.job("front-shell-1", "front shell of the controller")
+        result = self.ask("front-shell-1", "where does this part belong?")
+        self.assertEqual(result["status"], "needs_link")
+        self.assertIsNone(result["answer"])
+        self.assertIn("if any", result["message"])
+        self.assertFalse(any(candidate["suggested"] for candidate in result["candidates"]))
+        self.assertFalse((job / "part-link.json").exists())
+
     def test_coarse_origin_gives_follow_up_and_no_install_point(self):
         result = self.ask("front-1", "where does this part belong?")
         self.assertEqual(result["status"], "coarse_origin")

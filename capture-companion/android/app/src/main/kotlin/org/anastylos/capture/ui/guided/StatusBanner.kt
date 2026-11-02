@@ -15,7 +15,7 @@ data class StatusBanner(val title: String, val detail: String?, val tone: Banner
 /** What the operator should do or expect right now; null detail means nothing to add. */
 fun statusBannerOf(state: GuidanceUiState): StatusBanner {
     if (!state.remoteAttached) {
-        return StatusBanner("Not connected", "Attach a session from the workstation", BannerTone.PROBLEM)
+        return StatusBanner("No session yet", "Enter the session id shown on the workstation", BannerTone.PROBLEM)
     }
     val card = requestCardOf(state)
     if (card != null) {

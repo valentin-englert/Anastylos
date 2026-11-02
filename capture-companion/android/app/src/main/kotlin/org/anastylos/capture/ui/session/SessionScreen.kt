@@ -80,7 +80,7 @@ fun SessionScreen(
             Spacer(Modifier.height(8.dp))
             Text("A workbench that remembers what you took apart.", style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
             Spacer(Modifier.height(28.dp))
-            ConnectionStatus(paired, state.pairing?.workstationId)
+            ConnectionStatus(paired)
             if (!paired) {
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -136,11 +136,11 @@ fun SessionScreen(
 }
 
 @Composable
-private fun ConnectionStatus(paired: Boolean, workstationId: String?) {
+private fun ConnectionStatus(paired: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(12.dp).background(if (paired) Palette.Sage else Palette.Brick, CircleShape))
         Text(
-            if (paired) "Connected to ${workstationId ?: "workstation"}" else "Not connected",
+            if (paired) "Connected to the workstation" else "Not connected",
             style = MaterialTheme.typography.titleMedium,
             color = Palette.Paper,
         )

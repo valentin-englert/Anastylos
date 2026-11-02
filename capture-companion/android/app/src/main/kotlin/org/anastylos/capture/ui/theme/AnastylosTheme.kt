@@ -25,7 +25,7 @@ object Palette {
     val Muse = Color(0xFF3D8DF5)
 
     /** Scrim behind overlay text on live camera: dark, not milky. */
-    val Scrim = Color(0x66000000)
+    val Scrim = Color(0xA6000000)
 }
 
 private val scheme = darkColorScheme(

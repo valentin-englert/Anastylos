@@ -8,9 +8,9 @@ import org.junit.Test
 
 class StatusBannerTest {
     @Test
-    fun notAttachedSaysNotConnected() {
+    fun notAttachedAsksForASession() {
         val banner = statusBannerOf(GuidanceUiState())
-        assertThat(banner.title).isEqualTo("Not connected")
+        assertThat(banner.title).isEqualTo("No session yet")
         assertThat(banner.tone).isEqualTo(BannerTone.PROBLEM)
     }
 

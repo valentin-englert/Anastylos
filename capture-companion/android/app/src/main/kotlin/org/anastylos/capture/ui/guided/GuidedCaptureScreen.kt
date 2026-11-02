@@ -275,7 +275,7 @@ private fun ConnectionPill(connected: Boolean, voiceLabel: String?) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(9.dp).background(if (connected) Palette.Sage else Palette.Brick, CircleShape))
-        Text(if (connected) "Connected" else "Not connected", color = Palette.Paper, style = MaterialTheme.typography.titleSmall)
+        Text(if (connected) "Session attached" else "No session", color = Palette.Paper, style = MaterialTheme.typography.titleSmall)
         voiceLabel?.let { Text(it, color = Palette.Muse, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
     }
 }

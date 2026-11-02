@@ -150,7 +150,7 @@ still-stale binding).
 ## Phone page (pairing without a terminal) and phone videos
 
 `phone.py` runs the receiver's own CLI as a subprocess on the data dir from `capture-settings.json`
-(`receiver_data_dir`, `receiver_url`, `ca_file`, optional `phone_host`): `pair-code --qr`, `pair-status --json`,
+(`receiver_data_dir`, `receiver_url`, `receiver_cert`, optional `phone_host`): `pair-code --qr`, `pair-status --json`,
 `pair-approve` / `pair-reject`, `guided-enroll`. The **Phone** menu page shows the pairing QR (one click), pending
 requests with device name, request id and the workstation certificate fingerprint, and Approve / Reject buttons.
 Approval is only ever the operator's click (`POST /api/phone/decision`, same-origin guard, loopback server); it also

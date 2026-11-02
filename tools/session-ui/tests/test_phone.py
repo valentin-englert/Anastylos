@@ -62,7 +62,7 @@ class PhoneCase(unittest.TestCase):
         self.write_settings(source_id="src-old")
 
     def write_settings(self, **extra):
-        conf = {"receiver_data_dir": str(self.data), "receiver_url": "https://192.168.0.7:8443", "ca_file": str(CERT),
+        conf = {"receiver_data_dir": str(self.data), "receiver_url": "https://192.168.0.7:8443", "receiver_cert": str(CERT),
                 "phone_host": "192.168.0.7", **extra}
         (self.root / phone.SETTINGS).write_text(json.dumps(conf))
 
@@ -85,10 +85,10 @@ class TestPairing(PhoneCase):
         with self.assertRaises(AdapterError) as missing:
             phone.start_pairing(self.root, FakeCli())
         self.assertIn("capture-settings.json", str(missing.exception))
-        self.write_settings(ca_file=str(self.root / "nope.pem"))
+        self.write_settings(receiver_cert=str(self.root / "nope.pem"))
         with self.assertRaises(AdapterError) as no_cert:
             phone.start_pairing(self.root, FakeCli())
-        self.assertIn("ca_file", str(no_cert.exception))
+        self.assertIn("receiver_cert", str(no_cert.exception))
         with self.assertRaises(AdapterError):
             phone.pairing_qr_png(self.root)
 

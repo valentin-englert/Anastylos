@@ -8,7 +8,7 @@ Approval is the operator's decision: it happens only through ``decide`` after a 
 Approving also enrols the phone and writes its new ``source_id`` into ``<root>/capture-settings.json``; a session
 opened for the previous phone is dropped so the next connect opens one for the new phone.
 
-Settings read from ``<root>/capture-settings.json``: ``receiver_data_dir``, ``receiver_url``, ``ca_file`` (the
+Settings read from ``<root>/capture-settings.json``: ``receiver_data_dir``, ``receiver_url``, ``receiver_cert`` (the
 receiver certificate PEM, for the QR pin) and optionally ``phone_host`` (the LAN address the phone reaches; found
 automatically when absent).
 """
@@ -90,9 +90,9 @@ def certificate_fingerprint(pem: Path) -> str:
 def start_pairing(root: Path, run: Run = subprocess_run) -> dict:
     """Mint a fresh single-use pairing code and its QR picture."""
     conf = _settings(root)
-    cert = conf.get("ca_file")
+    cert = conf.get("receiver_cert")
     if not cert or not Path(cert).is_file():
-        raise AdapterError("capture-settings.json needs ca_file: the receiver certificate (PEM) for the pairing QR.", 409)
+        raise AdapterError("capture-settings.json needs receiver_cert: the receiver certificate (PEM) for the pairing QR.", 409)
     split = urlsplit(conf.get("receiver_url") or "")
     host = conf.get("phone_host") or _lan_host()
     port = str(split.port or 8443)
@@ -128,7 +128,7 @@ def pending_requests(root: Path, run: Run = subprocess_run) -> dict:
         for request_id, entry in sorted(listing.get("requests", {}).items())
         if entry.get("status") == "pending" and float(entry.get("expires_at", 0)) > now
     ]
-    cert = conf.get("ca_file")
+    cert = conf.get("receiver_cert")
     return {"requests": requests, "certificate_sha256": certificate_fingerprint(Path(cert)) if cert and Path(cert).is_file() else None,
             "source_id": conf.get("source_id")}
 

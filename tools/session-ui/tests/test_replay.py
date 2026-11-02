@@ -1,0 +1,339 @@
+"""Evidence replay: what t_s means, cached frame folders, whitelist serving, worker frame choice (fake extractor, no real video)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import threading
+import unittest
+import urllib.error
+import urllib.request
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+
+UI_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(UI_ROOT))
+
+import assembly_help  # noqa: E402
+import replay  # noqa: E402
+import server  # noqa: E402
+from adapter import AdapterError  # noqa: E402
+from state import SessionState  # noqa: E402
+
+SESSION = "memory"
+VIDEO_SHA = "ab" * 32
+
+
+def removal(event_id: str, label: str, source: str | None, t_s: float | None, note: str, supersedes: str | None = None) -> dict:
+    return {"type": "declared_removal", "id": event_id, "session": SESSION, "timestamp": "2026-11-02T18:22:42Z",
+            "operator_label": label, "source": source, "phase": "phase-0001", "t_s": t_s, "observation_id": None,
+            "declared_by": "workstation", "evidence_note": note, "supersedes": supersedes}
+
+
+QUESTIONS = [
+    {"id": "Q-P1-01", "kind": "source_of_part", "part": "P1-C01", "cell": "cell-1", "deposit_window_s": [22.2, 60.0],
+     "candidates": [{"removal_event": "E-0007", "window_s": [30.0, 34.5], "sources": []}]},
+    {"id": "Q-P1-02", "kind": "source_of_part", "part": "P1-C02", "cell": "cell-2", "deposit_window_s": [70.0, 72.0],
+     "candidates": [{"removal_event": "E-0007", "window_s": [30.0, 34.5], "sources": []}]},
+    {"id": "Q-P1-03", "kind": "destination_of_removal", "removal_event": "E-0009", "window_s": [90.0, 95.0], "sources": []},
+]
+EVENTS = [
+    {"type": "phase", "id": "phase-0001", "session": SESSION, "timestamp": "2026-11-02T16:42:41Z", "label": "recorded on the phone",
+     "pose_note": None, "starts_after": None, "supersedes": None},
+    removal("dec-0001", "screw", "back shell", 22.2, "answer to Q-P1-01; live op_key=x; operator input typed"),
+    removal("dec-0002", "button", "automatic candidate E-0007 (SRC-1), chosen by the operator", 30.0,
+            "answer to Q-P1-02; live op_key=x"),
+    removal("dec-0003", "foil", "front shell", 90.0, "answer to Q-P1-03; live op_key=x"),
+    removal("dec-0004", "back shell", None, None, "operator-stated at the end of the video, not observed"),
+    removal("dec-0005", "rubber", "front shell", 41.5, "operator-added part that raised no question; replayed"),
+    removal("dec-0006", "membrane", "front shell", 12.0, "typed"),
+    removal("dec-0007", "white rubber membrane", "L/R button", None, "operator correction", supersedes="dec-0006"),
+]
+
+
+def fake_worker(status: str = "ready", frames: int = 4, returncode: int = 0):
+    """A stand-in for ``replay_worker.py``: writes the folder it would write (JPEG-looking bytes) and records the call."""
+    calls = []
+
+    def run(command, **kwargs):
+        calls.append({"command": command, "env": kwargs.get("env")})
+        if returncode:
+            return SimpleNamespace(returncode=returncode, stderr="replay extraction failed: the video cannot be read\n", stdout="")
+        args = dict(zip(command[3::2], command[4::2]))
+        out = Path(args["--out"])
+        out.mkdir(parents=True)
+        t = float(args["--t-s"])
+        kept = [{"file": f"seq-{i:03d}.jpg", "t_s": round(t - 1 + i * 0.5, 3), "frame_index": i} for i in range(frames if status == "ready" else 0)]
+        for item in kept:
+            (out / item["file"]).write_bytes(b"\xff\xd8" + item["file"].encode())
+        picks = {}
+        for name, at in (("before", t - 3), ("after", t + 3)):
+            if status == "ready":
+                (out / f"{name}.jpg").write_bytes(b"\xff\xd8" + name.encode())
+                picks[name] = {"file": f"{name}.jpg", "t_s": at, "frame_index": 1}
+            else:
+                picks[name] = None
+        manifest = {"schema": "anastylos-replay-evidence@1", "status": status, "requested_t_s": t, "rate_fps": 10.0,
+                    "px_per_mm": 3.0, "video": {"name": "video.mp4", "sha256": args["--video-sha256"]}, "frames": kept,
+                    "skipped": [{"t_s": 1.0, "frame_index": 3, "reason": "rms 1.3 mm > 0.5 mm"}], "before": picks["before"],
+                    "after": picks["after"], "generated_at": "2026-11-02T20:00:00"}
+        (out / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        return SimpleNamespace(returncode=0, stderr="", stdout="{}")
+
+    run.calls = calls
+    return run
+
+
+class ReplayCase(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name) / "workspace"
+        self.session_dir = self.root / "s1"
+        state = SessionState.create(self.session_dir, "controller", "workstation")
+        self.video = Path(tmp.name) / "video.mp4"
+        self.video.write_bytes(b"not a real video")
+        state.begin_phase("P1", "recorded on the phone", self.video, VIDEO_SHA)
+        state.finish_phase("P1", {"parts": 3})
+        run_dir = state.run_dir("P1")
+        run_dir.mkdir(parents=True)
+        (run_dir / "questions.json").write_text(json.dumps({"schema": "x", "phase": "P1", "questions": QUESTIONS}), encoding="utf-8")
+        self.memory = state.memory_dir / "memory.jsonl"
+        self.memory.write_text("".join(json.dumps(e) + "\n" for e in EVENTS), encoding="utf-8")
+
+    def moment(self, part: str) -> dict:
+        return replay.replay_moments(self.root, "s1", [part])["moments"][0]
+
+
+class MomentMeaningTest(ReplayCase):
+    def test_typed_source_marks_a_deposit_not_a_removal(self):
+        moment = self.moment("dec-0001")
+        self.assertEqual((moment["status"], moment["meaning"], moment["observed_s"]), ("not_prepared", "deposit_window_start", 22.2))
+        self.assertEqual(moment["window_s"], [22.2, 60.0])
+        self.assertIn("being put down", moment["meaning_text"])
+        self.assertIn("It marks the deposit, not the removal.", moment["meaning_text"])
+        self.assertIn("22.2", moment["meaning_text"])
+
+    def test_chosen_candidate_and_destination_mark_a_removal(self):
+        chosen = self.moment("dec-0002")
+        self.assertEqual((chosen["meaning"], chosen["window_s"]), ("removal_window_start", [30.0, 34.5]))
+        self.assertIn("being removed", chosen["meaning_text"])
+        self.assertNotIn("deposit", chosen["meaning_text"])
+        destination = self.moment("dec-0003")
+        self.assertEqual((destination["meaning"], destination["window_s"]), ("removal_window_start", [90.0, 95.0]))
+
+    def test_stated_and_unspecified_times_are_labelled_as_such(self):
+        stated = self.moment("dec-0005")
+        self.assertEqual(stated["meaning"], "operator_stated")
+        self.assertIn("stated by the operator, not observed", stated["meaning_text"])
+        unspecified = self.moment("dec-0007")
+        self.assertEqual(unspecified["meaning"], "unspecified")
+        self.assertIn("does not say whether it marks the removal or the deposit", unspecified["meaning_text"])
+
+    def test_part_without_a_time_says_plainly_that_nothing_can_be_shown(self):
+        moment = self.moment("dec-0004")
+        self.assertEqual((moment["status"], moment["observed_s"], moment["key"]), ("no_moment", None, None))
+        self.assertEqual(moment["message"], replay.NO_MOMENT_TIME)
+
+    def test_a_correction_inherits_the_time_of_the_record_it_replaced(self):
+        moment = self.moment("dec-0007")
+        self.assertEqual((moment["observed_s"], moment["via_record"], moment["meaning"]), (12.0, "dec-0006", "unspecified"))
+        self.assertIn("comes from record dec-0006, which dec-0007 replaced", moment["meaning_text"])
+        with self.assertRaises(AdapterError) as replaced:
+            self.moment("dec-0006")
+        self.assertEqual(replaced.exception.status, 404)
+
+    def test_missing_video_means_no_moment(self):
+        self.video.unlink()
+        moment = self.moment("dec-0002")
+        self.assertEqual((moment["status"], moment["message"]), ("no_moment", replay.NO_MOMENT_VIDEO))
+
+    def test_fixed_label_is_always_present(self):
+        self.assertEqual(self.moment("dec-0001")["label_fixed"], "Reverse replay of the recorded disassembly, not a verified installation procedure.")
+        self.assertEqual(self.moment("dec-0004")["label_fixed"], replay.LABEL)
+
+    def test_listing_is_read_only(self):
+        before = {p: p.read_bytes() for p in self.session_dir.rglob("*") if p.is_file()}
+        replay.replay_moments(self.root, "s1", ["dec-0001", "dec-0002", "dec-0004"])
+        self.assertEqual(before, {p: p.read_bytes() for p in self.session_dir.rglob("*") if p.is_file()})
+        self.assertFalse((self.session_dir / "evidence").exists())
+        with self.assertRaises(AdapterError):
+            replay.replay_moments(self.root, "s1", [])
+
+
+class PrepareTest(ReplayCase):
+    def test_extracts_once_and_serves_only_names_times_and_hashes(self):
+        run = fake_worker()
+        memory_before = hashlib.sha256(self.memory.read_bytes()).hexdigest()
+        first = replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
+        self.assertEqual(first["status"], "ready")
+        self.assertEqual(len(run.calls), 1)
+        command = run.calls[0]["command"]
+        self.assertEqual(command[command.index("--video") + 1], str(self.video))
+        self.assertEqual(command[command.index("--video-sha256") + 1], VIDEO_SHA)
+        self.assertEqual(command[command.index("--t-s") + 1], "22.2")
+        self.assertTrue(Path(run.calls[0]["env"]["ANASTYLOS_DRAWING_CACHE"]).is_relative_to(self.session_dir / "evidence"))
+        player = first["player"]
+        self.assertEqual([f["file"] for f in player["frames"]], ["seq-000.jpg", "seq-001.jpg", "seq-002.jpg", "seq-003.jpg"])
+        self.assertEqual((player["before"]["t_s"], player["after"]["t_s"]), (19.2, 25.2))
+        self.assertEqual(player["skipped_frames"], 1)
+        shown = json.dumps(first)
+        for secret in (str(self.video), "video.mp4", str(self.session_dir), "\\\\"):
+            self.assertNotIn(secret, shown)
+        self.assertEqual(first["key"], f"{VIDEO_SHA[:12]}-22200-v1")
+        self.assertTrue((self.session_dir / "evidence" / "replay" / first["key"] / "manifest.json").is_file())
+        again = replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
+        self.assertEqual((len(run.calls), again["status"]), (1, "ready"))
+        self.assertEqual(self.moment("dec-0001")["status"], "ready")
+        self.assertEqual(hashlib.sha256(self.memory.read_bytes()).hexdigest(), memory_before)
+
+    def test_unregistered_frames_say_no_moment_can_be_shown_and_are_cached(self):
+        run = fake_worker(status="unregistered")
+        result = replay.replay_prepare(self.root, "s1", "dec-0002", run=run)
+        self.assertEqual(result["status"], "unregistered")
+        self.assertNotIn("player", result)
+        self.assertEqual(result["message"], replay.NO_MOMENT_REGISTERED)
+        replay.replay_prepare(self.root, "s1", "dec-0002", run=run)
+        self.assertEqual(len(run.calls), 1)
+
+    def test_part_without_time_never_starts_the_extractor(self):
+        run = fake_worker()
+        result = replay.replay_prepare(self.root, "s1", "dec-0004", run=run)
+        self.assertEqual((result["status"], run.calls), ("no_moment", []))
+
+    def test_a_failing_extractor_is_reported_and_leaves_no_cache(self):
+        with self.assertRaisesRegex(AdapterError, "cannot be read") as caught:
+            replay.replay_prepare(self.root, "s1", "dec-0001", run=fake_worker(returncode=2))
+        self.assertEqual(caught.exception.status, 502)
+        self.assertEqual(self.moment("dec-0001")["status"], "not_prepared")
+
+    def test_files_are_served_by_whitelist_only(self):
+        key = replay.replay_prepare(self.root, "s1", "dec-0001", run=fake_worker())["key"]
+        body, content_type = replay.replay_file(self.root, "s1", key, "seq-001.jpg")
+        self.assertEqual((body, content_type), (b"\xff\xd8seq-001.jpg", "image/jpeg"))
+        self.assertEqual(replay.replay_file(self.root, "s1", key, "before.jpg")[0], b"\xff\xd8before")
+        for bad_name in ("manifest.json", "../manifest.json", "seq-1.jpg", "seq-001.png", "", "..\\x.jpg", "seq-009.jpg"):
+            with self.subTest(name=bad_name), self.assertRaises(AdapterError) as caught:
+                replay.replay_file(self.root, "s1", key, bad_name)
+            self.assertEqual(caught.exception.status, 404)
+        for bad_key in ("", "..", "../replay", key + "/..", "zz" * 6 + "-1-v1"):
+            with self.subTest(key=bad_key), self.assertRaises(AdapterError):
+                replay.replay_file(self.root, "s1", bad_key, "seq-000.jpg")
+
+
+class RouteTest(ReplayCase):
+    def setUp(self):
+        super().setUp()
+        self.httpd = server.serve(self.root, "127.0.0.1", 0)
+        thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(self.httpd.server_close)
+        self.addCleanup(thread.join, 30)
+        self.addCleanup(self.httpd.shutdown)
+        self.base = f"http://127.0.0.1:{self.httpd.server_port}"
+
+    def get(self, path: str):
+        try:
+            with urllib.request.urlopen(self.base + path, timeout=30) as response:
+                return response.status, response.headers.get_content_type(), response.read()
+        except urllib.error.HTTPError as exc:
+            return exc.code, exc.headers.get_content_type(), exc.read()
+
+    def test_moments_and_files_over_http(self):
+        status, _type, body = self.get("/api/replay?session=s1&parts=dec-0001,dec-0004")
+        moments = json.loads(body)["moments"]
+        self.assertEqual((status, [m["status"] for m in moments]), (200, ["not_prepared", "no_moment"]))
+        key = replay.replay_prepare(self.root, "s1", "dec-0001", run=fake_worker())["key"]
+        status, content_type, body = self.get(f"/api/replay/file?session=s1&key={key}&name=after.jpg")
+        self.assertEqual((status, content_type, body), (200, "image/jpeg", b"\xff\xd8after"))
+        self.assertEqual(self.get(f"/api/replay/file?session=s1&key={key}&name=manifest.json")[0], 404)
+        self.assertEqual(self.get("/replay.js")[0], 200)
+
+
+class WorkerTest(unittest.TestCase):
+    """The real worker on a tiny synthetic video, with sheet registration replaced by a stub."""
+
+    @classmethod
+    def setUpClass(cls):
+        import cv2
+        import numpy as np
+        cls.cv2, cls.np = cv2, np
+        sys.path.insert(0, str(UI_ROOT))
+        import replay_worker
+        cls.worker = replay_worker
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        self.video = self.tmp / "clip.avi"
+        writer = self.cv2.VideoWriter(str(self.video), self.cv2.VideoWriter_fourcc(*"MJPG"), 10.0, (64, 48))
+        for i in range(150):  # 15 s at 10 fps; the grey level encodes the frame index
+            writer.write(self.np.full((48, 64, 3), i, self.np.uint8))
+        writer.release()
+        self.sha = hashlib.sha256(self.video.read_bytes()).hexdigest()
+        patcher = mock.patch.dict(os.environ, {"ANASTYLOS_DRAWING_CACHE": str(self.tmp / "cache")})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def registered(self, failing: set[int]):
+        def fake(video, frame_index, ppm):
+            if frame_index in failing:
+                return None, "sheet registration failed: rms 1.3 mm > 0.5 mm"
+            return SimpleNamespace(image=self.np.full((9, 12, 3), frame_index % 256, self.np.uint8)), None
+        return mock.patch.object(self.worker, "_registered", side_effect=fake)
+
+    def test_failed_registration_frames_are_skipped_and_recorded(self):
+        failing = {70, 75}
+        with self.registered(failing):
+            manifest = self.worker.extract(self.video, self.sha, 7.5, self.tmp / "out")
+        out = self.tmp / "out"
+        self.assertEqual(manifest["status"], "ready")
+        self.assertEqual([s["frame_index"] for s in manifest["skipped"]], [70, 75])
+        self.assertEqual(len(manifest["frames"]), 21 - 2)
+        self.assertTrue(all(f["frame_index"] not in failing for f in manifest["frames"]))
+        times = [f["t_s"] for f in manifest["frames"]]
+        self.assertEqual((times[0], times[-1], times == sorted(times)), (6.5, 8.5, True))
+        for name in ("seq-000.jpg", "before.jpg", "after.jpg", "manifest.json"):
+            self.assertTrue((out / name).is_file(), name)
+        self.assertFalse((self.tmp / "out.partial").exists())
+        self.assertEqual(manifest["video"]["sha256"], self.sha)
+        self.assertEqual(manifest["files_sha256"]["before.jpg"], hashlib.sha256((out / "before.jpg").read_bytes()).hexdigest())
+        self.assertLessEqual(abs(manifest["before"]["t_s"] - 4.5), 1.0)
+        self.assertLessEqual(abs(manifest["after"]["t_s"] - 10.5), 1.0)
+        self.assertEqual((manifest["memory_written"], manifest["model_called"]), (False, False))
+
+    def test_too_few_registered_frames_means_unregistered_and_no_picks(self):
+        with self.registered(set(range(150))):
+            manifest = self.worker.extract(self.video, self.sha, 7.5, self.tmp / "out")
+        self.assertEqual((manifest["status"], manifest["frames"], manifest["before"], manifest["after"]), ("unregistered", [], None, None))
+        self.assertEqual(len(manifest["skipped"]), 21)
+
+    def test_picks_prefer_a_registered_frame_and_try_the_next_when_one_fails(self):
+        with self.registered({35}):  # first in rank (no motion yet) but not registrable
+            manifest = self.worker.extract(self.video, self.sha, 7.5, self.tmp / "out")
+        self.assertIsNotNone(manifest["before"])
+        self.assertNotEqual(manifest["before"]["frame_index"], 35)
+        self.assertEqual(manifest["refused_picks"]["before"][0]["frame_index"], 35)
+
+    def test_a_different_video_is_refused_and_nothing_is_written(self):
+        with self.registered(set()), self.assertRaisesRegex(ValueError, "differs from the SHA-256"):
+            self.worker.extract(self.video, "0" * 64, 7.5, self.tmp / "out")
+        self.assertFalse((self.tmp / "out").exists())
+        self.assertFalse((self.tmp / "out.partial").exists())
+
+    def test_command_line_failure_exit_code(self):
+        done = subprocess.run([sys.executable, "-B", str(UI_ROOT / "replay_worker.py"), "--video", str(self.video),
+                               "--video-sha256", "0" * 64, "--t-s", "7.5", "--out", str(self.tmp / "out")],
+                              capture_output=True, text=True, env={**os.environ})
+        self.assertEqual(done.returncode, 2)
+        self.assertIn("differs from the SHA-256", done.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

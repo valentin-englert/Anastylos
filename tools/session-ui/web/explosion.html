@@ -87,11 +87,40 @@
           <p class="hint" id="part-help-link-state" role="status"></p>
           <button type="button" id="part-help-link-button" disabled>Link drawing to selected current part</button>
         </div>
+        <section id="part-replay" aria-labelledby="part-replay-heading" hidden>
+          <h4 id="part-replay-heading">Recorded moment</h4>
+          <ul id="part-replay-list" class="note-list"></ul>
+          <p class="state" id="part-replay-state" role="status"></p>
+          <div id="part-replay-player" hidden>
+            <p class="state replay-label" id="part-replay-label"></p>
+            <p class="hint" id="part-replay-meaning"></p>
+            <p class="state" id="part-replay-time" aria-live="off"></p>
+            <img id="part-replay-frame" class="replay-image" alt="Rectified top view of the calibration sheet at the shown video time">
+            <div class="replay-controls">
+              <button type="button" id="part-replay-reverse">Play in reverse</button>
+              <button type="button" id="part-replay-forward">Play forward</button>
+              <button type="button" id="part-replay-pause">Pause</button>
+            </div>
+            <label for="part-replay-scrub">Frame</label>
+            <input type="range" id="part-replay-scrub" min="0" max="0" value="0">
+            <div id="part-replay-compare" hidden>
+              <h4>Before and after</h4>
+              <div class="replay-compare">
+                <img id="part-replay-before" class="replay-image" alt="Earlier rectified view">
+                <img id="part-replay-after" class="replay-image replay-after" alt="Later rectified view">
+              </div>
+              <label for="part-replay-split">Slide between the two views</label>
+              <input type="range" id="part-replay-split" min="0" max="100" value="50">
+              <p class="hint" id="part-replay-compare-times"></p>
+            </div>
+          </div>
+        </section>
       </section>
     </div>
   </aside>
 </main>
 <script src="explosion.js"></script>
 <script src="part-help.js"></script>
+<script src="replay.js"></script>
 </body>
 </html>

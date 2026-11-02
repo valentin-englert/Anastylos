@@ -1,0 +1,20 @@
+{
+  "schema": "anastylos-dialogue-items-cases@1",
+  "note": "Real transcripts of the third voice test (dialogue-turns.jsonl, the ones that reach the model) plus made-up answers, fixed before the run. expect=no_name means: no usable part name may result.",
+  "cases": [
+    {"id": "T1", "text": "yeah five screws from the back shell.", "expect": [["screw", 5, "back shell"]]},
+    {"id": "T2", "text": "cell three are the right button of the uh back shell.", "expect": [["right button", 1, "back shell"]]},
+    {"id": "T3", "text": "in cell two there is only one part", "expect": "no_name"},
+    {"id": "T4", "text": "It came from left and right button", "expect": "no_name"},
+    {"id": "T5", "text": "it's only one part,", "expect": "no_name"},
+    {"id": "T6", "text": "it's the green button from the the front shell,", "expect": [["green button", 1, "front shell"]]},
+    {"id": "T7", "text": "those are five screws from the back shell", "expect": [["screw", 5, "back shell"]]},
+    {"id": "T8", "text": "screws", "expect": [["screw", null, null]]},
+    {"id": "T9", "text": "they came out of the back shell", "expect": "no_name"},
+    {"id": "T10", "text": "two screws and a left button from the back shell", "expect": [["screw", 2, "back shell"], ["left button", 1, "back shell"]]},
+    {"id": "T11", "text": "the D-pad and the four color buttons", "expect": [["D-pad", 1, null], ["color button", 4, null]]},
+    {"id": "T12", "text": "I think it's some kind of spring", "expect": [["spring", 1, null]]},
+    {"id": "T13", "text": "um two white membranes from the front shell", "expect": [["white membrane", 2, "front shell"]]},
+    {"id": "T14", "text": "what do you mean", "expect": "meta"}
+  ]
+}

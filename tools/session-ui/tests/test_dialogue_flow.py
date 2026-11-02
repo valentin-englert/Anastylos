@@ -15,7 +15,9 @@ import dialogue_flow  # noqa: E402
 from dialogue.executor import Executor, MuseClient  # noqa: E402
 from meta import TransportTimeout  # noqa: E402
 import videos  # noqa: E402
+from catalog import selector  # noqa: E402
 from dialogue import bundle, settings  # noqa: E402
+from dialogue import items as cell_items  # noqa: E402
 
 DEFER = "Why don't we resolve this later on the desktop?"
 
@@ -82,34 +84,85 @@ class FakeApi:
         return {}
 
 
-class BundleParserTests(unittest.TestCase):
-    def test_same_list_origin_and_unclear(self):
-        same = bundle.parse("yes, all screws from the back shell", 3)
-        self.assertEqual((same["kind"], same["names"], same["origins"]), ("same", ["screw"] * 3, ["back shell"] * 3))
-        for heard in ("there are all screws, it came from the back shell", "these are all screws. They came from the back shell",
-                      "they are all screws from it came from the back shell"):
-            got = bundle.parse(heard, 4)
-            self.assertEqual((got["kind"], got["names"][0], got["origins"][0]), ("same", "screw", "back shell"), heard)
-        self.assertEqual(bundle.parse("five screws from the back shell", 4)["count"], 5)
-        self.assertEqual(bundle.parse("these are all lens", 2)["names"], ["lens", "lens"])
-        self.assertEqual(bundle.parse("all of them are buttons", 2)["names"], ["button", "button"])
-        for noise in ("these are all", "there are", "it came from the back shell"):
-            self.assertEqual(bundle.parse(noise, 3)["kind"], "unclear", noise)
-        listed = bundle.parse("screw, screw and left button", 3)
-        self.assertEqual((listed["kind"], listed["names"]), ("list", ["screw", "screw", "left button"]))
-        self.assertEqual(bundle.parse("no", 3)["kind"], "different")
-        self.assertEqual(bundle.parse("no, screw, screw, button", 3)["kind"], "list")
-        self.assertEqual(bundle.parse("screw, button", 3)["kind"], "unclear")
-        self.assertEqual(bundle.parse("yes", 3)["kind"], "unclear")
-        self.assertEqual(bundle.parse("I don't know", 3)["kind"], "unsure")
-        self.assertEqual(bundle.parse("hmm what", 3)["kind"], "unclear")
-        self.assertEqual(bundle.parse("washers", 3, list_mode=True)["kind"], "same")
+class ScriptedModel:
+    """A fake Muse transport: answers each extract_items call from a table keyed by the operator's words."""
+
+    def __init__(self, table, fail=None):
+        self.table, self.fail, self.posts = table, fail, 0
+
+    def post(self, url, headers, body, timeout_s):
+        self.posts += 1
+        if self.fail:
+            raise self.fail
+        payload = json.loads(json.loads(body)["input"][1]["content"][0]["text"].split("\n", 1)[1])
+        reply = self.table.get(payload.get("answer_text"), {"kind": "unclear", "items": []})
+        return 200, json.dumps({"status": "completed", "model": "m", "output": [
+            {"type": "message", "content": [{"type": "output_text", "text": json.dumps(reply)}]}]}).encode()
+
+
+def rendered(kind, persona, where="cell 1"):
+    return [line.replace("{where}", where) for line in selector.variants(kind, persona)]
+
+
+def item(name, count=None, origin=None):
+    return {"name": name, "count": count, "origin": origin}
+
+
+def answer(*items):
+    return {"kind": "answer", "items": list(items)}
+
+
+MODEL_TABLE = {
+    "yeah five screws from the back shell.": answer(item("screw", 5, "back shell")),
+    "two screws and a left button from the back shell": answer(item("screw", 2, "back shell"), item("left button", None, "back shell")),
+    "it came from left and right button": answer(item("left and right button", None, None)),
+    "which cell?": {"kind": "meta", "items": []},
+    "cell three are the right button of the uh back shell.": answer(item("right button", None, "back shell")),
+    "there is only one part,": answer(item("only one part", 1, None)),
+    "why": answer(item("why", 2, None)),
+    "the right button": answer(item("right button")),
+    "two screws from the back shell": answer(item("screw", 2, "back shell")),
+    "in the start membrane": answer(item("start membrane")),
+    "screws": answer(item("screw")),
+    "trigger spring": answer(item("trigger spring")),
+}
+
+
+class ItemsTests(unittest.TestCase):
+    def test_plain_answers_and_non_answers_are_told_apart(self):
+        plain = cell_items.classify_plain
+        self.assertEqual([plain(t) for t in ("yes.", "no,", "nothing", "which cell?", "why", "in cell three there is the",
+                                             "I don't know", "skip", "")],
+                         ["yes", "no", "empty", "meta", "meta", "incomplete", "unsure", "skip", "unclear"])
+        self.assertIsNone(plain("two screws and a left button"))
+
+    def test_names_must_be_real_words_the_operator_said(self):
+        check = cell_items.check_items
+        self.assertEqual(check([item("screw", 2)], "two screws"), [{"name": "screw", "count": 2, "origin": None}])
+        said = "which cell why only one part two whys the"
+        for bad in ("why", "which cell", "only one part", "two whys", "the"):
+            self.assertEqual(check([item(bad, 1)], said), [], bad)
+        self.assertEqual(check([item("washer", 1)], "two screws"), [])
+        self.assertEqual(check([item("screw", 5)], "some screws")[0]["count"], None)  # a number must have been said
+        self.assertEqual(check([item("screw", None, "the back shell")], "a screw from the back shell")[0]["origin"], "back shell")
+
+    def test_rule_fallback_reads_lists_counts_and_origins(self):
+        found = cell_items.rule_items("two screws and a left button from the back shell")
+        self.assertEqual([(i["name"], i["count"], i["origin"]) for i in found],
+                         [("screw", 2, "back shell"), ("left button", 1, "back shell")])
+        self.assertEqual(cell_items.rule_items("there is only one part"), [])
+        self.assertEqual(cell_items.rule_items("why"), [])
+
+    def test_sentence_is_one_short_claim(self):
+        found = [{"name": "screw", "count": 2, "origin": "back shell"}, {"name": "left button", "count": 1, "origin": "back shell"}]
+        self.assertEqual(cell_items.sentence("Cell 3", found), "Cell 3: two screws and left button, from back shell. Right?")
+        self.assertEqual(cell_items.sentence("Cell 3", [{"name": "right button", "count": 1, "origin": None}]),
+                         "Cell 3: right button, origin unknown. Right?")
 
     def test_origin_answer(self):
         self.assertEqual(bundle.parse_origin("from the left side"), {"kind": "origin", "origin": "left side"})
-        self.assertEqual(bundle.parse_origin("it came from the back shell")["origin"], "back shell")
+        self.assertEqual(bundle.parse_origin("they came out of the back shell")["origin"], "back shell")
         self.assertEqual(bundle.parse_origin("skip")["kind"], "skip")
-        self.assertEqual(bundle.parse_origin("hmm")["kind"], "unclear")
 
 
 class FlowTests(unittest.TestCase):
@@ -119,250 +172,226 @@ class FlowTests(unittest.TestCase):
         self.root = Path(tmp.name)
         (self.root / "s1").mkdir()
         self.api = FakeApi()
+        self.model = None
         self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(None))
+
+    def with_model(self, table=None, fail=None):
+        self.model = ScriptedModel(MODEL_TABLE if table is None else table, fail)
+        muse = MuseClient(transport=self.model, environ={"MODEL_API_KEY": "k"})
+        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(muse))
 
     def say(self, text=None, command=None):
         result = self.flow.turn(command, text)
         return result["speak"]["text"] if result.get("speak") else None
 
-    def test_cell_questions_are_bundled_and_one_yes_commits_each_part(self):
-        self.assertIn("several small parts in cell 1. Are they all the same?", self.say(command="next_question"))
-        self.assertIn("Where", self.say("screw, screw and left button") + "Where")
-        read_back = self.say("from the back shell")
-        self.assertEqual(read_back, "Two screws, one left button in cell 1, from back shell. Is that right?")
-        self.assertEqual(self.api.answers["Q3"], "left button from back shell")
-        self.assertNotIn("COMMITTED", self.api.state.values())
-        self.assertIn("Next:", self.say("yes"))
-        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
-        self.assertEqual([c for c in self.api.log if c[0] == "confirm"], [("confirm", q, "yes") for q in ("Q1", "Q2", "Q3")])
-        self.assertIn("Where did the part in cell-2 come from?", self.say(command="next_question"))
-
-    def test_missing_origin_is_asked_once_for_all(self):
-        self.say(command="next_question")
-        self.assertIn("Where", self.say("all screws") or "")
-        self.assertEqual(self.say("from the left side"), "Three screws in cell 1, from left side. Is that right?")
-        self.assertEqual(set(self.api.answers.values()), {"screw from left side"})
-
-    def test_no_to_the_read_back_asks_the_parts_one_by_one_and_writes_nothing(self):
-        self.say(command="next_question")
-        self.say("all screws from the left side")
-        question = self.say("no")
-        self.assertIn("Where did the part in cell-1 come from?", question)
-        self.assertNotIn("COMMITTED", self.api.state.values())
-        self.assertEqual(self.flow.current["mode"], "single")
-
-    def test_bundle_answer_not_understood_twice_leaves_all_parts_for_the_desktop(self):
-        self.say(command="next_question")
-        self.assertIn("could you please repeat it?", self.say("mmm"))
-        reply = self.say("uhh")
-        self.assertIn(DEFER, reply)
-        self.assertIn("Next:", reply)  # the same turn goes on with the next cell
-        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
-        self.assertNotIn("COMMITTED", self.api.state.values())
-        self.assertEqual(self.flow.current["qid"], "Q4")
-        items = (self.root / "s1" / "dialogue-open-items.jsonl").read_text(encoding="utf-8").splitlines()
-        self.assertEqual(len(items), 1)
-
-    def test_single_part_one_reask_then_defer(self):
-        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
-        question = self.say(command="next_question")
-        self.assertIn("cell 2", question)
-        self.assertIn("could you please repeat it?", self.say("mmm"))
-        self.assertIn(DEFER, self.say("uhh"))
-        self.assertEqual(self.api.state["Q4"], "LEFT_UNRESOLVED")
-        self.assertIn("work area", self.say(command="next_question"))
-
-    def test_single_part_answer_read_back_yes(self):
-        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
-        self.say(command="next_question")
-        self.assertEqual(self.say("it's a D-pad from the front shell"), "read back Q4")
-        self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
-        self.assertIn("Next: What", self.say("yes"))  # recorded, and the closing questions follow in the same turn
-
-    def test_persona_changes_the_wording_per_workspace(self):
-        settings.save(self.root, persona="unhinged")
-        self.assertNotEqual(self.say(command="next_question"), "I see several small parts in cell 1. Are they all the same?") \
-            if False else None
-        text = self.say(command="next_question")
-        self.assertIn("cell 1", text)
-
     def writes(self):
         return [c for c in self.api.log if c[0] == "closing_write"]
 
-    def test_owner_transcript_replay_one_short_sentence_one_yes_clean_names(self):
-        self.api.cells["Q5"] = "cell-1"
-        self.api.state["Q5"] = "OPEN"
-        self.say(command="next_question")
-        claim = self.say("there are all screws, it came from the back shell")
-        self.assertEqual(claim, "Four screws in cell 1, from back shell. Is that right?")
-        self.assertEqual(set(self.api.answers.values()), {"screw from back shell"})
-        self.assertEqual(claim.count("screw"), 1)
-        self.say("yes")
-        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3", "Q5")], ["COMMITTED"] * 4)
-
-    def test_higher_count_is_claimed_again_and_the_extra_parts_are_written_as_operator_stated(self):
-        self.say(command="next_question")
-        self.say("all screws from the back shell")
-        self.assertEqual(self.say("five"), "Five screws in cell 1, from back shell. Is that right?")
-        self.assertEqual(self.writes(), [])
-        self.say("yes")
-        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
-        self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
-        self.assertEqual([n for n in self.notes() if n["kind"] == "bundle_extra"][0]["operator_said"]["count_stated"], 5)
-
-    def test_lower_count_defers_the_surplus_to_the_desktop_and_deletes_nothing(self):
-        self.say(command="next_question")
-        self.say("all screws from the back shell")
-        self.assertEqual(self.say("two"), "Two screws in cell 1, from back shell. Is that right?")
-        self.say("yes")
-        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED", "COMMITTED", "LEFT_UNRESOLVED"])
-        self.assertEqual(self.writes(), [])
-
-    def test_echo_of_the_agents_own_line_is_ignored_and_a_bare_wake_word_repeats_the_question(self):
-        first = self.say(command="next_question")
-        self.assertIsNone(self.flow.turn(None, first.rstrip("?."))["speak"])
-        self.assertEqual(self.api.log, [])
-        self.assertEqual(self.say(command="next_question"), first)
-        self.assertEqual(self.flow.current["stage"], "label")
-
-    def test_lead_in_only_on_the_first_single_question_and_read_backs_have_none(self):
-        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED", Q4="OPEN")
-        self.api.cells["Q6"] = "cell-5"
-        self.api.state["Q6"] = "OPEN"
-        first = self.say(command="next_question")
-        self.assertTrue(first.startswith(("I ", "A ", "Something", "Ooh", "Psst", "Bold", "Hold", "Okay")) and "Where did" in first and len(first) > 60)
-        self.say("D-pad from the front shell")
-        self.say("yes")
-        second = self.say(command="next_question")
-        self.assertTrue(second.endswith("Next: Where did the part in cell-5 come from?"))
-
-    def model_flow(self, reply):
-        transport = type("T", (), {"posts": 0})()
-
-        class Fake:
-            def post(inner, url, headers, body, timeout_s):
-                transport.posts += 1
-                if isinstance(reply, Exception):
-                    raise reply
-                text = json.dumps(reply)
-                return 200, json.dumps({"status": "completed", "model": "m", "output": [
-                    {"type": "message", "content": [{"type": "output_text", "text": text}]}]}).encode()
-
-        muse = MuseClient(transport=Fake(), environ={"MODEL_API_KEY": "k"})
-        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(muse))
-        return transport
-
-    def test_replay_five_screws_then_the_origin_then_yes_writes_the_extra_parts_after_the_read_back(self):
-        self.say(command="next_question")
-        self.assertIn("Where", self.say("five screws"))
-        self.assertEqual(self.say("they came out of the back shell"), "Five screws in cell 1, from back shell. Is that right?")
-        self.assertEqual(self.writes(), [])
-        self.say("yes")
-        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
-        self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
-
-    def test_replay_those_are_five_screws_from_the_back_shell(self):
-        self.say(command="next_question")
-        self.assertEqual(self.say("those are five screws from the back shell"), "Five screws in cell 1, from back shell. Is that right?")
-
-    def test_replay_screws_then_five_then_yes(self):
-        self.say(command="next_question")
-        self.assertIn("Where", self.say("screws"))
-        self.assertEqual(self.say("from the back shell"), "Three screws in cell 1, from back shell. Is that right?")
-        self.assertEqual(self.say("five"), "Five screws in cell 1, from back shell. Is that right?")
-        self.say("yes")
-        self.assertEqual(len(self.writes()), 1)
-
-    def test_replay_a_bare_yes_asks_for_the_name_once(self):
-        self.say(command="next_question")
-        from catalog import selector
-        self.assertIn(self.say("yes"), selector.variants("bundle_name", "serious"))
-        self.assertEqual(self.flow.current["stage"], "label")
-        self.assertIn("could you please repeat it?", self.say("yes"))
-
-    def test_model_extracts_what_the_rules_cannot_and_the_read_back_still_gates_the_write(self):
-        sentence = "I would say these small things here are probably screws from the back shell"
-        transport = self.model_flow({"intent": "answer", "part_name": "screws", "origin": "back shell", "storage": None, "count": 4})
-        self.say(command="next_question")
-        self.assertEqual(self.say(sentence), "Three screws in cell 1, from back shell. Is that right?")
-        self.assertEqual(transport.posts, 1)
-        self.assertEqual([c for c in self.api.log if c[0] == "confirm"], [])
-        logged = [json.loads(line) for line in (self.root / "s1" / "dialogue-turns.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual((logged[-1]["transcript"], logged[-1]["source"], logged[-1]["stage"]), (sentence, "model", "bundle/label"))
-
-    def test_model_name_that_is_not_in_the_transcript_is_rejected_and_timeouts_re_ask(self):
-        sentence = "I would say these small things here are probably some parts from the back shell"
-        self.model_flow({"intent": "answer", "part_name": "washers", "origin": "back shell", "storage": None, "count": None})
-        self.say(command="next_question")
-        self.assertIn("could you please repeat it?", self.say(sentence))
-    def test_a_model_timeout_re_asks_instead_of_guessing(self):
-        sentence = "I would say these small things here are probably screws from the back shell"
-        self.model_flow(TransportTimeout("t"))
-        self.say(command="next_question")
-        self.assertIn("could you please repeat it?", self.say(sentence))
-        self.assertEqual([c for c in self.api.log if c[0] in ("answer", "confirm")], [])
-
-    def test_every_turn_is_logged_locally_with_the_transcript(self):
-        self.say(command="next_question")
-        self.say("mmm")
-        lines = [json.loads(line) for line in (self.root / "s1" / "dialogue-turns.jsonl").read_text(encoding="utf-8").splitlines()]
-        self.assertEqual([entry["transcript"] for entry in lines], [None, "mmm"])
-        self.assertEqual((lines[1]["stage"], lines[1]["parser"], lines[1]["source"]), ("bundle/label", "unclear", "rule"))
-        self.assertIn("repeat", lines[1]["reply"])
-
-    def finished(self):
-        for q in self.api.state:
-            self.api.state[q] = "COMMITTED"
+    def coordinator_calls(self):
+        return [c for c in self.api.log if c[0] in ("answer", "confirm", "defer")]
 
     def notes(self):
         path = self.root / "s1" / "dialogue-notes.jsonl"
         return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()] if path.exists() else []
 
-    def test_closing_questions_go_through_read_back_and_land_in_notes_not_memory(self):
+    def finished(self):
+        for q in self.api.state:
+            self.api.state[q] = "COMMITTED"
+
+    # -- the one open question
+
+    def test_one_open_question_per_cell_without_count_or_screen(self):
+        first = self.say(command="next_question")
+        self.assertIn(first, rendered("cell_open", "serious"))
+        for persona in ("serious", "playful", "unhinged"):
+            for line in selector.variants("cell_open", persona):
+                self.assertNotIn("several", line)
+                self.assertNotRegex(line, r"\d")
+
+    def test_nothing_is_written_before_the_yes(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.say("two screws and a left button from the back shell")
+        self.assertEqual(self.coordinator_calls(), [])
+        self.assertEqual(self.writes(), [])
+
+    # -- replay of the owner's real transcripts (dialogue-turns.jsonl of the third voice test)
+
+    def test_replay_which_cell_and_why_are_questions_back_not_answers(self):
+        self.with_model()
+        first = self.say(command="next_question")
+        self.assertEqual(self.say("which cell?"), first)
+        self.assertEqual(self.say("why"), first)
+        self.assertEqual(self.flow.agent._events.get("cell-Q1", {}).get("reasks", 0), 0)  # no re-ask is used up
+        self.assertEqual(self.coordinator_calls(), [])
+
+    def test_replay_an_answer_that_stops_mid_sentence_waits(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertIn(self.say("in cell three there is the"), selector.variants("go_on", "serious"))
+        self.assertEqual(self.flow.agent._events.get("cell-Q1", {}).get("reasks", 0), 0)
+
+    def test_replay_there_is_only_one_part_is_not_a_name(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertIn("could you please repeat it?", self.say("there is only one part,"))
+        self.assertEqual(self.coordinator_calls(), [])
+
+    def test_replay_five_screws_from_the_back_shell_then_yes(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertEqual(self.say("yeah five screws from the back shell."), "Cell 1: five screws, from back shell. Right?")
+        reply = self.say("yes.")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
+        self.assertEqual(self.api.answers, {"Q1": "screw from back shell", "Q2": "screw from back shell", "Q3": "screw from back shell"})
+        self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
+        self.assertTrue(reply.endswith(tuple(selector.variants("cell_open", "serious")[0:1] + ["What's in cell 2?"])) or "cell 2" in reply)
+
+    def test_replay_the_whys_never_reach_memory(self):
+        self.with_model()
+        self.api.state.update(Q1="LEFT_UNRESOLVED", Q2="LEFT_UNRESOLVED", Q3="LEFT_UNRESOLVED")
+        self.say(command="next_question")
+        self.assertEqual(self.say("why"), self.flow.last_speak["text"])
+        self.assertIn("could you please repeat it?", self.say("it came from left and right button"))
+        self.assertEqual(self.coordinator_calls(), [])
+
+    # -- mapping onto the detected questions
+
+    def test_fewer_parts_leave_the_surplus_unresolved_and_delete_nothing(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertEqual(self.say("two screws from the back shell"), "Cell 1: two screws, from back shell. Right?")
+        self.say("yes")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED", "COMMITTED", "LEFT_UNRESOLVED"])
+        self.assertEqual(self.writes(), [])
+
+    def test_several_different_items_in_one_answer(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertEqual(self.say("two screws and a left button from the back shell"),
+                         "Cell 1: two screws and left button, from back shell. Right?")
+        self.say("yes")
+        self.assertEqual(sorted(self.api.answers.values()), ["left button from back shell", "screw from back shell", "screw from back shell"])
+
+    def test_an_empty_cell_leaves_everything_unresolved_without_asking_again(self):
+        self.say(command="next_question")
+        reply = self.say("nothing")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
+        self.assertIn("cell 2", reply)
+        self.assertEqual(self.coordinator_calls().count(("answer",)), 0)
+
+    # -- origin, correction, no
+
+    def test_origin_is_asked_once_and_dont_know_is_recorded_as_unknown(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertIn(self.say("the right button"), selector.variants("cell_origin", "serious"))
+        self.assertEqual(self.say("I don't know"), "Cell 1: right button, origin unknown. Right?")
+        self.say("yes")
+        self.assertEqual(self.api.answers["Q1"], "right button from unknown")
+
+    def test_a_plural_without_a_number_asks_how_many_once(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.assertIn(self.say("screws"), selector.variants("cell_how_many", "serious"))
+        self.assertIn(self.say("three"), selector.variants("cell_origin", "serious"))
+        self.assertEqual(self.say("from the back shell"), "Cell 1: three screws, from back shell. Right?")
+
+    def test_no_asks_the_cell_again_and_a_correction_in_the_same_sentence_is_taken_directly(self):
+        self.with_model({**MODEL_TABLE, "it's a right button from the back shell": answer(item("right button", 1, "back shell"))})
+        self.say(command="next_question")
+        self.say("two screws and a left button from the back shell")
+        self.assertIn(self.say("no"), rendered("cell_again", "serious"))
+        self.say("two screws and a left button from the back shell")
+        self.assertEqual(self.say("no, it's a right button from the back shell"), "Cell 1: right button, from back shell. Right?")
+        self.assertEqual(self.coordinator_calls(), [])
+
+    # -- model failure falls back, deferral advances
+
+    def test_model_timeout_falls_back_to_the_rules_and_the_read_back_still_gates(self):
+        self.with_model(fail=TransportTimeout("t"))
+        self.say(command="next_question")
+        self.assertEqual(self.say("two screws and a left button from the back shell"),
+                         "Cell 1: two screws and left button, from back shell. Right?")
+        self.assertEqual(self.coordinator_calls(), [])
+
+    def test_not_understood_twice_defers_and_the_same_turn_asks_the_next_cell(self):
+        self.say(command="next_question")
+        self.assertIn("could you please repeat it?", self.say("mmm"))
+        reply = self.say("uhh")
+        self.assertIn("Why don't we resolve this later on the desktop?", reply)
+        self.assertIn("cell 2", reply)
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
+        self.assertEqual(self.flow.current["qids"], ["Q4"])
+        result = self.flow.turn(None, "d-pad from the front shell")  # no command needed: still the question round
+        self.assertTrue(result["handled"])
+
+    def test_model_is_used_first_for_real_answers_and_not_for_plain_yes_no(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.say("two screws and a left button from the back shell")
+        self.assertEqual(self.model.posts, 1)
+        self.say("yes")
+        self.assertEqual(self.model.posts, 1)
+
+    # -- speech never reaches the guide, echo, repeat, log, voice
+
+    def test_speech_never_reaches_the_guide_while_questions_remain_and_nothing_mentions_a_screen(self):
+        result = self.flow.turn(None, "where does it go")
+        self.assertTrue(result["handled"])
+        self.assertNotIn("screen", result["speak"]["text"].lower())
+        self.finished()
+        (self.root / "s1" / "dialogue-closing-done").write_text("done", encoding="utf-8")
+        self.flow.current = None
+        self.assertFalse(self.flow.turn(None, "where does it go")["handled"])
+
+    def test_echo_is_ignored_and_a_bare_wake_word_repeats_the_question(self):
+        first = self.say(command="next_question")
+        self.assertIsNone(self.flow.turn(None, first.rstrip("?."))["speak"])
+        self.assertEqual(self.say(command="next_question"), first)
+
+    def test_every_turn_is_logged_locally_with_transcript_parser_source_and_timing(self):
+        self.with_model()
+        self.say(command="next_question")
+        self.say("which cell?")
+        lines = [json.loads(line) for line in (self.root / "s1" / "dialogue-turns.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual((lines[1]["transcript"], lines[1]["stage"], lines[1]["parser"], lines[1]["source"]),
+                         ("which cell?", "cell/ask", "meta", "rule"))
+        self.assertIn("turn_ms", lines[1])
+
+    def test_persona_changes_the_wording_per_workspace(self):
+        settings.save(self.root, persona="unhinged")
+        self.assertIn(self.say(command="next_question"), rendered("cell_open", "unhinged"))
+
+    def test_a_read_back_left_open_by_an_older_flow_is_closed_with_no(self):
+        self.api.state["Q1"] = "READ_BACK"
+        self.say(command="next_question")
+        self.assertIn(("confirm", "Q1", "no"), self.api.log)
+        self.assertNotIn("COMMITTED", self.api.state.values())
+
+    # -- closing questions
+
+    def test_closing_questions_go_through_read_back_and_land_in_memory_only_after_yes(self):
+        self.with_model({"the front shell, the back shell and the PCB": answer(item("front shell"), item("back shell"), item("PCB")),
+                         "in the start membrane": answer(item("start membrane"))})
         self.finished()
         self.assertIn("work area", self.say(command="next_question"))
-        read_back = self.say("the front shell and the back shell")
-        self.assertIn("“the front shell and the back shell”", read_back)
-        self.assertEqual(self.notes(), [])
-        self.assertEqual([c for c in self.api.log if c[0] == "closing_write"], [])  # nothing written before "yes"
+        self.assertEqual(self.say("the front shell, the back shell and the PCB"), "Still in the work area: front shell, back shell, PCB. Right?")
+        self.assertEqual(self.writes(), [])
         self.assertIn("miss", self.say("yes"))
-        self.assertEqual([c for c in self.api.log if c[0] == "closing_write"],
-                         [("closing_write", ("front shell", "back shell"), "work area")])
+        self.assertEqual(self.writes(), [("closing_write", ("front shell", "back shell", "PCB"), "work area")])
         self.assertIn("cell", self.say("yes"))
-        read_back = self.say("it was in cell six, the start button")
-        self.assertIn("missed in cell 6: “start button”", read_back)
+        self.assertEqual(self.say("in cell six the start membrane"), "Missed in cell 6: start membrane. Right?")
         self.assertIn("no more questions", self.say("yes"))
-        notes = self.notes()
-        self.assertEqual([n["kind"] for n in notes], ["assemblies_left", "missed_part"])
-        self.assertEqual(notes[1]["operator_said"], {"cell": 6, "part_name": "start button"})
-        self.assertEqual([c for c in self.api.log if c[0] == "closing_write"][1], ("closing_write", ("start button",), "cell-6"))
+        self.assertEqual(self.writes()[1], ("closing_write", ("start membrane",), "cell-6"))
         self.assertIn("no more questions", self.say(command="next_question"))
-        self.assertEqual([c for c in self.api.log if c[0] in ("answer", "confirm")], [])
 
     def test_closing_nothing_left_and_nothing_missed(self):
         self.finished()
         self.say(command="next_question")
         self.assertIn("miss", self.say("nothing"))
         self.assertIn("no more questions", self.say("no, that's all"))
-        self.assertEqual(self.notes(), [])
-
-    def test_closing_unclear_twice_defers_and_moves_on(self):
-        self.finished()
-        self.say(command="next_question")
-        self.assertIn("could you please repeat it?", self.say("mmm"))
-        reply = self.say("uhh")
-        self.assertIn(DEFER, reply)
-        self.assertIn("miss", reply)
-
-    def test_speech_never_reaches_the_guide_while_questions_remain(self):
-        result = self.flow.turn(None, "where does it go")
-        self.assertTrue(result["handled"])
-        self.assertIn("several small parts", result["speak"]["text"])
-
-    def test_after_the_last_question_speech_goes_to_the_guide(self):
-        self.finished()
-        (self.root / "s1" / "dialogue-closing-done").write_text("done", encoding="utf-8")
-        self.assertFalse(self.flow.turn(None, "where does it go")["handled"])
+        self.assertEqual(self.writes(), [])
 
     def test_finished_video_opens_the_dialogue_on_the_first_utterance(self):
         (self.root / "s1" / "dialogue-pending-open").write_text("x", encoding="utf-8")

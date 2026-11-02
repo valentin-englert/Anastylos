@@ -24,7 +24,16 @@
     "assemblies_left": [],
     "missed_anything": [],
     "missed_cell": [],
-    "bundle_name": []
+    "bundle_name": [],
+    "cell_open": [
+      "where"
+    ],
+    "cell_again": [
+      "where"
+    ],
+    "cell_origin": [],
+    "cell_how_many": [],
+    "go_on": []
   },
   "phrases": {
     "part_removed": {
@@ -331,6 +340,106 @@
         "Name the gang, buddy!",
         "What are these rascals called?",
         "Go on, christen them!"
+      ]
+    },
+    "cell_open": {
+      "serious": [
+        "What's in {where}?",
+        "What is in {where}?",
+        "What do you see in {where}?",
+        "What's lying in {where}?"
+      ],
+      "playful": [
+        "What's in {where}?",
+        "So, what's hiding in {where}?",
+        "Okay, {where}. What's in there?",
+        "What have we got in {where}?"
+      ],
+      "unhinged": [
+        "What's in {where}?",
+        "Alright buddy, what's lurking in {where}?",
+        "{where}, my friend. What's the loot?",
+        "Spill it: what's in {where}?"
+      ]
+    },
+    "cell_again": {
+      "serious": [
+        "What's in {where}, then?",
+        "Then what is in {where}?",
+        "So what is in {where}?",
+        "What's in {where}, please?"
+      ],
+      "playful": [
+        "What's in {where}, then?",
+        "Okay, so what's in {where}?",
+        "My bad. What's in {where}, then?",
+        "Then what's in {where}?"
+      ],
+      "unhinged": [
+        "What's in {where}, then?",
+        "Oops! So what's in {where}, buddy?",
+        "Fine, you tell me: what's in {where}?",
+        "Then what's really in {where}?"
+      ]
+    },
+    "cell_origin": {
+      "serious": [
+        "Where did it come from?",
+        "Where was it before?",
+        "Where did you take it from?",
+        "Where did it come from?"
+      ],
+      "playful": [
+        "Where did it come from?",
+        "And where was it before?",
+        "Where did you pull it from?",
+        "Where did it come from?"
+      ],
+      "unhinged": [
+        "Where did it come from?",
+        "And where did you pry it from?",
+        "Where was it hiding, buddy?",
+        "Where did it come from?"
+      ]
+    },
+    "cell_how_many": {
+      "serious": [
+        "How many?",
+        "How many are there?",
+        "How many of them?",
+        "How many is that?"
+      ],
+      "playful": [
+        "How many?",
+        "And how many of them?",
+        "How many are in the gang?",
+        "How many is that?"
+      ],
+      "unhinged": [
+        "How many?",
+        "How many of the little rascals?",
+        "Count them for me, buddy. How many?",
+        "How many is that?"
+      ]
+    },
+    "go_on": {
+      "serious": [
+        "Go on.",
+        "Yes, go on.",
+        "I'm listening.",
+        "Please go on."
+      ],
+      "playful": [
+        "Go on.",
+        "Ooh, keep going.",
+        "I'm all ears.",
+        "And then?"
+      ],
+      "unhinged": [
+        "Go on.",
+        "Don't stop now, buddy.",
+        "Mhm, keep it coming.",
+        "I'm hanging on your words."
       ]
     }
   }

@@ -94,6 +94,7 @@ class VideoRoutes:
         session_id = parts[0]
         record = self.guided._require_guided("source")
         if record is None:
+            self._discard()  # an unread body makes Windows reset the connection before the client reads the 401
             return True
         _snapshot, exc = self.guided._journal_errors(
             self.guided.journal.get_session, session_id, record.get("source_id"))

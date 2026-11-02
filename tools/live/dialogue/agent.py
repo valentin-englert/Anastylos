@@ -128,6 +128,9 @@ class DialogueAgent:
         """Fields from a free answer: rules first, the model only where the rules cannot tell (see Executor)."""
         return self._executor.extract(text, question_type, tag, need_name)
 
+    def extract_items(self, text: str, cell: str, tag: str = "") -> dict | None:
+        return self._executor.extract_items(text, cell, tag)
+
     def set_persona(self, persona: str) -> None:
         self._persona = persona
 

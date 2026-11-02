@@ -29,4 +29,25 @@ class ConversationWindowTest {
         window.close()
         assertThat(window.isOpen(26_000)).isFalse()
     }
+
+    @Test
+    fun anEmptyClipDoesNotUseUpTheWindowButNoiseCannotKeepItOpenForever() {
+        val window = ConversationWindow()
+        window.renew(0)
+        assertThat(window.extendAfterEmpty(14_000)).isTrue()
+        assertThat(window.isOpen(28_000)).isTrue()
+        assertThat(window.extendAfterEmpty(28_500)).isTrue()
+        assertThat(window.extendAfterEmpty(29_000)).isFalse()
+        assertThat(window.isOpen(44_000)).isFalse()
+        window.renew(50_000)
+        assertThat(window.extendAfterEmpty(51_000)).isTrue()
+    }
+
+    @Test
+    fun aWindowThatHasRunOutIsNotRevivedByAnEmptyClip() {
+        val window = ConversationWindow()
+        window.renew(0)
+        assertThat(window.extendAfterEmpty(16_000)).isFalse()
+        assertThat(window.isOpen(16_001)).isFalse()
+    }
 }

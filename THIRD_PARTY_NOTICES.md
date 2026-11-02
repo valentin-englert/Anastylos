@@ -97,6 +97,7 @@ one M2-relevant artifact is inventoried individually now:
 |---|---|---|---|---|
 | com.google.mlkit:barcode-scanning | 17.3.0 | LicenseRef-MLKit-Terms (custom Google terms, not an SPDX-listed license) | Bundled on-device QR model for the pairing scanner; runs fully offline | `<license><name>` in cached `barcode-scanning-17.3.0.pom` |
 | Khula font (Latin subset) | 1.002 | OFL-1.1 | App typeface, bundled in the APK (`res/font/khula_*.ttf`) and the session UI (`tools/session-ui/web/fonts/`, with the OFL text). Copyright (c) 2014, Erin McLaughlin; digitized data copyright 2010, Google Corporation. The OFL text must accompany a redistributed APK | Name table of the TTF (IDs 0, 14) |
+| Lucide icons `info`, `arrow-up-right` (inline SVG in the session UI) | 1.17.0 | ISC AND MIT | Copyright (c) 2026 Lucide Icons and Contributors; Feather-derived: Copyright (c) 2013-present Cole Bemis | `tools/session-ui/web/assets/ICONS.md` |
 
 The bundled ML Kit model performs no network calls for detection:
 scanning works airplane-mode offline, and no image or scan content

@@ -914,6 +914,24 @@
           "comment": "category=android-bundled-font; source=capture-companion/android/app/src/main/res/font/khula_*.ttf; evidence: name table IDs 0 and 14 of the TTF (licence URL http://scripts.sil.org/OFL); bundled in the APK; the OFL text must accompany a redistributed APK; also tools/session-ui/web/fonts/ (woff2 with OFL text)"
         }
       ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-icons-lucide",
+      "name": "Lucide icons info and arrow-up-right (inline SVG paths)",
+      "versionInfo": "1.17.0",
+      "downloadLocation": "https://github.com/lucide-icons/lucide",
+      "filesAnalyzed": false,
+      "licenseConcluded": "ISC AND MIT",
+      "licenseDeclared": "ISC AND MIT",
+      "copyrightText": "Copyright (c) 2026 Lucide Icons and Contributors; Feather-derived icons Copyright (c) 2013-present Cole Bemis",
+      "annotations": [
+        {
+          "annotationDate": "2026-11-02T00:00:00Z",
+          "annotationType": "OTHER",
+          "annotator": "Tool: anastylos-compliance-check",
+          "comment": "category=session-ui-inline-icons; source=tools/session-ui/web/index.html, shell.js; notices in tools/session-ui/web/assets/ICONS.md"
+        }
+      ]
     }
   ],
   "hasExtractedLicensingInfos": [
@@ -1066,6 +1084,11 @@
       "spdxElementId": "SPDXRef-Package-anastylos-source",
       "relationshipType": "CONTAINS",
       "relatedSpdxElement": "SPDXRef-Package-font-khula"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-anastylos-source",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Package-icons-lucide"
     }
   ]
 }

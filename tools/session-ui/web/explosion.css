@@ -1,13 +1,19 @@
+@font-face { font-family: "Khula"; font-weight: 400; font-display: swap; src: url("fonts/khula-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Khula"; font-weight: 600; font-display: swap; src: url("fonts/khula-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Khula"; font-weight: 700; font-display: swap; src: url("fonts/khula-latin-700-normal.woff2") format("woff2"); }
+
+/* Same palette as styles.css; the composed drawing itself stays a white technical sheet. */
 :root {
-  --ink: #1d2733;
-  --muted: #44536a;
-  --line: #d7dee8;
-  --paper: #ffffff;
-  --wash: #f2f5f9;
-  --accent: #0f5c8c;
-  --good: #1e6b3a;
-  --warn: #8a5a00;
-  --bad: #a4262c;
+  color-scheme: dark;
+  --ink: #f2efe8;
+  --muted: #9a978f;
+  --line: #2e2e31;
+  --paper: #0b0b0c;
+  --wash: #151516;
+  --accent: #e0b13a;
+  --good: #8fb08f;
+  --warn: #e0b13a;
+  --bad: #d0705f;
 }
 
 * { box-sizing: border-box; }
@@ -18,7 +24,7 @@ body {
   padding: 1rem 1.25rem 3rem;
   color: var(--ink);
   background: var(--paper);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Khula", "Segoe UI", system-ui, -apple-system, sans-serif;
   line-height: 1.5;
 }
 
@@ -57,7 +63,7 @@ button {
   font: inherit;
   cursor: pointer;
 }
-button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+button[aria-pressed="true"] { background: var(--accent); color: #0b0b0c; }
 button:disabled { opacity: 0.5; cursor: default; }
 button:focus-visible, input:focus-visible { outline: 3px solid #f5b800; outline-offset: 1px; }
 
@@ -71,7 +77,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid #f5b800; outline-
 .facts dd { margin: 0; overflow-wrap: anywhere; }
 .links a { display: block; }
 
-.badge { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 3px; font-weight: 600; color: #fff; background: var(--muted); }
+.badge { display: inline-block; padding: 0.1rem 0.6rem; border-radius: 3px; font-weight: 600; color: #0b0b0c; background: var(--muted); }
 .badge.confirmed { background: var(--good); }
 .badge.unconfirmed { background: var(--warn); }
 

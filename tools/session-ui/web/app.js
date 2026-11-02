@@ -708,12 +708,25 @@ function drawingUrl(job, file) {
   return `/api/drawing/file?session=${encodeURIComponent(state.session)}&job=${encodeURIComponent(job)}&file=${file}`;
 }
 
+const JOB_WORDS = {
+  NEEDS_CAPTURE: "needs a new photo",
+  NEEDS_CONFIRMATION: "ready, please check it",
+  NEEDS_REVIEW: "needs a closer look",
+  drawn_unconfirmed: "ready, please confirm it",
+  running: "working",
+  paused: "paused, can continue",
+  failed: "failed",
+};
+
 function drawingCard(job) {
   const card = document.createElement("div");
   card.className = "drawing-job";
+  card.dataset.state = job.state || "";
+  card.dataset.status = job.status || "";
+  card.dataset.binding = job.binding ? job.binding.decision : "";
   const head = document.createElement("p");
   const progress = job.state === "running" ? ` — ${job.stage || "starting"} (${job.done || 0}/${job.total || 7}, ${job.elapsed_s ?? 0} s)` : "";
-  head.textContent = `${job.job}: ${job.state}${job.status ? " / " + job.status : ""}${progress}`;
+  head.textContent = `${job.part || job.job}: ${JOB_WORDS[job.status] || JOB_WORDS[job.state] || job.state}${progress}`;
   card.append(head);
   if (job.error) {
     const error = document.createElement("p");
@@ -914,11 +927,20 @@ const DRAWING_SPEECH = {
 const spokenJobs = new Map();
 const voice = { recording: false, context: null, stream: null, chunks: [], source: null, processor: null, seq: 0 };
 
+function setVoiceState(value) {
+  $("voice-bar").dataset.state = value;
+}
+
 async function transcribeLatest(blob) {
   /* Each clip gets a sequence number; only the newest clip may be routed, a late older result is dropped. */
   const seq = ++voice.seq;
-  const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob });
-  return seq === voice.seq ? result : { status: "stale" };
+  setVoiceState("thinking");
+  try {
+    const result = await call("/api/voice/transcribe", { method: "POST", headers: { "Content-Type": "audio/wav" }, body: blob });
+    return seq === voice.seq ? result : { status: "stale" };
+  } finally {
+    if (seq === voice.seq) setVoiceState("idle");
+  }
 }
 
 function speak(text) {
@@ -926,6 +948,8 @@ function speak(text) {
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
+  utterance.onstart = () => setVoiceState("speaking");
+  utterance.onend = () => setVoiceState("idle");
   const english = window.speechSynthesis.getVoices().find((v) => v.lang.startsWith("en"));
   if (english) utterance.voice = english;
   window.speechSynthesis.speak(utterance);
@@ -977,6 +1001,7 @@ async function startTalking() {
   voice.source.connect(voice.processor);
   voice.processor.connect(voice.context.destination);
   $("talk-button").classList.add("recording");
+  setVoiceState("listening");
   setText("voice-state", "Listening …");
 }
 
@@ -984,6 +1009,7 @@ async function stopTalking() {
   if (!voice.recording || !voice.context) return;
   voice.recording = false;
   $("talk-button").classList.remove("recording");
+  setVoiceState("idle");
   voice.processor.disconnect();
   voice.source.disconnect();
   voice.stream.getTracks().forEach((track) => track.stop());

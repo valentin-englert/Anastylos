@@ -1,5 +1,11 @@
 # ANASTYLOS handoff
 
+## Current state, Claude, 2026-11-02 night (supersedes the sections below where they differ)
+
+- Explosion with three operator-confirmed assemblies and assembly help work on the session copy `video-20261102-173652-6b0b2e13-outlines`.
+- Outlines come from `tools/drawing-proof/sheet_outlines.py` (offline; button "Find parts on the sheet"), because Muse box + SAM failed on the full page. Set on one view of one object; not validated elsewhere.
+- Open: fidget toy hard test, capture loop with a real photo, part-help panel shows too much technical text, cells 2, 3, 6 and the membranes are incomplete in memory, `dec-0021` exists only on the copy.
+
 ## Current continuation — Codex, 2026-11-02 late evening
 
 This section supersedes older status statements below; keep the historical evidence.

@@ -52,6 +52,9 @@ class VoiceController(
     /** The agent is audible until this time (its speech plus a short echo tail); nothing is heard before it. */
     @Volatile private var deafUntilMs = 0L
 
+    /** When the last speech ended (log only: how soon after it the operator started to speak). */
+    @Volatile private var ttsEndedMs = 0L
+
     /** True when the speech being played is a reply that should open the conversation window when it ends. */
     @Volatile private var renewWhenDone = false
     data class State(
@@ -106,10 +109,22 @@ class VoiceController(
     private fun openConversation() {
         conversation.renew(SystemClock.elapsedRealtime())
         _state.update { it.copy(conversationOpen = true, status = "Your turn: no “${wakeNames.displayName}” needed") }
+        scheduleConversationClose()
+    }
+
+    private fun scheduleConversationClose() {
         conversationJob?.cancel()
         conversationJob = scope.launch {
             kotlinx.coroutines.delay(ConversationWindow.DURATION_MS)
             if (!conversation.isOpen(SystemClock.elapsedRealtime())) closeConversation()
+        }
+    }
+
+    /** Silence for the agent, a hint for the operator; the window is not used up by a clip that came back empty. */
+    private fun didntCatchThat(fromWindow: Boolean) {
+        if (fromWindow && conversation.extendAfterEmpty(SystemClock.elapsedRealtime())) {
+            scheduleConversationClose()
+            _state.update { it.copy(conversationOpen = true, status = DIDNT_CATCH) }
         }
     }
 
@@ -221,10 +236,14 @@ class VoiceController(
                             else -> "dropped_busy"
                         }
                     }
+                    val levels = SegmentLevels.of(samples)
                     Log.i(
                         VOICE_LOG_TAG,
                         "segment id=${segment.id} vad_start=${endMs - segment.durationMs} vad_end=$endMs " +
                             "ms=${segment.durationMs} bytes=${samples.size * 2} " +
+                            "peak=${"%.3f".format(Locale.US, levels.peak)} rms=${"%.4f".format(Locale.US, levels.rms)} " +
+                            "clipped=${levels.clippedSamples} sinceTtsEndMs=${if (ttsEndedMs == 0L) -1 else endMs - segment.durationMs - ttsEndedMs} " +
+                            "window=${conversation.isOpen(endMs)} " +
                             "floor=${"%.4f".format(Locale.US, segmenter.backgroundRms)} disposition=$disposition",
                     )
                     if (disposition == "processed") {
@@ -262,12 +281,14 @@ class VoiceController(
                 if (transcript.status != "ok") {
                     Log.i(VOICE_LOG_TAG, "segment id=${segment.id} transcribe status=${transcript.status} ms=$transcribeMs")
                     _state.update { it.copy(status = statusLine(transcript.status)) }
+                    didntCatchThat(fromWindow)
                     return@launch
                 }
                 // Nothing recognisable: discarded like unaddressed speech; an
                 // earlier failure stays on screen instead of being wiped.
                 if (transcript.text.isNullOrBlank()) {
-                    Log.i(VOICE_LOG_TAG, "segment id=${segment.id} transcribe status=empty ms=$transcribeMs")
+                    Log.i(VOICE_LOG_TAG, "segment id=${segment.id} transcribe status=empty ms=$transcribeMs fromWindow=$fromWindow")
+                    didntCatchThat(fromWindow)
                     return@launch
                 }
                 val route = if (wakeRequired) {
@@ -352,7 +373,7 @@ class VoiceController(
     }
 
     private fun statusLine(status: String): String = when (status) {
-        "ok" -> ""
+        "ok", "ignored" -> "" // an ignored turn is silence: nothing is said and nothing is shown
         DetachedVoiceLink.STATUS -> "Voice needs an attached workstation session"
         "not_bound" -> "Voice is not bound to an agent session on the workstation"
         else -> "Not understood ($status). Please try again or type."
@@ -381,7 +402,8 @@ class VoiceController(
                 }
                 override fun onDone(utteranceId: String?) {
                     // The agent must never hear itself: stay deaf a moment after the speech, then open the window.
-                    deafUntilMs = SystemClock.elapsedRealtime() + ECHO_TAIL_MS
+                    ttsEndedMs = SystemClock.elapsedRealtime()
+                    deafUntilMs = ttsEndedMs + ECHO_TAIL_MS
                     _state.update { it.copy(speaking = false) }
                     if (renewWhenDone && _state.value.listening) openConversation()
                     renewWhenDone = false
@@ -414,6 +436,7 @@ class VoiceController(
     private companion object {
         /** Fixed status sentence of the reference behaviour; never model text. */
         const val YES = "Yes?"
+        const val DIDNT_CATCH = "Didn't catch that"
         const val LISTENING_PREFIX = "Listening for "
         const val ECHO_TAIL_MS = 400L
         const val RECORDING_STARTED = "Recording."

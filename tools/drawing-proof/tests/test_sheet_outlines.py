@@ -100,6 +100,20 @@ class SeparateTest(unittest.TestCase):
         self.assertTrue(reached[400, 650])
         self.assertFalse(reached[200, 200])
 
+    def test_refine_fills_what_sam_leaves_out_on_sure_material(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        cv2.rectangle(image, (300, 200), (800, 500), (30, 30, 30), -1)
+        firm = np.zeros(empty.shape[:2], bool)
+        firm[200:500, 300:800] = True
+        notched = firm.copy()
+        notched[350:500, 500:600] = False  # a cable SAM followed instead of the board
+        rectified = source.RectifiedFrame(image, PPM, (0.0, 0.0), np.eye(3), {})
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sheet_outlines.muse_sam, "sam_mask", return_value=(notched, {})):
+            refined, method = sheet_outlines.refine_part(rectified, np.zeros(firm.shape, bool), firm, Path(tmp))
+        self.assertTrue(refined[450, 550])
+        self.assertIn("SAM", method)
+
     def test_an_empty_sheet_gives_nothing(self):
         empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
         self.assertEqual(sheet_outlines.separate(empty, empty, (0, 0, 1200, 800), PPM), ([], []))

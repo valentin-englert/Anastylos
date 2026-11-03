@@ -223,7 +223,12 @@ def refine_part(rectified: source.RectifiedFrame, reached: np.ndarray, firm: np.
     outer, _openings = muse_sam.outer_and_openings(mask)
     if (outer & (sure > 0)).sum() < MIN_FIRM_COVER * sure.sum():
         return firm, "difference from the empty sheet"
-    return outer, "SAM from a box and point measured against the empty sheet"
+    # SAM leaves out what crosses a part, such as a cable on a board; the sure material under it belongs to the part
+    joined = cv2.morphologyEx((outer | (sure > 0)).astype(np.uint8), cv2.MORPH_CLOSE, _ellipse(3.0, ppm))
+    contours, _ = cv2.findContours(joined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    united = np.zeros(joined.shape, np.uint8)
+    cv2.drawContours(united, [max(contours, key=cv2.contourArea)], -1, 1, -1)
+    return united > 0, "SAM from a box and point measured against the empty sheet"
 
 
 def _atomic_json(path: Path, document: dict) -> None:

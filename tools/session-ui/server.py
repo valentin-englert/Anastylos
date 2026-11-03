@@ -34,6 +34,7 @@ import explosion
 import phone
 import replay
 import videos
+import voice_focus
 from adapter import AdapterError
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
@@ -169,6 +170,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
             "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
             "/api/parts/link-candidates": self._api_parts_candidates,
+            "/api/focus": self._api_focus_view,
             "/api/replay": self._api_replay_moments, "/api/replay/file": self._api_replay_file,
             "/api/capture/qr": lambda: self._send_bytes(captures.session_qr_png(Handler.workspace_root), "image/png"),
             "/explosion.html": lambda: self._send_static("explosion.html"),
@@ -209,7 +211,7 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
-                  "/api/replay/prepare": self._api_replay_prepare,
+                  "/api/replay/prepare": self._api_replay_prepare, "/api/focus": self._api_focus_set,
                   "/api/explosion/layout": self._api_explosion_layout, "/api/explosion/outlines": self._api_explosion_outlines,
                   "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
                   "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
@@ -496,6 +498,17 @@ class Handler(BaseHTTPRequestHandler):
             raise AdapterError("The session parameter is missing.", 400)
         self._send_json(assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""),
                                                      str(body.get("question", ""))))
+
+    def _api_focus_view(self) -> None:
+        self._send_json(voice_focus.view(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_focus_set(self) -> None:
+        """The explosion page reports its session and selected job (null = nothing selected); kept in server memory only."""
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        self._send_json(voice_focus.set_focus(Handler.workspace_root, session_id, body.get("job")))
 
     def _api_replay_moments(self) -> None:
         query = self._query()

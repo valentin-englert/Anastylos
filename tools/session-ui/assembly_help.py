@@ -191,7 +191,7 @@ def _candidates(spec_part: str | None, memory: dict) -> list[dict]:
     return sorted(out, key=lambda c: (-c["score"], -len(c["matched_tokens"]), c["part_id"]))
 
 
-def _layer(job_dir: Path) -> dict | None:
+def layer_of(job_dir: Path) -> dict | None:
     """The drawing's layer in the explosion layout, with its neighbours; only an operator-confirmed layer counts."""
     try:
         layers = json.loads((job_dir.parents[1] / "explosion.json").read_text(encoding="utf-8"))["layers"]
@@ -227,7 +227,7 @@ def link_candidates(root: Path, session_id: str, job: str) -> dict:
     memory = read_memory(state)
     link = _read_link(context["dir"])
     link_state, _reason = _link_state(link, context, memory)
-    layer = _layer(context["dir"])
+    layer = layer_of(context["dir"])
     wanted = layer["label"] if layer else context["summary"]["part"]
     return {"schema": CANDIDATES_SCHEMA, "job": job, "spec_part": context["summary"]["part"],
             "drawing_sha256": context["drawing_sha256"], "memory_sha256": memory["sha256"], "link": link,
@@ -279,7 +279,7 @@ def _result(status: str, message: str, matched: dict | None, target: dict, **fie
     return {"schema": HELP_SCHEMA, "status": status, "message": message,
             "intent": matched["intent"] if matched else None, "phrase": matched["phrase"] if matched else None,
             "target": target, "link": None, "package_sha256": None, "memory_sha256": None, "answer": None,
-            "answers": None, "origin": None, "storage": None, "follow_up": None, "evidence_to_show": [],
+            "answers": None, "part_label": None, "origin": None, "storage": None, "follow_up": None, "evidence_to_show": [],
             "candidates": [], "memory_written": False, **fields}
 
 
@@ -445,7 +445,7 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
     if status == "storage_unknown":
         follow_up = _follow_up("storage_place", label, event_id, target["job"], "no storage record", None)
     belongs_here = _parts_of(label, event_id, memory)
-    layer = _layer(context["dir"]) if context is not None else None
+    layer = layer_of(context["dir"]) if context is not None else None
     if status == "origin_unknown" and belongs_here:
         total = sum(group["count"] for group in belongs_here)
         status, message = "parts_belong_here", f"{total} recorded part(s) came from {label}; put them back here."
@@ -453,6 +453,6 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
         follow_up = _follow_up("install_point", label, event_id, target["job"], origin["precision"], origin["description"])
     return _result(status, message, matched, target, link=link, package_sha256=asked["guide_sha256"],
                    memory_sha256=asked["memory_sha256"], answer=None if status == "parts_belong_here" else _checked_text(asked), origin=origin, storage=storage,
-                   follow_up=follow_up, belongs_here=belongs_here, layer=layer,
+                   follow_up=follow_up, belongs_here=belongs_here, layer=layer, part_label=label,
                    evidence_to_show=_evidence_to_show(context, origin) if status in ("coarse_origin", "origin_unknown") else [],
                    answers={intent: _checked_text(answer) for intent, answer in answers.items()})

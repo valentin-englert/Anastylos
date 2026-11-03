@@ -32,11 +32,12 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "drawing-proof"))
 import frames  # noqa: E402
+import rectified_frames  # noqa: E402
 import sheet_outlines  # noqa: E402
 import source  # noqa: E402
 
 SCHEMA = "anastylos-cell-settle@1"
-PX_PER_MM = 4.0
+PX_PER_MM = 2.0  # measured on a phone video: the same settle times as at 4.0 (one cell 1 s apart), half the time
 STEP_S = 1.0
 CELL_INSET_MM = 2.0
 OCCUPIED_MIN = 0.03
@@ -45,14 +46,6 @@ LUMINANCE_CHANGE = 0.25
 CHROMA_CHANGE = 0.1
 EMPTY_CELL_DEVIATION = 0.1  # log-ratio of a cell's mean colour in the reference against the median cell
 FINAL_SAMPLES = 5
-
-
-def _rectify(video: Path, frame_index: int, ppm: float):
-    """The rectified full-page view as float32 BGR, or None when the sheet does not register."""
-    try:
-        return source.rectify(video, frame_index, sheet_outlines.FULL_PAGE_MM, ppm)[1].image.astype(np.float32)
-    except source.SourceError:
-        return None
 
 
 def _cell_rects() -> dict[str, tuple[float, float, float, float]]:
@@ -83,7 +76,17 @@ def settle_time(times: list[float], track: list[float], limit: float) -> float |
 
 
 def measure(video: Path, video_sha256: str, ppm: float = PX_PER_MM, rectify=None, cell_rects=None) -> dict:
-    rectify, cell_rects = rectify or _rectify, cell_rects or _cell_rects
+    if rectify is not None:
+        return _measure(video, video_sha256, ppm, rectify, cell_rects or _cell_rects)
+    with rectified_frames.SheetFrames(video, ppm, sheet_outlines.FULL_PAGE_MM) as sheet:  # one capture, frames read in order
+
+        def read(_video, frame_index, _ppm):
+            image, _reason = sheet.rectified(frame_index)
+            return None if image is None else image.astype(np.float32)
+        return _measure(video, video_sha256, ppm, read, cell_rects or _cell_rects)
+
+
+def _measure(video: Path, video_sha256: str, ppm: float, rectify, cell_rects) -> dict:
     actual = frames.video_sha256(video)
     if actual != video_sha256:
         raise ValueError("the video file differs from the SHA-256 recorded in the session")

@@ -265,22 +265,36 @@ def _player(manifest: dict) -> dict:
             "px_per_mm": manifest["px_per_mm"], "generated_at": manifest["generated_at"]}
 
 
-def _measure_cells(state, session_dir: Path, moment: dict, run) -> None:
-    """Measure the storage cells of the part's video once (OpenCV worker); the result is cached next to the replays."""
-    phase = state.phase(moment["phase_tag"])
+def _measure_phase(session_dir: Path, phase: dict, run) -> bool:
+    """Measure the storage cells of one phase video unless that is cached (OpenCV worker); True when a measurement ran."""
     target = replay_time.settle_path(session_dir, phase["video_sha256"])
+    if replay_time.read_settle(session_dir, phase["video_sha256"]) is not None:
+        return False
     env = {**os.environ, "ANASTYLOS_DRAWING_CACHE": str(session_dir / EVIDENCE_DIR / "_hash-cache")}
     done = run([sys.executable, "-B", str(SETTLE_WORKER), "--video", phase["video"], "--video-sha256", phase["video_sha256"],
                 "--out", str(target)], capture_output=True, text=True, encoding="utf-8", timeout=WORKER_TIMEOUT_S, env=env)
     if done.returncode:
         reason = (done.stderr or "").strip().splitlines()
         raise AdapterError(f"The storage cells could not be measured: {reason[-1] if reason else 'the tool reported an error'}", 502)
+    return True
 
 
-def replay_prepare(root: Path, session_id: str, part_id: str, run=subprocess.run) -> dict:
+def measure_cells(root: Path, session_id: str, run=None) -> dict:
+    """Measure the storage cells of every processed video of the session that has no measurement yet (nothing else is written)."""
+    run = run or subprocess.run
+    state = adapter._load_state(root, session_id)
+    session_dir = adapter.resolve_session(root, session_id)
+    measured = [p["tag"] for p in state.doc["phases"]
+                if p.get("status") == "done" and p.get("video_sha256") and Path(p["video"]).is_file()
+                and _measure_phase(session_dir, p, run)]
+    return {"measured": measured}
+
+
+def replay_prepare(root: Path, session_id: str, part_id: str, run=None) -> dict:
     """Extract (once) and return the moment with its player data; a cached folder is reused as it is.
 
-    The first call for a video also measures its storage cells (about a minute), so the time shown is the checked one."""
+    The first call for a video also measures its storage cells (about 15 s), so the time shown is the checked one."""
+    run = run or subprocess.run
     state = adapter._load_state(root, session_id)
     memory = assembly_help.read_memory(state)
     moment = _moment(state, memory, _current_part(memory, part_id))
@@ -288,7 +302,7 @@ def replay_prepare(root: Path, session_id: str, part_id: str, run=subprocess.run
         session_dir = adapter.resolve_session(root, session_id)
         phase = state.phase(moment["phase_tag"])
         if replay_time.read_settle(session_dir, phase["video_sha256"]) is None:
-            _measure_cells(state, session_dir, moment, run)
+            _measure_phase(session_dir, state.phase(moment["phase_tag"]), run)
             moment = _moment(state, memory, _current_part(memory, part_id))
     if moment["status"] not in ("not_prepared", "ready", "unregistered"):
         return moment

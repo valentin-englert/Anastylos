@@ -66,9 +66,9 @@ def muse_box(image: np.ndarray, part: str, key: str, effort: str | None = None, 
             "latency_s": meta["latency_s"], "usage": data.get("usage"), "effort_returned": (data.get("reasoning") or {}).get("effort")}
 
 
-def sam_mask(image_path: Path, box: list[int], shape: tuple[int, int], out: Path, ledger: Path) -> tuple[np.ndarray | None, dict]:
+def sam_mask(image_path: Path, box: list[int], shape: tuple[int, int], out: Path, ledger: Path, points: list[dict] | None = None) -> tuple[np.ndarray | None, dict]:
     out.mkdir(parents=True, exist_ok=True)
-    (out / "objects.json").write_text(json.dumps({"width": shape[1], "height": shape[0], "objects": [{"id": 1, "box": box}]}))
+    (out / "objects.json").write_text(json.dumps({"width": shape[1], "height": shape[0], "objects": [{"id": 1, "box": box, "points": points or []}]}))
     began = time.perf_counter()
     done = subprocess.run([sys.executable, "-B", str(SAM), "--live", "--upload-ok", "--budget-usd", "2.0", "--ledger", str(ledger),
                            "segment-image", "--image", str(image_path), "--objects-json", str(out / "objects.json"), "--out", str(out)],

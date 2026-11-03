@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import cv2
 import numpy as np
@@ -64,6 +65,29 @@ class SeparateTest(unittest.TestCase):
         self.assertTrue(cleaned[300, 500])
         self.assertFalse(cleaned[480, 500])
         self.assertIsNone(sheet_outlines.without_shadow(mask, (empty * 0.62).astype(np.uint8), empty, PPM))
+
+    def test_firm_material_as_dark_as_a_shadow_stays(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = (empty * 0.62).astype(np.uint8)
+        mask = np.zeros(empty.shape[:2], bool)
+        mask[200:500, 300:800] = True
+        firm = mask.copy()
+        cleaned = sheet_outlines.without_shadow(mask, image, empty, PPM, firm)
+        self.assertTrue(cleaned[300, 500])
+
+    def test_refine_keeps_the_measured_mask_when_sam_would_lose_it(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        cv2.rectangle(image, (300, 200), (800, 500), (30, 30, 30), -1)
+        firm = np.zeros(empty.shape[:2], bool)
+        firm[200:500, 300:800] = True
+        rectified = source.RectifiedFrame(image, PPM, (0.0, 0.0), np.eye(3), {})
+        tiny = np.zeros(empty.shape[:2], bool)
+        tiny[200:250, 300:800] = True
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sheet_outlines.muse_sam, "sam_mask", return_value=(tiny, {})):
+            refined, method = sheet_outlines.refine_part(rectified, empty, firm, Path(tmp))
+        self.assertTrue((refined == firm).all())
+        self.assertIn("difference", method)
 
     def test_an_empty_sheet_gives_nothing(self):
         empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)

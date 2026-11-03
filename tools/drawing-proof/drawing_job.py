@@ -302,9 +302,9 @@ def run(spec: dict, job: Path) -> dict:
         raise
 
 
-def render_layered_svg(outline_mm, openings_mm, spec: dict) -> str:
-    """Outline visible; opening candidates in their own hidden, labelled group; inner details as an empty group."""
-    geometry = {"outline_mm": outline_mm, "regions": []}
+def render_layered_svg(outline_mm, openings_mm, spec: dict, cut_mm=()) -> str:
+    """Outline visible with ``cut_mm`` cut out of it; opening candidates in their own hidden, labelled group; inner details as an empty group."""
+    geometry = {"outline_mm": outline_mm, "cut_mm": list(cut_mm), "regions": []}
     svg = proof.render_svg(geometry, {"title": spec["title"], "subtitle": spec["subtitle"], "legend": spec["legend"]})
     o = proof._layout(geometry, spec)["part_origin"]
     candidates = "".join(f'<path data-line-role="detail" data-status="unconfirmed" d="{proof._path(p, o)}" fill="none" '

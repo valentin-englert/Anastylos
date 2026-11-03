@@ -28,6 +28,48 @@ def _sheet(bridge: bool = False) -> np.ndarray:
     return np.clip(blurred + np.random.default_rng(0).normal(0, 6, image.shape), 0, 255).astype(np.uint8)
 
 
+class OpeningsTest(unittest.TestCase):
+    def setUp(self):
+        self.empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        self.image = self.empty.copy()
+        cv2.rectangle(self.image, (200, 200), (800, 600), (90, 95, 92), -1)
+        cv2.circle(self.image, (500, 400), 60, (200, 207, 203), -1)
+        self.part = np.zeros((800, 1200), bool)
+        self.part[200:600, 200:800] = True
+        self.rectified = source.RectifiedFrame(self.image, PPM, (0.0, 0.0), np.eye(3), {})
+
+    def _find(self, points):
+        with mock.patch.dict(sheet_outlines.os.environ, {"MODEL_API_KEY": "test"}), mock.patch.object(sheet_outlines.muse_sam, "muse_openings", return_value=points):
+            return sheet_outlines.find_openings(self.rectified, self.empty, self.part)
+
+    def test_a_pointed_hole_is_traced_even_from_its_rim(self):
+        holes, note = self._find([(500 - 200 + 45, 400 - 200)])
+        self.assertIsNone(note)
+        self.assertEqual(len(holes), 1)
+        self.assertAlmostEqual(holes[0].sum() / (np.pi * 60 ** 2), 1.0, delta=0.1)
+
+    def test_the_same_hole_pointed_twice_counts_once(self):
+        self.assertEqual(len(self._find([(300, 200), (310, 200)])[0]), 1)
+
+    def test_a_point_on_dark_material_gives_no_hole(self):
+        self.assertEqual(self._find([(60, 60)])[0], [])
+
+    def test_muse_failing_keeps_the_solid_part_and_says_why(self):
+        with mock.patch.dict(sheet_outlines.os.environ, {"MODEL_API_KEY": "test"}), mock.patch.object(sheet_outlines.muse_sam, "muse_openings", side_effect=OSError("down")):
+            holes, note = sheet_outlines.find_openings(self.rectified, self.empty, self.part)
+        self.assertEqual(holes, [])
+        self.assertIn("OSError", note)
+
+    def test_a_hole_is_cut_out_of_the_drawn_outline(self):
+        holes, _ = self._find([(300, 200)])
+        with tempfile.TemporaryDirectory() as tmp:
+            name = sheet_outlines.write_job(Path(tmp), self.rectified, self.part, "Front shell", "test", openings=(holes, None))
+            svg = (Path(tmp) / "drawings" / "jobs" / name / "drawing.svg").read_text(encoding="utf-8")
+        outline = svg.split('id="observed_outline"')[1].split("</g>")[0]
+        self.assertEqual(outline.count("M "), 2)
+        self.assertIn('fill-rule="evenodd"', outline)
+
+
 class FindOutlinesTest(unittest.TestCase):
     def test_finds_each_part_without_the_cable(self):
         masks = sheet_outlines.find_outlines(_sheet(), (0, 0, 1200, 800), PPM)

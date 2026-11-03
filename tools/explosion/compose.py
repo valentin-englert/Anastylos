@@ -133,7 +133,7 @@ def _part_svg(item: dict, mode: str) -> list[str]:
            f'transform="translate({_n(translate[mode][0])} {_n(translate[mode][1])})" tabindex="0" role="button" '
            f'aria-label={_a(title)}>', f"<title>{_t(title)}</title>",
            f'<g class="ax-shape"{shape}>']
-    out += [f'<path class="ax-outline" d={_a(d)} fill="{fill}" fill-opacity="0.85" stroke="{stroke}" stroke-width="0.5" '
+    out += [f'<path class="ax-outline" d={_a(d)} fill="{fill}" fill-opacity="0.85" fill-rule="evenodd" stroke="{stroke}" stroke-width="0.5" '
             f'stroke-linejoin="round"{dash}/>' for d in evidence.outline.paths]
     out.append("</g>")
     label_color = "#1d2733" if confirmed else "#8a5a00"

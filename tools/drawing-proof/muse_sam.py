@@ -30,6 +30,12 @@ import segment  # noqa: E402
 PROMPT = ("Image size {w}x{h} px. Find the {part}. Return the tightest axis-aligned box [left, top, right, bottom] in pixels "
           "of this image around that one part only (exclude shadows, printed lines and other parts). Set fully_visible false "
           "if any part of its outer edge is cut off or hidden. If the part is not in the image, set found false and box [0,0,0,0].")
+OPENINGS_PROMPT = ("Image size {w}x{h} px. A part lies on a pale paper sheet. List every through-hole where the paper is visible through "
+                   "the part, with one point in the middle of each hole. Ignore screw posts, blind recesses and the area outside the part.")
+OPENINGS_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["openings"],
+                   "properties": {"openings": {"type": "array", "items": {
+                       "type": "object", "additionalProperties": False, "required": ["x", "y", "what"],
+                       "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}, "what": {"type": "string", "maxLength": 60}}}}}}
 SCHEMA = {"type": "object", "additionalProperties": False, "required": ["found", "box", "fully_visible", "reason"],
           "properties": {"found": {"type": "boolean"},
                          "box": {"type": "array", "items": {"type": "integer"}, "minItems": 4, "maxItems": 4},
@@ -64,6 +70,21 @@ def muse_box(image: np.ndarray, part: str, key: str, effort: str | None = None, 
     valid = bool(answer["found"]) and 0 <= box[0] < box[2] <= sw and 0 <= box[1] < box[3] <= sh
     return {"answer": answer, "valid": valid, "box_full": [min(round(v / scale), limit) for v, limit in zip(box, (w, h, w, h))] if valid else None,
             "latency_s": meta["latency_s"], "usage": data.get("usage"), "effort_returned": (data.get("reasoning") or {}).get("effort")}
+
+
+def muse_openings(image: np.ndarray, key: str) -> list[tuple[int, int]]:
+    """Muse looks at one part and points at each hole the sheet shows through, in pixels of ``image``. It does not draw them."""
+    h, w = image.shape[:2]
+    scale = min(1.0, FROZEN["muse_max_side_px"] / max(h, w))
+    small = cv2.resize(image, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_AREA)
+    _ok, jpg = cv2.imencode(".jpg", small, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    payload = {"model": FROZEN["muse_model"], "reasoning": {"effort": "medium"},
+               "input": [{"role": "user", "content": [{"type": "input_text", "text": OPENINGS_PROMPT.format(w=small.shape[1], h=small.shape[0])},
+                          {"type": "input_image", "image_url": "data:image/jpeg;base64," + base64.b64encode(jpg.tobytes()).decode()}]}],
+               "text": {"format": {"type": "json_schema", "name": "openings", "strict": True, "schema": OPENINGS_SCHEMA}}}
+    data, _meta = client.post_responses_once(payload, key, timeout_s=120)
+    text = next(c.get("text") for o in data.get("output", []) if o.get("type") == "message" for c in o.get("content", []))
+    return [(round(p["x"] / scale), round(p["y"] / scale)) for p in json.loads(text)["openings"]]
 
 
 def sam_mask(image_path: Path, box: list[int], shape: tuple[int, int], out: Path, ledger: Path, points: list[dict] | None = None) -> tuple[np.ndarray | None, dict]:

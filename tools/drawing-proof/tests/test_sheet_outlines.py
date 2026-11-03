@@ -54,6 +54,17 @@ class SeparateTest(unittest.TestCase):
         self.assertEqual(len(boxes), 1)
         self.assertTrue(boxes[0][0] < 700 and boxes[0][2] > 1000)
 
+    def test_shadow_is_taken_off_a_pale_part_or_the_mask_is_refused(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        image[400:500, 300:800] = (empty[400:500, 300:800] * 0.62).astype(np.uint8)
+        mask = np.zeros(empty.shape[:2], bool)
+        mask[200:500, 300:800] = True  # 200 rows of pale part, 100 rows of shadow
+        cleaned = sheet_outlines.without_shadow(mask, image, empty, PPM)
+        self.assertTrue(cleaned[300, 500])
+        self.assertFalse(cleaned[480, 500])
+        self.assertIsNone(sheet_outlines.without_shadow(mask, (empty * 0.62).astype(np.uint8), empty, PPM))
+
     def test_an_empty_sheet_gives_nothing(self):
         empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
         self.assertEqual(sheet_outlines.separate(empty, empty, (0, 0, 1200, 800), PPM), ([], []))

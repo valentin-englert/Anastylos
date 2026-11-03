@@ -49,6 +49,8 @@ CHROMA_MATERIAL = 0.13
 BRIGHTER_MATERIAL = 0.12
 MIN_PART_MM2 = 300.0
 BOX_MARGIN_MM = 6.0
+PALE_SHADOW_LUM = -0.25  # on a part as pale as the sheet: about 0 on the part, about -0.45 in its shadow
+MIN_KEPT_SHARE = 0.4
 
 
 def _ellipse(mm: float, ppm: float) -> np.ndarray:
@@ -146,8 +148,21 @@ def reference_view(video: Path) -> tuple[source.RectifiedFrame, np.ndarray] | No
     return dataclasses.replace(finals[0], image=final), empty
 
 
-def sam_outline(rectified: source.RectifiedFrame, box: list[int], folder: Path) -> tuple[np.ndarray | None, str]:
-    """SAM's mask for a tight box; None and the reason when there is none or its plausibility checks fail."""
+def without_shadow(mask: np.ndarray, image: np.ndarray, empty: np.ndarray, ppm: float) -> np.ndarray | None:
+    """A pale part's mask with its measured cast shadow removed; None when too little would remain to trust the result."""
+    ratio = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 0.7) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 0.7) + 8))
+    kept = (mask & (ratio.mean(axis=2) >= PALE_SHADOW_LUM)).astype(np.uint8)
+    kept = cv2.morphologyEx(cv2.morphologyEx(kept, cv2.MORPH_CLOSE, _ellipse(4.0, ppm)), cv2.MORPH_OPEN, _ellipse(3.0, ppm)) & mask.astype(np.uint8)
+    contours, _ = cv2.findContours(kept, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if not contours:
+        return None
+    solid = np.zeros(kept.shape, np.uint8)
+    cv2.drawContours(solid, [max(contours, key=cv2.contourArea)], -1, 1, -1)
+    return solid > 0 if solid.sum() >= MIN_KEPT_SHARE * mask.sum() else None
+
+
+def sam_outline(rectified: source.RectifiedFrame, empty: np.ndarray, box: list[int], folder: Path) -> tuple[np.ndarray | None, str]:
+    """SAM's mask for a tight box without its shadow; None and the reason when there is none or a check fails."""
     folder.mkdir(parents=True, exist_ok=True)
     image_path = folder / "view.png"
     cv2.imwrite(str(image_path), rectified.image)
@@ -156,7 +171,10 @@ def sam_outline(rectified: source.RectifiedFrame, box: list[int], folder: Path) 
         return None, "SAM returned no mask"
     outer, _openings = muse_sam.outer_and_openings(mask)
     flags = quality.plausibility(outer, box, info.get("sam_box"))["flags"]
-    return (None, "SAM mask failed checks: " + ", ".join(flags)) if flags else (outer, "")
+    if flags:
+        return None, "SAM mask failed checks: " + ", ".join(flags)
+    cleaned = without_shadow(outer, rectified.image, empty, rectified.px_per_mm)
+    return (cleaned, "") if cleaned is not None else (None, "too little of SAM's mask remained without the shadow")
 
 
 def _atomic_json(path: Path, document: dict) -> None:
@@ -246,7 +264,7 @@ def main() -> None:
             written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", "difference from the empty sheet"))
         for box in boxes:
             numbered += 1
-            mask, reason = sam_outline(rectified, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")
+            mask, reason = sam_outline(rectified, empty, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")
             if mask is None:
                 not_drawn.append({"part": f"part {numbered}", "box_px": box, "reason": reason})
             else:

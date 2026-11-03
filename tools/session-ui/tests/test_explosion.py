@@ -26,7 +26,7 @@ def drawing_svg(d: str) -> str:
 
 class _Done:
     def __init__(self, returncode=0, stderr=""):
-        self.returncode, self.stderr = returncode, stderr
+        self.returncode, self.stderr, self.stdout = returncode, stderr, ""
 
 
 class ExplosionTest(unittest.TestCase):
@@ -139,6 +139,13 @@ class ExplosionTest(unittest.TestCase):
         self.assertEqual((after["rotation_deg"], after["outline_size_mm"]), (90, [40.0, 60.0]))
         self.assertFalse(after["confirmed_by_operator"])
         self.assertIn("rotate(90 ", explosion.explosion_bytes(self.root, "s1", "explosion.svg")[0].decode("utf-8"))
+
+    def test_find_outlines_reports_what_it_would_not_draw(self):
+        (self.root / "s1" / "agent-session.json").write_text(json.dumps({"phases": [{"video": "v.mp4"}]}), encoding="utf-8")
+        done = _Done()
+        done.stdout = json.dumps({"jobs": [], "not_drawn": [{"part": "part 5", "reason": "SAM mask failed checks"}]})
+        view = explosion.find_outlines(self.root, "s1", run=lambda *a, **k: done)
+        self.assertEqual(view["not_drawn"][0]["part"], "part 5")
 
     def test_find_outlines_reports_a_tool_failure_and_needs_a_video(self):
         with self.assertRaises(AdapterError) as missing:

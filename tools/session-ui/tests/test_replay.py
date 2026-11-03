@@ -21,6 +21,7 @@ sys.path.insert(0, str(UI_ROOT))
 
 import assembly_help  # noqa: E402
 import replay  # noqa: E402
+import replay_time  # noqa: E402
 import server  # noqa: E402
 from adapter import AdapterError  # noqa: E402
 from state import SessionState  # noqa: E402
@@ -56,12 +57,22 @@ EVENTS = [
 ]
 
 
-def fake_worker(status: str = "ready", frames: int = 4, returncode: int = 0):
-    """A stand-in for ``replay_worker.py``: writes the folder it would write (JPEG-looking bytes) and records the call."""
+def settle_document(cells: dict, status: str = "ok", reason: str = "") -> dict:
+    return {"schema": replay_time.SETTLE_SCHEMA, "video": {"sha256": VIDEO_SHA}, "reference": {"status": status, "reason": reason},
+            "cells": {name: {"reference_ok": True, "occupied": True, "settled_s": 100.0, **v} for name, v in cells.items()}}
+
+
+def fake_worker(status: str = "ready", frames: int = 4, returncode: int = 0, settle: dict | None = None):
+    """A stand-in for the two workers: writes what they would write (JPEG-looking bytes, the cell measurement)."""
     calls = []
 
     def run(command, **kwargs):
         calls.append({"command": command, "env": kwargs.get("env")})
+        if command[2].endswith("cell_settle_worker.py"):
+            out = Path(command[command.index("--out") + 1])
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(json.dumps(settle or settle_document({})), encoding="utf-8")
+            return SimpleNamespace(returncode=0, stderr="", stdout="{}")
         if returncode:
             return SimpleNamespace(returncode=returncode, stderr="replay extraction failed: the video cannot be read\n", stdout="")
         args = dict(zip(command[3::2], command[4::2]))
@@ -198,6 +209,93 @@ class ClipPlanTest(ReplayCase):
         (old / "manifest.json").write_text(json.dumps({"status": "ready"}), encoding="utf-8")
         self.assertEqual(self.moment("dec-0001")["status"], "not_prepared")  # a version 1 folder is never read
         self.assertIn("around this time", self.moment("dec-0005")["clip_text"])
+
+
+def storage(event_id: str, target: str, cell: str) -> dict:
+    return {"type": "storage_link", "id": event_id, "session": SESSION, "timestamp": "2026-11-02T18:22:43Z", "target_id": target,
+            "location": cell, "basis": {"kind": "human", "confirmed_by": "workstation"}, "supersedes": None}
+
+
+class CellMomentTest(ReplayCase):
+    """The time comes from the storage cell when the video has an empty-sheet reference; memory is never changed."""
+
+    def setUp(self):
+        super().setUp()
+        with self.memory.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(storage("store-0001", "dec-0001", "cell-1")) + "\n")
+
+    def write_settle(self, document: dict) -> None:
+        path = replay_time.settle_path(self.session_dir, VIDEO_SHA)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(document), encoding="utf-8")
+
+    def commands(self, run, name):
+        return [c["command"] for c in run.calls if c["command"][2].endswith(name)]
+
+    def test_before_any_measurement_the_detector_time_is_an_estimate(self):
+        moment = self.moment("dec-0001")
+        self.assertEqual((moment["time_basis"], moment["observed_s"], moment["cell"]), ("detector_estimate", 22.2, "cell-1"))
+        self.assertIn("have not been measured yet", moment["meaning_text"])
+
+    def test_the_first_prepare_measures_the_cells_once_and_shows_the_settle_time(self):
+        run = fake_worker(settle=settle_document({"cell-1": {"settled_s": 100.0}}))
+        memory_before = self.memory.read_bytes()
+        result = replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
+        self.assertEqual(len(self.commands(run, "cell_settle_worker.py")), 1)
+        self.assertEqual((result["time_basis"], result["observed_s"], result["recorded_t_s"], result["settled_s"]),
+                         ("storage_cell_settle", 100.0, 22.2, 100.0))
+        self.assertIn("Time measured from the storage cell", result["meaning_text"])
+        extraction = self.commands(run, "replay_worker.py")[0]
+        self.assertEqual(extraction[extraction.index("--anchor-s") + 1], "100.0")
+        self.assertEqual((result["clip"]["start_s"], result["clip"]["end_s"]), (88.0, 102.0))
+        replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
+        self.assertEqual((len(self.commands(run, "cell_settle_worker.py")), len(self.commands(run, "replay_worker.py"))), (1, 1))
+        self.assertTrue((self.session_dir / "evidence" / "cell-settle" / f"{VIDEO_SHA[:12]}-v2.json").is_file())
+        self.assertEqual(self.memory.read_bytes(), memory_before)
+
+    def test_a_video_without_a_reference_keeps_the_detector_time_labelled_as_an_estimate(self):
+        run = fake_worker(settle=settle_document({}, "no_reference", "the sheet is not empty at the start of the video"))
+        result = replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
+        self.assertEqual((result["time_basis"], result["observed_s"]), ("detector_estimate", 22.2))
+        self.assertIn("This time is a detector estimate", result["meaning_text"])
+        self.assertIn("the sheet is not empty at the start of the video", result["meaning_text"])
+        self.assertEqual(len(self.commands(run, "replay_worker.py")), 1)
+
+    def test_a_cell_without_lasting_change_shows_no_clip(self):
+        self.write_settle(settle_document({"cell-1": {"occupied": False, "settled_s": None}}))
+        run = fake_worker()
+        result = replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
+        self.assertEqual(result["status"], "no_moment")
+        self.assertIn("moment is not known", result["message"])
+        self.assertEqual(run.calls, [])
+
+    def test_parts_without_a_cell_or_a_deposit_time_are_not_measured(self):
+        run = fake_worker()
+        replay.replay_prepare(self.root, "s1", "dec-0003", run=run)  # a removal window, no storage cell
+        replay.replay_prepare(self.root, "s1", "dec-0005", run=run)  # stated by the operator, no cell
+        self.assertEqual(self.commands(run, "cell_settle_worker.py"), [])
+
+    def test_a_failing_measurement_is_reported(self):
+        def broken(command, **kwargs):
+            return SimpleNamespace(returncode=2, stderr="cell measurement failed: the video cannot be read\n", stdout="")
+        with self.assertRaisesRegex(AdapterError, "could not be measured"):
+            replay.replay_prepare(self.root, "s1", "dec-0001", run=broken)
+
+    def test_several_parts_in_a_cell_use_the_fitting_window_or_say_the_moment_is_not_known(self):
+        questions = [{**QUESTIONS[0], "cell": "cell-1", "deposit_window_s": [22.2, 30.0]}, *QUESTIONS[1:],
+                     {"id": "Q-P1-04", "kind": "source_of_part", "part": "P1-C01b", "cell": "cell-1",
+                      "deposit_window_s": [50.0, 52.0], "candidates": []}]
+        (self.session_dir / "runs" / "P1" / "questions.json").write_text(json.dumps({"questions": questions}), encoding="utf-8")
+        with self.memory.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(json.dumps(removal("dec-0008", "screw", "back shell", 50.0, "answer to Q-P1-04; typed")) + "\n")
+            handle.write(json.dumps(storage("store-0008", "dec-0008", "cell-1")) + "\n")
+        self.write_settle(settle_document({"cell-1": {"settled_s": 44.0}}))
+        fits = self.moment("dec-0008")
+        self.assertEqual((fits["time_basis"], fits["observed_s"]), ("detector_fitting_cell", 50.0))
+        self.assertEqual(fits["window_s"], [50.0, 52.0])
+        early = self.moment("dec-0001")  # its own window at 22.2 s is before the cell's first lasting change at 44 s
+        self.assertEqual((early["status"], early["time_basis"], early["key"]), ("no_moment", "unknown", None))
+        self.assertIn("no detector window fits", early["message"])
 
 
 class PrepareTest(ReplayCase):

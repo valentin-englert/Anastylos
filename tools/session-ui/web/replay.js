@@ -124,7 +124,9 @@
     button.type = "button";
     button.textContent = "Show recorded moment";
     button.addEventListener("click", () => open(moment.part_id, current));
-    item.append(`${name} — observed video time ${moment.observed_s.toFixed(1)} s`, button);
+    const basis = { storage_cell_settle: "time measured from the storage cell", detector_fitting_cell: "detector window that fits the storage cell",
+                    detector_estimate: "detector estimate" }[moment.time_basis];
+    item.append(`${name} — observed video time ${moment.observed_s.toFixed(1)} s${basis ? ` (${basis})` : ""}`, button);
     return item;
   }
 

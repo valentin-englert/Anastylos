@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
 
+import voice_focus  # noqa: E402  (session-ui: the part selected on the desktop)
 from catalog.selector import where_words  # noqa: E402
 from dialogue import bundle, items as cell_items, settings  # noqa: E402
 from dialogue.agent import DialogueAgent  # noqa: E402
@@ -102,11 +103,16 @@ class DialogueFlow:
             return {"handled": True, "speak": self.last_speak}  # a bare wake word while a question is open: say it again
         if command == "next_question":
             self._marker.unlink(missing_ok=True)
-            return self._said(self._open_next())
+            speak = self._open_next()
+            if speak["kind"] == "status" and speak["text"] == ALL_DONE:  # no round left: name what the desktop shows, if anything
+                speak = voice_focus.name_focus(self.root) or speak
+            return self._said(speak)
         if self.current is None:
             # unresolved questions remain: speech continues the question round, it never falls through to the guide
             self._marker.unlink(missing_ok=True)
             speak = self._open_next(guide_ok=text is not None)
+            if speak is None:  # no round is open: a phrase about the part selected on the desktop is answered for it
+                speak = voice_focus.answer_phrase(self.root, text or "")
             return {"handled": False} if speak is None else self._said(speak)
         handler = getattr(self, f"_{self.current['mode']}_{self.current['stage']}")
         return self._said(handler(text or ""))

@@ -34,6 +34,7 @@ import explosion
 import phone
 import replay
 import replay_prep
+import ui_meta
 import videos
 import voice_focus
 from adapter import AdapterError
@@ -217,7 +218,8 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
                   "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
                   "/api/phone/pair": lambda: self._send_json(phone.start_pairing(Handler.workspace_root)),
-                  "/api/phone/decision": self._api_phone_decision}
+                  "/api/phone/decision": self._api_phone_decision,
+                  "/api/session/name": self._api_session_name, "/api/history/start-fresh": self._api_start_fresh}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -237,7 +239,23 @@ class Handler(BaseHTTPRequestHandler):
         self._send_static("index.html")
 
     def _api_sessions(self) -> None:
-        self._send_json({"sessions": adapter.list_sessions(Handler.workspace_root)})
+        show_all = self._query().get("all") == "1"
+        self._send_json({**ui_meta.decorate_and_filter(Handler.workspace_root, adapter.list_sessions(Handler.workspace_root), show_all),
+                         "next_session_name": ui_meta.settings(Handler.workspace_root)["next_session_name"]})
+
+    def _api_session_name(self) -> None:
+        """Name one session (UI metadata next to it), or, without ``session``, the next one that is created."""
+        body = self._read_json()
+        session_id = body.get("session")
+        if session_id:
+            name = ui_meta.set_session_name(adapter.resolve_session(Handler.workspace_root, str(session_id)), body.get("name"))
+        else:
+            name = ui_meta.set_next_session_name(Handler.workspace_root, body.get("name"))
+        self._send_json({"name": name})
+
+    def _api_start_fresh(self) -> None:
+        self._discard_body()
+        self._send_json({"history_cutoff": ui_meta.start_fresh(Handler.workspace_root)})
 
     def _session_param(self, query: dict[str, str]) -> str:
         session_id = query.get("session", "")

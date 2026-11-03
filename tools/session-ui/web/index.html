@@ -50,8 +50,16 @@
       <button type="submit" id="session-open">Open session</button>
     </form>
     <p class="state" id="session-state" role="status"></p>
+    <p class="history-tools"><a href="#" id="show-older" hidden>Show older sessions</a>
+      <button type="button" class="pill ghost" id="start-fresh">Start fresh</button></p>
     <div id="session-status" hidden>
+      <form id="rename-form" class="rename-form">
+        <label for="rename-input">Session name</label>
+        <input id="rename-input" type="text" maxlength="60" autocomplete="off" placeholder="Give this session a name">
+        <button type="submit" id="rename-save">Save name</button>
+      </form>
       <dl class="facts">
+        <div><dt>Name</dt><dd id="fact-name"></dd></div>
         <div><dt>Object</dt><dd id="fact-object"></dd></div>
         <div><dt>Operator</dt><dd id="fact-operator"></dd></div>
         <div><dt>Complete</dt><dd id="fact-complete"></dd></div>
@@ -238,6 +246,14 @@
       <p class="state" id="pair-state" role="status"></p>
       <p class="error" id="pair-error" role="alert" hidden></p>
     </div>
+    <form class="phone-name" id="next-name-form">
+      <h3>Name this session</h3>
+      <label for="next-name">Session name (optional)</label>
+      <input id="next-name" name="name" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Kitchen radio">
+      <button type="submit" id="next-name-save">Save name</button>
+      <p class="hint">Shown instead of the technical ID. It is used for the next session that is created from a phone video.</p>
+      <p class="state" id="next-name-state" role="status"></p>
+    </form>
     <div class="phone-link">
       <p class="state" id="phone-link-state" role="status">Phone: checking…</p>
       <button type="button" id="phone-connect">Connect phone</button>

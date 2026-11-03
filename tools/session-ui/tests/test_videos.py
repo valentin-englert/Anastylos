@@ -89,6 +89,14 @@ class TestProcess(VideoCase):
         self.assertEqual(command[command.index("--video") + 1], str((directory / "video.mp4").resolve()))
         self.assertEqual(videos.list_videos(self.root)["videos"][0]["job"]["state"], "done")
 
+    def test_the_name_given_before_recording_lands_beside_the_new_session_once(self):
+        import ui_meta
+        self.store()
+        ui_meta.set_next_session_name(self.root, "Tuner")
+        job = self.process(FakeRunner())
+        self.assertEqual(ui_meta.session_name(self.root / job["session"]), "Tuner")
+        self.assertEqual(ui_meta.settings(self.root)["next_session_name"], "")
+
     def test_a_second_click_returns_the_same_job_without_a_second_run(self):
         self.store()
         runner = FakeRunner()

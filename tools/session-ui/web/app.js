@@ -893,7 +893,8 @@ function videoCard(video) {
     ? { queued: "waiting to start", running: `processing — ${job.stage || "starting"}`, done: `processed — open session ${job.session}`, failed: "processing failed" }[job.state]
     : { complete: "uploaded, ready to process", receiving: "uploading from the phone…", failed: "upload failed, the phone will send it again" }[video.status];
   const head = document.createElement("p");
-  head.textContent = `Video ${video.video.slice(0, 8)} · ${size} · ${words || video.status}`;
+  const recorded = video.declared_at ? new Date(video.declared_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Unknown time";
+  head.textContent = `${recorded} · ${size} · ${words || video.status} · id ${video.video.slice(0, 8)}`;
   card.append(head);
   if (job && job.error) {
     const error = document.createElement("p");

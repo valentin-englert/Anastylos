@@ -43,7 +43,7 @@ class CatalogTests(unittest.TestCase):
         for kind in (*selector.QUESTION_TYPES, "ack"):
             for persona in selector.PERSONAS:
                 found = selector.variants(kind, persona)
-                self.assertTrue(4 <= len(found) <= 6, (kind, persona))
+                self.assertTrue(len(found) >= (12 if kind in ("recorded", "cell_open") else 4), (kind, persona))
                 slots = {n: "x" for n in selector.CATALOG["slots"][kind]}
                 for index in range(len(found)):
                     text, _ = selector.render(kind, persona, f"e{index}", slots)

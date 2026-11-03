@@ -21,7 +21,7 @@ UNKNOWN_PLACE = "the sheet"
 RECENT_WINDOW = 3
 
 _CELL = re.compile(r"[1-9][0-9]{0,2}")
-_SLOT = re.compile(r"\{([a-z_]+)\}")
+_SLOT = re.compile(r"\{([A-Za-z_]+)\}")
 
 CATALOG = json.loads(Path(__file__).with_name("phrases.json").read_text(encoding="utf-8"))
 
@@ -55,6 +55,8 @@ def render(question_type: str, persona: str, event_id: str, slots: dict[str, str
     missing = [name for name in needed if name not in slots]
     if missing:
         raise KeyError(f"{question_type} needs slots {missing}")
+    if "where" in slots:
+        slots = {**slots, "Where": slots["where"][:1].upper() + slots["where"][1:]}
     index = pick_index(event_id, question_type, persona, recent)
     template = variants(question_type, persona)[index]
     return _SLOT.sub(lambda m: str(slots[m.group(1)]), template), index
@@ -70,6 +72,9 @@ class Recents:
         return tuple(self._used.get((question_type, persona), ()))
 
     def note(self, question_type: str, persona: str, index: int) -> None:
+        """Remember the variant. Nothing repeats until every variant of this slot has been used; then a new round
+        starts (the variant just used stays excluded, so the same line never comes twice in a row)."""
         used = self._used.setdefault((question_type, persona), [])
         used.append(index)
-        del used[:-RECENT_WINDOW]
+        if len(set(used)) >= len(variants(question_type, persona)):
+            used[:] = [index]

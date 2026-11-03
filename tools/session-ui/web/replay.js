@@ -89,8 +89,17 @@
     $("part-replay-scrub").max = String(frames.length - 1);
     showCompare(moment, player);
     $("part-replay-player").hidden = false;
+    $("part-replay-player").focus();
     showFrame(frames.length - 1);
   }
+
+  $("part-replay-close").addEventListener("click", () => {
+    stop();
+    $("part-replay-player").hidden = true;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("part-replay-player").hidden) $("part-replay-close").click();
+  });
 
   async function open(partId, current) {
     $("part-replay-state").textContent = "Preparing the recorded frames from the stored video…";

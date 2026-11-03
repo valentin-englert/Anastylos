@@ -121,9 +121,10 @@ def parse_origin(text: str) -> dict:
         return {"kind": intent}
     match = _ORIGIN.match(plain)
     candidate = match.group("origin") if match else _FROM.sub("", plain)
-    origin = _ARTICLE.sub("", candidate.strip(" ,.;:-!?")).strip()
+    from .items import tidy_origin  # local import: items imports this module
+    origin = tidy_origin(candidate)
     words = re.findall(r"[A-Za-z0-9'-]+", origin)
-    if intent == "unclear" or not words or len(words) > 5 or set(w.lower() for w in words) <= _NOISE:
+    if not words or len(words) > 8 or set(w.lower() for w in words) <= _NOISE:
         return {"kind": "unclear"}
     return {"kind": "origin", "origin": origin}
 

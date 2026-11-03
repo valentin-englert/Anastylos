@@ -33,7 +33,9 @@
     ],
     "cell_origin": [],
     "cell_how_many": [],
-    "go_on": []
+    "go_on": [],
+    "missed_name": [],
+    "missed_where": []
   },
   "phrases": {
     "part_removed": {
@@ -185,21 +187,47 @@
     "recorded": {
       "serious": [
         "Recorded.",
+        "Saved.",
+        "That is recorded.",
+        "Noted and saved.",
         "Done, it is recorded.",
-        "That is saved.",
-        "Noted and recorded."
+        "Got it, recorded.",
+        "Stored.",
+        "Written down.",
+        "That's saved.",
+        "Recorded, thank you.",
+        "Logged.",
+        "It is in the record."
       ],
       "playful": [
         "Recorded.",
-        "Saved. Easy!",
+        "Saved. Nice!",
         "In the books!",
-        "Got it, all saved."
+        "Got it, all saved.",
+        "Done and dusted.",
+        "Logged and loaded.",
+        "Tucked away!",
+        "Noted, thanks!",
+        "Check! Saved.",
+        "Filed away.",
+        "That's in. Next!",
+        "Perfect, saved."
       ],
       "unhinged": [
-        "Recorded.",
         "Locked in, buddy!",
-        "Chiseled in stone. Well, in memory.",
-        "Done and dusted, my friend."
+        "Done! I'm basically a librarian now.",
+        "Saved. Gold star for you.",
+        "Boom. Memory updated.",
+        "Got it, filed under 'awesome'.",
+        "Noted. You're on a roll.",
+        "Stored. Future you says thanks.",
+        "Easy peasy. Next!",
+        "Written down. No take-backs.",
+        "That's in the books, chief.",
+        "Stamped, sealed, remembered.",
+        "Done. My circuits are doing a little dance.",
+        "Recorded. Imaginary high five!",
+        "Nailed it, team!"
       ]
     },
     "ack": {
@@ -304,22 +332,22 @@
     },
     "missed_cell": {
       "serious": [
-        "Which cell is it in, and what is it called?",
-        "Please tell me the cell number and the name.",
-        "In which cell, and what do you call it?",
-        "Which cell, and what is the part called?"
+        "Which cell or place is it in, and what is it called?",
+        "Where is it, which cell, and what is it called?",
+        "In which cell or place, and what do you call it?",
+        "Which cell or place, and what is the part called?"
       ],
       "playful": [
-        "Which cell is it in, and what is it called?",
-        "Spill it: which cell, and what's it called?",
+        "Which cell or place is it in, and what is it called?",
+        "Spill it: which cell or place, and what's it called?",
         "Where did it hide, and what's its name?",
-        "Which cell, and what do we call it?"
+        "Which cell or place, and what do we call it?"
       ],
       "unhinged": [
-        "Which cell is it in, and what is it called?",
-        "Ha, I knew it! Which cell, and what's its name, buddy?",
-        "Name and cell number, my friend, go!",
-        "Which cell is the rascal in, and what is it called?"
+        "Which cell or place is it in, and what is it called?",
+        "Ha, I knew it! Where is it, and what's its name, buddy?",
+        "Name and place, my friend, go!",
+        "Where is the rascal, and what is it called?"
       ]
     },
     "bundle_name": {
@@ -344,42 +372,73 @@
     },
     "cell_open": {
       "serious": [
-        "What's in {where}?",
-        "What is in {where}?",
-        "What do you see in {where}?",
-        "What's lying in {where}?"
+        "What's in {where}, and where did it come from?",
+        "What is in {where}, and where did it come from?",
+        "{Where}: what is in it, and where did it come from?",
+        "What do you see in {where}, and where did it come from?",
+        "Tell me what is in {where} and where it came from.",
+        "What is lying in {where}, and where was it before?",
+        "{Where}: what is it, and where did it come from?",
+        "What's in {where}? Please say where it came from too.",
+        "Please describe {where}: what is in it, and where from?",
+        "What does {where} hold, and where did it come from?",
+        "Next, {where}: what is in it, and where from?",
+        "In {where}, what do we have, and where is it from?"
       ],
       "playful": [
-        "What's in {where}?",
-        "So, what's hiding in {where}?",
-        "Okay, {where}. What's in there?",
-        "What have we got in {where}?"
+        "Okay, {where}! What's in it, and where from?",
+        "What have we got in {where}, and where from?",
+        "Peek into {where}: what's there, and where from?",
+        "{Where} time! What's in it, where did it come from?",
+        "So, what's hiding in {where}, and where's it from?",
+        "And {where} holds... what, and from where?",
+        "What's cooking in {where}, and where did it come from?",
+        "{Where}, please: what's inside, and where from?",
+        "Let's see {where}. What's in it, and where from?",
+        "What's {where} up to? What's in it, where from?",
+        "Over to {where}: what is it, and where from?",
+        "Next up, {where}. What's in it, where from?"
       ],
       "unhinged": [
-        "What's in {where}?",
-        "Alright buddy, what's lurking in {where}?",
-        "{where}, my friend. What's the loot?",
-        "Spill it: what's in {where}?"
+        "Alright, {where}: what's hiding there, and where from?",
+        "Drumroll... {where}! What's in it, where from?",
+        "What's chilling in {where}, and where's it from?",
+        "{Where} next! Name it, and where it came from.",
+        "Tell me about {where}: what, and where from?",
+        "And in {where} we find...? Also, where from?",
+        "What's {where} hiding, and where did it come from?",
+        "Spill the beans on {where}: what, where from?",
+        "{Where}, go! What's in it, where'd it come from?",
+        "What lives in {where}, and where's it from?",
+        "Plot twist in {where}? What is it, where from?",
+        "Cell-check {where}: what's in it, where from?",
+        "Dig in, buddy: {where}. What, and where from?"
       ]
     },
     "cell_again": {
       "serious": [
         "What's in {where}, then?",
         "Then what is in {where}?",
-        "So what is in {where}?",
-        "What's in {where}, please?"
+        "So what is in {where}, and where from?",
+        "What's in {where}, please?",
+        "Please say again what is in {where}.",
+        "What is in {where}, then, and where from?"
       ],
       "playful": [
         "What's in {where}, then?",
         "Okay, so what's in {where}?",
         "My bad. What's in {where}, then?",
-        "Then what's in {where}?"
+        "Then what's in {where}, and where from?",
+        "Fix it for me: what's in {where}?",
+        "Let's redo {where}: what's in it?"
       ],
       "unhinged": [
         "What's in {where}, then?",
         "Oops! So what's in {where}, buddy?",
         "Fine, you tell me: what's in {where}?",
-        "Then what's really in {where}?"
+        "Then what's really in {where}?",
+        "Rewind! What's actually in {where}?",
+        "Teach me, oh wise one: what's in {where}?"
       ]
     },
     "cell_origin": {
@@ -440,6 +499,46 @@
         "Don't stop now, buddy.",
         "Mhm, keep it coming.",
         "I'm hanging on your words."
+      ]
+    },
+    "missed_name": {
+      "serious": [
+        "What is it called?",
+        "What do you call it?",
+        "And its name?",
+        "What is the part called?"
+      ],
+      "playful": [
+        "What is it called?",
+        "And what's its name?",
+        "What do we call it?",
+        "Who is this little guy?"
+      ],
+      "unhinged": [
+        "What is it called?",
+        "And what do we christen it, buddy?",
+        "Name it, my friend!",
+        "What's the rascal called?"
+      ]
+    },
+    "missed_where": {
+      "serious": [
+        "Where is it?",
+        "Which cell or place is it in?",
+        "Where was it?",
+        "Where does it lie?"
+      ],
+      "playful": [
+        "Where is it?",
+        "And where is it hiding?",
+        "Which cell or place?",
+        "Where did you find it?"
+      ],
+      "unhinged": [
+        "Where is it?",
+        "Where is the sneaky thing, buddy?",
+        "Which cell or place, my friend?",
+        "Where did it hide?"
       ]
     }
   }

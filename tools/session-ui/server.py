@@ -276,7 +276,7 @@ class Handler(BaseHTTPRequestHandler):
     def _api_video_process(self) -> None:
         """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""
         body = self._read_json()
-        self._send_json(videos.start_processing(Handler.workspace_root, str(body.get("video", ""))))
+        self._send_json(videos.start_processing(Handler.workspace_root, str(body.get("video", "")), find_parts=explosion.find_outlines))
 
     def _api_connection(self) -> None:
         """Whether the Muse key is set in this server's environment. The value is never read out or sent."""

@@ -106,7 +106,7 @@ def _view(root: Path, meta: dict) -> dict:
             "status": meta.get("status"), "received_chunks": None, "declared_at": meta.get("declared_at"),
             "completed_at": meta.get("completed_at"),
             "job": None if job is None else {k: job.get(k) for k in
-                                             ("state", "session", "stage", "error", "counts", "started_at", "finished_at")}}
+                                             ("state", "session", "stage", "error", "counts", "started_at", "finished_at", "parts", "parts_not_drawn", "parts_error")}}
 
 
 def list_videos(root: Path) -> dict:
@@ -127,7 +127,7 @@ def _find(root: Path, video_id: str) -> tuple[dict, Path]:
 
 
 def start_processing(root: Path, video_id: str, runner: Callable | None = None, python: Path | None = None,
-                     background: bool = True) -> dict:
+                     background: bool = True, find_parts: Callable | None = None) -> dict:
     """Start the pipeline on one complete video; a double click returns the job that is already there."""
     meta, directory = _find(root, video_id)
     if meta.get("status") != "complete":
@@ -145,7 +145,7 @@ def start_processing(root: Path, video_id: str, runner: Callable | None = None, 
         job = {"schema": "anastylos-video-job@1", "video": video_id, "state": "queued", "session": folder,
                "stage": "starting", "error": None, "counts": None, "started_at": _now(), "finished_at": None}
         _write_atomic(_job_path(root, video_id), job)
-    args = (root, video_id, video, folder, runner or phases.subprocess_runner, python)
+    args = (root, video_id, video, folder, runner or phases.subprocess_runner, python, find_parts)
     if background:
         threading.Thread(target=_run, args=args, daemon=True, name=f"video-{video_id[:8]}").start()
     else:
@@ -185,7 +185,17 @@ def _bind_voice(root: Path, video_id: str, folder: str) -> None:
         pass
 
 
-def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, python: Path | None) -> None:
+def _find_parts(root: Path, video_id: str, folder: str, find_parts: Callable) -> None:
+    """The drawings follow by themselves; a failure here is shown and leaves the processed session and the page's button intact."""
+    _update(root, video_id, parts="finding")
+    try:
+        found = find_parts(root, folder)
+        _update(root, video_id, parts="found", parts_not_drawn=len(found.get("not_drawn", [])))
+    except Exception as exc:  # noqa: BLE001 - a background job must always end in a visible state
+        _update(root, video_id, parts="failed", parts_error=str(exc)[:300])
+
+
+def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, python: Path | None, find_parts: Callable | None = None) -> None:
     try:
         _update(root, video_id, state="running", stage="creating the session folder")
         state = SessionState.create(root / folder, "Phone video", "workstation")
@@ -194,6 +204,8 @@ def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, 
         _update(root, video_id, state="done", stage="finished", counts=counts, finished_at=_now())
         _bind_voice(root, video_id, folder)
         (root / folder / OPEN_MARKER).write_text("opens on the first voice turn", encoding="utf-8")
+        if find_parts is not None:
+            _find_parts(root, video_id, folder, find_parts)
     except SessionError as exc:
         _update(root, video_id, state="failed", stage="failed", error=str(exc), finished_at=_now())
     except Exception as exc:  # noqa: BLE001 - a background job must always end in a visible state

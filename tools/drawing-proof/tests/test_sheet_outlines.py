@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 import cv2
 import numpy as np
@@ -64,6 +65,54 @@ class SeparateTest(unittest.TestCase):
         self.assertTrue(cleaned[300, 500])
         self.assertFalse(cleaned[480, 500])
         self.assertIsNone(sheet_outlines.without_shadow(mask, (empty * 0.62).astype(np.uint8), empty, PPM))
+
+    def test_firm_material_as_dark_as_a_shadow_stays(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = (empty * 0.62).astype(np.uint8)
+        mask = np.zeros(empty.shape[:2], bool)
+        mask[200:500, 300:800] = True
+        firm = mask.copy()
+        cleaned = sheet_outlines.without_shadow(mask, image, empty, PPM, firm)
+        self.assertTrue(cleaned[300, 500])
+
+    def test_refine_keeps_the_measured_mask_when_sam_would_lose_it(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        cv2.rectangle(image, (300, 200), (800, 500), (30, 30, 30), -1)
+        firm = np.zeros(empty.shape[:2], bool)
+        firm[200:500, 300:800] = True
+        rectified = source.RectifiedFrame(image, PPM, (0.0, 0.0), np.eye(3), {})
+        tiny = np.zeros(empty.shape[:2], bool)
+        tiny[200:250, 300:800] = True
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sheet_outlines.muse_sam, "sam_mask", return_value=(tiny, {})):
+            refined, method = sheet_outlines.refine_part(rectified, np.zeros(firm.shape, bool), firm, Path(tmp))
+        self.assertTrue((refined == firm).all())
+        self.assertIn("difference", method)
+
+    def test_sheet_flood_crosses_a_soft_shadow_but_not_a_sharp_edge(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        fade = np.ones((800, 1200, 1), np.float32)
+        fade[300:500, 500:800] = 0.62
+        fade = cv2.GaussianBlur(fade, (0, 0), 40)[..., None]  # soft cast shadow
+        image = (empty * fade).astype(np.uint8)
+        cv2.rectangle(image, (100, 100), (300, 300), (90, 95, 92), -1)  # grey as a shadow, but with a sharp edge
+        reached = sheet_outlines.reached_by_sheet(image, empty, (0, 0, 1200, 800), PPM)
+        self.assertTrue(reached[400, 650])
+        self.assertFalse(reached[200, 200])
+
+    def test_refine_fills_what_sam_leaves_out_on_sure_material(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        cv2.rectangle(image, (300, 200), (800, 500), (30, 30, 30), -1)
+        firm = np.zeros(empty.shape[:2], bool)
+        firm[200:500, 300:800] = True
+        notched = firm.copy()
+        notched[350:500, 500:600] = False  # a cable SAM followed instead of the board
+        rectified = source.RectifiedFrame(image, PPM, (0.0, 0.0), np.eye(3), {})
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sheet_outlines.muse_sam, "sam_mask", return_value=(notched, {})):
+            refined, method = sheet_outlines.refine_part(rectified, np.zeros(firm.shape, bool), firm, Path(tmp))
+        self.assertTrue(refined[450, 550])
+        self.assertIn("SAM", method)
 
     def test_an_empty_sheet_gives_nothing(self):
         empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)

@@ -51,6 +51,8 @@ MIN_PART_MM2 = 300.0
 BOX_MARGIN_MM = 6.0
 PALE_SHADOW_LUM = -0.25  # on a part as pale as the sheet: about 0 on the part, about -0.45 in its shadow
 MIN_KEPT_SHARE = 0.4
+MIN_FIRM_COVER = 0.85  # SAM may add a pale end to a part, but must keep what was measured as sure material
+SHARP_EDGE_PER_MM = 0.25  # log-ratio change per mm; a cast shadow's soft edge stays below it
 
 
 def _ellipse(mm: float, ppm: float) -> np.ndarray:
@@ -148,10 +150,11 @@ def reference_view(video: Path) -> tuple[source.RectifiedFrame, np.ndarray] | No
     return dataclasses.replace(finals[0], image=final), empty
 
 
-def without_shadow(mask: np.ndarray, image: np.ndarray, empty: np.ndarray, ppm: float) -> np.ndarray | None:
-    """A pale part's mask with its measured cast shadow removed; None when too little would remain to trust the result."""
+def without_shadow(mask: np.ndarray, image: np.ndarray, empty: np.ndarray, ppm: float, firm: np.ndarray | None = None) -> np.ndarray | None:
+    """A mask with its measured cast shadow removed; ``firm`` pixels are material and stay. None when too little would remain."""
     ratio = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 0.7) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 0.7) + 8))
-    kept = (mask & (ratio.mean(axis=2) >= PALE_SHADOW_LUM)).astype(np.uint8)
+    lit = ratio.mean(axis=2) >= PALE_SHADOW_LUM
+    kept = (mask & (lit if firm is None else lit | firm)).astype(np.uint8)
     kept = cv2.morphologyEx(cv2.morphologyEx(kept, cv2.MORPH_CLOSE, _ellipse(4.0, ppm)), cv2.MORPH_OPEN, _ellipse(3.0, ppm)) & mask.astype(np.uint8)
     contours, _ = cv2.findContours(kept, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not contours:
@@ -175,6 +178,57 @@ def sam_outline(rectified: source.RectifiedFrame, empty: np.ndarray, box: list[i
         return None, "SAM mask failed checks: " + ", ".join(flags)
     cleaned = without_shadow(outer, rectified.image, empty, rectified.px_per_mm)
     return (cleaned, "") if cleaned is not None else (None, "too little of SAM's mask remained without the shadow")
+
+
+def reached_by_sheet(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> np.ndarray:
+    """Pixels joined to bare sheet without crossing a sharp edge. A cast shadow fades softly and is joined; a part's edge stops it."""
+    x, y, w, h = area_px
+    inside = np.zeros(image.shape[:2], bool)
+    inside[y:y + h, x:x + w] = True
+    soft = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 2.0) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 2.0) + 8))
+    lum = soft.mean(axis=2)
+    across = np.stack([cv2.Sobel(soft[..., c], cv2.CV_32F, 1, 0, ksize=3) / 8 for c in range(3)], axis=2)
+    down = np.stack([cv2.Sobel(soft[..., c], cv2.CV_32F, 0, 1, ksize=3) / 8 for c in range(3)], axis=2)
+    edge = np.sqrt((across ** 2 + down ** 2).max(axis=2)) * ppm > SHARP_EDGE_PER_MM
+    edge = cv2.dilate(edge.astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
+    count, labels, stats, _ = cv2.connectedComponentsWithStats((~edge & (lum > -1.3) & inside).astype(np.uint8), connectivity=4)
+    bare = (np.abs(lum) < 0.05) & inside
+    reached = np.zeros(lum.shape, bool)
+    for i in range(1, count):
+        if stats[i, cv2.CC_STAT_AREA] > 55 * ppm * ppm and bare[labels == i].mean() > 0.2:
+            reached |= labels == i
+    return reached
+
+
+def refine_part(rectified: source.RectifiedFrame, reached: np.ndarray, firm: np.ndarray, folder: Path) -> tuple[np.ndarray, str]:
+    """SAM from the measured box and a point on sure material. It keeps the measured mask when SAM would lose part of that material.
+
+    The measured mask can hold a grey part's shadow, so only what the sheet flood could not reach counts as sure."""
+    ppm = rectified.px_per_mm
+    sure = cv2.morphologyEx((firm & ~reached).astype(np.uint8), cv2.MORPH_OPEN, _ellipse(OPEN_MM, ppm))
+    if not sure.any():
+        return firm, "difference from the empty sheet"
+    bx, by, bw, bh = cv2.boundingRect(firm.astype(np.uint8))
+    margin = int(3.0 * ppm)
+    h, w = firm.shape
+    box = [max(bx - margin, 0), max(by - margin, 0), min(bx + bw + margin, w), min(by + bh + margin, h)]
+    inner = cv2.distanceTransform(sure, cv2.DIST_L2, 5)
+    py, px = np.unravel_index(np.argmax(inner), inner.shape)
+    folder.mkdir(parents=True, exist_ok=True)
+    image_path = folder / "view.png"
+    cv2.imwrite(str(image_path), rectified.image)
+    mask, _info = muse_sam.sam_mask(image_path, box, firm.shape, folder / "sam", folder / "sam_ledger.jsonl", points=[{"x": int(px), "y": int(py), "label": "positive"}])
+    if mask is None:
+        return firm, "difference from the empty sheet"
+    outer, _openings = muse_sam.outer_and_openings(mask)
+    if (outer & (sure > 0)).sum() < MIN_FIRM_COVER * sure.sum():
+        return firm, "difference from the empty sheet"
+    # SAM leaves out what crosses a part, such as a cable on a board; the sure material under it belongs to the part
+    joined = cv2.morphologyEx((outer | (sure > 0)).astype(np.uint8), cv2.MORPH_CLOSE, _ellipse(3.0, ppm))
+    contours, _ = cv2.findContours(joined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    united = np.zeros(joined.shape, np.uint8)
+    cv2.drawContours(united, [max(contours, key=cv2.contourArea)], -1, 1, -1)
+    return united > 0, "SAM from a box and point measured against the empty sheet"
 
 
 def _atomic_json(path: Path, document: dict) -> None:
@@ -259,9 +313,11 @@ def main() -> None:
     if args.frame == "auto" and (reference := reference_view(args.video)) is not None:
         rectified, empty = reference
         masks, boxes = separate(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
+        reached = reached_by_sheet(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
         written, not_drawn, numbered = [], [], len(masks)
         for number, mask in enumerate(masks, start=1):
-            written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", "difference from the empty sheet"))
+            refined, method = refine_part(rectified, reached, mask, args.session_dir / "drawings" / "sam-boxes" / f"part-{number}")
+            written.append(write_job(args.session_dir, rectified, refined, f"part {number}", "final view of the video", method))
         for box in boxes:
             numbered += 1
             mask, reason = sam_outline(rectified, empty, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")

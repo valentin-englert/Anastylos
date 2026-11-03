@@ -894,7 +894,8 @@ function videoCard(video) {
     : { complete: "uploaded, ready to process", receiving: "uploading from the phone…", failed: "upload failed, the phone will send it again" }[video.status];
   const head = document.createElement("p");
   const recorded = video.declared_at ? new Date(video.declared_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Unknown time";
-  head.textContent = `${recorded} · ${size} · ${words || video.status} · id ${video.video.slice(0, 8)}`;
+  const parts = job && { finding: " · finding parts on the sheet…", found: " · parts drawn, see the explosion view", failed: " · finding parts failed" }[job.parts];
+  head.textContent = `${recorded} · ${size} · ${words || video.status}${parts || ""} · id ${video.video.slice(0, 8)}`;
   card.append(head);
   if (job && job.error) {
     const error = document.createElement("p");

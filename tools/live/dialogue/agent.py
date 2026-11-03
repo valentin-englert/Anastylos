@@ -21,6 +21,7 @@ OPEN_ITEM_SCHEMA = "anastylos-dialogue-open-item@1"
 EVENT_TYPES = ("part_removed", "origin_unseen", "part_stored", "need_photo")
 QUIET_S = 8.0  # a question asked this recently makes "ask nothing now" a real option for Muse
 MAX_REASKS = 1
+FLAVOURED = frozenset({"recorded", "cell_open", "cell_again", "go_on", "cell_how_many", "cell_origin", "ack"})
 
 
 class DialogueAgent:
@@ -30,12 +31,18 @@ class DialogueAgent:
         self._recents = Recents()
         self._events: dict[str, dict] = {}
         self._last_question_at: float | None = None
+        self._flavoured_lines = 0
 
     # ------------------------------------------------------------------ speaking
 
     def _say(self, kind: str, event_id: str, slots: dict | None = None) -> tuple[str, int]:
-        text, index = render(kind, self._persona, event_id, slots or {}, self._recents.recent(kind, self._persona))
-        self._recents.note(kind, self._persona, index)
+        persona = self._persona
+        if persona != "serious" and kind in FLAVOURED:
+            self._flavoured_lines += 1
+            if self._flavoured_lines % 2 == 1:  # persona colour on every other line at most; the rest are plain
+                persona = "serious"
+        text, index = render(kind, persona, event_id, slots or {}, self._recents.recent(kind, persona))
+        self._recents.note(kind, persona, index)
         return text, index
 
     def _event(self, event_id: str) -> dict:
@@ -127,6 +134,9 @@ class DialogueAgent:
     def extract(self, text: str, question_type: str, tag: str = "", need_name: bool = False) -> tuple[dict, str, list[str]]:
         """Fields from a free answer: rules first, the model only where the rules cannot tell (see Executor)."""
         return self._executor.extract(text, question_type, tag, need_name)
+
+    def extract_origin(self, text: str, tag: str = "") -> dict | None:
+        return self._executor.extract_origin(text, tag)
 
     def extract_items(self, text: str, cell: str, tag: str = "") -> dict | None:
         return self._executor.extract_items(text, cell, tag)

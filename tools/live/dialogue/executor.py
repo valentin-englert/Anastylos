@@ -242,6 +242,16 @@ class Executor:
         result = self._client.call("extract_items", {"cell": cell, "answer_text": answer_text}, self._effort, tag)
         return result["output"] if result["status"] == "ok" else None
 
+    def extract_origin(self, answer_text: str, tag: str = "") -> dict | None:
+        """The place the operator names, from Muse directly (no rule shortcut); None on any failure. The caller checks
+        that every word of the origin occurs in the transcript."""
+        if self._client is None:
+            return None
+        result = self._client.call("extract_fields", {"question_type": "origin", "answer_text": answer_text}, self._effort, tag)
+        if result["status"] != "ok" or result["output"].get("intent") not in ("answer", "unsure", "skip"):
+            return None
+        return result["output"]
+
     def choose(self, state: dict, allowed: list[str], tag: str = "") -> tuple[str, str]:
         if self._client is not None:
             result = self._client.call("choose_question", {"state": state, "allowed": allowed + ["none"]}, self._effort, tag)

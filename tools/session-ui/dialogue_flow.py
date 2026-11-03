@@ -64,7 +64,7 @@ class DialogueFlow:
         self._tail_offered = self._load_tail_offers()
         self._tail_queue: dict[str, list[str]] = {}
         self._tail_seeded = False
-        self._last_origin: str | None = None
+        self._known_origins: dict[str, str] = {}  # normalised -> as said; lets "no front shell" be read as an origin
         self._marker = self.root / session_id / "dialogue-pending-open"  # written when a video finished processing
         self.last_speak: dict | None = None
         self._trace: dict = {}
@@ -271,13 +271,6 @@ class DialogueFlow:
             cur["stage"] = "count"
             return _speak(self.agent.say("cell_how_many", cur["event"]), "question")
         if any(item["origin"] is None for item in found):
-            if self._last_origin:
-                cur["stage"] = "origin_confirm"
-                cur["origin_proposal"] = self._last_origin
-                proposed_items = [{**item, "origin": item["origin"] or self._last_origin} for item in found]
-                read_back = cell_items.sentence(cur["label"].capitalize(), proposed_items).removesuffix(" Right?")
-                cur["origin_proposal_prompt"] = f"{read_back}. Same origin as last time; is that right?"
-                return _speak(cur["origin_proposal_prompt"], "read_back")
             cur["stage"] = "origin"
             return _speak(self.agent.say("cell_origin", cur["event"]), "question")
         return self._read_back()
@@ -322,11 +315,11 @@ class DialogueFlow:
         if plain == "incomplete":
             return _speak(self.agent.say("go_on", cur["event"]), "question")
         if parsed["kind"] == "unclear" and plain is None:
-            fields, source, dropped = self.agent.extract(text, "origin", tag=cur["event"])
-            origin = cell_items.clean_origin(fields["origin"], set(cell_items.words(text)))
-            if source == "muse" and fields["intent"] == "answer" and origin:
+            proposed = self.agent.extract_origin(text, tag=cur["event"])
+            origin = cell_items.clean_origin((proposed or {}).get("origin"), set(cell_items.words(text)))
+            if proposed is not None and proposed["intent"] == "answer" and origin:
                 parsed = {"kind": "origin", "origin": origin}
-                self._trace.update(source="model", dropped=dropped)
+                self._trace.update(parser="origin", source="model")
         if parsed["kind"] in ("unsure", "skip") or plain in ("unsure", "skip", "no"):
             origin = cell_items.UNKNOWN  # "don't know" is an answer: recorded as unknown, never asked again
         elif parsed["kind"] == "origin":
@@ -340,50 +333,23 @@ class DialogueFlow:
             item["origin"] = item["origin"] or origin
         return self._read_back()
 
-    def _cell_origin_confirm(self, text: str) -> dict:
-        cur = self.current
-        if cell_items.has_repeated_cvc_fragment(text):
-            cur["stage"] = "origin"
-            cur.pop("origin_proposal", None)
-            cur.pop("origin_proposal_prompt", None)
-            self.agent.reset_reasks(cur["event"])
-            self._trace.update(parser="unclear", source="rule")
-            return _speak(self.agent.say("cell_origin", cur["event"]), "question")
-        proposal = cur["origin_proposal"]
-        plain = cell_items.classify_plain(text)
-        confirmation = cell_items.classify_confirmation(text)
-        self._trace.update(parser=confirmation or plain or "unclear", source="rule")
-        if confirmation == "yes":
-            for item in cur["items"]:
-                if item["origin"] is None:
-                    item["origin"] = proposal
-            return self._commit(text)
-        if confirmation == "no":
-            cur["stage"] = "origin"
-            cur.pop("origin_proposal", None)
-            cur.pop("origin_proposal_prompt", None)
-            self.agent.reset_reasks(cur["event"])
-            return _speak(self.agent.say("cell_origin", cur["event"]), "question")
-        if plain == "meta":
-            return _speak(cur["origin_proposal_prompt"], "question")
+    @staticmethod
+    def _origin_key(text: str) -> str:
+        return " ".join(w for w in cell_items.words(text) if w not in ("the", "a", "an"))
 
-        corrected = _LEADING_NO.sub("", text, count=1).strip()
-        parsed = bundle.parse_origin(corrected)
-        origin = cell_items.clean_origin(parsed.get("origin"), set(cell_items.words(corrected)))
-        if parsed["kind"] == "origin" and origin:
-            for item in cur["items"]:
-                if item["origin"] is None:
-                    item["origin"] = origin
-            return self._read_back()
-        if parsed["kind"] in ("unsure", "skip"):
-            for item in cur["items"]:
-                if item["origin"] is None:
-                    item["origin"] = cell_items.UNKNOWN
-            return self._read_back()
-        again = self.agent.misunderstood(cur["event"], text)
-        if again["closed"]:
-            return self._leave_cell(text, "proposed origin not understood twice", again["speak"], open_item=False)
-        return _speak(again["speak"], "status")
+    def _origin_correction(self, text: str) -> str | None:
+        """'from Dpad' or a place already named in this session ('front shell'): a corrected origin, taken directly."""
+        said = set(cell_items.words(text))
+        if re.match(r"^\W*(?:from|out of|off of)\b", text, re.IGNORECASE):
+            parsed = bundle.parse_origin(text)
+            return cell_items.clean_origin(parsed.get("origin"), said) if parsed["kind"] == "origin" else None
+        known = self._known_origins.get(self._origin_key(text))
+        if known:
+            return cell_items.clean_origin(known, said)
+        tokens = cell_items.words(text)
+        if tokens and tokens[-1] in cell_items.PLACE_WORDS and len(tokens) <= 4:  # "front shell", "back of the controller"
+            return cell_items.clean_origin(text, said)
+        return None
 
     def _read_back(self) -> dict:
         cur = self.current
@@ -400,6 +366,8 @@ class DialogueFlow:
             return self._commit(text)
         if plain == "meta":
             return _speak(cell_items.sentence(cur["label"].capitalize(), cur["items"]), "read_back")
+        if plain == "incomplete":
+            return _speak(self.agent.say("go_on", cur["event"]), "question")
         if plain in ("unsure", "skip"):
             line = self.agent.defer(cur["event"], text, f"operator {plain}")["speak"]
             return self._leave_cell(text, f"operator {plain}", line, open_item=False)
@@ -408,6 +376,12 @@ class DialogueFlow:
             cur.update(stage="ask", items=[])
             cur["asked"] = self._question(again=True)
             return _speak(cur["asked"], "question")
+        fixed = self._origin_correction(corrected)
+        if fixed:
+            for item in cur["items"]:
+                item["origin"] = fixed
+            self._trace.update(parser="origin_correction", source="rule", correction=True)
+            return self._read_back()
         heard = self._understand(corrected)  # a correction in the same sentence is taken directly
         self._trace.update(parser=heard["kind"], source=heard["source"], items=heard["items"], correction=True)
         if heard["kind"] == "answer":
@@ -444,9 +418,9 @@ class DialogueFlow:
                                     origins=[origin for _, origin in extra], extra_key=str(len(parts))):
                 failed.append("notes")
         if not failed:
-            origins = {item["origin"] for item in cur["items"]}
-            self._last_origin = next(iter(origins)) if len(origins) == 1 and None not in origins \
-                and cell_items.UNKNOWN not in origins else None
+            for item in cur["items"]:
+                if item["origin"] and item["origin"] != cell_items.UNKNOWN:
+                    self._known_origins[self._origin_key(item["origin"])] = item["origin"]
         self.current = None
         if failed:
             return self._advance(self.agent.defer(cur["event"], text, "a part was not committed")["speak"])
@@ -560,30 +534,88 @@ class DialogueFlow:
             return self._closing_finish(self.agent.defer("closing-missed", text, "operator unsure")["speak"])
         if plain == "meta":
             return _speak(self.agent.say("missed_anything", "closing-missed"), "question")
-        if self._CELL.search(text):
+        if self._find_location(text):
             self.current["stage"] = "missed_detail"
             return self._closing_missed_detail(text)
         return self._closing_unclear(text, self._closing_finish)
+
+    _WORK_AREA = re.compile(r"\bwork(?:ing)?\s*(?:area|space)\b", re.I)
+
+    def _find_location(self, text: str):
+        """('cell-6', 'cell 6', span) or ('work area', 'the work area', span) for a place named in ``text``."""
+        match = self._CELL.search(text)
+        if match:
+            token = match.group(1).lower()
+            number = int(token) if token.isdigit() else self._CELL_WORDS[token]
+            return f"cell-{number}", f"cell {number}", match.span()
+        match = self._WORK_AREA.search(text)
+        if match:
+            start = match.start()
+            before = re.search(r"(?:the\s+)?$", text[:start], re.I)
+            return "work area", "the work area", (before.start() if before else start, match.end())
+        return None
 
     def _closing_missed_detail(self, text: str) -> dict:
         if self._is_missed_negative(text) or cell_items.classify_plain(text) in ("empty", "skip"):
             return self._closing_finish()
         if cell_items.classify_confirmation(text) == "yes" or cell_items.classify_plain(text) == "meta":
             return _speak(self.agent.say("missed_cell", "closing-missed"), "question")
-        match = self._CELL.search(text)
-        found = []
-        if match:
-            rest = " ".join((text[:match.start()] + " " + text[match.end():]).strip(" ,.;").split())
-            heard = self._understand(rest) if rest.strip() else {"kind": "unclear", "items": [], "source": "rule"}
-            found = heard["items"] if heard["kind"] == "answer" else []
-            self._trace.update(parser=heard["kind"], source=heard["source"], items=found)
-        if not match or len(found) != 1:
-            return self._closing_unclear(text, self._closing_finish)
-        token = match.group(1).lower()
-        cell = int(token) if token.isdigit() else self._CELL_WORDS[token]
-        self.current.update(stage="missed_detail", cell=cell, items=found, said=text.strip())
+        cur = self.current
+        place = self._find_location(text)
+        rest = text if place is None else text[:place[2][0]] + " " + text[place[2][1]:]
+        rest = " ".join(rest.strip(" ,.;").split())
+        rest = re.sub(r"^(?:(?:in|on|at|and|it'?s|it is|there is)\b[\s,]*)+", "", rest, flags=re.I).strip(" ,.;")
+        if place:
+            cur.update(location=place[0], loc_label=place[1])
+        if set(cell_items.words(rest)) - cell_items.FILLER - cell_items.NUMBERS:
+            heard = self._understand(rest)
+            self._trace.update(parser=heard["kind"], source=heard["source"], items=heard["items"])
+            if heard["kind"] == "answer" and len(heard["items"]) == 1:
+                cur["items"] = heard["items"]
+        cur["said"] = text.strip()
+        return self._closing_missed_fill(text)
+
+    def _closing_missed_fill(self, text: str) -> dict:
+        """Ask only for the slot that is still missing: the name, or the place."""
+        cur = self.current
         self.agent.reset_reasks("closing-missed")
-        return self._closing_missed_next()
+        if cur.get("location") and cur.get("items"):
+            return self._closing_missed_next()
+        if cur.get("location"):
+            cur["stage"] = "missed_name"
+            return _speak(self.agent.say("missed_name", "closing-missed"), "question")
+        if cur.get("items"):
+            cur["stage"] = "missed_where"
+            return _speak(self.agent.say("missed_where", "closing-missed"), "question")
+        return self._closing_unclear(text, self._closing_finish)
+
+    def _closing_missed_name(self, text: str) -> dict:
+        plain = cell_items.classify_plain(text)
+        if plain == "meta":
+            return _speak(self.agent.say("missed_name", "closing-missed"), "question")
+        if plain in ("unsure", "skip", "no", "empty"):
+            return self._closing_finish(self.agent.defer("closing-missed", text, "operator did not name the part")["speak"])
+        heard = self._understand(text)
+        self._trace.update(parser=heard["kind"], source=heard["source"], items=heard["items"])
+        if heard["kind"] == "answer" and len(heard["items"]) == 1:
+            self.current["items"] = heard["items"]
+            self.current["said"] = f"{self.current.get('said', '')} / {text.strip()}".strip(" /")
+            return self._closing_missed_next()
+        return self._closing_unclear(text, self._closing_finish)
+
+    def _closing_missed_where(self, text: str) -> dict:
+        plain = cell_items.classify_plain(text)
+        if plain == "meta":
+            return _speak(self.agent.say("missed_where", "closing-missed"), "question")
+        if plain in ("unsure", "skip", "no", "empty"):
+            return self._closing_finish(self.agent.defer("closing-missed", text, "operator did not say where")["speak"])
+        place = self._find_location(text)
+        self._trace.update(parser="location" if place else "unclear", source="rule")
+        if place:
+            self.current.update(location=place[0], loc_label=place[1])
+            self.current["said"] = f"{self.current.get('said', '')} / {text.strip()}".strip(" /")
+            return self._closing_missed_next()
+        return self._closing_unclear(text, self._closing_finish)
 
     def _closing_missed_next(self) -> dict:
         item = self.current["items"][0]
@@ -596,7 +628,7 @@ class DialogueFlow:
             self.agent.reset_reasks("closing-missed")
             return _speak(self.agent.say("cell_origin", "closing-missed"), "question")
         self.current["stage"] = "missed_confirm"
-        sentence = cell_items.sentence(f"Missed in cell {self.current['cell']}", [item])
+        sentence = cell_items.sentence(f"Missed in {self.current['loc_label']}", [item])
         self.current["read_back"] = sentence
         self.agent.reset_reasks("closing-missed")
         return _speak(sentence, "read_back")
@@ -650,8 +682,9 @@ class DialogueFlow:
             labels = [item["name"]] * count
             origin = item["origin"] if item["origin"] != cell_items.UNKNOWN else None
             origins = [origin] * count
-            location = f"cell-{self.current['cell']}"
-            said = {"cell": self.current["cell"], "part_name": item["name"], "count": count,
+            location = self.current["location"]
+            cell = int(location.removeprefix("cell-")) if location.startswith("cell-") else None
+            said = {"cell": cell, "place": location, "part_name": item["name"], "count": count,
                     "origin": origin, "location": location, "operator_text": self.current["said"],
                     "read_back": self.current["read_back"]}
             if not self._write_note("missed_part", labels, location, said, origins=origins):

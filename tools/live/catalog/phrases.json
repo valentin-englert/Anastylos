@@ -33,7 +33,9 @@
     ],
     "cell_origin": [],
     "cell_how_many": [],
-    "go_on": []
+    "go_on": [],
+    "missed_name": [],
+    "missed_where": []
   },
   "phrases": {
     "part_removed": {
@@ -304,22 +306,22 @@
     },
     "missed_cell": {
       "serious": [
-        "Which cell is it in, and what is it called?",
-        "Please tell me the cell number and the name.",
-        "In which cell, and what do you call it?",
-        "Which cell, and what is the part called?"
+        "Which cell or place is it in, and what is it called?",
+        "Where is it, which cell, and what is it called?",
+        "In which cell or place, and what do you call it?",
+        "Which cell or place, and what is the part called?"
       ],
       "playful": [
-        "Which cell is it in, and what is it called?",
-        "Spill it: which cell, and what's it called?",
+        "Which cell or place is it in, and what is it called?",
+        "Spill it: which cell or place, and what's it called?",
         "Where did it hide, and what's its name?",
-        "Which cell, and what do we call it?"
+        "Which cell or place, and what do we call it?"
       ],
       "unhinged": [
-        "Which cell is it in, and what is it called?",
-        "Ha, I knew it! Which cell, and what's its name, buddy?",
-        "Name and cell number, my friend, go!",
-        "Which cell is the rascal in, and what is it called?"
+        "Which cell or place is it in, and what is it called?",
+        "Ha, I knew it! Where is it, and what's its name, buddy?",
+        "Name and place, my friend, go!",
+        "Where is the rascal, and what is it called?"
       ]
     },
     "bundle_name": {
@@ -440,6 +442,46 @@
         "Don't stop now, buddy.",
         "Mhm, keep it coming.",
         "I'm hanging on your words."
+      ]
+    },
+    "missed_name": {
+      "serious": [
+        "What is it called?",
+        "What do you call it?",
+        "And its name?",
+        "What is the part called?"
+      ],
+      "playful": [
+        "What is it called?",
+        "And what's its name?",
+        "What do we call it?",
+        "Who is this little guy?"
+      ],
+      "unhinged": [
+        "What is it called?",
+        "And what do we christen it, buddy?",
+        "Name it, my friend!",
+        "What's the rascal called?"
+      ]
+    },
+    "missed_where": {
+      "serious": [
+        "Where is it?",
+        "Which cell or place is it in?",
+        "Where was it?",
+        "Where does it lie?"
+      ],
+      "playful": [
+        "Where is it?",
+        "And where is it hiding?",
+        "Which cell or place?",
+        "Where did you find it?"
+      ],
+      "unhinged": [
+        "Where is it?",
+        "Where is the sneaky thing, buddy?",
+        "Which cell or place, my friend?",
+        "Where did it hide?"
       ]
     }
   }

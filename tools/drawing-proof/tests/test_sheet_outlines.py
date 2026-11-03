@@ -85,9 +85,20 @@ class SeparateTest(unittest.TestCase):
         tiny = np.zeros(empty.shape[:2], bool)
         tiny[200:250, 300:800] = True
         with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sheet_outlines.muse_sam, "sam_mask", return_value=(tiny, {})):
-            refined, method = sheet_outlines.refine_part(rectified, empty, firm, Path(tmp))
+            refined, method = sheet_outlines.refine_part(rectified, np.zeros(firm.shape, bool), firm, Path(tmp))
         self.assertTrue((refined == firm).all())
         self.assertIn("difference", method)
+
+    def test_sheet_flood_crosses_a_soft_shadow_but_not_a_sharp_edge(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        fade = np.ones((800, 1200, 1), np.float32)
+        fade[300:500, 500:800] = 0.62
+        fade = cv2.GaussianBlur(fade, (0, 0), 40)[..., None]  # soft cast shadow
+        image = (empty * fade).astype(np.uint8)
+        cv2.rectangle(image, (100, 100), (300, 300), (90, 95, 92), -1)  # grey as a shadow, but with a sharp edge
+        reached = sheet_outlines.reached_by_sheet(image, empty, (0, 0, 1200, 800), PPM)
+        self.assertTrue(reached[400, 650])
+        self.assertFalse(reached[200, 200])
 
     def test_an_empty_sheet_gives_nothing(self):
         empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)

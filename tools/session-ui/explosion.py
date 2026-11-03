@@ -23,6 +23,9 @@ session id as everywhere else; ``Handler.workspace_root`` is the workspace root;
 Every POST answers with the refreshed ``explosion_view`` plus ``action`` (and ``added`` for propose). The page for a
 session is ``/explosion.html?session=<id>``; it announces the selected part with the window event
 ``anastylos:part-selected`` (detail ``{job, label}``; both null when the selection is cleared).
+
+Confirming a layer also links its drawing to the one matching memory part (``link`` in the answer: linked, already_linked or
+not_linked with the reason); several matches or a different/stale existing link are left alone for the panel.
 """
 
 from __future__ import annotations
@@ -33,6 +36,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import assembly_help
 import drawings
 from adapter import AdapterError, closing_write, resolve_session
 
@@ -90,6 +94,17 @@ def _memory_part_for(root: Path, session_id: str, session: Path, job: str, label
         return {"status": "failed", "message": "the part could not be recorded"}
     matches = _memory_parts(session, label)
     return {"status": "recorded", "part": matches[0]["id"]} if len(matches) == 1 else {"status": "recorded"}
+
+
+def _link_confirmed_part(root: Path, session_id: str, job: str, part_id: str) -> dict:
+    """The operator's confirmation also links drawing and part for assembly help. An existing link to the same part stays;
+    a different or stale one is left alone (replacing it is the explicit choice in the panel)."""
+    try:
+        record = assembly_help.link_part(root, session_id, job, part_id, supersede=False,
+                                         note="confirmed in the explosion view")
+    except AdapterError as exc:
+        return {"status": "not_linked", "part": part_id, "message": str(exc)}
+    return {"status": "already_linked" if record.get("already_recorded") else "linked", "part": part_id}
 
 
 def _session(root: Path, session_id: str) -> Path:
@@ -189,6 +204,8 @@ def layout_action(root: Path, session_id: str, body: dict) -> dict:
                 extra["memory"] = memory
                 part = f"; memory part {memory['part']}" if memory.get("part") else ""
                 drawings.bind(root, session_id, body["job"], "confirm", f"confirmed in the explosion view as {layer['label']}{part}")
+                if memory.get("part"):
+                    extra["link"] = _link_confirmed_part(root, session_id, body["job"], memory["part"])
         elif action == "rotate":
             explosion_layout.rotate_layer(session, _text(body, "job", required=True))
         else:

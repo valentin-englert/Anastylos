@@ -67,21 +67,21 @@ def fake_worker(status: str = "ready", frames: int = 4, returncode: int = 0):
         args = dict(zip(command[3::2], command[4::2]))
         out = Path(args["--out"])
         out.mkdir(parents=True)
-        t = float(args["--t-s"])
-        kept = [{"file": f"seq-{i:03d}.jpg", "t_s": round(t - 1 + i * 0.5, 3), "frame_index": i} for i in range(frames if status == "ready" else 0)]
+        start, end, anchor = float(args["--start-s"]), float(args["--end-s"]), float(args["--anchor-s"])
+        count = frames if status == "ready" else 0
+        kept = [{"file": f"seq-{i:03d}.jpg", "t_s": round(start + i * (end - start) / max(count - 1, 1), 3), "frame_index": i,
+                 "skin": 0.0} for i in range(count)]
         for item in kept:
             (out / item["file"]).write_bytes(b"\xff\xd8" + item["file"].encode())
-        picks = {}
-        for name, at in (("before", t - 3), ("after", t + 3)):
+        picks = {"before": None, "after": None}
+        for name, at in (("before", anchor - 0.5), ("after", anchor + 0.5)):
             if status == "ready":
                 (out / f"{name}.jpg").write_bytes(b"\xff\xd8" + name.encode())
-                picks[name] = {"file": f"{name}.jpg", "t_s": at, "frame_index": 1}
-            else:
-                picks[name] = None
-        manifest = {"schema": "anastylos-replay-evidence@1", "status": status, "requested_t_s": t, "rate_fps": 10.0,
-                    "px_per_mm": 3.0, "video": {"name": "video.mp4", "sha256": args["--video-sha256"]}, "frames": kept,
-                    "skipped": [{"t_s": 1.0, "frame_index": 3, "reason": "rms 1.3 mm > 0.5 mm"}], "before": picks["before"],
-                    "after": picks["after"], "generated_at": "2026-11-02T20:00:00"}
+                picks[name] = {"file": f"{name}.jpg", "t_s": at, "frame_index": 1, "skin": 0.0, "low_skin": name == "before"}
+        manifest = {"schema": "anastylos-replay-evidence@2", "status": status, "start_s": start, "end_s": end, "anchor_s": anchor,
+                    "rate_fps": 2.5, "px_per_mm": 3.0, "video": {"name": "video.mp4", "sha256": args["--video-sha256"]},
+                    "frames": kept, "skipped": [{"t_s": 1.0, "frame_index": 3, "reason": "rms 1.3 mm > 0.5 mm"}],
+                    "before": picks["before"], "after": picks["after"], "generated_at": "2026-11-02T20:00:00"}
         (out / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
         return SimpleNamespace(returncode=0, stderr="", stdout="{}")
 
@@ -166,6 +166,40 @@ class MomentMeaningTest(ReplayCase):
             replay.replay_moments(self.root, "s1", [])
 
 
+class ClipPlanTest(ReplayCase):
+    DEPOSIT = "deposit_window_start"
+
+    def test_a_deposit_clip_starts_at_the_previous_deposit_within_twelve_seconds(self):
+        questions = [{"deposit_window_s": [20.0, 25.0]}, {"deposit_window_s": [30.1, 31.0]}, {"deposit_window_s": [35.4, 36.0]}]
+        clip = replay._clip(self.DEPOSIT, 35.4, None, questions)
+        self.assertEqual((clip["start_s"], clip["end_s"], clip["anchor_s"]), (30.1, 37.4, 35.4))
+
+    def test_without_a_close_previous_deposit_the_lead_is_twelve_seconds_and_never_below_zero(self):
+        self.assertEqual(replay._clip(self.DEPOSIT, 35.4, None, [{"deposit_window_s": [5.0, 6.0]}])["start_s"], 23.4)
+        self.assertEqual(replay._clip(self.DEPOSIT, 5.0, None, [])["start_s"], 0.0)
+
+    def test_a_previous_deposit_right_before_still_leaves_three_seconds(self):
+        self.assertEqual(replay._clip(self.DEPOSIT, 35.4, None, [{"deposit_window_s": [34.5, 35.0]}])["start_s"], 32.4)
+
+    def test_removal_and_other_times_get_their_own_clips(self):
+        removal = replay._clip("removal_window_start", 30.0, [30.0, 34.5], [])
+        self.assertEqual((removal["start_s"], removal["end_s"]), (29.0, 35.5))
+        self.assertEqual(replay._clip("removal_window_start", 30.0, [30.0, 80.0], [])["end_s"], 42.0)
+        around = replay._clip("unspecified", 41.5, None, [])
+        self.assertEqual((around["kind"], around["start_s"], around["end_s"]), ("around", 40.5, 42.5))
+
+    def test_the_label_says_the_removal_is_not_marked_and_the_key_changed(self):
+        moment = self.moment("dec-0001")
+        self.assertIn("Recorded seconds before this part was put down; the removal itself is not marked.", moment["clip_text"])
+        self.assertIn("10.2–24.2", moment["clip_text"])
+        self.assertTrue(moment["key"].endswith("-v2"))
+        old = self.session_dir / "evidence" / "replay" / f"{VIDEO_SHA[:12]}-22200-v1"
+        old.mkdir(parents=True)
+        (old / "manifest.json").write_text(json.dumps({"status": "ready"}), encoding="utf-8")
+        self.assertEqual(self.moment("dec-0001")["status"], "not_prepared")  # a version 1 folder is never read
+        self.assertIn("around this time", self.moment("dec-0005")["clip_text"])
+
+
 class PrepareTest(ReplayCase):
     def test_extracts_once_and_serves_only_names_times_and_hashes(self):
         run = fake_worker()
@@ -176,16 +210,19 @@ class PrepareTest(ReplayCase):
         command = run.calls[0]["command"]
         self.assertEqual(command[command.index("--video") + 1], str(self.video))
         self.assertEqual(command[command.index("--video-sha256") + 1], VIDEO_SHA)
-        self.assertEqual(command[command.index("--t-s") + 1], "22.2")
+        self.assertEqual([command[command.index(flag) + 1] for flag in ("--start-s", "--end-s", "--anchor-s")],
+                         ["10.2", "24.2", "22.2"])
         self.assertTrue(Path(run.calls[0]["env"]["ANASTYLOS_DRAWING_CACHE"]).is_relative_to(self.session_dir / "evidence"))
         player = first["player"]
         self.assertEqual([f["file"] for f in player["frames"]], ["seq-000.jpg", "seq-001.jpg", "seq-002.jpg", "seq-003.jpg"])
-        self.assertEqual((player["before"]["t_s"], player["after"]["t_s"]), (19.2, 25.2))
+        self.assertEqual((player["before"]["t_s"], player["after"]["t_s"]), (21.7, 22.7))
+        self.assertEqual((player["before"]["low_skin"], player["after"]["low_skin"]), (True, False))
+        self.assertEqual(player["playback_fps"], replay.MIN_PLAYBACK_FPS)
         self.assertEqual(player["skipped_frames"], 1)
         shown = json.dumps(first)
         for secret in (str(self.video), "video.mp4", str(self.session_dir), "\\\\"):
             self.assertNotIn(secret, shown)
-        self.assertEqual(first["key"], f"{VIDEO_SHA[:12]}-22200-v1")
+        self.assertEqual(first["key"], f"{VIDEO_SHA[:12]}-22200-10200-24200-v2")
         self.assertTrue((self.session_dir / "evidence" / "replay" / first["key"] / "manifest.json").is_file())
         again = replay.replay_prepare(self.root, "s1", "dec-0001", run=run)
         self.assertEqual((len(run.calls), again["status"]), (1, "ready"))
@@ -221,7 +258,7 @@ class PrepareTest(ReplayCase):
             with self.subTest(name=bad_name), self.assertRaises(AdapterError) as caught:
                 replay.replay_file(self.root, "s1", key, bad_name)
             self.assertEqual(caught.exception.status, 404)
-        for bad_key in ("", "..", "../replay", key + "/..", "zz" * 6 + "-1-v1"):
+        for bad_key in ("", "..", "../replay", key + "/..", "zz" * 6 + "-1-2-3-v2", VIDEO_SHA[:12] + "-1-v1"):
             with self.subTest(key=bad_key), self.assertRaises(AdapterError):
                 replay.replay_file(self.root, "s1", bad_key, "seq-000.jpg")
 
@@ -291,7 +328,7 @@ class WorkerTest(unittest.TestCase):
     def test_failed_registration_frames_are_skipped_and_recorded(self):
         failing = {70, 75}
         with self.registered(failing):
-            manifest = self.worker.extract(self.video, self.sha, 7.5, self.tmp / "out")
+            manifest = self.worker.extract(self.video, self.sha, 6.5, 8.5, 7.5, self.tmp / "out")
         out = self.tmp / "out"
         self.assertEqual(manifest["status"], "ready")
         self.assertEqual([s["frame_index"] for s in manifest["skipped"]], [70, 75])
@@ -304,32 +341,43 @@ class WorkerTest(unittest.TestCase):
         self.assertFalse((self.tmp / "out.partial").exists())
         self.assertEqual(manifest["video"]["sha256"], self.sha)
         self.assertEqual(manifest["files_sha256"]["before.jpg"], hashlib.sha256((out / "before.jpg").read_bytes()).hexdigest())
-        self.assertLessEqual(abs(manifest["before"]["t_s"] - 4.5), 1.0)
-        self.assertLessEqual(abs(manifest["after"]["t_s"] - 10.5), 1.0)
+        self.assertEqual((manifest["before"]["t_s"], manifest["after"]["t_s"]), (7.4, 7.6))
+        self.assertTrue(manifest["before"]["low_skin"] and manifest["after"]["low_skin"])
         self.assertEqual((manifest["memory_written"], manifest["model_called"]), (False, False))
 
     def test_too_few_registered_frames_means_unregistered_and_no_picks(self):
         with self.registered(set(range(150))):
-            manifest = self.worker.extract(self.video, self.sha, 7.5, self.tmp / "out")
+            manifest = self.worker.extract(self.video, self.sha, 6.5, 8.5, 7.5, self.tmp / "out")
         self.assertEqual((manifest["status"], manifest["frames"], manifest["before"], manifest["after"]), ("unregistered", [], None, None))
         self.assertEqual(len(manifest["skipped"]), 21)
 
-    def test_picks_prefer_a_registered_frame_and_try_the_next_when_one_fails(self):
-        with self.registered({35}):  # first in rank (no motion yet) but not registrable
-            manifest = self.worker.extract(self.video, self.sha, 7.5, self.tmp / "out")
-        self.assertIsNotNone(manifest["before"])
-        self.assertNotEqual(manifest["before"]["frame_index"], 35)
-        self.assertEqual(manifest["refused_picks"]["before"][0]["frame_index"], 35)
+    def test_a_long_clip_keeps_about_thirty_frames(self):
+        with self.registered(set()):
+            manifest = self.worker.extract(self.video, self.sha, 1.0, 13.0, 12.0, self.tmp / "out")
+        self.assertTrue(20 <= len(manifest["frames"]) <= 40, len(manifest["frames"]))
+        self.assertLessEqual(manifest["rate_fps"], 10.0)
+        self.assertEqual((manifest["frames"][0]["t_s"], manifest["end_s"]), (1.0, 13.0))
+
+    def test_the_pair_is_chosen_around_the_anchor_and_hands_are_flagged(self):
+        kept = [{"file": f"seq-{i:03d}.jpg", "t_s": float(i), "frame_index": i, "skin": skin}
+                for i, skin in enumerate([0.01, 0.015, 0.2, 0.3, 0.25, 0.01, 0.4])]
+        before, after = self.worker.choose_pair(kept, anchor_s=3.0)
+        self.assertEqual((before["t_s"], before["low_skin"]), (1.0, True))  # the last low-skin frame up to the anchor
+        self.assertEqual((after["t_s"], after["low_skin"]), (5.0, True))    # the first low-skin frame after it
+        hands = [{**f, "skin": 0.3} for f in kept]
+        before, after = self.worker.choose_pair(hands, anchor_s=3.0)
+        self.assertEqual((before["t_s"], before["low_skin"], after["t_s"], after["low_skin"]), (3.0, False, 4.0, False))
+        self.assertEqual(self.worker.choose_pair(kept[4:], anchor_s=0.0), (None, {**kept[5], "low_skin": True}))
 
     def test_a_different_video_is_refused_and_nothing_is_written(self):
         with self.registered(set()), self.assertRaisesRegex(ValueError, "differs from the SHA-256"):
-            self.worker.extract(self.video, "0" * 64, 7.5, self.tmp / "out")
+            self.worker.extract(self.video, "0" * 64, 6.5, 8.5, 7.5, self.tmp / "out")
         self.assertFalse((self.tmp / "out").exists())
         self.assertFalse((self.tmp / "out.partial").exists())
 
     def test_command_line_failure_exit_code(self):
         done = subprocess.run([sys.executable, "-B", str(UI_ROOT / "replay_worker.py"), "--video", str(self.video),
-                               "--video-sha256", "0" * 64, "--t-s", "7.5", "--out", str(self.tmp / "out")],
+                               "--video-sha256", "0" * 64, "--start-s", "6.5", "--end-s", "8.5", "--anchor-s", "7.5", "--out", str(self.tmp / "out")],
                               capture_output=True, text=True, env={**os.environ})
         self.assertEqual(done.returncode, 2)
         self.assertIn("differs from the SHA-256", done.stderr)

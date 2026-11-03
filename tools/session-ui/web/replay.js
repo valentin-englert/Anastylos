@@ -69,22 +69,23 @@
     $("part-replay-after").src = fileUrl(moment.key, player.after.file);
     $("part-replay-split").value = "50";
     $("part-replay-after").style.clipPath = "inset(0 0 0 50%)";
+    const hands = (pick) => (pick.low_skin ? "" : " (hands in view)");
     $("part-replay-compare-times").textContent =
-      `Left: earlier view, observed video time ${player.before.t_s.toFixed(1)} s. ` +
-      `Right: later view, observed video time ${player.after.t_s.toFixed(1)} s.`;
+      `Left: the last view before the recorded time, observed video time ${player.before.t_s.toFixed(1)} s${hands(player.before)}. ` +
+      `Right: the first view after it, observed video time ${player.after.t_s.toFixed(1)} s${hands(player.after)}.`;
   }
 
   function showPlayer(moment) {
     const player = moment.player;
     frames = player.frames;
-    rateFps = player.rate_fps;
+    rateFps = player.playback_fps;
     images = frames.map((frame) => {
       const image = new Image();
       image.src = fileUrl(moment.key, frame.file);
       return image;
     });
     $("part-replay-label").textContent = moment.label_fixed;
-    $("part-replay-meaning").textContent = moment.meaning_text +
+    $("part-replay-meaning").textContent = `${moment.meaning_text} ${moment.clip_text}` +
       (player.skipped_frames ? ` ${player.skipped_frames} frame(s) around it failed sheet registration and are not shown.` : "");
     $("part-replay-scrub").max = String(frames.length - 1);
     showCompare(moment, player);

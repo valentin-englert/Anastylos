@@ -59,6 +59,8 @@ OPENING_MIN_MM2 = 8.0
 OPENING_MAX_SHARE = 0.4
 OPENING_MIN_LUM = -0.7  # paper in a hole's shadow stays above this; a dark recess does not
 OPENING_MAX_SPREAD = 20.0  # lightness std in a hole; plain paper is even, a white wire on a board is not
+OPENING_LARGE_MM2 = 150.0
+OPENING_MIN_PAPER = 0.65  # of the sheet's lightness around the part: shaded paper measured 0.72, pale plastic 0.57
 OPENING_ROUND_SOLIDITY = 0.8  # above it the shape has no real corners, so a wall's shadow bite is filled by the hull
 PART_EDGE_PER_MM = 0.35  # sharper than SHARP_EDGE_PER_MM's blur allows: a part as bright as the sheet still has fine edges
 EDGE_SEAL_MM = 3.0  # closes gaps in a part's edge so the sheet cannot flow in; given back afterwards
@@ -324,12 +326,16 @@ def find_openings(rectified: source.RectifiedFrame, empty: np.ndarray, part: np.
     lightness = cv2.GaussianBlur(cv2.cvtColor(rectified.image, cv2.COLOR_BGR2LAB)[..., 0], (0, 0), 1.5)
     soft = np.log((cv2.GaussianBlur(rectified.image.astype(np.float32), (0, 0), 1.5) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 1.5) + 8))
     sheet_lum = soft.mean(axis=2)
+    around = (cv2.dilate(part.astype(np.uint8), _ellipse(12.0, ppm)) > 0) & ~(cv2.dilate(part.astype(np.uint8), _ellipse(5.0, ppm)) > 0)
+    paper = float(np.median(lightness[around]))
     found: list[np.ndarray] = []
     for x, y in points:
         hole = trace_opening(lightness, sheet_lum, part, (x + bx, y + by), ppm)
         if hole is None or any((hole & other).any() for other in found):
             continue
-        if np.median(sheet_lum[hole]) >= OPENING_MIN_LUM and lightness[hole].std() <= OPENING_MAX_SPREAD:  # Muse can point at a pale patch or a wire
+        looks_like_paper = np.median(lightness[hole]) >= OPENING_MIN_PAPER * paper
+        even = lightness[hole].std() <= OPENING_MAX_SPREAD or hole.sum() > OPENING_LARGE_MM2 * ppm * ppm  # a large hole holds a wall's shadow
+        if looks_like_paper and even:  # Muse can point at a pale patch or a wire
             found.append(hole)
     return found, None
 

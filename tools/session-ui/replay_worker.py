@@ -24,6 +24,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -31,6 +32,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "drawing-proof"))
 import frames  # noqa: E402
 import quality  # noqa: E402
+import rectified_frames  # noqa: E402
 import source  # noqa: E402
 
 SCHEMA = "anastylos-replay-evidence@2"
@@ -45,16 +47,10 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _registered(video: Path, frame_index: int, ppm: float):
-    """The rectified frame, or ``(None, reason)``; a registration with rms above the gate counts as failed."""
-    try:
-        _raw, rectified = source.rectify(video, frame_index, FULL_PAGE_MM, ppm)
-    except source.SourceError as exc:
-        return None, str(exc)[:200]
-    rms = rectified.provenance["registration"].get("rms_mm")
-    if isinstance(rms, (int, float)) and rms > MAX_RMS_MM:
-        return None, f"registration rms {rms:.2f} mm is above {MAX_RMS_MM} mm"
-    return rectified, None
+def _registered(sheet: rectified_frames.SheetFrames, frame_index: int):
+    """``(object with .image, None)`` for a registered frame, else ``(None, reason)`` (rms above the gate counts as failed)."""
+    image, reason = sheet.rectified(frame_index)
+    return (None, reason) if image is None else (SimpleNamespace(image=image), None)
 
 
 def _save(path: Path, image) -> None:
@@ -66,14 +62,14 @@ def _skin(image) -> float:
     return round(quality.skin_fraction(image, np.ones(image.shape[:2], bool)), 4)
 
 
-def _extract_sequence(video: Path, out: Path, fps: float, total: int, start_s: float, end_s: float, rate: float, ppm: float):
+def _extract_sequence(sheet, out: Path, fps: float, total: int, start_s: float, end_s: float, rate: float):
     kept, skipped, seen = [], [], set()
     for step in range(int((end_s - start_s) * rate) + 1):
         index = int(round((start_s + step / rate) * fps))
         if index < 0 or index >= total or index in seen:
             continue
         seen.add(index)
-        rectified, reason = _registered(video, index, ppm)
+        rectified, reason = _registered(sheet, index)
         if rectified is None:
             skipped.append({"t_s": round(index / fps, 3), "frame_index": index, "reason": reason})
             continue
@@ -118,7 +114,8 @@ def extract(video: Path, video_sha256: str, start_s: float, end_s: float, anchor
     partial = out.with_name(out.name + ".partial")
     shutil.rmtree(partial, ignore_errors=True)
     partial.mkdir(parents=True)
-    kept, skipped = _extract_sequence(video, partial, fps, total, start_s, end_s, rate, ppm)
+    with rectified_frames.SheetFrames(video, ppm, FULL_PAGE_MM) as sheet:
+        kept, skipped = _extract_sequence(sheet, partial, fps, total, start_s, end_s, rate)
     ready = len(kept) >= MIN_SEQUENCE_FRAMES
     before = after = None
     if ready:

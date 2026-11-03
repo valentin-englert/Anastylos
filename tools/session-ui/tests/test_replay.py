@@ -417,7 +417,7 @@ class WorkerTest(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def registered(self, failing: set[int]):
-        def fake(video, frame_index, ppm):
+        def fake(sheet, frame_index):
             if frame_index in failing:
                 return None, "sheet registration failed: rms 1.3 mm > 0.5 mm"
             return SimpleNamespace(image=self.np.full((9, 12, 3), frame_index % 256, self.np.uint8)), None

@@ -201,7 +201,10 @@ function wire() {
     $("outlines-button").disabled = true;
     setState("Looking for parts on the sheet. This can take a minute.");
     try {
-      await load(await call("/api/explosion/outlines", {}));
+      const found = await call("/api/explosion/outlines", {});
+      await load(found);
+      const missing = found.not_drawn || [];
+      if (missing.length) setState(`${missing.length} more thing(s) on the sheet could not be outlined; nothing was drawn for them.`, true);
     } catch (error) {
       setState(error.message, true);
     } finally {

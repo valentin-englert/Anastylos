@@ -610,3 +610,9 @@ main > section[data-page="questions"] > .page-head { order: 0; }
 .cta-link svg { width: 1.1em; height: 1.1em; fill: none; stroke: var(--ochre); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 160ms ease; }
 .cta-link:hover svg, .cta-link:focus-visible svg { transform: translate(3px, -3px); }
 .cta-link:hover { color: var(--ochre); }
+
+/* phone videos: a card without a button is not automatically still running */
+#video-list .drawing-job[data-state="done"] { --job: var(--confirmed); order: 0; }
+#video-list .drawing-job[data-state="done"]::before { content: "Processed"; }
+#video-list .drawing-job[data-state="done"]::after { background: var(--confirmed); }
+#video-list .drawing-job[data-state="complete"]::before { content: "Ready"; }

@@ -146,6 +146,7 @@
     if (result.memory_sha256) details.push(line(`Memory sha256 ${result.memory_sha256.slice(0, 12)}…`));
     $("part-help-details").replaceChildren(...details);
     renderLink(result);
+    window.dispatchEvent(new CustomEvent("anastylos:part-help-result", { detail: result }));
   }
 
   async function ask(event, target = selected, revision = selectionRevision) {

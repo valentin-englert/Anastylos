@@ -106,7 +106,7 @@ def _tokens(text: str) -> set[str]:
 
 # ------------------------------------------------------------------ memory (read-only)
 
-def _read_memory(state) -> dict:
+def read_memory(state) -> dict:
     path = state.memory_dir / "memory.jsonl"
     if not path.is_file():
         raise AdapterError("This session has no memory yet; no part can be linked or asked about.", 409)
@@ -224,7 +224,7 @@ def link_candidates(root: Path, session_id: str, job: str) -> dict:
     """Current link state plus every current memory part, ranked by label match; never links anything."""
     state = adapter._load_state(root, session_id)
     context = _job_context(root, session_id, job)
-    memory = _read_memory(state)
+    memory = read_memory(state)
     link = _read_link(context["dir"])
     link_state, _reason = _link_state(link, context, memory)
     layer = _layer(context["dir"])
@@ -250,7 +250,7 @@ def link_part(root: Path, session_id: str, job: str, part_id: str, supersede: bo
         raise AdapterError(f"This drawing cannot be linked (state {summary['state']}, status {summary['status']}).", 409)
     if (summary["binding"] or {}).get("decision") == "reject":
         raise AdapterError("The operator rejected this drawing; it cannot be linked to a part.", 409)
-    memory = _read_memory(state)
+    memory = read_memory(state)
     event = next((e for e in memory["parts"] if e["id"] == part_id), None)
     if event is None:
         raise AdapterError(f"{part_id!r} is not a current declared part in the session memory.", 409)
@@ -411,7 +411,7 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
     if not isinstance(question, str) or not question.strip():
         raise AdapterError("The question is required.", 400)
     state = adapter._load_state(root, session_id)
-    memory = _read_memory(state)
+    memory = read_memory(state)
     target, context = _target_for(root, session_id, job_or_part, memory)
     matched = part_intent.match(question)
     if matched is None:

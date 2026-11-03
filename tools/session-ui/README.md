@@ -177,3 +177,15 @@ guided link. Opening the page opens the guided session and shows its QR; the pho
 Routes: `GET /api/phone/requests`, `GET /api/phone/pair-qr`, `POST /api/phone/pair`, `POST /api/phone/decision`
 `{request, decision: approve|reject}`; videos: `GET /api/videos`, `POST /api/videos/process {video}`.
 Tests: `tests/test_phone.py`, `tests/test_videos.py`.
+
+## Evidence replay (assembly help)
+
+For a selected part with a recorded video time (`t_s` on its `declared_removal`) the explosion page's assembly help
+lists "Recorded moment" entries (an assembly lists the parts that `belongs_here`). `replay.py` prepares, from the stored
+video only, a 2 s sequence of sheet-registered, rectified JPEG frames (about 10 fps, 1260 px wide) and a before/after pair
+three seconds either side, in `<session>/evidence/replay/<video-sha-prefix>-<ms>-v1/`; `replay_worker.py` does the OpenCV
+work in its own process (frames that fail registration, rms above 0.5 mm, are skipped and counted). The page plays the
+images forward or in reverse and offers a before/after slider; the browser only gets whitelisted JPEG names, never the
+video or a path. What `t_s` marks depends on the answered question and is shown in fixed words: for a typed source it
+is the start of the DEPOSIT window, not a removal. Nothing writes memory and no model is called. Routes and details:
+`replay.py` module docstring.

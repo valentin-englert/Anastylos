@@ -98,6 +98,15 @@ def explosion_bytes(root: Path, session_id: str, name: str, job: str = "", mode:
     return path.read_bytes(), JOB_FILES[name]
 
 
+def _not_drawn(stdout: str | None) -> list:
+    """Parts the tool saw but would not draw; the older result is a plain list of jobs."""
+    try:
+        result = json.loads(stdout or "")
+    except ValueError:
+        return []
+    return result.get("not_drawn", []) if isinstance(result, dict) else []
+
+
 def find_outlines(root: Path, session_id: str, run=subprocess.run) -> dict:
     """The operator's click: outlines of the large parts in the session's video become unconfirmed drawings in the layout."""
     session = _session(root, session_id)
@@ -112,7 +121,7 @@ def find_outlines(root: Path, session_id: str, run=subprocess.run) -> dict:
     if done.returncode:
         reason = (done.stderr or "").strip().splitlines()
         raise AdapterError(f"Could not find outlines: {reason[-1] if reason else 'the tool reported an error'}", 502)
-    return layout_action(root, session_id, {"action": "propose"})
+    return {**layout_action(root, session_id, {"action": "propose"}), "not_drawn": _not_drawn(done.stdout)}
 
 
 def layout_action(root: Path, session_id: str, body: dict) -> dict:

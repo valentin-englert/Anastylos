@@ -14,12 +14,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.anastylos.capture.camera.ExposureLockResult
 import org.anastylos.capture.camera.VideoCamera
 import org.anastylos.capture.camera.VideoRecordingEvent
 
 sealed interface RecordingState {
     data object Idle : RecordingState
-    data class Recording(val startedAtMs: Long) : RecordingState
+
+    /** "Empty sheet, please": focus, exposure and white balance are being locked before the recording starts. */
+    data object Preparing : RecordingState
+
+    /** [lock] says what held for the take; null when no lock was tried. */
+    data class Recording(
+        val startedAtMs: Long,
+        val emptySheetMs: Long = EMPTY_SHEET_MS,
+        val lock: ExposureLockResult? = null,
+    ) : RecordingState
     data class Failed(val message: String) : RecordingState
 }
 
@@ -55,9 +65,13 @@ class RecordingController(
 
     private var uploadJob: Job? = null
     private var recordingSessionId: String? = null
+    private var currentNote: TakeNote? = null
+
+    /** What held for one take; written next to the file for the operator's records, never uploaded. */
+    private data class TakeNote(val startedAtMs: Long, val emptySheetMs: Long, val lock: ExposureLockResult)
 
     fun start() {
-        if (_recording.value is RecordingState.Recording) return
+        if (_recording.value is RecordingState.Recording || _recording.value is RecordingState.Preparing) return
         val context = uploadContext()
         if (context == null) {
             _recording.value = RecordingState.Failed("Attach a session first, then record.")
@@ -71,14 +85,34 @@ class RecordingController(
         val file = File(directory, "disassembly-${clockMs()}.mp4")
         directory.mkdirs()
         recordingSessionId = context.sessionId
-        _recording.value = RecordingState.Recording(clockMs())
+        _recording.value = RecordingState.Preparing
         scope.launch {
+            // Bind the video use case first, then converge and lock on the final session; a lock that
+            // fails is a visible note on the take, never a reason not to record.
+            val prepared = try {
+                cam.prepareVideo()
+            } catch (e: Exception) {
+                false
+            }
+            val lock = if (prepared) {
+                try {
+                    cam.lockExposure()
+                } catch (e: Exception) {
+                    ExposureLockResult.failed("locking failed (${e.javaClass.simpleName})")
+                }
+            } else {
+                ExposureLockResult.failed("the camera could not be prepared for video")
+            }
             val started = try {
                 cam.startVideo(file) { event -> onCameraEvent(file, event) }
             } catch (e: Exception) {
                 false
             }
-            if (!started && _recording.value is RecordingState.Recording) {
+            if (started) {
+                currentNote = TakeNote(clockMs(), EMPTY_SHEET_MS, lock)
+                _recording.value = RecordingState.Recording(clockMs(), EMPTY_SHEET_MS, lock)
+            } else {
+                cam.unlockExposure()
                 _recording.value = RecordingState.Failed("The camera could not start recording.")
             }
         }
@@ -101,6 +135,7 @@ class RecordingController(
     }
 
     private fun onCameraEvent(file: File, event: VideoRecordingEvent) {
+        camera()?.unlockExposure()
         when (event) {
             is VideoRecordingEvent.Finished -> scope.launch { saved(event.file) }
             is VideoRecordingEvent.Failed -> {
@@ -120,9 +155,28 @@ class RecordingController(
             _recording.value = RecordingState.Failed("The recording could not be saved.")
             return
         }
+        currentNote?.let { writeNote(file, it) }
         store.add(entry)
         _recording.value = RecordingState.Idle
         resumePending()
+    }
+
+    /** `<video>.take.json` beside the video: lock state and the length of the empty-sheet lead-in. Local only. */
+    private suspend fun writeNote(video: File, note: TakeNote) = withContext(io) {
+        try {
+            val json = buildString {
+                append("{\"schema\":\"anastylos-take-note@1\",\"started_at_ms\":").append(note.startedAtMs)
+                append(",\"empty_sheet_s\":").append(note.emptySheetMs / 1000.0)
+                append(",\"ae_locked\":").append(note.lock.aeLocked)
+                append(",\"awb_locked\":").append(note.lock.awbLocked)
+                append(",\"af_locked\":").append(note.lock.afLocked)
+                append(",\"lock_note\":").append(note.lock.note?.let { "\"" + it.replace("\"", "'") + "\"" } ?: "null")
+                append("}")
+            }
+            File(video.parentFile, video.name + ".take.json").writeText(json)
+        } catch (_: Exception) {
+            // The note is a convenience; the take itself is already saved.
+        }
     }
 
     private suspend fun uploadLoop() {

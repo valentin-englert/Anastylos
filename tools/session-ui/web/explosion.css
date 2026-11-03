@@ -92,3 +92,12 @@ form select { width: 100%; padding: 0.3rem 0.4rem; border: 1px solid var(--line)
 form button { margin: 0.3rem 0.3rem 0 0; }
 
 #thumb-rectified { max-width: 100%; border: 1px solid var(--line); background: #fff; }
+
+/* Evidence replay: rectified sheet frames, played from images (no video element, no seeking). */
+.replay-image { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: var(--wash); }
+.replay-label { color: var(--ink); font-weight: 600; }
+.replay-controls { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+.replay-compare { position: relative; }
+.replay-compare .replay-after { position: absolute; inset: 0; clip-path: inset(0 0 0 50%); }
+#part-replay-list button { display: block; margin: 0.2rem 0 0.5rem; }
+#part-replay input[type="range"] { width: 100%; }

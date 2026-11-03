@@ -15,6 +15,21 @@ sealed interface VideoRecordingEvent {
  * controller unit-tests against fakes.
  */
 interface VideoCamera {
+    /**
+     * Binds the video use case ahead of the recording so that focus, exposure and white balance can be
+     * locked on the final camera session. False (no throw) when that fails; recording may still work.
+     */
+    suspend fun prepareVideo(): Boolean = true
+
+    /**
+     * Lets AF, AE and AWB converge on the sheet, then holds them until [unlockExposure]. Never throws;
+     * a lock that cannot be honoured is reported in the result and recording goes on.
+     */
+    suspend fun lockExposure(): ExposureLockResult = ExposureLockResult.failed("exposure lock is not available")
+
+    /** Gives 3A back to the camera. Safe to call without a lock. */
+    fun unlockExposure() {}
+
     /** False (no throw) when the camera cannot record; later results arrive as [VideoRecordingEvent]. */
     suspend fun startVideo(output: File, onEvent: (VideoRecordingEvent) -> Unit): Boolean
 

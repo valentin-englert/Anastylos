@@ -4,11 +4,16 @@ On the full page Muse's box is too loose for SAM. The sheet itself separates the
 sheet colour inside the work area, Otsu, strict components as seeds, a looser mask for the extent, watershed so that parts
 joined by a shadow stay apart, and an opening that removes thin things such as a cable.
 This finds outlines, not identities: a part name here is a proposal and every job stays NEEDS_CONFIRMATION.
+
+When the video starts with an empty sheet, that view is the reference and the method is better: the log ratio to it separates
+material from cast shadow (``separate``). A part as pale as the sheet shows only through its shadow; it gets a tight box and SAM
+draws the outline, and if SAM's mask does not hold up, the part is reported instead of drawn.
 """
 
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import re
@@ -19,6 +24,8 @@ import numpy as np
 
 import draw
 import frames
+import muse_sam
+import quality
 import segment
 import source
 from drawing_job import render_layered_svg
@@ -34,6 +41,16 @@ MIN_AREA_MM2 = 1000.0
 CANDIDATE_STRIDE_S = 1.0
 CANDIDATE_FRAMES = 12
 MAX_SKIN = 0.02
+EMPTY_TIMES_S = (0.8, 1.5, 2.2, 2.9, 3.6)
+FINAL_TIMES_S = (0.3, 0.8, 1.3, 1.8, 2.3)
+# Log-ratio limits measured on two recordings with locked exposure; a cast shadow stayed inside them, material outside.
+SHADOW_FLOOR = -0.75
+CHROMA_MATERIAL = 0.13
+BRIGHTER_MATERIAL = 0.12
+MIN_PART_MM2 = 300.0
+BOX_MARGIN_MM = 6.0
+PALE_SHADOW_LUM = -0.25  # on a part as pale as the sheet: about 0 on the part, about -0.45 in its shadow
+MIN_KEPT_SHARE = 0.4
 
 
 def _ellipse(mm: float, ppm: float) -> np.ndarray:
@@ -75,6 +92,91 @@ def find_outlines(image: np.ndarray, area_px: tuple[int, int, int, int], ppm: fl
     return sorted((m for m in masks if m.sum() >= minimum), key=lambda m: -int(m.sum()))
 
 
+def separate(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> tuple[list[np.ndarray], list[list[int]]]:
+    """Against the empty sheet: filled masks of material parts, and tight boxes where something shows only by its shadow."""
+    x, y, w, h = area_px
+    inside = np.zeros(image.shape[:2], bool)
+    inside[y:y + h, x:x + w] = True
+    ratio = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 0.7) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 0.7) + 8))
+    lum = ratio.mean(axis=2)
+    chroma = np.sqrt(((ratio - lum[..., None]) ** 2).mean(axis=2))
+    firm = ((lum < SHADOW_FLOOR) | (chroma > CHROMA_MATERIAL) | (lum > BRIGHTER_MATERIAL)) & inside
+    firm = cv2.morphologyEx(cv2.morphologyEx(firm.astype(np.uint8), cv2.MORPH_OPEN, _ellipse(0.5, ppm)), cv2.MORPH_CLOSE, _ellipse(1.5, ppm))
+    contours, _ = cv2.findContours(firm, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    masks = []
+    for contour in contours:
+        if cv2.contourArea(contour) >= MIN_PART_MM2 * ppm * ppm:
+            mask = np.zeros(firm.shape, np.uint8)
+            cv2.drawContours(mask, [contour], -1, 1, -1)
+            masks.append(mask > 0)
+    changed = ((np.abs(lum) > 0.15) | (chroma > 0.05)) & inside
+    changed = cv2.morphologyEx(changed.astype(np.uint8), cv2.MORPH_OPEN, _ellipse(1.5, ppm))
+    near_parts = cv2.dilate(sum(masks, np.zeros(firm.shape, bool)).astype(np.uint8), _ellipse(10.0, ppm)) if masks else np.zeros(firm.shape, np.uint8)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(changed & (1 - near_parts), connectivity=8)
+    margin = int(BOX_MARGIN_MM * ppm)
+    boxes = []
+    for i in range(1, count):
+        if stats[i, cv2.CC_STAT_AREA] >= MIN_PART_MM2 * ppm * ppm:
+            bx, by, bw, bh = stats[i, :4].tolist()
+            boxes.append([max(bx - margin, 0), max(by - margin, 0), min(bx + bw + margin, image.shape[1]), min(by + bh + margin, image.shape[0])])
+    return sorted(masks, key=lambda m: -int(m.sum())), boxes
+
+
+def reference_view(video: Path) -> tuple[source.RectifiedFrame, np.ndarray] | None:
+    """Median final view and median empty view, or None when the video does not start with an empty sheet."""
+    capture = cv2.VideoCapture(str(video))
+    fps, total = capture.get(cv2.CAP_PROP_FPS), int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+    capture.release()
+
+    def views(frame_numbers):
+        out = []
+        for frame in frame_numbers:
+            try:
+                out.append(source.rectify(video, frame, FULL_PAGE_MM, PX_PER_MM)[1])
+            except source.SourceError:
+                continue
+        return out
+
+    empties = views(int(fps * t) for t in EMPTY_TIMES_S)
+    finals = views(total - 1 - int(fps * t) for t in FINAL_TIMES_S)
+    if len(empties) < 2 or len(finals) < 2:
+        return None
+    empty = np.median(np.stack([v.image for v in empties]), axis=0).astype(np.uint8)
+    if find_outlines(empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM):
+        return None
+    final = np.median(np.stack([v.image for v in finals]), axis=0).astype(np.uint8)
+    return dataclasses.replace(finals[0], image=final), empty
+
+
+def without_shadow(mask: np.ndarray, image: np.ndarray, empty: np.ndarray, ppm: float) -> np.ndarray | None:
+    """A pale part's mask with its measured cast shadow removed; None when too little would remain to trust the result."""
+    ratio = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 0.7) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 0.7) + 8))
+    kept = (mask & (ratio.mean(axis=2) >= PALE_SHADOW_LUM)).astype(np.uint8)
+    kept = cv2.morphologyEx(cv2.morphologyEx(kept, cv2.MORPH_CLOSE, _ellipse(4.0, ppm)), cv2.MORPH_OPEN, _ellipse(3.0, ppm)) & mask.astype(np.uint8)
+    contours, _ = cv2.findContours(kept, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if not contours:
+        return None
+    solid = np.zeros(kept.shape, np.uint8)
+    cv2.drawContours(solid, [max(contours, key=cv2.contourArea)], -1, 1, -1)
+    return solid > 0 if solid.sum() >= MIN_KEPT_SHARE * mask.sum() else None
+
+
+def sam_outline(rectified: source.RectifiedFrame, empty: np.ndarray, box: list[int], folder: Path) -> tuple[np.ndarray | None, str]:
+    """SAM's mask for a tight box without its shadow; None and the reason when there is none or a check fails."""
+    folder.mkdir(parents=True, exist_ok=True)
+    image_path = folder / "view.png"
+    cv2.imwrite(str(image_path), rectified.image)
+    mask, info = muse_sam.sam_mask(image_path, box, rectified.image.shape[:2], folder / "sam", folder / "sam_ledger.jsonl")
+    if mask is None:
+        return None, "SAM returned no mask"
+    outer, _openings = muse_sam.outer_and_openings(mask)
+    flags = quality.plausibility(outer, box, info.get("sam_box"))["flags"]
+    if flags:
+        return None, "SAM mask failed checks: " + ", ".join(flags)
+    cleaned = without_shadow(outer, rectified.image, empty, rectified.px_per_mm)
+    return (cleaned, "") if cleaned is not None else (None, "too little of SAM's mask remained without the shadow")
+
+
 def _atomic_json(path: Path, document: dict) -> None:
     partial = path.with_name(path.name + ".partial")
     partial.write_text(json.dumps(document, indent=1), encoding="utf-8")
@@ -85,7 +187,8 @@ def _job_name(part: str) -> str:
     return "outline-" + re.sub(r"[^a-z0-9]+", "-", part.lower()).strip("-")
 
 
-def write_job(session_dir: Path, rectified: source.RectifiedFrame, mask: np.ndarray, part: str, origin: str) -> str:
+def write_job(session_dir: Path, rectified: source.RectifiedFrame, mask: np.ndarray, part: str, origin: str,
+              method: str = "colour separation from the sheet") -> str:
     """One finished drawing job in the layout tools/explosion and the session UI already read."""
     job = Path(session_dir) / "drawings" / "jobs" / _job_name(part)
     job.mkdir(parents=True, exist_ok=False)
@@ -94,7 +197,7 @@ def write_job(session_dir: Path, rectified: source.RectifiedFrame, mask: np.ndar
     spec = {"part": part, "scope": "assembly", "view_side": None, "region_mm": list(FULL_PAGE_MM), "px_per_mm": ppm, "method": "sheet_outlines"}
     svg = render_layered_svg(rectified.px_to_mm(outline).round(2).tolist(), [], {
         "title": "Outline (unconfirmed)", "subtitle": f"{part} (assembly); {origin}",
-        "legend": [f"Outline: colour separation from the sheet, max deviation {deviation:.2f} mm, sheet plane; not part dimensions.",
+        "legend": [f"Outline: {method}, max deviation {deviation:.2f} mm, sheet plane; not part dimensions.",
                    "Part name, view side and orientation need operator confirmation."]})
     cv2.imwrite(str(job / "chosen_rectified.png"), rectified.image)
     view = rectified.image.copy()
@@ -104,7 +207,7 @@ def write_job(session_dir: Path, rectified: source.RectifiedFrame, mask: np.ndar
     _atomic_json(job / "spec.json", spec)
     _atomic_json(job / "progress.json", {"state": "done", "result": {
         "status": "NEEDS_CONFIRMATION", "spec": spec, "outline_points": len(outline), "opening_candidates": 0,
-        "reasons": ["Found by colour on the sheet; the part name is a proposal, please check the outline."]}})
+        "reasons": [f"Found by {method}; the part name is a proposal, please check the outline."]}})
     return job.name
 
 
@@ -153,6 +256,21 @@ def main() -> None:
     parser.add_argument("--frame", required=True, help="video frame number, or auto")
     parser.add_argument("--part", action="append", type=_part, default=[], metavar="NAME@X,Y", help="proposed name and a sheet point (mm) inside it")
     args = parser.parse_args()
+    if args.frame == "auto" and (reference := reference_view(args.video)) is not None:
+        rectified, empty = reference
+        masks, boxes = separate(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
+        written, not_drawn, numbered = [], [], len(masks)
+        for number, mask in enumerate(masks, start=1):
+            written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", "difference from the empty sheet"))
+        for box in boxes:
+            numbered += 1
+            mask, reason = sam_outline(rectified, empty, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")
+            if mask is None:
+                not_drawn.append({"part": f"part {numbered}", "box_px": box, "reason": reason})
+            else:
+                written.append(write_job(args.session_dir, rectified, mask, f"part {numbered}", "final view of the video", "SAM from a box found against the empty sheet"))
+        print(json.dumps({"jobs": written, "not_drawn": not_drawn}))
+        return
     if args.frame == "auto":
         rectified, frame, masks = best_view(args.video)
     else:

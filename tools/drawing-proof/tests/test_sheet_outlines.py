@@ -40,6 +40,36 @@ class FindOutlinesTest(unittest.TestCase):
         self.assertFalse(next(m for m in masks if m[200, 800])[500, 800])
 
 
+class SeparateTest(unittest.TestCase):
+    def test_shadow_stays_out_and_a_part_as_pale_as_the_sheet_gets_a_box(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        image[300:520, 120:320] = (empty[300:520, 120:320] * 0.62).astype(np.uint8)  # shadow of the dark part
+        cv2.rectangle(image, (100, 280), (300, 500), (30, 30, 30), -1)
+        image[440:520, 700:1000] = (empty[440:520, 700:1000] * 0.62).astype(np.uint8)  # shadow of the pale part
+        masks, boxes = sheet_outlines.separate(image, empty, (0, 0, 1200, 800), PPM)
+        self.assertEqual(len(masks), 1)
+        self.assertTrue(masks[0][400, 200])
+        self.assertFalse(masks[0][510, 200])
+        self.assertEqual(len(boxes), 1)
+        self.assertTrue(boxes[0][0] < 700 and boxes[0][2] > 1000)
+
+    def test_shadow_is_taken_off_a_pale_part_or_the_mask_is_refused(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        image = empty.copy()
+        image[400:500, 300:800] = (empty[400:500, 300:800] * 0.62).astype(np.uint8)
+        mask = np.zeros(empty.shape[:2], bool)
+        mask[200:500, 300:800] = True  # 200 rows of pale part, 100 rows of shadow
+        cleaned = sheet_outlines.without_shadow(mask, image, empty, PPM)
+        self.assertTrue(cleaned[300, 500])
+        self.assertFalse(cleaned[480, 500])
+        self.assertIsNone(sheet_outlines.without_shadow(mask, (empty * 0.62).astype(np.uint8), empty, PPM))
+
+    def test_an_empty_sheet_gives_nothing(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        self.assertEqual(sheet_outlines.separate(empty, empty, (0, 0, 1200, 800), PPM), ([], []))
+
+
 class WriteJobTest(unittest.TestCase):
     def test_job_needs_confirmation_and_never_overwrites(self):
         image = _sheet()

@@ -78,3 +78,5 @@ reused for an unrelated process would be killed on resume. Tests: `tests/test_dr
 ## Offline outlines on the sheet
 
 `sheet_outlines.py` makes finished, unconfirmed drawing jobs for the large parts on the sheet from one video frame, with no provider call (`--session-dir`, `--video`, `--frame`, `--part NAME@X,Y`). It finds outlines, not identities: names are proposals and the operator confirms them. Parameters were set on one real view of the SNES controller; it is not validated on other objects, needs a bright sheet, and small or sheet-coloured parts may be missed. Use Muse box and SAM for those.
+
+When the video starts with about 5 s of empty sheet (the app's record flow does this), `--frame auto` uses that view as a reference: cast shadows stay out and thin parts are kept. A part as pale as the sheet gets a box from its shadow and SAM draws it; if the mask fails its checks, the part is reported as not drawn. The limits were measured on two recordings only.

@@ -132,6 +132,24 @@ class TestProcess(VideoCase):
             videos.start_processing(self.root, "f" * 32, FakeRunner(), self.python, background=False)
         self.assertEqual(unknown.exception.status, 404)
 
+    def test_parts_are_found_after_processing_and_a_failure_stays_visible(self):
+        self.store()
+        calls = []
+        videos.start_processing(self.root, VIDEO_ID, FakeRunner(), self.python, background=False,
+                                find_parts=lambda root, folder: calls.append(folder) or {"not_drawn": [1]})
+        job = videos.list_videos(self.root)["videos"][0]["job"]
+        self.assertEqual((job["state"], job["parts"], job["parts_not_drawn"], len(calls)), ("done", "found", 1, 1))
+
+    def test_a_failed_part_search_leaves_the_job_done(self):
+        self.store()
+
+        def broken(root, folder):
+            raise AdapterError("no key", 502)
+
+        videos.start_processing(self.root, VIDEO_ID, FakeRunner(), self.python, background=False, find_parts=broken)
+        job = videos.list_videos(self.root)["videos"][0]["job"]
+        self.assertEqual((job["state"], job["parts"], job["parts_error"]), ("done", "failed", "no key"))
+
     def test_background_job_ends_in_a_visible_state(self):
         self.store()
         self.process(FakeRunner(), background=True)

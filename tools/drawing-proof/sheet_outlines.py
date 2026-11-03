@@ -64,6 +64,7 @@ OPENING_MIN_LUM = -0.7  # paper in a hole's shadow stays above this; a dark rece
 OPENING_MAX_SPREAD = 20.0  # lightness std in a hole; plain paper is even, a white wire on a board is not
 OPENING_LARGE_MM2 = 150.0
 OPENING_MIN_PAPER = 0.65  # of the sheet's lightness around the part: shaded paper measured 0.72, pale plastic 0.57
+OPENING_MUSE_LOOKS = 2
 OPENING_ROUND_SOLIDITY = 0.8  # above it the shape has no real corners, so a wall's shadow bite is filled by the hull
 PART_EDGE_PER_MM = 0.35  # sharper than SHARP_EDGE_PER_MM's blur allows: a part as bright as the sheet still has fine edges
 EDGE_SEAL_MM = 3.0  # closes gaps in a part's edge so the sheet cannot flow in; given back afterwards
@@ -352,10 +353,17 @@ def find_openings(rectified: source.RectifiedFrame, empty: np.ndarray, part: np.
         return [], "no model key"
     ppm = rectified.px_per_mm
     bx, by, bw, bh = cv2.boundingRect(part.astype(np.uint8))
-    try:
-        points = muse_sam.muse_openings(rectified.image[by:by + bh, bx:bx + bw], key)
-    except Exception as exc:  # a drawing without holes is still a drawing; the reason goes into the job
-        return [], f"Muse gave no holes ({type(exc).__name__})"
+    points: list[tuple[int, int]] = []
+    failure = None
+    with ThreadPoolExecutor(max_workers=OPENING_MUSE_LOOKS) as pool:  # one look can miss holes another finds; the paper check below refuses wrong points
+        looks = [pool.submit(muse_sam.muse_openings, rectified.image[by:by + bh, bx:bx + bw], key) for _ in range(OPENING_MUSE_LOOKS)]
+    for look in looks:
+        try:
+            points += look.result()
+        except Exception as exc:  # a drawing without holes is still a drawing; the reason goes into the job
+            failure = exc
+    if not points and failure is not None:
+        return [], f"Muse gave no holes ({type(failure).__name__})"
     lightness = cv2.GaussianBlur(cv2.cvtColor(rectified.image, cv2.COLOR_BGR2LAB)[..., 0], (0, 0), 1.5)
     soft = np.log((cv2.GaussianBlur(rectified.image.astype(np.float32), (0, 0), 1.5) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 1.5) + 8))
     sheet_lum = soft.mean(axis=2)

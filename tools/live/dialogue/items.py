@@ -15,7 +15,7 @@ QUESTION_WORDS = {"why", "which", "what", "where", "how", "who", "when", "whose"
 FILLER = {"the", "a", "an", "is", "are", "was", "were", "there", "only", "one", "part", "parts", "thing", "things", "it", "its",
           "this", "that", "these", "those", "they", "uh", "um", "yes", "yeah", "no", "and", "of", "from", "in", "on", "at", "to",
           "with", "here", "some", "just", "all", "same", "i", "you", "think", "say", "would", "like", "also", "then", "so",
-          "well", "okay", "ok", "came", "come", "out", "off", "my", "mm", "mmm", "hmm", "uhh", "umm", "eh", "huh"}
+          "well", "okay", "ok", "came", "come", "out", "off", "my", "oh", "ah", "aha", "er", "hm", "mhm", "identical", "similar", "mm", "mmm", "hmm", "uhh", "umm", "eh", "huh"}
 NUMBERS = set(NUMBER_WORDS) | {str(n) for n in range(1, 100)}
 OPEN_ENDINGS = {"and", "the", "a", "an", "of", "from", "with", "uh", "um", "is", "are", "there", "to", "in", "on", "at", "or", "but"}
 _EMPTY = re.compile(r"^\W*(?:nothing|none|empty|no part|no parts|it'?s empty|(?:there(?:'s| is) )?nothing(?: (?:here|there|in (?:it|there)))?"
@@ -23,6 +23,9 @@ _EMPTY = re.compile(r"^\W*(?:nothing|none|empty|no part|no parts|it'?s empty|(?:
 _WORD = re.compile(r"[a-z0-9']+")
 MAX_NAME_WORDS = 4
 UNKNOWN = "unknown"
+PLACE_WORDS = {"shell", "side", "case", "cover", "housing", "controller", "toy", "back", "front", "inside", "outside"}
+INTERJECTIONS = {"oh", "ah", "aha", "uh", "um", "umm", "uhh", "er", "hm", "hmm", "mm", "mmm", "mhm", "eh", "huh", "well", "so", "like"}
+QUALIFIERS = ("identical", "similar", "same", "together")
 _REPEATED_CVC = re.compile(r"(?i)(?<![aeiou])([bcdfghjklmnpqrstvwxz][aeiou][bcdfghjklmnpqrstvwxz])\1$")
 
 
@@ -38,6 +41,10 @@ def classify_plain(text: str) -> str | None:
         return "unclear"
     if _EMPTY.match(plain):
         return "empty"
+    if plain.rstrip().endswith(("...", "\u2026", "-", "\u2014")):
+        return "incomplete"  # the speech was cut off: wait, never a re-ask
+    if set(tokens) <= INTERJECTIONS:
+        return "meta"  # "oh," / "hmm": no name, no origin, no penalty
     intent = extract_by_rule(plain)["intent"]
     if intent in ("yes", "no", "skip", "unsure"):
         return intent
@@ -81,6 +88,7 @@ def clean_name(name: str | None, said: set[str]) -> str | None:
     text = _ARTICLE.sub("", name.strip(" ,.;:-!?")).strip()
     text = re.sub(r"^(?:(?:uh|um|the|a|an|in|on|at|it|its|it's|is|was|are|there|that|this)\s+)+", "", text, flags=re.IGNORECASE)
     text = re.sub(r"(?:\s+(?:uh|um|of|and|the|a|an))+$", "", text, flags=re.IGNORECASE).strip()
+    text = re.sub(r"(?:\s+(?:" + "|".join(QUALIFIERS) + r"))+$", "", text, flags=re.IGNORECASE).strip()
     tokens = words(text)
     if not tokens or len(tokens) > MAX_NAME_WORDS or not _in_transcript(text, said):
         return None
@@ -107,7 +115,7 @@ def clean_origin(origin: str | None, said: set[str]) -> str | None:
         return None
     text = tidy_origin(origin)
     tokens = words(text)
-    if not tokens or len(tokens) > 6 or not _in_transcript(text, said):
+    if not tokens or len(tokens) > 8 or not _in_transcript(text, said):
         return None
     if _has_repeated_cvc(tokens):
         return None

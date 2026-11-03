@@ -117,7 +117,7 @@ class ScriptedModel:
 
 
 def rendered(kind, persona, where="cell 1"):
-    return [line.replace("{where}", where) for line in selector.variants(kind, persona)]
+    return [line.replace("{where}", where).replace("{Where}", where.capitalize()) for line in selector.variants(kind, persona)]
 
 
 def item(name, count=None, origin=None):
@@ -278,7 +278,7 @@ class FlowTests(unittest.TestCase):
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
         self.assertEqual(self.api.answers, {"Q1": "screw from back shell", "Q2": "screw from back shell", "Q3": "screw from back shell"})
         self.assertEqual(self.writes(), [("closing_write", ("screw", "screw"), "cell-1")])
-        self.assertTrue(reply.endswith(tuple(selector.variants("cell_open", "serious")[0:1] + ["What's in cell 2?"])) or "cell 2" in reply)
+        self.assertIn("cell 2", reply.lower())
 
     def test_initially_unresolved_cells_are_reoffered_once_at_the_round_tail(self):
         self.with_model()
@@ -323,7 +323,7 @@ class FlowTests(unittest.TestCase):
         self.say(command="next_question")
         reply = self.say("nothing")
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
-        self.assertIn("cell 2", reply)
+        self.assertIn("cell 2", reply.lower())
         self.assertEqual(self.coordinator_calls().count(("answer",)), 0)
 
     # -- origin, correction, no
@@ -342,38 +342,6 @@ class FlowTests(unittest.TestCase):
         self.assertIn(self.say("screws"), selector.variants("cell_how_many", "serious"))
         self.assertIn(self.say("three"), selector.variants("cell_origin", "serious"))
         self.assertEqual(self.say("from the back shell"), "Cell 1: three screws, from back shell. Right?")
-
-    def test_last_origin_is_proposed_in_one_readback_and_right_yes_commits_it(self):
-        table = {**MODEL_TABLE, "the right button from the back shell": answer(item("right button", 1, "back shell")),
-                 "d-pad": answer(item("D-pad", 1, None))}
-        self.with_model(table)
-        self.say(command="next_question")
-        self.say("the right button from the back shell")
-        self.say("yes")
-        proposal = self.say("d-pad")
-        self.assertIn("from back shell", proposal)
-        self.assertIn("Same origin as last time", proposal)
-        self.assertEqual(self.flow.current["stage"], "origin_confirm")
-        self.assertNotIn(("answer", "Q4", "D-pad from back shell"), self.api.log)
-        self.say("right, yes,")
-        self.assertEqual(self.api.answers["Q4"], "D-pad from back shell")
-
-    def test_rejecting_last_origin_keeps_the_name_and_requires_yes_after_correction(self):
-        table = {**MODEL_TABLE, "the right button from the back shell": answer(item("right button", 1, "back shell")),
-                 "d-pad": answer(item("D-pad", 1, None))}
-        self.with_model(table)
-        self.say(command="next_question")
-        self.say("the right button from the back shell")
-        self.say("yes")
-        proposal = self.say("d-pad")
-        self.assertIn("Same origin as last time", proposal)
-        self.assertIn(self.say("no"), selector.variants("cell_origin", "serious"))
-        self.assertEqual(self.flow.current["items"], [item("D-pad", 1, None)])
-        read_back = self.say("from front shell")
-        self.assertIn("from front shell", read_back)
-        self.assertNotIn("Q4", self.api.answers)
-        self.say("yes")
-        self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
 
     def test_asr_like_origin_noise_is_clarified_without_domain_normalization(self):
         table = {**MODEL_TABLE, "rubber membrane": answer(item("rubber membrane", 1, None))}
@@ -419,30 +387,6 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(self.api.answers, {})
         self.assertEqual(self.writes(), [])
 
-    def test_asr_noise_invalidates_a_proposed_origin_before_a_bare_yes(self):
-        table = {**MODEL_TABLE, "the right button from the back shell": answer(item("right button", 1, "back shell")),
-                 "d-pad": answer(item("D-pad", 1, None))}
-        self.with_model(table)
-        self.say(command="next_question")
-        self.say("the right button from the back shell")
-        self.say("yes")
-        self.say("d-pad")
-        self.assertEqual(self.flow.current["stage"], "origin_confirm")
-
-        reply = self.say("front shell Dpadpad")
-        self.assertEqual(self.flow.current["stage"], "origin")
-        self.assertIn(reply, selector.variants("cell_origin", "serious"))
-        self.assertNotIn("origin_proposal", self.flow.current)
-        self.assertEqual(self.say("yes"), self.flow.last_speak["text"])
-        self.assertNotIn("Q4", self.api.answers)
-        self.assertEqual(self.api.state["Q4"], "ASKED")
-        self.assertEqual(self.writes(), [])
-
-        self.say("from front shell")
-        self.assertIn("Right?", self.flow.last_speak["text"])
-        self.say("yes")
-        self.assertEqual(self.api.answers["Q4"], "D-pad from front shell")
-
     def test_no_asks_the_cell_again_and_a_correction_in_the_same_sentence_is_taken_directly(self):
         self.with_model({**MODEL_TABLE, "it's a right button from the back shell": answer(item("right button", 1, "back shell"))})
         self.say(command="next_question")
@@ -463,10 +407,10 @@ class FlowTests(unittest.TestCase):
 
     def test_not_understood_twice_defers_and_the_same_turn_asks_the_next_cell(self):
         self.say(command="next_question")
-        self.assertIn("could you please repeat it?", self.say("mmm"))
-        reply = self.say("uhh")
+        self.assertIn("could you please repeat it?", self.say("there is only one part,"))
+        reply = self.say("there is only one one part.")
         self.assertIn("Why don't we resolve this later on the desktop?", reply)
-        self.assertIn("cell 2", reply)
+        self.assertIn("cell 2", reply.lower())
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["LEFT_UNRESOLVED"] * 3)
         self.assertEqual(self.flow.current["qids"], ["Q4"])
         result = self.flow.turn(None, "d-pad from the front shell")  # no command needed: still the question round
@@ -476,7 +420,7 @@ class FlowTests(unittest.TestCase):
         table = {**MODEL_TABLE, "d-pad": answer(item("D-pad", 1, None))}
         self.with_model(table)
         self.say(command="next_question")
-        self.assertIn("cell 2", self.say("skip"))
+        self.assertIn("cell 2", self.say("skip").lower())
         self.say("d-pad")
         self.say("from the front shell")
         self.say("yes")
@@ -533,7 +477,8 @@ class FlowTests(unittest.TestCase):
 
     def test_persona_changes_the_wording_per_workspace(self):
         settings.save(self.root, persona="unhinged")
-        self.assertIn(self.say(command="next_question"), rendered("cell_open", "unhinged"))
+        first = self.say(command="next_question")  # persona colour on every other line at most: the first one is plain
+        self.assertIn(first, rendered("cell_open", "serious"))
 
     def test_a_read_back_left_open_by_an_older_flow_is_closed_with_no(self):
         self.api.state["Q1"] = "READ_BACK"
@@ -675,11 +620,8 @@ class FidgetToyReplayTests(unittest.TestCase):
         self.assertEqual(self.coordinator_calls(), [])
         self.say("yes.")
         self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
-        # the second cell proposes the last origin: one period, never two
-        proposal = self.say("a plastic wheel")
-        self.assertEqual(proposal, "Cell 2: plastic wheel, from outer shell of the toy. Same origin as last time; is that right?")
-        self.assertNotIn("..", proposal)
-        self.assertIn(self.say("no,"), selector.variants("cell_origin", "serious"))
+        # the second cell asks for the origin itself: never "same origin as last time"
+        self.assertIn(self.say("a plastic wheel"), selector.variants("cell_origin", "serious"))
         self.assertEqual(self.say("in the inside of the toy"), "Cell 2: plastic wheel, from inside of the toy. Right?")
 
     def test_the_model_reads_an_origin_the_rules_cannot_and_its_words_must_be_in_the_transcript(self):
@@ -727,6 +669,130 @@ class FidgetToyReplayTests(unittest.TestCase):
         self.say("yes.")
         self.assertEqual(self.say("in the working area, a plastic wheel from inside the toy"),
                          "Missed in the work area: plastic wheel, from inside the toy. Right?")
+
+
+CELL_ORDER = [1, 8, 3, 2, 10, 4, 5, 7, 6, 9, 11, 12]  # the order of the owner's third fidget-toy run
+ONE_SHOT = {  # what the owner said per cell, as one answer to "what's in it, and where did it come from?"
+    1: ("five screws from the back shell", answer(item("screw", 5, "back shell"))),
+    8: ("green button from the front shell", answer(item("green button", 1, "front shell"))),
+    3: ("right button from the back of the controller", answer(item("right button", 1, "back of the controller"))),
+    2: ("left button from the back of the controller", answer(item("left button", 1, "back of the controller"))),
+    10: ("blue button from the front shell", answer(item("blue button", 1, "front shell"))),
+    4: ("two white rubber membrane identical from left and right button",
+        answer(item("white rubber membrane identical", 2, "left and right button"))),
+    5: ("white rubber membrane from Dpad", answer(item("white rubber membrane", 1, "Dpad"))),
+    7: ("start and select button from the front shell", answer(item("start and select button", 1, "front shell"))),
+    6: ("wide rubber membrane from the front shell", answer(item("wide rubber membrane", 1, "front shell"))),
+    9: ("Dpad from the front shell", answer(item("Dpad", 1, "front shell"))),
+    11: ("yellow button", answer(item("yellow button"))),
+    12: ("red button from the front shell", answer(item("red button", 1, "front shell"))),
+}
+
+
+class ThirdFidgetRunReplayTests(unittest.TestCase):
+    """video-20261103-121526-30832219: shorter dialogue (name and origin asked together), fillers, corrections, cut-offs."""
+
+    say, writes, coordinator_calls = FlowTests.say, FlowTests.writes, FlowTests.coordinator_calls
+
+    def setUp(self, persona="serious"):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        (self.root / "s1").mkdir()
+        settings.save(self.root, persona=persona)
+        self.api = FakeApi()
+        self.api.cells = {f"Q{n}": f"cell-{n}" for n in CELL_ORDER}
+        self.api.state = {q: "OPEN" for q in self.api.cells}
+        table = {text: reply for text, reply in ONE_SHOT.values()}
+        table["yellow button"] = answer(item("yellow button"))
+        table["green button"] = answer(item("green button"))
+        self.model = FieldsModel(table, {})
+        muse = MuseClient(transport=self.model, environ={"MODEL_API_KEY": "k"})
+        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(muse))
+
+    def run_round(self):
+        """Returns the number of operator turns per cell (answers and yes/no, not the opening command)."""
+        turns, cell_turns = {}, 0
+        self.say(command="next_question")
+        for number in CELL_ORDER:
+            text, _reply = ONE_SHOT[number]
+            self.assertIn(f"cell {number}", self.flow.last_speak["text"].lower())
+            cell_turns = 1
+            reply = self.say(text)
+            if "Right?" not in reply:  # the origin was missing: asked once
+                cell_turns += 1
+                reply = self.say("from the front shell")
+            self.assertIn("Right?", reply)
+            cell_turns += 1
+            self.say("yes.")
+            turns[number] = cell_turns
+        return turns
+
+    def test_two_turns_per_cell_and_three_when_the_origin_is_missing(self):
+        turns = self.run_round()
+        self.assertEqual(sorted(turns.values()), [2] * 11 + [3])
+        self.assertEqual(turns[11], 3)
+        self.assertEqual(sum(turns.values()) / len(turns), 25 / 12)
+        self.assertEqual(self.api.answers["Q4"], "white rubber membrane from left and right button")  # no "identical", count 2
+        self.assertEqual(self.api.answers["Q1"], "screw from back shell")
+
+    def test_nothing_proposes_the_last_origin(self):
+        self.say(command="next_question")
+        self.say(ONE_SHOT[1][0])
+        self.say("yes.")
+        for number in (8, 3):
+            self.assertNotIn("last time", self.flow.last_speak["text"])
+            self.say(ONE_SHOT[number][0])
+            self.say("yes.")
+        self.assertNotIn("last time", self.flow.last_speak["text"])
+
+    def test_oh_is_a_repeat_request_never_an_origin(self):
+        asked = self.say(command="next_question")
+        self.assertEqual(self.say("oh,"), asked)
+        self.assertEqual(self.flow.agent._events.get("cell-Q1", {}).get("reasks", 0), 0)
+        self.say("green button")
+        self.assertIn(self.flow.last_speak["text"], rendered("cell_origin", "serious"))
+        self.assertEqual(self.say("oh,"), self.flow.last_speak["text"])
+        self.assertNotIn("from oh", self.flow.last_speak["text"])
+
+    def test_corrections_are_taken_directly(self):
+        self.say(command="next_question")
+        self.say(ONE_SHOT[1][0])
+        self.say("yes.")
+        self.model.table["green button from the back shell"] = answer(item("green button", 1, "back shell"))
+        self.say(ONE_SHOT[8][0].replace("front", "back"))  # misheard origin
+        for correction, expected in (("no front shell", "Cell 8: green button, from front shell. Right?"),
+                                     ("no, from Dpad", "Cell 8: green button, from Dpad. Right?")):
+            self.assertEqual(self.say(correction), expected, correction)
+        self.assertEqual(self.api.answers.get("Q8"), None)  # still nothing written
+
+    def test_an_answer_cut_off_mid_speech_gets_go_on_not_a_re_ask(self):
+        self.say(command="next_question")
+        self.say(ONE_SHOT[1][0])
+        self.assertIn(self.say("no, from from the back of the controller, lef..."), rendered("go_on", "serious"))
+        self.assertEqual(self.flow.agent._events.get("cell-Q1", {}).get("reasks", 0), 0)
+        self.assertEqual(self.flow.current["stage"], "confirm")
+
+    def test_persona_lines_do_not_repeat_until_the_slot_is_used_up_and_flavour_is_every_other_line(self):
+        agent = dialogue_flow.DialogueAgent("unhinged", Executor(None))
+        lines = [agent.recorded_line(f"cell-{n}") for n in range(40)]
+        flavoured = lines[1::2]  # the even lines carry the persona, the odd ones are plain
+        unhinged_lines = set(selector.variants("recorded", "unhinged"))
+        self.assertTrue(all(line in unhinged_lines for line in flavoured))
+        self.assertTrue(all(line in selector.variants("recorded", "serious") for line in lines[0::2]))
+        round_one = flavoured[:len(unhinged_lines)]
+        self.assertEqual(len(set(round_one)), len(unhinged_lines))  # every funny line once before any repeats
+        self.assertTrue(all(a != b for a, b in zip(lines, lines[1:])))
+
+    def test_catalog_has_many_short_unhinged_lines_and_no_insults(self):
+        for kind in ("recorded", "cell_open"):
+            for persona in ("serious", "playful", "unhinged"):
+                self.assertGreaterEqual(len(selector.variants(kind, persona)), 12, (kind, persona))
+        for kind in selector.CATALOG["phrases"]:
+            for line in selector.variants(kind, "unhinged"):
+                if kind in ("recorded", "cell_open", "cell_again", "go_on", "cell_origin", "cell_how_many"):
+                    self.assertLessEqual(len(line.replace("{where}", "cell 8").replace("{Where}", "Cell 8").split()), 10, line)
+                self.assertNotRegex(line.lower(), r"stupid|idiot|dumb|moron|shut up|hate")
 
 
 class AutoBindTests(unittest.TestCase):

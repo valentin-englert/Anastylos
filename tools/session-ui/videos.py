@@ -25,6 +25,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+import ui_meta
 from adapter import AdapterError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
@@ -143,7 +144,7 @@ def start_processing(root: Path, video_id: str, runner: Callable | None = None, 
             raise AdapterError("The stored video no longer matches its SHA-256; it was not processed.", 409)
         folder = f"video-{time.strftime('%Y%m%d-%H%M%S')}-{video_id[:8]}"
         job = {"schema": "anastylos-video-job@1", "video": video_id, "state": "queued", "session": folder,
-               "stage": "starting", "error": None, "counts": None, "started_at": _now(), "finished_at": None}
+               "stage": "starting", "error": None, "name": ui_meta.take_next_session_name(root), "counts": None, "started_at": _now(), "finished_at": None}
         _write_atomic(_job_path(root, video_id), job)
     args = (root, video_id, video, folder, runner or phases.subprocess_runner, python, find_parts, measure_cells)
     if background:
@@ -210,6 +211,9 @@ def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, 
     try:
         _update(root, video_id, state="running", stage="creating the session folder")
         state = SessionState.create(root / folder, "Phone video", "workstation")
+        job_name = (_job(root, video_id) or {}).get("name")
+        if job_name:
+            ui_meta.set_session_name(root / folder, job_name)
         _update(root, video_id, stage="running the session pipeline on the video")
         counts = phases.run_phase(state, PHASE_TAG, PHASE_LABEL, video, runner, phases.vision_python(python or Path(sys.executable)))
         _update(root, video_id, state="done", stage="finished", counts=counts, finished_at=_now())

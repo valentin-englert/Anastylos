@@ -79,6 +79,27 @@ class ServerCase(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual([s["id"] for s in payload["sessions"]], ["p1"])
 
+    def test_session_name_survives_a_reload_and_never_enters_memory(self):
+        self.assertEqual(call(self.base, "/api/session/name", {"session": "p1", "name": "  Kitchen   radio "})[1], {"name": "Kitchen radio"})
+        self.assertEqual(call(self.base, "/api/sessions")[1]["sessions"][0]["name"], "Kitchen radio")
+        self.assertEqual(json.loads((self.workspace / "p1" / "ui-meta.json").read_text(encoding="utf-8"))["name"], "Kitchen radio")
+        self.assertFalse(list((self.workspace / "p1").rglob("memory.jsonl")) and any(
+            "Kitchen" in f.read_text(encoding="utf-8") for f in (self.workspace / "p1").rglob("memory.jsonl")))
+        self.assertEqual(call(self.base, "/api/session/name", {"session": "../x", "name": "a"})[0], 404)
+
+    def test_next_session_name_is_kept_before_the_session_exists(self):
+        call(self.base, "/api/session/name", {"name": "Tuner"})
+        self.assertEqual(call(self.base, "/api/sessions")[1]["next_session_name"], "Tuner")
+
+    def test_start_fresh_hides_older_sessions_and_the_link_shows_them(self):
+        self.assertEqual(len(call(self.base, "/api/sessions")[1]["sessions"]), 1)
+        status, _ = call(self.base, "/api/history/start-fresh", {})
+        self.assertEqual(status, 200)
+        view = call(self.base, "/api/sessions")[1]
+        self.assertEqual((view["sessions"], view["hidden_older"]), ([], 1))
+        self.assertEqual(len(call(self.base, "/api/sessions?all=1")[1]["sessions"]), 1)
+        self.assertTrue((self.workspace / "p1" / "agent-session.json").is_file())  # nothing deleted
+
     def test_status_and_question_round_over_http(self):
         status, payload = call(self.base, "/api/status?session=p1")
         self.assertEqual(status, 200)

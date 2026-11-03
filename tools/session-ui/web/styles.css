@@ -616,3 +616,8 @@ main > section[data-page="questions"] > .page-head { order: 0; }
 #video-list .drawing-job[data-state="done"]::before { content: "Processed"; }
 #video-list .drawing-job[data-state="done"]::after { background: var(--confirmed); }
 #video-list .drawing-job[data-state="complete"]::before { content: "Ready"; }
+
+/* session names and history tools */
+.phone-name, .rename-form { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 1rem 0; }
+.phone-name h3, .phone-name .hint, .phone-name .state { flex-basis: 100%; margin: 0; }
+.history-tools { display: flex; align-items: center; gap: 1rem; font-size: 0.9rem; }

@@ -157,5 +157,79 @@ class ExplosionTest(unittest.TestCase):
         self.assertIn("no frame shows parts", str(failed.exception))
 
 
+class ExplosionMemoryTest(unittest.TestCase):
+    """Confirming a layer under a label: no matching part -> recorded as operator-stated in the work area; one match -> linked."""
+
+    def setUp(self):
+        ExplosionTest.setUp(self)
+        self.memory = self.session / "memory"
+        self.memory.mkdir()
+        self.calls = []
+        self.fail = False
+        explosion_module = explosion
+
+        def fake_write(root, session_id, note_id, labels, location, said):
+            if self.fail:
+                raise AdapterError("no questions in this session", 409)
+            self.calls.append((note_id, tuple(labels), location, json.loads(said)))
+            with open(self.memory / "memory.jsonl", "a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"type": "declared_removal", "id": f"dec-{len(self.calls):04d}", "operator_label": labels[0]}) + "\n")
+            return {"status": "committed", "results": []}
+
+        self._original = explosion_module.closing_write
+        explosion_module.closing_write = fake_write
+        self.addCleanup(setattr, explosion_module, "closing_write", self._original)
+        explosion.layout_action(self.root, "s1", {"action": "propose"})
+
+    def put(self, *events):
+        with open(self.memory / "memory.jsonl", "a", encoding="utf-8") as handle:
+            for event in events:
+                handle.write(json.dumps({"type": "declared_removal", **event}) + "\n")
+
+    def confirm(self, label="Front shell", job="front-1"):
+        return explosion.layout_action(self.root, "s1", {"action": "confirm", "job": job, "label": label})
+
+    def binding(self, job="front-1"):
+        return json.loads((self.session / "drawings" / "jobs" / job / "binding.json").read_text(encoding="utf-8"))
+
+    def test_a_label_without_a_matching_part_is_recorded_once_in_the_work_area(self):
+        result = self.confirm()
+        self.assertEqual(result["memory"]["status"], "recorded")
+        note_id, labels, location, said = self.calls[0]
+        self.assertEqual((labels, location), (("Front shell",), "work area"))
+        self.assertEqual(said["source"], "explosion view")
+        self.assertIn("memory part dec-0001", self.binding()["note"])
+        self.assertEqual(self.confirm()["memory"]["status"], "linked")  # a repeat click finds the part and writes nothing
+        self.assertEqual(len(self.calls), 1)
+
+    def test_a_match_ignoring_case_and_spaces_is_linked_not_written(self):
+        self.put({"id": "dec-0042", "operator_label": "FRONTshell"})
+        result = self.confirm("front  Shell")
+        self.assertEqual(result["memory"], {"status": "linked", "part": "dec-0042"})
+        self.assertEqual(self.calls, [])
+        self.assertIn("memory part dec-0042", self.binding()["note"])
+
+    def test_several_matches_do_nothing_and_show_the_candidates(self):
+        self.put({"id": "dec-0001", "operator_label": "front shell"}, {"id": "dec-0002", "operator_label": "Front Shell"})
+        result = self.confirm()
+        self.assertEqual(result["memory"]["status"], "ambiguous")
+        self.assertEqual([c["id"] for c in result["memory"]["candidates"]], ["dec-0001", "dec-0002"])
+        self.assertEqual(self.calls, [])
+        self.assertNotIn("memory part", self.binding()["note"])
+
+    def test_a_superseded_part_does_not_count_and_a_failed_write_does_not_block_the_confirmation(self):
+        self.put({"id": "dec-0001", "operator_label": "front shell"}, {"id": "dec-0002", "operator_label": "front shell", "supersedes": "dec-0001"})
+        self.assertEqual(self.confirm()["memory"], {"status": "linked", "part": "dec-0002"})
+        self.fail = True
+        failed = self.confirm("PCB board", "pcb-1")
+        self.assertEqual(failed["memory"]["status"], "failed")
+        self.assertTrue(failed["layout"]["layers"][1]["confirmed_by_operator"])
+
+    def test_unconfirming_writes_nothing(self):
+        explosion.layout_action(self.root, "s1", {"action": "confirm", "job": "front-1", "label": "Front shell", "confirmed": False})
+        self.assertEqual(self.calls, [])
+
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -94,12 +94,20 @@ def clean_name(name: str | None, said: set[str]) -> str | None:
     return singular(text) if tokens[-1].endswith("s") else text
 
 
+def tidy_origin(origin: str) -> str:
+    """Remove stutter ('the the') and a leading preposition ('in the inside of the toy'); nothing else is reworded."""
+    text = re.sub(r"^(?:from|out of|off of|in|on|at)\s+", "", origin.strip(" ,.;:-!?"), flags=re.IGNORECASE)
+    text = re.sub(r"(\b\w+\b)(?:\s+\1\b)+", r"\1", text, flags=re.IGNORECASE)
+    text = _ARTICLE.sub("", text.strip()).strip()
+    return re.sub(r"^(?:in|on|at)\s+(?:the\s+)?(?=inside|outside|inner|outer)", "", text, flags=re.IGNORECASE)
+
+
 def clean_origin(origin: str | None, said: set[str]) -> str | None:
     if not origin:
         return None
-    text = _ARTICLE.sub("", origin.strip(" ,.;:-!?")).strip()
+    text = tidy_origin(origin)
     tokens = words(text)
-    if not tokens or len(tokens) > 5 or not _in_transcript(text, said):
+    if not tokens or len(tokens) > 6 or not _in_transcript(text, said):
         return None
     if _has_repeated_cvc(tokens):
         return None

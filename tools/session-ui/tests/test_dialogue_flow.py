@@ -138,7 +138,7 @@ MODEL_TABLE = {
     "why": answer(item("why", 2, None)),
     "the right button": answer(item("right button")),
     "two screws from the back shell": answer(item("screw", 2, "back shell")),
-    "in the start membrane": answer(item("start membrane")),
+    "the start membrane": answer(item("start membrane")),
     "screws": answer(item("screw")),
     "trigger spring": answer(item("trigger spring")),
 }
@@ -545,7 +545,7 @@ class FlowTests(unittest.TestCase):
 
     def test_closing_questions_go_through_read_back_and_land_in_memory_only_after_yes(self):
         self.with_model({"the front shell, the back shell and the PCB": answer(item("front shell"), item("back shell"), item("PCB")),
-                         "in the start membrane from the front shell": answer(item("start membrane", 1, "front shell"))})
+                         "the start membrane from the front shell": answer(item("start membrane", 1, "front shell"))})
         self.finished()
         self.assertIn("work area", self.say(command="next_question"))
         self.assertEqual(self.say("the front shell, the back shell and the PCB"), "Still in the work area: front shell, back shell, PCB. Right?")
@@ -617,6 +617,116 @@ class FlowTests(unittest.TestCase):
         result = self.flow.turn(None, "hello")
         self.assertTrue(result["handled"])
         self.assertFalse((self.root / "s1" / "dialogue-pending-open").exists())
+
+
+FIDGET_TABLE = {
+    "screws.": answer(item("screw")),
+    "a plastic wheel": answer(item("plastic wheel")),
+    "a spring": answer(item("spring")),
+    "yes, barrel.": answer(item("barrel")),
+    "Robert?": {"kind": "meta", "items": []},
+    "a plastic wheel from inside the toy": answer(item("plastic wheel", 1, "inside the toy")),
+}
+FIDGET_FIELDS = {
+    "uh it came out of the outer shell of the whole toy I think somewhere": {
+        "intent": "answer", "part_name": None, "origin": "outer shell of the whole toy", "storage": None, "count": None},
+}
+
+
+class FieldsModel(ScriptedModel):
+    """Also answers extract_fields (the origin fallback) from a second table."""
+
+    def __init__(self, table, fields, fail=None):
+        super().__init__(table, fail)
+        self.fields = fields
+
+    def post(self, url, headers, body, timeout_s):
+        payload = json.loads(json.loads(body)["input"][1]["content"][0]["text"].split("\n", 1)[1])
+        if "question_type" not in payload:
+            return super().post(url, headers, body, timeout_s)
+        self.posts += 1
+        reply = self.fields.get(payload["answer_text"], {"intent": "unclear", "part_name": None, "origin": None,
+                                                          "storage": None, "count": None})
+        return 200, json.dumps({"status": "completed", "model": "m", "output": [
+            {"type": "message", "content": [{"type": "output_text", "text": json.dumps(reply)}]}]}).encode()
+
+
+class FidgetToyReplayTests(unittest.TestCase):
+    """The real transcripts of the owner's fidget-toy run (dialogue-turns.jsonl), replayed against a fake model."""
+
+    say, writes, coordinator_calls, notes, finished = (FlowTests.say, FlowTests.writes, FlowTests.coordinator_calls,
+                                                       FlowTests.notes, FlowTests.finished)
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root = Path(tmp.name)
+        (self.root / "s1").mkdir()
+        self.api = FakeApi()
+        self.model = FieldsModel({**MODEL_TABLE, **FIDGET_TABLE}, FIDGET_FIELDS)
+        muse = MuseClient(transport=self.model, environ={"MODEL_API_KEY": "k"})
+        self.flow = dialogue_flow.DialogueFlow(self.root, "s1", self.api, executor=Executor(muse))
+
+    def test_origin_answers_with_stutter_and_filler_are_understood_and_the_read_back_stays_the_gate(self):
+        self.say(command="next_question")
+        self.assertIn(self.say("screws."), selector.variants("cell_how_many", "serious"))
+        self.assertIn(self.say("four."), selector.variants("cell_origin", "serious"))
+        self.assertEqual(self.say("From the outer shell of the the toy."), "Cell 1: four screws, from outer shell of the toy. Right?")
+        self.assertEqual(self.coordinator_calls(), [])
+        self.say("yes.")
+        self.assertEqual([self.api.state[q] for q in ("Q1", "Q2", "Q3")], ["COMMITTED"] * 3)
+        # the second cell proposes the last origin: one period, never two
+        proposal = self.say("a plastic wheel")
+        self.assertEqual(proposal, "Cell 2: plastic wheel, from outer shell of the toy. Same origin as last time; is that right?")
+        self.assertNotIn("..", proposal)
+        self.assertIn(self.say("no,"), selector.variants("cell_origin", "serious"))
+        self.assertEqual(self.say("in the inside of the toy"), "Cell 2: plastic wheel, from inside of the toy. Right?")
+
+    def test_the_model_reads_an_origin_the_rules_cannot_and_its_words_must_be_in_the_transcript(self):
+        self.say(command="next_question")
+        self.say("a spring")
+        said = "uh it came out of the outer shell of the whole toy I think somewhere"
+        self.assertEqual(self.say(said), "Cell 1: spring, from outer shell of the whole toy. Right?")
+        self.assertEqual(self.coordinator_calls(), [])
+        self.assertGreaterEqual(self.model.posts, 2)
+
+    def test_a_bare_wake_word_with_no_transcript_repeats_the_open_question(self):
+        first = self.say(command="next_question")
+        self.say("screws.")
+        self.assertEqual(self.say(command="next_question"), self.flow.last_speak["text"])
+        self.assertNotEqual(first, self.flow.last_speak["text"])
+
+    def test_closing_missed_part_in_the_work_area_asks_only_for_the_missing_name(self):
+        self.finished()
+        self.say(command="next_question")
+        self.assertEqual(self.say("Robert?"), self.flow.last_speak["text"])
+        self.assertIn("barrel", self.say("yes, barrel."))
+        self.assertIn("miss", self.say("yes."))
+        self.assertIn("cell or place", self.say("yes."))
+        self.assertIn(self.say("in the working area,"), selector.variants("missed_name", "serious"))
+        self.assertIn(self.say("a spring"), selector.variants("cell_origin", "serious"))
+        self.assertEqual(self.say("inside the toy"), "Missed in the work area: spring, from inside the toy. Right?")
+        self.assertEqual(len(self.writes()), 1)  # only the assemblies so far
+        self.say("yes")
+        self.assertEqual(self.writes()[1], ("closing_write", ("spring",), "work area"))
+
+    def test_closing_missed_work_area_alone_and_in_one_sentence(self):
+        self.finished()
+        self.say(command="next_question")
+        self.say("yes, barrel.")
+        self.say("yes.")
+        self.say("yes.")
+        self.assertIn(self.say("working area"), selector.variants("missed_name", "serious"))
+        self.assertEqual(self.flow.current["location"], "work area")
+        # the name first, the place after
+        self.setUp()
+        self.finished()
+        self.say(command="next_question")
+        self.say("yes, barrel.")
+        self.say("yes.")
+        self.say("yes.")
+        self.assertEqual(self.say("in the working area, a plastic wheel from inside the toy"),
+                         "Missed in the work area: plastic wheel, from inside the toy. Right?")
 
 
 class AutoBindTests(unittest.TestCase):

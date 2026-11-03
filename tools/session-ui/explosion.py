@@ -27,13 +27,14 @@ session is ``/explosion.html?session=<id>``; it announces the selected part with
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 import drawings
-from adapter import AdapterError, resolve_session
+from adapter import AdapterError, closing_write, resolve_session
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "explosion"))
 import compose  # noqa: E402  (tools/explosion; stdlib only)
@@ -45,6 +46,50 @@ OUTLINES_TIMEOUT_S = 300
 JOB_FILES = {"drawing.svg": "image/svg+xml", "overlay.jpg": "image/jpeg", "rectified.png": "image/png"}
 SVG_TYPE = "image/svg+xml"
 ACTIONS = ("propose", "confirm", "reorder", "rotate")
+
+
+WORK_AREA = "work area"
+
+
+def _key(label: str) -> str:
+    """Labels compare ignoring case, spaces and punctuation: 'Front shell' == 'frontshell'."""
+    return "".join(ch for ch in (label or "").lower() if ch.isalnum())
+
+
+def _memory_parts(session: Path, label: str) -> list[dict]:
+    """Operator-declared parts of the session's memory whose label matches ``label`` (superseded events left out)."""
+    events = []
+    for path in sorted(session.glob("*/memory.jsonl")):
+        try:
+            events += [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        except (OSError, ValueError):
+            continue
+    superseded = {e.get("supersedes") for e in events if e.get("supersedes")}
+    return [{"id": e["id"], "label": e["operator_label"]} for e in events
+            if e.get("type") == "declared_removal" and e["id"] not in superseded and _key(e.get("operator_label")) == _key(label)]
+
+
+def _memory_part_for(root: Path, session_id: str, session: Path, job: str, label: str | None) -> dict:
+    """Confirming a layer is the operator's approval of its label: a label that matches no current part is recorded
+    as an operator-stated part in the work area (idempotent); one clear match is only linked; several matches do nothing."""
+    if not label or not _key(label):
+        return {"status": "no_label"}
+    matches = _memory_parts(session, label)
+    if len(matches) > 1:
+        return {"status": "ambiguous", "candidates": matches}
+    if matches:
+        return {"status": "linked", "part": matches[0]["id"]}
+    note_id = "EXPL-" + hashlib.sha256(_key(label).encode("utf-8")).hexdigest()[:12]
+    said = json.dumps({"source": "explosion view", "layer": job, "label": label,
+                       "note": "operator confirmed this layer under this name in the explosion view"})
+    try:
+        written = closing_write(root, session_id, note_id, [label.strip()], WORK_AREA, said)
+    except AdapterError as exc:
+        return {"status": "failed", "message": str(exc)}
+    if written.get("status") != "committed":
+        return {"status": "failed", "message": "the part could not be recorded"}
+    matches = _memory_parts(session, label)
+    return {"status": "recorded", "part": matches[0]["id"]} if len(matches) == 1 else {"status": "recorded"}
 
 
 def _session(root: Path, session_id: str) -> Path:
@@ -140,7 +185,10 @@ def layout_action(root: Path, session_id: str, body: dict) -> dict:
                                            confirmed=_flag(body, "confirmed", default=True))
             if _flag(body, "confirmed", default=True):  # the panel shows outline and source, so one click decides both questions
                 layer = next(l for l in explosion_layout.load(session)["layers"] if l["job"] == body["job"])
-                drawings.bind(root, session_id, body["job"], "confirm", f"confirmed in the explosion view as {layer['label']}")
+                memory = _memory_part_for(root, session_id, session, body["job"], layer["label"])
+                extra["memory"] = memory
+                part = f"; memory part {memory['part']}" if memory.get("part") else ""
+                drawings.bind(root, session_id, body["job"], "confirm", f"confirmed in the explosion view as {layer['label']}{part}")
         elif action == "rotate":
             explosion_layout.rotate_layer(session, _text(body, "job", required=True))
         else:

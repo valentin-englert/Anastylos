@@ -58,7 +58,12 @@ OPENING_SNAP_MM = (4.0, 8.0)  # Muse's point can land on a hole's rim, and the n
 OPENING_MIN_MM2 = 8.0
 OPENING_MAX_SHARE = 0.4
 OPENING_MIN_LUM = -0.7  # paper in a hole's shadow stays above this; a dark recess does not
+OPENING_MAX_SPREAD = 20.0  # lightness std in a hole; plain paper is even, a white wire on a board is not
 OPENING_ROUND_SOLIDITY = 0.8  # above it the shape has no real corners, so a wall's shadow bite is filled by the hull
+PART_EDGE_PER_MM = 0.35  # sharper than SHARP_EDGE_PER_MM's blur allows: a part as bright as the sheet still has fine edges
+EDGE_SEAL_MM = 3.0  # closes gaps in a part's edge so the sheet cannot flow in; given back afterwards
+RIM_INSET_MM = 4.0  # inside the printed dashed line
+MIN_PART_MM2 = 300.0
 SHARP_EDGE_PER_MM = 0.25  # log-ratio change per mm; a cast shadow's soft edge stays below it
 
 
@@ -187,6 +192,33 @@ def sam_outline(rectified: source.RectifiedFrame, empty: np.ndarray, box: list[i
     return (cleaned, "") if cleaned is not None else (None, "too little of SAM's mask remained without the shadow")
 
 
+def sheet_parts(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> list[np.ndarray]:
+    """Bare sheet is what floods in from the work area's rim without crossing an edge. What it cannot reach, filled, is a part."""
+    x, y, w, h = area_px
+    soft = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 1.0) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 1.0) + 8))
+    across = np.stack([cv2.Sobel(soft[..., c], cv2.CV_32F, 1, 0, ksize=3) / 8 for c in range(3)], axis=2)
+    down = np.stack([cv2.Sobel(soft[..., c], cv2.CV_32F, 0, 1, ksize=3) / 8 for c in range(3)], axis=2)
+    edge = np.sqrt((across ** 2 + down ** 2).max(axis=2)) * ppm > PART_EDGE_PER_MM
+    edge = cv2.dilate(edge.astype(np.uint8), _ellipse(EDGE_SEAL_MM, ppm)) > 0
+    inset = int(RIM_INSET_MM * ppm)
+    inside = np.zeros(edge.shape, bool)
+    inside[y + inset:y + h - inset, x + inset:x + w - inset] = True
+    _count, labels = cv2.connectedComponents((~edge & inside).astype(np.uint8), connectivity=4)
+    rim = inside.copy()
+    rim[y + inset + 2:y + h - inset - 2, x + inset + 2:x + w - inset - 2] = False
+    sheet = np.isin(labels, np.unique(labels[rim & (labels > 0)])) & (labels > 0)
+    sheet = cv2.dilate(sheet.astype(np.uint8), _ellipse(EDGE_SEAL_MM, ppm)) > 0
+    parts = cv2.morphologyEx((~sheet & inside).astype(np.uint8), cv2.MORPH_OPEN, _ellipse(OPEN_MM, ppm))
+    contours, _ = cv2.findContours(parts, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    found = []
+    for contour in sorted(contours, key=cv2.contourArea, reverse=True):
+        if cv2.contourArea(contour) >= MIN_PART_MM2 * ppm * ppm:
+            mask = np.zeros(parts.shape, np.uint8)
+            cv2.drawContours(mask, [contour], -1, 1, -1)
+            found.append(mask > 0)
+    return found
+
+
 def reached_by_sheet(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> np.ndarray:
     """Pixels joined to bare sheet without crossing a sharp edge. A cast shadow fades softly and is joined; a part's edge stops it."""
     x, y, w, h = area_px
@@ -295,7 +327,9 @@ def find_openings(rectified: source.RectifiedFrame, empty: np.ndarray, part: np.
     found: list[np.ndarray] = []
     for x, y in points:
         hole = trace_opening(lightness, sheet_lum, part, (x + bx, y + by), ppm)
-        if hole is not None and not any((hole & other).any() for other in found):
+        if hole is None or any((hole & other).any() for other in found):
+            continue
+        if np.median(sheet_lum[hole]) >= OPENING_MIN_LUM and lightness[hole].std() <= OPENING_MAX_SPREAD:  # Muse can point at a pale patch or a wire
             found.append(hole)
     return found, None
 
@@ -386,14 +420,15 @@ def main() -> None:
     args = parser.parse_args()
     if args.frame == "auto" and (reference := reference_view(args.video)) is not None:
         rectified, empty = reference
-        masks, boxes = separate(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
-        reached = reached_by_sheet(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
+        area = tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM)
+        masks = sheet_parts(rectified.image, empty, area, PX_PER_MM)
+        _firm, boxes = separate(rectified.image, empty, area, PX_PER_MM)
+        boxes = [b for b in boxes if not any(m[(b[1] + b[3]) // 2, (b[0] + b[2]) // 2] for m in masks)]  # what the flood found needs no shadow box
         written, not_drawn, numbered = [], [], len(masks)
-        refined = [refine_part(rectified, reached, mask, args.session_dir / "drawings" / "sam-boxes" / f"part-{number}") for number, mask in enumerate(masks, start=1)]
         with ThreadPoolExecutor(max_workers=4) as pool:
-            openings = list(pool.map(lambda found: find_openings(rectified, empty, found[0]), refined))
-        for number, ((outline, method), holes) in enumerate(zip(refined, openings), start=1):
-            written.append(write_job(args.session_dir, rectified, outline, f"part {number}", "final view of the video", method, holes))
+            openings = list(pool.map(lambda mask: find_openings(rectified, empty, mask), masks))
+        for number, (mask, holes) in enumerate(zip(masks, openings), start=1):
+            written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", "edges against the empty sheet", holes))
         for box in boxes:
             numbered += 1
             mask, reason = sam_outline(rectified, empty, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")

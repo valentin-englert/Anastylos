@@ -28,6 +28,19 @@ def _sheet(bridge: bool = False) -> np.ndarray:
     return np.clip(blurred + np.random.default_rng(0).normal(0, 6, image.shape), 0, 255).astype(np.uint8)
 
 
+class SheetPartsTest(unittest.TestCase):
+    def test_a_part_as_bright_as_the_sheet_is_one_filled_part_and_a_soft_shadow_is_none(self):
+        empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        fade = np.ones((800, 1200, 1), np.float32)
+        fade[550:700, 800:1100] = 0.7
+        image = (empty * cv2.GaussianBlur(fade, (0, 0), 40)[..., None]).astype(np.uint8)
+        cv2.rectangle(image, (200, 200), (600, 500), (120, 125, 122), 3)  # only a fine edge tells it from the sheet
+        parts = sheet_outlines.sheet_parts(image, empty, (0, 0, 1200, 800), PPM)
+        self.assertEqual(len(parts), 1)
+        self.assertTrue(parts[0][350, 400])
+        self.assertFalse(parts[0][620, 950])
+
+
 class OpeningsTest(unittest.TestCase):
     def setUp(self):
         self.empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)

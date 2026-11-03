@@ -41,6 +41,34 @@ class SheetPartsTest(unittest.TestCase):
         self.assertFalse(parts[0][620, 950])
 
 
+class SamTightenedTest(unittest.TestCase):
+    def setUp(self):
+        self.image = np.full((800, 1200, 3), (205, 212, 208), np.uint8)
+        cv2.rectangle(self.image, (200, 200), (800, 600), (90, 95, 92), -1)
+        self.rectified = source.RectifiedFrame(self.image, PPM, (0.0, 0.0), np.eye(3), {})
+        self.flood = np.zeros((800, 1200), bool)
+        self.flood[200:640, 200:800] = True  # with a shadow band below
+
+    def _tighten(self, sam):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.object(sheet_outlines.muse_sam, "sam_mask", return_value=(sam, {})):
+            return sheet_outlines.sam_tightened(self.rectified, self.flood, Path(tmp))
+
+    def test_sam_inside_the_flood_drops_the_shadow_band(self):
+        sam = np.zeros((800, 1200), bool)
+        sam[200:600, 200:800] = True
+        tight, method = self._tighten(sam)
+        self.assertFalse(tight[625, 500])
+        self.assertTrue(tight[400, 500])
+        self.assertIn("SAM", method)
+
+    def test_sam_leaving_the_flood_or_losing_the_part_keeps_the_flood(self):
+        wide = np.ones((800, 1200), bool)
+        tiny = np.zeros((800, 1200), bool)
+        tiny[300:340, 300:340] = True
+        for sam in (wide, tiny, None):
+            self.assertIs(self._tighten(sam)[0], self.flood)
+
+
 class OpeningsTest(unittest.TestCase):
     def setUp(self):
         self.empty = np.full((800, 1200, 3), (205, 212, 208), np.uint8)

@@ -49,6 +49,9 @@ SHADOW_FLOOR = -0.75
 CHROMA_MATERIAL = 0.13
 BRIGHTER_MATERIAL = 0.12
 MIN_PART_MM2 = 300.0
+SAM_INSIDE_FLOOD = 0.97
+SAM_KEEPS_FLOOD = 0.85
+SAM_SMOOTH_MM = 1.5
 BOX_MARGIN_MM = 6.0
 PALE_SHADOW_LUM = -0.25  # on a part as pale as the sheet: about 0 on the part, about -0.45 in its shadow
 MIN_KEPT_SHARE = 0.4
@@ -219,6 +222,36 @@ def sheet_parts(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, i
             cv2.drawContours(mask, [contour], -1, 1, -1)
             found.append(mask > 0)
     return found
+
+
+def sam_tightened(rectified: source.RectifiedFrame, flood: np.ndarray, folder: Path) -> tuple[np.ndarray, str]:
+    """The flood can hold a part's soft shadow; SAM, given its box and a point on dark material, draws the edge inside it. Otherwise the flood stays."""
+    plain = "edges against the empty sheet"
+    ppm = rectified.px_per_mm
+    lightness = cv2.cvtColor(rectified.image, cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32)
+    grown = flood.astype(np.uint8)
+    around = (cv2.dilate(grown, _ellipse(12.0, ppm)) > 0) & ~(cv2.dilate(grown, _ellipse(5.0, ppm)) > 0)
+    depth = cv2.distanceTransform(grown, cv2.DIST_L2, 5) * (lightness < 0.75 * np.median(lightness[around]))
+    if depth.max() <= 0:
+        return flood, plain
+    py, px = np.unravel_index(np.argmax(depth), depth.shape)
+    bx, by, bw, bh = cv2.boundingRect(grown)
+    margin = int(3.0 * ppm)
+    h, w = flood.shape
+    box = [max(bx - margin, 0), max(by - margin, 0), min(bx + bw + margin, w), min(by + bh + margin, h)]
+    folder.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(folder / "view.png"), rectified.image)
+    mask, _info = muse_sam.sam_mask(folder / "view.png", box, flood.shape, folder / "sam", folder / "sam_ledger.jsonl", points=[{"x": int(px), "y": int(py), "label": "positive"}])
+    if mask is None:
+        return flood, plain
+    outer, _openings = muse_sam.outer_and_openings(mask)
+    if not outer.any() or (outer & flood).sum() < SAM_INSIDE_FLOOD * outer.sum() or (outer & flood).sum() < SAM_KEEPS_FLOOD * flood.sum():
+        return flood, plain
+    smooth = cv2.GaussianBlur(outer.astype(np.float32), (0, 0), SAM_SMOOTH_MM * ppm) > 0.5  # SAM's edge frays along a shadow
+    contours, _ = cv2.findContours(smooth.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    filled = np.zeros(flood.shape, np.uint8)
+    cv2.drawContours(filled, [max(contours, key=cv2.contourArea)], -1, 1, -1)
+    return filled > 0, "edges against the empty sheet, tightened by SAM"
 
 
 def reached_by_sheet(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> np.ndarray:
@@ -432,9 +465,10 @@ def main() -> None:
         boxes = [b for b in boxes if not any(m[(b[1] + b[3]) // 2, (b[0] + b[2]) // 2] for m in masks)]  # what the flood found needs no shadow box
         written, not_drawn, numbered = [], [], len(masks)
         with ThreadPoolExecutor(max_workers=4) as pool:
-            openings = list(pool.map(lambda mask: find_openings(rectified, empty, mask), masks))
-        for number, (mask, holes) in enumerate(zip(masks, openings), start=1):
-            written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", "edges against the empty sheet", holes))
+            tightened = list(pool.map(lambda item: sam_tightened(rectified, item[1], args.session_dir / "drawings" / "sam-boxes" / f"part-{item[0]}"), enumerate(masks, start=1)))
+            openings = list(pool.map(lambda found: find_openings(rectified, empty, found[0]), tightened))
+        for number, ((mask, method), holes) in enumerate(zip(tightened, openings), start=1):
+            written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", method, holes))
         for box in boxes:
             numbered += 1
             mask, reason = sam_outline(rectified, empty, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")

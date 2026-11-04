@@ -21,7 +21,7 @@ SPDX_PATH = ROOT / "tools" / "compliance" / "spdx.json"
 REQUIREMENTS = [ROOT / "calibration" / "requirements.txt"]
 REQUIRED_FILES = [
     ROOT / "THIRD_PARTY_NOTICES.md",
-    ROOT / "pcb-ocr" / "THIRD_PARTY.md",
+    ROOT / "not-in-pipeline/pcb-ocr" / "THIRD_PARTY.md",
     SPDX_PATH,
 ]
 IGNORED_DISTS = {"pip", "setuptools", "wheel"}
@@ -156,7 +156,7 @@ def run(root: Path = ROOT) -> dict:
             errors.append(str(exc))
     errors += check_requirements(pins, pypi_purls(document))
     errors += check_files([root / "THIRD_PARTY_NOTICES.md",
-                           root / "pcb-ocr" / "THIRD_PARTY.md",
+                           root / "not-in-pipeline/pcb-ocr" / "THIRD_PARTY.md",
                            root / "tools" / "compliance" / "spdx.json"])
     venv_errors, warnings = check_venv(pins, root)
     return {"errors": errors + venv_errors, "warnings": warnings,

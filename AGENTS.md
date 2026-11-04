@@ -1,5 +1,7 @@
 # AGENTS.md — agent operating contract
 
+> **Moved:** modules that are not part of the working pipeline, including the recognition readers and the microscopy work, now live in [`not-in-pipeline/`](not-in-pipeline/README.md). Older paths in this document refer to that folder.
+
 ## Mission
 
 ANASTYLOS is an evidence-backed physical disassembly and reassembly

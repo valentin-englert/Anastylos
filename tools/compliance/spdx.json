@@ -172,7 +172,7 @@
           "annotationDate": "2026-10-26T23:30:00Z",
           "annotationType": "OTHER",
           "annotator": "Tool: anastylos-compliance-check",
-          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + licenses/ directory in installed dist-info; note=bundled vendored components carry their own texts under numpy-2.5.4.dist-info/licenses/; used-by=change-detection, resistor-reader, tray-counter, pcb-ocr"
+          "comment": "category=runtime-python-transitive; source=calibration/requirements.txt; evidence=License-Expression + licenses/ directory in installed dist-info; note=bundled vendored components carry their own texts under numpy-2.5.4.dist-info/licenses/; used-by=change-detection, resistor-reader, tray-counter, not-in-pipeline/pcb-ocr"
         }
       ]
     },
@@ -197,7 +197,7 @@
           "annotationDate": "2026-10-26T23:30:00Z",
           "annotationType": "OTHER",
           "annotator": "Tool: anastylos-compliance-check",
-          "comment": "category=runtime-python-direct; source=calibration/requirements.txt; evidence=Apache-2.0 metadata + MIT packaging LICENSE.txt + cv2/LICENSE-3RD-PARTY.txt in installed wheel; bundles=LGPL-2.1 FFmpeg DLL plus other third-party binaries listed in LICENSE-3RD-PARTY.txt; obligation=mandatory Apache-2.0 NOTICE + LGPL compliance if the wheel/venv is redistributed; used-by=calibration, change-detection, resistor-reader, tray-counter, pcb-ocr"
+          "comment": "category=runtime-python-direct; source=calibration/requirements.txt; evidence=Apache-2.0 metadata + MIT packaging LICENSE.txt + cv2/LICENSE-3RD-PARTY.txt in installed wheel; bundles=LGPL-2.1 FFmpeg DLL plus other third-party binaries listed in LICENSE-3RD-PARTY.txt; obligation=mandatory Apache-2.0 NOTICE + LGPL compliance if the wheel/venv is redistributed; used-by=calibration, change-detection, resistor-reader, tray-counter, not-in-pipeline/pcb-ocr"
         }
       ]
     },
@@ -623,7 +623,7 @@
           "annotationDate": "2026-10-26T23:30:00Z",
           "annotationType": "OTHER",
           "annotator": "Tool: anastylos-compliance-check",
-          "comment": "category=optional-system-tool; evidence=tesseract --version + Apache-2.0 doc/LICENSE + AUTHORS in install dir; note=invoked as CLI by pcb-ocr; installed tool, NOT bundled or redistributed; eng+osd tessdata shipped with it; see also pcb-ocr/THIRD_PARTY.md"
+          "comment": "category=optional-system-tool; evidence=tesseract --version + Apache-2.0 doc/LICENSE + AUTHORS in install dir; note=invoked as CLI by pcb-ocr; installed tool, NOT bundled or redistributed; eng+osd tessdata shipped with it; see also not-in-pipeline/pcb-ocr/THIRD_PARTY.md"
         }
       ]
     },

@@ -1,5 +1,7 @@
 # ANASTYLOS
 
+> **Moved:** modules that are not part of the working pipeline, including the recognition readers and the microscopy work, now live in [`not-in-pipeline/`](not-in-pipeline/README.md). Older paths in this document refer to that folder.
+
 Evidence-grounded, human-in-the-loop active vision for physical
 electronics disassembly and reassembly.
 

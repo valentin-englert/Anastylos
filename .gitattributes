@@ -15,4 +15,4 @@
 
 
 # Preserve exact microscopy delivery and historical QA hashes.
-anastylos-microscopy/** -text
+not-in-pipeline/anastylos-microscopy/** -text

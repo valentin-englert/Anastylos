@@ -516,8 +516,13 @@ class Handler(BaseHTTPRequestHandler):
         session_id = body.get("session", "")
         if not session_id:
             raise AdapterError("The session parameter is missing.", 400)
-        self._send_json(assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""),
-                                                     str(body.get("question", ""))))
+        ask = lambda: assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""), str(body.get("question", "")))
+        answer = ask()
+        if answer["status"] == "guide_unusable":  # a new memory event outdates the package; the operator should not have to rebuild it
+            with self._session_lock(session_id):
+                adapter.guide_build(Handler.workspace_root, session_id)
+            answer = ask()
+        self._send_json(answer)
 
     def _api_focus_view(self) -> None:
         self._send_json(voice_focus.view(Handler.workspace_root, self._session_param(self._query())))

@@ -67,6 +67,10 @@ function paintBadge(badgeId, source, outcome) {
 
 /* ------------------------------------------------------------------ session */
 
+function rememberedSession() {
+  try { return localStorage.getItem("anastylos-session"); } catch { return null; }
+}
+
 async function loadSessions() {
   setText("session-state", "Loading sessions …");
   showError("session-error", "");
@@ -90,9 +94,14 @@ async function loadSessions() {
       setText("session-state", hiddenOlder ? "No new sessions yet. Record on the phone, or show the older ones." : "No prepared sessions in this workspace.");
       return;
     }
-    const deepLink = new URLSearchParams(location.search).get("session");
-    if (deepLink && [...picker.options].some((o) => o.value === deepLink)) {
-      picker.value = deepLink;
+    const listed = (id) => id && [...picker.options].some((o) => o.value === id);
+    if (listed(state.session)) {  // this list is rebuilt while the operator works; the open session stays open
+      picker.value = state.session;
+      return;
+    }
+    const wanted = new URLSearchParams(location.search).get("session") || rememberedSession();
+    if (listed(wanted)) {
+      picker.value = wanted;
       await openSession();
     } else {
       setText("session-state", sessions.length === 1
@@ -154,6 +163,7 @@ async function openSession() {
   const sessionId = $("session-picker").value;
   if (!sessionId) return;
   state.session = sessionId;
+  try { localStorage.setItem("anastylos-session", sessionId); } catch { /* the page works without the convenience */ }
   state.question = null;
   state.binding = null;
   for (const id of ["prompt-card", "confirm-card", "guide-body", "resolution",
@@ -364,6 +374,18 @@ async function loadGuide() {
   }
 }
 
+async function buildFromRebuild(button) {
+  showError("assembly-error", "");
+  setText("assembly-state", "Building the rebuild steps …");
+  try {
+    await post("/api/guide/build", { session: state.session }, button);
+    await refreshAfterMutation();
+  } catch (error) {
+    setText("assembly-state", "");
+    showError("assembly-error", error.message);
+  }
+}
+
 async function buildGuide(button) {
   showError("guide-error", "");
   setText("guide-state", "Building the guide package …");
@@ -512,8 +534,10 @@ async function loadAssembly() {
     if (!view.usable) {
       $("assembly-body").hidden = true;
       setText("assembly-state", view.reason);
+      $("assembly-build-form").hidden = false;
       return;
     }
+    $("assembly-build-form").hidden = true;
     $("assembly-body").hidden = false;
     setText("assembly-progress",
       `${view.steps_done} of ${view.steps.length} steps done (package ${view.package_sha256.slice(0, 12)}).` +
@@ -1332,6 +1356,11 @@ $("answer-form").addEventListener("submit", (event) => {
   event.preventDefault(); sendAnswer($("answer-input").value, null, $("answer-button"));
 });
 $("confirm-form").addEventListener("submit", (event) => { event.preventDefault(); sendConfirm($("confirm-button")); });
+$("assembly-build-form").addEventListener("submit", (event) => { event.preventDefault(); buildFromRebuild($("assembly-build-button")); });
+document.addEventListener("click", (event) => {  // the step menu is drawn before a session is known
+  const link = event.target.closest && event.target.closest('a[href="/explosion.html"]');
+  if (link && state.session) link.href = `/explosion.html?session=${encodeURIComponent(state.session)}`;
+});
 $("build-form").addEventListener("submit", (event) => { event.preventDefault(); buildGuide($("build-button")); });
 $("ask-form").addEventListener("submit", (event) => { event.preventDefault(); askGuide($("ask-button")); });
 $("select-form").addEventListener("submit", (event) => { event.preventDefault(); resolveSelection($("select-button")); });

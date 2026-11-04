@@ -178,20 +178,37 @@ def _link_state(link: dict | None, context: dict, memory: dict) -> tuple[str, st
     return "linked", None
 
 
+def _compact(text: str | None) -> str:
+    return "".join(_WORD.findall((text or "").lower()))
+
+
 def _candidates(spec_part: str | None, memory: dict) -> list[dict]:
-    wanted = _tokens(spec_part or "")
+    """Every current part, best label match first. Words are compared singular and, ignoring spacing, as one run
+    ("frontshell" meets "front shell", and "front shell of the controller" contains "frontshell")."""
+    wanted, wanted_key = _tokens(spec_part or ""), _compact(spec_part)
     out = []
     for event in memory["parts"]:
         label_words = _tokens(event.get("operator_label") or "")
+        label_key = _compact(event.get("operator_label"))
         shared = sorted(wanted & label_words)
         score = round(len(shared) / len(label_words), 3) if label_words else 0.0
-        if label_words and "".join(_WORD.findall((spec_part or "").lower())) == "".join(_WORD.findall(event["operator_label"].lower())):
-            shared, score = sorted(label_words), 1.0  # "frontshell" and "front shell" are the same words
+        if label_key and wanted_key:
+            short, long_ = sorted((label_key, wanted_key), key=len)
+            if short == long_:
+                shared, score = sorted(label_words), 1.0
+            elif len(short) >= 4 and short in long_:
+                shared, score = shared or sorted(label_words), max(score, 0.8)
         out.append({**_part_summary(event, memory), "score": score, "matched_tokens": shared, "suggested": bool(shared)})
     return sorted(out, key=lambda c: (-c["score"], -len(c["matched_tokens"]), c["part_id"]))
 
 
-def _layer(job_dir: Path) -> dict | None:
+def wanted_label(context: dict) -> str | None:
+    """The words to match against memory labels: the operator-confirmed layer name, else the drawing job's part text."""
+    layer = layer_of(context["dir"])
+    return layer["label"] if layer else context["summary"]["part"]
+
+
+def layer_of(job_dir: Path) -> dict | None:
     """The drawing's layer in the explosion layout, with its neighbours; only an operator-confirmed layer counts."""
     try:
         layers = json.loads((job_dir.parents[1] / "explosion.json").read_text(encoding="utf-8"))["layers"]
@@ -227,12 +244,10 @@ def link_candidates(root: Path, session_id: str, job: str) -> dict:
     memory = read_memory(state)
     link = _read_link(context["dir"])
     link_state, _reason = _link_state(link, context, memory)
-    layer = _layer(context["dir"])
-    wanted = layer["label"] if layer else context["summary"]["part"]
     return {"schema": CANDIDATES_SCHEMA, "job": job, "spec_part": context["summary"]["part"],
             "drawing_sha256": context["drawing_sha256"], "memory_sha256": memory["sha256"], "link": link,
             "link_state": link_state, "auto_link": False,
-            "candidates": _candidates(wanted, memory)}
+            "candidates": _candidates(wanted_label(context), memory)}
 
 
 def link_part(root: Path, session_id: str, job: str, part_id: str, supersede: bool = False, note: str = "") -> dict:
@@ -279,7 +294,7 @@ def _result(status: str, message: str, matched: dict | None, target: dict, **fie
     return {"schema": HELP_SCHEMA, "status": status, "message": message,
             "intent": matched["intent"] if matched else None, "phrase": matched["phrase"] if matched else None,
             "target": target, "link": None, "package_sha256": None, "memory_sha256": None, "answer": None,
-            "answers": None, "origin": None, "storage": None, "follow_up": None, "evidence_to_show": [],
+            "answers": None, "part_label": None, "origin": None, "storage": None, "follow_up": None, "evidence_to_show": [],
             "candidates": [], "memory_written": False, **fields}
 
 
@@ -424,7 +439,7 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
         if link_state != "linked":
             status, message = ("needs_link", NEEDS_LINK) if link_state == "none" else ("link_stale", LINK_STALE.format(reason=reason))
             return _result(status, message, matched, target, link=link, memory_sha256=memory["sha256"],
-                           candidates=_candidates(context["summary"]["part"], memory))
+                           candidates=_candidates(wanted_label(context), memory))
         event_id, element = link["part"]["id"], f"drawing-job:{job_or_part}"
     else:
         event_id, element = job_or_part, f"memory-part:{job_or_part}"
@@ -445,7 +460,7 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
     if status == "storage_unknown":
         follow_up = _follow_up("storage_place", label, event_id, target["job"], "no storage record", None)
     belongs_here = _parts_of(label, event_id, memory)
-    layer = _layer(context["dir"]) if context is not None else None
+    layer = layer_of(context["dir"]) if context is not None else None
     if status == "origin_unknown" and belongs_here:
         total = sum(group["count"] for group in belongs_here)
         status, message = "parts_belong_here", f"{total} recorded part(s) came from {label}; put them back here."
@@ -453,6 +468,6 @@ def ask_about_part(root: Path, session_id: str, job_or_part: str, question: str)
         follow_up = _follow_up("install_point", label, event_id, target["job"], origin["precision"], origin["description"])
     return _result(status, message, matched, target, link=link, package_sha256=asked["guide_sha256"],
                    memory_sha256=asked["memory_sha256"], answer=None if status == "parts_belong_here" else _checked_text(asked), origin=origin, storage=storage,
-                   follow_up=follow_up, belongs_here=belongs_here, layer=layer,
+                   follow_up=follow_up, belongs_here=belongs_here, layer=layer, part_label=label,
                    evidence_to_show=_evidence_to_show(context, origin) if status in ("coarse_origin", "origin_unknown") else [],
                    answers={intent: _checked_text(answer) for intent, answer in answers.items()})

@@ -178,10 +178,45 @@
     }
   }
 
+  // Voice follows the desktop: the server learns which session and part are selected (server memory only), and a spoken
+  // answer for it comes back through the same panel. Only fields the server verified are shown.
+  let lastVoiceAt = null;
+
+  async function reportFocus() {
+    if (!session) return;
+    try {
+      await post("/api/focus", { job: selected });
+    } catch (error) {
+      // the voice follow-up is optional; the panel keeps working without it
+    }
+  }
+
+  async function pollVoice() {
+    if (!session || document.hidden) return;
+    try {
+      const response = await fetch(`/api/focus?session=${encodeURIComponent(session)}`);
+      const view = await response.json();
+      const voice = response.ok ? view.voice : null;
+      const at = voice ? voice.at : 0;
+      if (lastVoiceAt === null) {  // an answer from before the page opened is not replayed
+        lastVoiceAt = at;
+        return;
+      }
+      if (!voice || at <= lastVoiceAt) return;
+      lastVoiceAt = at;
+      if (voice.target_job !== selected) return;
+      if (voice.result) show(voice.result);
+      $("part-help-answer").textContent = `Voice: ${voice.spoken}`;
+    } catch (error) {
+      // polling is best effort
+    }
+  }
+
   window.addEventListener("anastylos:part-selected", (event) => {
     selectionRevision += 1;
     const detail = event.detail || {};
     selected = typeof detail.job === "string" ? detail.job : null;
+    reportFocus();
     $("part-help-answer").textContent = "";
     $("part-help-details").replaceChildren();
     $("part-help-link").hidden = true;
@@ -192,4 +227,6 @@
   $("part-help-replace").addEventListener("change", updateLinkControls);
   $("part-help-form").addEventListener("submit", ask);
   $("part-help-link-button").addEventListener("click", link);
+  reportFocus().then(pollVoice);
+  window.setInterval(pollVoice, 2000);
 })();

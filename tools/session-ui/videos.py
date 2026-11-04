@@ -25,6 +25,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+import ui_meta
 from adapter import AdapterError
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "agent"))
@@ -106,7 +107,7 @@ def _view(root: Path, meta: dict) -> dict:
             "status": meta.get("status"), "received_chunks": None, "declared_at": meta.get("declared_at"),
             "completed_at": meta.get("completed_at"),
             "job": None if job is None else {k: job.get(k) for k in
-                                             ("state", "session", "stage", "error", "counts", "started_at", "finished_at", "parts", "parts_not_drawn", "parts_error")}}
+                                             ("state", "session", "stage", "error", "counts", "started_at", "finished_at", "parts", "parts_not_drawn", "parts_error", "cells", "cells_error")}}
 
 
 def list_videos(root: Path) -> dict:
@@ -127,7 +128,7 @@ def _find(root: Path, video_id: str) -> tuple[dict, Path]:
 
 
 def start_processing(root: Path, video_id: str, runner: Callable | None = None, python: Path | None = None,
-                     background: bool = True, find_parts: Callable | None = None) -> dict:
+                     background: bool = True, find_parts: Callable | None = None, measure_cells: Callable | None = None) -> dict:
     """Start the pipeline on one complete video; a double click returns the job that is already there."""
     meta, directory = _find(root, video_id)
     if meta.get("status") != "complete":
@@ -143,9 +144,9 @@ def start_processing(root: Path, video_id: str, runner: Callable | None = None, 
             raise AdapterError("The stored video no longer matches its SHA-256; it was not processed.", 409)
         folder = f"video-{time.strftime('%Y%m%d-%H%M%S')}-{video_id[:8]}"
         job = {"schema": "anastylos-video-job@1", "video": video_id, "state": "queued", "session": folder,
-               "stage": "starting", "error": None, "counts": None, "started_at": _now(), "finished_at": None}
+               "stage": "starting", "error": None, "name": ui_meta.take_next_session_name(root), "counts": None, "started_at": _now(), "finished_at": None}
         _write_atomic(_job_path(root, video_id), job)
-    args = (root, video_id, video, folder, runner or phases.subprocess_runner, python, find_parts)
+    args = (root, video_id, video, folder, runner or phases.subprocess_runner, python, find_parts, measure_cells)
     if background:
         threading.Thread(target=_run, args=args, daemon=True, name=f"video-{video_id[:8]}").start()
     else:
@@ -195,10 +196,24 @@ def _find_parts(root: Path, video_id: str, folder: str, find_parts: Callable) ->
         _update(root, video_id, parts="failed", parts_error=str(exc)[:300])
 
 
-def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, python: Path | None, find_parts: Callable | None = None) -> None:
+def _measure_cells(root: Path, video_id: str, folder: str, measure_cells: Callable) -> None:
+    """The storage cells are measured once per video so every clip later shows the checked time; a failure is shown only."""
+    _update(root, video_id, cells="measuring")
+    try:
+        measure_cells(root, folder)
+        _update(root, video_id, cells="measured")
+    except Exception as exc:  # noqa: BLE001 - a background job must always end in a visible state
+        _update(root, video_id, cells="failed", cells_error=str(exc)[:300])
+
+
+def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, python: Path | None, find_parts: Callable | None = None,
+         measure_cells: Callable | None = None) -> None:
     try:
         _update(root, video_id, state="running", stage="creating the session folder")
         state = SessionState.create(root / folder, "Phone video", "workstation")
+        job_name = (_job(root, video_id) or {}).get("name")
+        if job_name:
+            ui_meta.set_session_name(root / folder, job_name)
         _update(root, video_id, stage="running the session pipeline on the video")
         counts = phases.run_phase(state, PHASE_TAG, PHASE_LABEL, video, runner, phases.vision_python(python or Path(sys.executable)))
         _update(root, video_id, state="done", stage="finished", counts=counts, finished_at=_now())
@@ -206,6 +221,8 @@ def _run(root: Path, video_id: str, video: Path, folder: str, runner: Callable, 
         (root / folder / OPEN_MARKER).write_text("opens on the first voice turn", encoding="utf-8")
         if find_parts is not None:
             _find_parts(root, video_id, folder, find_parts)
+        if measure_cells is not None:
+            _measure_cells(root, video_id, folder, measure_cells)
     except SessionError as exc:
         _update(root, video_id, state="failed", stage="failed", error=str(exc), finished_at=_now())
     except Exception as exc:  # noqa: BLE001 - a background job must always end in a visible state

@@ -4,7 +4,7 @@
 
 const $ = (id) => document.getElementById(id);
 
-const state = { session: null, question: null, binding: null, claims: [] };
+const state = { session: null, showOlder: false, sessionName: "", question: null, binding: null, claims: [] };
 
 function setText(id, value) {
   $(id).textContent = value === null || value === undefined ? "" : String(value);
@@ -71,18 +71,23 @@ async function loadSessions() {
   setText("session-state", "Loading sessions …");
   showError("session-error", "");
   try {
-    const { sessions } = await call("/api/sessions");
+    const { sessions, hidden_older: hiddenOlder, next_session_name: nextName } = await call(`/api/sessions${state.showOlder ? "?all=1" : ""}`);
+    const link = $("show-older");
+    link.hidden = state.showOlder || !hiddenOlder;
+    link.textContent = `Show older sessions (${hiddenOlder})`;
+    if (document.activeElement !== $("next-name")) $("next-name").value = nextName || "";
     const picker = $("session-picker");
     picker.replaceChildren();
     for (const entry of sessions) {
       const option = document.createElement("option");
       option.value = entry.id;
       option.textContent = entry.error ? `${entry.id} (${entry.error})`
-        : `${entry.id} — ${entry.object}${entry.complete ? " (complete)" : ""}`;
+        : `${entry.name ? `${entry.name} · ` : ""}${entry.id} — ${entry.object}${entry.complete ? " (complete)" : ""}`;
+      option.dataset.name = entry.name || "";
       picker.append(option);
     }
     if (!sessions.length) {
-      setText("session-state", "No prepared sessions in this workspace.");
+      setText("session-state", hiddenOlder ? "No new sessions yet. Record on the phone, or show the older ones." : "No prepared sessions in this workspace.");
       return;
     }
     const deepLink = new URLSearchParams(location.search).get("session");
@@ -117,6 +122,10 @@ async function loadStatus() {
   try {
     const summary = await call(`/api/status?session=${encodeURIComponent(state.session)}`);
     $("session-status").hidden = false;
+    const chosen = $("session-picker").selectedOptions[0];
+    state.sessionName = chosen ? chosen.dataset.name || "" : "";
+    setText("fact-name", state.sessionName || state.session);
+    $("rename-input").value = state.sessionName;
     setText("fact-object", summary.object);
     setText("fact-operator", summary.operator);
     setText("fact-complete", summary.complete ? "yes" : "no");
@@ -895,7 +904,8 @@ function videoCard(video) {
   const head = document.createElement("p");
   const recorded = video.declared_at ? new Date(video.declared_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Unknown time";
   const parts = job && { finding: " · finding parts on the sheet…", found: " · parts drawn, see the explosion view", failed: " · finding parts failed" }[job.parts];
-  head.textContent = `${recorded} · ${size} · ${words || video.status}${parts || ""} · id ${video.video.slice(0, 8)}`;
+  const cells = job && { measuring: " · measuring the storage cells…", measured: " · storage cells measured", failed: " · measuring the storage cells failed" }[job.cells];
+  head.textContent = `${recorded} · ${size} · ${words || video.status}${parts || ""}${cells || ""} · id ${video.video.slice(0, 8)}`;
   card.append(head);
   if (job && job.error) {
     const error = document.createElement("p");
@@ -1292,6 +1302,30 @@ async function handleSegment(blocks, rate, endedAt) {
 
 /* ------------------------------------------------------------------ wiring */
 
+$("next-name-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const { name } = await post("/api/session/name", { name: $("next-name").value }, $("next-name-save"));
+    $("next-name").value = name;
+    setText("next-name-state", name ? `Saved. The next session is called “${name}”.` : "No name; the technical ID is used.");
+  } catch (error) { setText("next-name-state", error.message); }
+});
+$("rename-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!state.session) return;
+  try {
+    await post("/api/session/name", { session: state.session, name: $("rename-input").value }, $("rename-save"));
+    const keep = state.session;
+    await loadSessions();
+    $("session-picker").value = keep;
+    await openSession();
+  } catch (error) { showError("session-error", error.message); }
+});
+$("show-older").addEventListener("click", (event) => { event.preventDefault(); state.showOlder = true; loadSessions(); });
+$("start-fresh").addEventListener("click", async () => {
+  try { await post("/api/history/start-fresh", {}, $("start-fresh")); state.showOlder = false; await loadSessions(); }
+  catch (error) { showError("session-error", error.message); }
+});
 $("session-form").addEventListener("submit", (event) => { event.preventDefault(); openSession(); });
 $("next-form").addEventListener("submit", (event) => { event.preventDefault(); nextQuestion($("next-button")); });
 $("answer-form").addEventListener("submit", (event) => {

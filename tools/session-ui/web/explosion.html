@@ -91,7 +91,8 @@
           <h4 id="part-replay-heading">Recorded moment</h4>
           <ul id="part-replay-list" class="note-list"></ul>
           <p class="state" id="part-replay-state" role="status"></p>
-          <div id="part-replay-player" hidden>
+          <div id="part-replay-player" tabindex="-1" role="dialog" aria-label="Recorded moment" hidden>
+            <button type="button" id="part-replay-close">Close</button>
             <p class="state replay-label" id="part-replay-label"></p>
             <p class="hint" id="part-replay-meaning"></p>
             <p class="state" id="part-replay-time" aria-live="off"></p>

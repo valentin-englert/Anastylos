@@ -33,7 +33,10 @@ import drawings
 import explosion
 import phone
 import replay
+import replay_prep
+import ui_meta
 import videos
+import voice_focus
 from adapter import AdapterError
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
@@ -169,6 +172,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/gaps/evidence": self._api_evidence, "/api/drawings": self._api_drawings,
             "/api/drawing/status": self._api_drawing_status, "/api/drawing/file": self._api_drawing_file,
             "/api/parts/link-candidates": self._api_parts_candidates,
+            "/api/focus": self._api_focus_view,
             "/api/replay": self._api_replay_moments, "/api/replay/file": self._api_replay_file,
             "/api/capture/qr": lambda: self._send_bytes(captures.session_qr_png(Handler.workspace_root), "image/png"),
             "/explosion.html": lambda: self._send_static("explosion.html"),
@@ -209,12 +213,13 @@ class Handler(BaseHTTPRequestHandler):
                   "/api/capture/connect": self._api_capture_connect, "/api/capture/link": self._api_capture_link,
                   "/api/capture/request": self._api_capture_request, "/api/capture/poll": self._api_capture_poll,
                   "/api/parts/link": self._api_parts_link, "/api/parts/ask": self._api_parts_ask,
-                  "/api/replay/prepare": self._api_replay_prepare,
+                  "/api/replay/prepare": self._api_replay_prepare, "/api/focus": self._api_focus_set,
                   "/api/explosion/layout": self._api_explosion_layout, "/api/explosion/outlines": self._api_explosion_outlines,
                   "/api/voice/transcribe": self._api_voice_transcribe, "/api/dialogue/settings": self._api_dialogue_settings_save,
                   "/api/dialogue/turn": self._api_dialogue_turn, "/api/videos/process": self._api_video_process,
                   "/api/phone/pair": lambda: self._send_json(phone.start_pairing(Handler.workspace_root)),
-                  "/api/phone/decision": self._api_phone_decision}
+                  "/api/phone/decision": self._api_phone_decision,
+                  "/api/session/name": self._api_session_name, "/api/history/start-fresh": self._api_start_fresh}
         route = routes.get(urllib.parse.urlsplit(self.path).path)
         if route is None:
             self._discard_body()
@@ -234,7 +239,23 @@ class Handler(BaseHTTPRequestHandler):
         self._send_static("index.html")
 
     def _api_sessions(self) -> None:
-        self._send_json({"sessions": adapter.list_sessions(Handler.workspace_root)})
+        show_all = self._query().get("all") == "1"
+        self._send_json({**ui_meta.decorate_and_filter(Handler.workspace_root, adapter.list_sessions(Handler.workspace_root), show_all),
+                         "next_session_name": ui_meta.settings(Handler.workspace_root)["next_session_name"]})
+
+    def _api_session_name(self) -> None:
+        """Name one session (UI metadata next to it), or, without ``session``, the next one that is created."""
+        body = self._read_json()
+        session_id = body.get("session")
+        if session_id:
+            name = ui_meta.set_session_name(adapter.resolve_session(Handler.workspace_root, str(session_id)), body.get("name"))
+        else:
+            name = ui_meta.set_next_session_name(Handler.workspace_root, body.get("name"))
+        self._send_json({"name": name})
+
+    def _api_start_fresh(self) -> None:
+        self._discard_body()
+        self._send_json({"history_cutoff": ui_meta.start_fresh(Handler.workspace_root)})
 
     def _session_param(self, query: dict[str, str]) -> str:
         session_id = query.get("session", "")
@@ -276,7 +297,8 @@ class Handler(BaseHTTPRequestHandler):
     def _api_video_process(self) -> None:
         """Start the pipeline on one uploaded phone video; progress and failures are read back from /api/videos."""
         body = self._read_json()
-        self._send_json(videos.start_processing(Handler.workspace_root, str(body.get("video", "")), find_parts=explosion.find_outlines))
+        self._send_json(videos.start_processing(Handler.workspace_root, str(body.get("video", "")), find_parts=explosion.find_outlines,
+                                                 measure_cells=replay_prep.measure_job))
 
     def _api_connection(self) -> None:
         """Whether the Muse key is set in this server's environment. The value is never read out or sent."""
@@ -497,10 +519,25 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(assembly_help.ask_about_part(Handler.workspace_root, session_id, body.get("target", ""),
                                                      str(body.get("question", ""))))
 
+    def _api_focus_view(self) -> None:
+        self._send_json(voice_focus.view(Handler.workspace_root, self._session_param(self._query())))
+
+    def _api_focus_set(self) -> None:
+        """The explosion page reports its session and selected job (null = nothing selected); kept in server memory only."""
+        body = self._read_json()
+        session_id = body.get("session", "")
+        if not session_id:
+            raise AdapterError("The session parameter is missing.", 400)
+        view = voice_focus.set_focus(Handler.workspace_root, session_id, body.get("job"))
+        replay_prep.kick(Handler.workspace_root, session_id)  # opening the page prepares any clip that is still missing
+        self._send_json(view)
+
     def _api_replay_moments(self) -> None:
         query = self._query()
         parts = [p for p in query.get("parts", "").split(",") if p]
-        self._send_json(replay.replay_moments(Handler.workspace_root, self._session_param(query), parts))
+        session_id = self._session_param(query)
+        self._send_json(replay_prep.annotate(Handler.workspace_root, session_id,
+                                             replay.replay_moments(Handler.workspace_root, session_id, parts)))
 
     def _api_replay_file(self) -> None:
         query = self._query()
@@ -513,7 +550,7 @@ class Handler(BaseHTTPRequestHandler):
         session_id = body.get("session", "")
         if not session_id:
             raise AdapterError("The session parameter is missing.", 400)
-        self._mutate(session_id, lambda: replay.replay_prepare(Handler.workspace_root, session_id, str(body.get("part", ""))))
+        self._mutate(session_id, lambda: replay_prep.open_clip(Handler.workspace_root, session_id, str(body.get("part", ""))))
 
     def _api_voice_transcribe(self) -> None:
         """Push-to-talk clip → transcript. The clip goes to the provider in a separate process and is not stored."""
@@ -559,6 +596,7 @@ def main(argv: list[str] | None = None) -> int:
         server = serve(args.workspace_root, args.host, args.port)
     except AdapterError as exc:
         parser.error(str(exc))
+    replay_prep.enable(Handler.workspace_root)  # clips are made in the background, one at a time, at low priority
     LOG.info("Serving %s on http://%s:%s (localhost only, offline demo).",
              Handler.workspace_root, args.host, server.server_port)
     try:

@@ -189,3 +189,16 @@ images forward or in reverse and offers a before/after slider; the browser only 
 video or a path. What `t_s` marks depends on the answered question and is shown in fixed words: for a typed source it
 is the start of the DEPOSIT window, not a removal. Nothing writes memory and no model is called. Routes and details:
 `replay.py` module docstring.
+
+The shown time is checked against the storage cell: on the first replay of a video `cell_settle_worker.py` measures (once, about a
+minute, cached in `evidence/cell-settle/`) when each sheet cell changed for good against the empty sheet at the start of the video.
+A part alone in its cell is shown at that time ("time measured from the storage cell"; `t_s` in memory is not changed). With several
+parts in a cell the detector window that fits the cell's first lasting change is used, or the part's moment is reported as not
+known. A video without an empty-sheet start keeps the detector time, labelled as a detector estimate. See `replay_time.py`.
+
+
+Clips are made before anyone clicks (`replay_prep.py`): one low-priority background worker, one clip at a time. It starts when the
+video job ends (cell measurement, shown in the video card), after every dialogue answer that reaches memory and when the dialogue
+ends, and when the explosion page opens a session; a clip folder appears only when complete. A click on a ready clip opens at once;
+one still being made shows "Almost ready" and opens by itself. Frames are read in order from one open capture
+(`rectified_frames.py`), so a clip takes about 2 s and the cell measurement about 18 s on a 3-minute phone video.

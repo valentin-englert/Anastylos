@@ -13,6 +13,7 @@ draws the outline, and if SAM's mask does not hold up, the part is reported inst
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import dataclasses
 import json
 import os
@@ -48,10 +49,27 @@ SHADOW_FLOOR = -0.75
 CHROMA_MATERIAL = 0.13
 BRIGHTER_MATERIAL = 0.12
 MIN_PART_MM2 = 300.0
+SAM_INSIDE_FLOOD = 0.97
+SAM_KEEPS_FLOOD = 0.85
+SAM_SMOOTH_MM = 1.5
 BOX_MARGIN_MM = 6.0
 PALE_SHADOW_LUM = -0.25  # on a part as pale as the sheet: about 0 on the part, about -0.45 in its shadow
 MIN_KEPT_SHARE = 0.4
 MIN_FIRM_COVER = 0.85  # SAM may add a pale end to a part, but must keep what was measured as sure material
+OPENING_TOLERANCES = (3, 2, 1)  # lightness steps a flood may take between neighbours, widest first; a leak retries narrower
+OPENING_SNAP_MM = (4.0, 8.0)  # Muse's point can land on a hole's rim, and the nearest bright spot can be the rim itself
+OPENING_MIN_MM2 = 8.0
+OPENING_MAX_SHARE = 0.4
+OPENING_MIN_LUM = -0.7  # paper in a hole's shadow stays above this; a dark recess does not
+OPENING_MAX_SPREAD = 20.0  # lightness std in a hole; plain paper is even, a white wire on a board is not
+OPENING_LARGE_MM2 = 150.0
+OPENING_MIN_PAPER = 0.65  # of the sheet's lightness around the part: shaded paper measured 0.72, pale plastic 0.57
+OPENING_MUSE_LOOKS = 2
+OPENING_ROUND_SOLIDITY = 0.8  # above it the shape has no real corners, so a wall's shadow bite is filled by the hull
+PART_EDGE_PER_MM = 0.35  # sharper than SHARP_EDGE_PER_MM's blur allows: a part as bright as the sheet still has fine edges
+EDGE_SEAL_MM = 3.0  # closes gaps in a part's edge so the sheet cannot flow in; given back afterwards
+RIM_INSET_MM = 4.0  # inside the printed dashed line
+MIN_PART_MM2 = 300.0
 SHARP_EDGE_PER_MM = 0.25  # log-ratio change per mm; a cast shadow's soft edge stays below it
 
 
@@ -180,6 +198,63 @@ def sam_outline(rectified: source.RectifiedFrame, empty: np.ndarray, box: list[i
     return (cleaned, "") if cleaned is not None else (None, "too little of SAM's mask remained without the shadow")
 
 
+def sheet_parts(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> list[np.ndarray]:
+    """Bare sheet is what floods in from the work area's rim without crossing an edge. What it cannot reach, filled, is a part."""
+    x, y, w, h = area_px
+    soft = np.log((cv2.GaussianBlur(image.astype(np.float32), (0, 0), 1.0) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 1.0) + 8))
+    across = np.stack([cv2.Sobel(soft[..., c], cv2.CV_32F, 1, 0, ksize=3) / 8 for c in range(3)], axis=2)
+    down = np.stack([cv2.Sobel(soft[..., c], cv2.CV_32F, 0, 1, ksize=3) / 8 for c in range(3)], axis=2)
+    edge = np.sqrt((across ** 2 + down ** 2).max(axis=2)) * ppm > PART_EDGE_PER_MM
+    edge = cv2.dilate(edge.astype(np.uint8), _ellipse(EDGE_SEAL_MM, ppm)) > 0
+    inset = int(RIM_INSET_MM * ppm)
+    inside = np.zeros(edge.shape, bool)
+    inside[y + inset:y + h - inset, x + inset:x + w - inset] = True
+    _count, labels = cv2.connectedComponents((~edge & inside).astype(np.uint8), connectivity=4)
+    rim = inside.copy()
+    rim[y + inset + 2:y + h - inset - 2, x + inset + 2:x + w - inset - 2] = False
+    sheet = np.isin(labels, np.unique(labels[rim & (labels > 0)])) & (labels > 0)
+    sheet = cv2.dilate(sheet.astype(np.uint8), _ellipse(EDGE_SEAL_MM, ppm)) > 0
+    parts = cv2.morphologyEx((~sheet & inside).astype(np.uint8), cv2.MORPH_OPEN, _ellipse(OPEN_MM, ppm))
+    contours, _ = cv2.findContours(parts, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    found = []
+    for contour in sorted(contours, key=cv2.contourArea, reverse=True):
+        if cv2.contourArea(contour) >= MIN_PART_MM2 * ppm * ppm:
+            mask = np.zeros(parts.shape, np.uint8)
+            cv2.drawContours(mask, [contour], -1, 1, -1)
+            found.append(mask > 0)
+    return found
+
+
+def sam_tightened(rectified: source.RectifiedFrame, flood: np.ndarray, folder: Path) -> tuple[np.ndarray, str]:
+    """The flood can hold a part's soft shadow; SAM, given its box and a point on dark material, draws the edge inside it. Otherwise the flood stays."""
+    plain = "edges against the empty sheet"
+    ppm = rectified.px_per_mm
+    lightness = cv2.cvtColor(rectified.image, cv2.COLOR_BGR2LAB)[..., 0].astype(np.float32)
+    grown = flood.astype(np.uint8)
+    around = (cv2.dilate(grown, _ellipse(12.0, ppm)) > 0) & ~(cv2.dilate(grown, _ellipse(5.0, ppm)) > 0)
+    depth = cv2.distanceTransform(grown, cv2.DIST_L2, 5) * (lightness < 0.75 * np.median(lightness[around]))
+    if depth.max() <= 0:
+        return flood, plain
+    py, px = np.unravel_index(np.argmax(depth), depth.shape)
+    bx, by, bw, bh = cv2.boundingRect(grown)
+    margin = int(3.0 * ppm)
+    h, w = flood.shape
+    box = [max(bx - margin, 0), max(by - margin, 0), min(bx + bw + margin, w), min(by + bh + margin, h)]
+    folder.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(folder / "view.png"), rectified.image)
+    mask, _info = muse_sam.sam_mask(folder / "view.png", box, flood.shape, folder / "sam", folder / "sam_ledger.jsonl", points=[{"x": int(px), "y": int(py), "label": "positive"}])
+    if mask is None:
+        return flood, plain
+    outer, _openings = muse_sam.outer_and_openings(mask)
+    if not outer.any() or (outer & flood).sum() < SAM_INSIDE_FLOOD * outer.sum() or (outer & flood).sum() < SAM_KEEPS_FLOOD * flood.sum():
+        return flood, plain
+    smooth = cv2.GaussianBlur(outer.astype(np.float32), (0, 0), SAM_SMOOTH_MM * ppm) > 0.5  # SAM's edge frays along a shadow
+    contours, _ = cv2.findContours(smooth.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    filled = np.zeros(flood.shape, np.uint8)
+    cv2.drawContours(filled, [max(contours, key=cv2.contourArea)], -1, 1, -1)
+    return filled > 0, "edges against the empty sheet, tightened by SAM"
+
+
 def reached_by_sheet(image: np.ndarray, empty: np.ndarray, area_px: tuple[int, int, int, int], ppm: float) -> np.ndarray:
     """Pixels joined to bare sheet without crossing a sharp edge. A cast shadow fades softly and is joined; a part's edge stops it."""
     x, y, w, h = area_px
@@ -231,6 +306,81 @@ def refine_part(rectified: source.RectifiedFrame, reached: np.ndarray, firm: np.
     return united > 0, "SAM from a box and point measured against the empty sheet"
 
 
+def _flood_opening(lightness: np.ndarray, part: np.ndarray, inner: np.ndarray, seed: tuple[int, int], ppm: float) -> np.ndarray | None:
+    h, w = part.shape
+    for tolerance in OPENING_TOLERANCES:
+        flood = np.zeros((h + 2, w + 2), np.uint8)
+        cv2.floodFill(lightness.copy(), flood, seed, 0, tolerance, tolerance, flags=4 | cv2.FLOODFILL_MASK_ONLY | (1 << 8))
+        hole = cv2.morphologyEx(flood[1:-1, 1:-1], cv2.MORPH_OPEN, _ellipse(1.5, ppm))
+        if not hole.any() or (hole.astype(bool) & ~inner).any() or hole.sum() > OPENING_MAX_SHARE * part.sum():
+            continue
+        if hole.sum() < OPENING_MIN_MM2 * ppm * ppm:
+            return None
+        contours, _ = cv2.findContours(hole, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contour = max(contours, key=cv2.contourArea)
+        hull = cv2.convexHull(contour)
+        if cv2.contourArea(contour) >= OPENING_ROUND_SOLIDITY * cv2.contourArea(hull):
+            contour = hull
+        filled = np.zeros(part.shape, np.uint8)
+        cv2.drawContours(filled, [contour], -1, 1, -1)
+        return filled > 0
+    return None
+
+
+def trace_opening(lightness: np.ndarray, sheet_lum: np.ndarray, part: np.ndarray, point: tuple[int, int], ppm: float) -> np.ndarray | None:
+    """The hole around Muse's point, flooded over smooth lightness from the brightest spot nearby. None when no pale region enclosed by the part is there."""
+    inner = cv2.erode(part.astype(np.uint8), _ellipse(0.5, ppm)) > 0
+    h, w = part.shape
+    smooth = cv2.GaussianBlur(lightness, (0, 0), 0.7 * ppm).astype(np.float32) * inner
+    for snap_mm in OPENING_SNAP_MM:
+        r = int(snap_mm * ppm)
+        x0, y0, x1, y1 = max(point[0] - r, 0), max(point[1] - r, 0), min(point[0] + r, w), min(point[1] + r, h)
+        if x0 >= x1 or y0 >= y1:
+            return None
+        sy, sx = np.unravel_index(np.argmax(smooth[y0:y1, x0:x1]), (y1 - y0, x1 - x0))
+        seed = (int(x0 + sx), int(y0 + sy))
+        if inner[seed[1], seed[0]] and sheet_lum[seed[1], seed[0]] >= OPENING_MIN_LUM:
+            hole = _flood_opening(lightness, part, inner, seed, ppm)
+            if hole is not None:
+                return hole
+    return None
+
+
+def find_openings(rectified: source.RectifiedFrame, empty: np.ndarray, part: np.ndarray) -> tuple[list[np.ndarray], str | None]:
+    """Muse points at the holes of one part, the image draws them. Without Muse the part simply keeps its solid outline, with the reason."""
+    key = os.environ.get("MODEL_API_KEY")
+    if not key:
+        return [], "no model key"
+    ppm = rectified.px_per_mm
+    bx, by, bw, bh = cv2.boundingRect(part.astype(np.uint8))
+    points: list[tuple[int, int]] = []
+    failure = None
+    with ThreadPoolExecutor(max_workers=OPENING_MUSE_LOOKS) as pool:  # one look can miss holes another finds; the paper check below refuses wrong points
+        looks = [pool.submit(muse_sam.muse_openings, rectified.image[by:by + bh, bx:bx + bw], key) for _ in range(OPENING_MUSE_LOOKS)]
+    for look in looks:
+        try:
+            points += look.result()
+        except Exception as exc:  # a drawing without holes is still a drawing; the reason goes into the job
+            failure = exc
+    if not points and failure is not None:
+        return [], f"Muse gave no holes ({type(failure).__name__})"
+    lightness = cv2.GaussianBlur(cv2.cvtColor(rectified.image, cv2.COLOR_BGR2LAB)[..., 0], (0, 0), 1.5)
+    soft = np.log((cv2.GaussianBlur(rectified.image.astype(np.float32), (0, 0), 1.5) + 8) / (cv2.GaussianBlur(empty.astype(np.float32), (0, 0), 1.5) + 8))
+    sheet_lum = soft.mean(axis=2)
+    around = (cv2.dilate(part.astype(np.uint8), _ellipse(12.0, ppm)) > 0) & ~(cv2.dilate(part.astype(np.uint8), _ellipse(5.0, ppm)) > 0)
+    paper = float(np.median(lightness[around]))
+    found: list[np.ndarray] = []
+    for x, y in points:
+        hole = trace_opening(lightness, sheet_lum, part, (x + bx, y + by), ppm)
+        if hole is None or any((hole & other).any() for other in found):
+            continue
+        looks_like_paper = np.median(lightness[hole]) >= OPENING_MIN_PAPER * paper
+        even = lightness[hole].std() <= OPENING_MAX_SPREAD or hole.sum() > OPENING_LARGE_MM2 * ppm * ppm  # a large hole holds a wall's shadow
+        if looks_like_paper and even:  # Muse can point at a pale patch or a wire
+            found.append(hole)
+    return found, None
+
+
 def _atomic_json(path: Path, document: dict) -> None:
     partial = path.with_name(path.name + ".partial")
     partial.write_text(json.dumps(document, indent=1), encoding="utf-8")
@@ -242,26 +392,31 @@ def _job_name(part: str) -> str:
 
 
 def write_job(session_dir: Path, rectified: source.RectifiedFrame, mask: np.ndarray, part: str, origin: str,
-              method: str = "colour separation from the sheet") -> str:
+              method: str = "colour separation from the sheet", openings: tuple[list[np.ndarray], str | None] = ([], None)) -> str:
     """One finished drawing job in the layout tools/explosion and the session UI already read."""
     job = Path(session_dir) / "drawings" / "jobs" / _job_name(part)
     job.mkdir(parents=True, exist_ok=False)
     ppm = rectified.px_per_mm
     outline, deviation = draw.simplify(segment.boundary(mask), ppm, 0.2)
     spec = {"part": part, "scope": "assembly", "view_side": None, "region_mm": list(FULL_PAGE_MM), "px_per_mm": ppm, "method": "sheet_outlines"}
+    holes, holes_note = openings
+    cut_px = [draw.simplify(segment.boundary(hole), ppm, 0.2)[0] for hole in holes]
     svg = render_layered_svg(rectified.px_to_mm(outline).round(2).tolist(), [], {
         "title": "Outline (unconfirmed)", "subtitle": f"{part} (assembly); {origin}",
         "legend": [f"Outline: {method}, max deviation {deviation:.2f} mm, sheet plane; not part dimensions.",
-                   "Part name, view side and orientation need operator confirmation."]})
+                   f"Holes: {len(holes)}, pointed out by Muse and traced in the image.",
+                   "Part name, view side and orientation need operator confirmation."]},
+        cut_mm=[rectified.px_to_mm(c).round(2).tolist() for c in cut_px])
     cv2.imwrite(str(job / "chosen_rectified.png"), rectified.image)
     view = rectified.image.copy()
     cv2.polylines(view, [np.round(segment.boundary(mask)).astype(np.int32)], True, (0, 200, 0), 4, cv2.LINE_AA)
+    cv2.polylines(view, [np.round(c).astype(np.int32) for c in cut_px], True, (0, 0, 220), 3, cv2.LINE_AA)
     cv2.imwrite(str(job / "overlay.jpg"), view)
     (job / "drawing.svg").write_text(svg, encoding="utf-8")
     _atomic_json(job / "spec.json", spec)
     _atomic_json(job / "progress.json", {"state": "done", "result": {
-        "status": "NEEDS_CONFIRMATION", "spec": spec, "outline_points": len(outline), "opening_candidates": 0,
-        "reasons": [f"Found by {method}; the part name is a proposal, please check the outline."]}})
+        "status": "NEEDS_CONFIRMATION", "spec": spec, "outline_points": len(outline), "opening_candidates": 0, "holes": len(holes),
+        "reasons": [f"Found by {method}; the part name is a proposal, please check the outline."] + ([holes_note] if holes_note else [])}})
     return job.name
 
 
@@ -312,12 +467,16 @@ def main() -> None:
     args = parser.parse_args()
     if args.frame == "auto" and (reference := reference_view(args.video)) is not None:
         rectified, empty = reference
-        masks, boxes = separate(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
-        reached = reached_by_sheet(rectified.image, empty, tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM), PX_PER_MM)
+        area = tuple(int(v * PX_PER_MM) for v in WORK_AREA_MM)
+        masks = sheet_parts(rectified.image, empty, area, PX_PER_MM)
+        _firm, boxes = separate(rectified.image, empty, area, PX_PER_MM)
+        boxes = [b for b in boxes if not any(m[(b[1] + b[3]) // 2, (b[0] + b[2]) // 2] for m in masks)]  # what the flood found needs no shadow box
         written, not_drawn, numbered = [], [], len(masks)
-        for number, mask in enumerate(masks, start=1):
-            refined, method = refine_part(rectified, reached, mask, args.session_dir / "drawings" / "sam-boxes" / f"part-{number}")
-            written.append(write_job(args.session_dir, rectified, refined, f"part {number}", "final view of the video", method))
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            tightened = list(pool.map(lambda item: sam_tightened(rectified, item[1], args.session_dir / "drawings" / "sam-boxes" / f"part-{item[0]}"), enumerate(masks, start=1)))
+            openings = list(pool.map(lambda found: find_openings(rectified, empty, found[0]), tightened))
+        for number, ((mask, method), holes) in enumerate(zip(tightened, openings), start=1):
+            written.append(write_job(args.session_dir, rectified, mask, f"part {number}", "final view of the video", method, holes))
         for box in boxes:
             numbered += 1
             mask, reason = sam_outline(rectified, empty, box, args.session_dir / "drawings" / "sam-boxes" / f"part-{numbered}")

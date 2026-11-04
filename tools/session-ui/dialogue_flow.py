@@ -20,6 +20,8 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / "live"))
 
+import replay_prep  # noqa: E402  (session-ui: clips are prepared in the background)
+import voice_focus  # noqa: E402  (session-ui: the part selected on the desktop)
 from catalog.selector import where_words  # noqa: E402
 from dialogue import bundle, items as cell_items, settings  # noqa: E402
 from dialogue.agent import DialogueAgent  # noqa: E402
@@ -102,11 +104,16 @@ class DialogueFlow:
             return {"handled": True, "speak": self.last_speak}  # a bare wake word while a question is open: say it again
         if command == "next_question":
             self._marker.unlink(missing_ok=True)
-            return self._said(self._open_next())
+            speak = self._open_next()
+            if speak["kind"] == "status" and speak["text"] == ALL_DONE:  # no round left: name what the desktop shows, if anything
+                speak = voice_focus.name_focus(self.root) or speak
+            return self._said(speak)
         if self.current is None:
             # unresolved questions remain: speech continues the question round, it never falls through to the guide
             self._marker.unlink(missing_ok=True)
             speak = self._open_next(guide_ok=text is not None)
+            if speak is None:  # no round is open: a phrase about the part selected on the desktop is answered for it
+                speak = voice_focus.answer_phrase(self.root, text or "")
             return {"handled": False} if speak is None else self._said(speak)
         handler = getattr(self, f"_{self.current['mode']}_{self.current['stage']}")
         return self._said(handler(text or ""))
@@ -422,6 +429,7 @@ class DialogueFlow:
                 if item["origin"] and item["origin"] != cell_items.UNKNOWN:
                     self._known_origins[self._origin_key(item["origin"])] = item["origin"]
         self.current = None
+        replay_prep.kick(self.root, self.session_id)  # a part reached memory: its clip is made while the dialogue goes on
         if failed:
             return self._advance(self.agent.defer(cur["event"], text, "a part was not committed")["speak"])
         return self._advance(self.agent.recorded_line(cur["event"]))
@@ -451,6 +459,7 @@ class DialogueFlow:
     def _closing_finish(self, lead: str = "") -> dict:
         self._closing_marker.write_text("done", encoding="utf-8")
         self.current = None
+        replay_prep.kick(self.root, self.session_id)
         return _speak(f"{lead} {ALL_DONE}".strip(), "status")
 
     def _write_note(self, kind: str, labels: list[str], location: str, said: dict,
@@ -467,6 +476,7 @@ class DialogueFlow:
         if reply.get("status") != "committed":
             return False
         self._note(kind, said)
+        replay_prep.kick(self.root, self.session_id)
         return True
 
     def _note(self, kind: str, said: dict) -> None:

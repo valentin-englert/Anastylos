@@ -12,6 +12,8 @@
   let frames = [];
   let index = 0;
   let rateFps = 10;
+  const MAX_WAIT_ATTEMPTS = 600;
+  const LIST_REFRESH_MS = 3000;
 
   const fileUrl = (key, name) =>
     `/api/replay/file?session=${encodeURIComponent(session)}&key=${encodeURIComponent(key)}&name=${encodeURIComponent(name)}`;
@@ -69,48 +71,71 @@
     $("part-replay-after").src = fileUrl(moment.key, player.after.file);
     $("part-replay-split").value = "50";
     $("part-replay-after").style.clipPath = "inset(0 0 0 50%)";
+    const hands = (pick) => (pick.low_skin ? "" : " (hands in view)");
     $("part-replay-compare-times").textContent =
-      `Left: earlier view, observed video time ${player.before.t_s.toFixed(1)} s. ` +
-      `Right: later view, observed video time ${player.after.t_s.toFixed(1)} s.`;
+      `Left: the last view before the recorded time, observed video time ${player.before.t_s.toFixed(1)} s${hands(player.before)}. ` +
+      `Right: the first view after it, observed video time ${player.after.t_s.toFixed(1)} s${hands(player.after)}.`;
   }
 
   function showPlayer(moment) {
     const player = moment.player;
     frames = player.frames;
-    rateFps = player.rate_fps;
+    rateFps = player.playback_fps;
     images = frames.map((frame) => {
       const image = new Image();
       image.src = fileUrl(moment.key, frame.file);
       return image;
     });
     $("part-replay-label").textContent = moment.label_fixed;
-    $("part-replay-meaning").textContent = moment.meaning_text +
+    $("part-replay-meaning").textContent = `${moment.meaning_text} ${moment.clip_text}` +
       (player.skipped_frames ? ` ${player.skipped_frames} frame(s) around it failed sheet registration and are not shown.` : "");
     $("part-replay-scrub").max = String(frames.length - 1);
     showCompare(moment, player);
     $("part-replay-player").hidden = false;
+    $("part-replay-player").focus();
     showFrame(frames.length - 1);
   }
 
-  async function open(partId, current) {
-    $("part-replay-state").textContent = "Preparing the recorded frames from the stored video…";
-    $("part-replay-player").hidden = true;
+  $("part-replay-close").addEventListener("click", () => {
     stop();
+    $("part-replay-player").hidden = true;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("part-replay-player").hidden) $("part-replay-close").click();
+  });
+
+  // A clip is made in the background before anyone asks. A ready one opens at once; one still being made says so and
+  // opens by itself when it is done (the same request is repeated once a second; it also moves the clip up the queue).
+  async function open(partId, current, attempt = 0) {
+    if (attempt === 0) {
+      $("part-replay-player").hidden = true;
+      stop();
+    }
     try {
       const moment = await request("/api/replay/prepare", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session, part: partId }),
       });
       if (current !== revision) return;
-      if (!moment.player) {
-        $("part-replay-state").textContent = moment.message || "No recorded moment can be shown for this part.";
+      if (moment.player) {
+        $("part-replay-state").textContent = "";
+        showPlayer(moment);
         return;
       }
-      $("part-replay-state").textContent = "";
-      showPlayer(moment);
+      const prep = moment.prep && moment.prep.state;
+      if (prep === "queued" || prep === "preparing") {
+        $("part-replay-state").textContent = "Almost ready — it opens by itself when it is done.";
+        if (attempt < MAX_WAIT_ATTEMPTS) window.setTimeout(() => open(partId, current, attempt + 1), 1000);
+        return;
+      }
+      $("part-replay-state").textContent = prep === "failed"
+        ? `This clip could not be prepared: ${moment.prep.error || "the tool reported an error"}`
+        : moment.message || "No recorded moment can be shown for this part.";
     } catch (error) {
       if (current === revision) $("part-replay-state").textContent = error.message;
     }
   }
+
+  const PREP_WORDS = { ready: " · ready", queued: " · being prepared", preparing: " · being prepared", failed: " · could not be prepared" };
 
   function entry(moment, label, current) {
     const item = document.createElement("li");
@@ -123,7 +148,10 @@
     button.type = "button";
     button.textContent = "Show recorded moment";
     button.addEventListener("click", () => open(moment.part_id, current));
-    item.append(`${name} — observed video time ${moment.observed_s.toFixed(1)} s`, button);
+    const basis = { storage_cell_settle: "time measured from the storage cell", detector_fitting_cell: "detector window that fits the storage cell",
+                    detector_estimate: "detector estimate" }[moment.time_basis];
+    const prep = PREP_WORDS[moment.prep && moment.prep.state] || "";
+    item.append(`${name} — observed video time ${moment.observed_s.toFixed(1)} s${basis ? ` (${basis})` : ""}${prep}`, button);
     return item;
   }
 
@@ -135,11 +163,7 @@
     return result.origin && result.origin.record_id ? [{ id: result.origin.record_id, label: null }] : [];
   }
 
-  async function onResult(event) {
-    reset();
-    const current = revision;
-    const wanted = targets(event.detail || {});
-    if (wanted.length === 0) return;
+  async function showList(wanted, current) {
     try {
       const view = await request(
         `/api/replay?session=${encodeURIComponent(session)}&parts=${encodeURIComponent(wanted.map((t) => t.id).join(","))}`);
@@ -147,12 +171,20 @@
       const labels = new Map(wanted.map((t) => [t.id, t.label]));
       $("part-replay-list").replaceChildren(...view.moments.map((m) => entry(m, labels.get(m.part_id), current)));
       $("part-replay").hidden = false;
+      const waiting = view.moments.some((m) => m.key && m.prep && m.prep.state !== "ready" && m.prep.state !== "failed");
+      if (waiting) window.setTimeout(() => showList(wanted, current), LIST_REFRESH_MS);
     } catch (error) {
       if (current === revision) {
         $("part-replay-state").textContent = error.message;
         $("part-replay").hidden = false;
       }
     }
+  }
+
+  async function onResult(event) {
+    reset();
+    const wanted = targets(event.detail || {});
+    if (wanted.length > 0) await showList(wanted, revision);
   }
 
   window.addEventListener("anastylos:part-selected", reset);

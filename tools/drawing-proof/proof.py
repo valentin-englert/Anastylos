@@ -142,7 +142,7 @@ def render_svg(geometry: dict, spec: dict) -> str:
              f'<text x="{lay["margin"]}" y="9" font-size="4.2" font-weight="bold">{spec["title"]}</text>',
              f'<text x="{lay["margin"]}" y="15" font-size="2.4" fill="#555">{spec["subtitle"]}</text>',
              '<g id="observed_outline">',
-             f'<path data-line-role="outline" d="{_path(geometry["outline_mm"], o)}" fill="#e9eaec" stroke="#222" stroke-width="0.45" stroke-linejoin="round"/>',
+             f'<path data-line-role="outline" d="{" ".join(_path(p, o) for p in [geometry["outline_mm"], *geometry.get("cut_mm", [])])}" fill="#e9eaec" fill-rule="evenodd" stroke="#222" stroke-width="0.45" stroke-linejoin="round"/>',
              '</g><g id="observed_regions">']
     for region in geometry["regions"]:
         fill = TONE_FILL[region["tone"]][0]

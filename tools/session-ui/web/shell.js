@@ -18,17 +18,22 @@
 
   /* ------------------------------------------------------------------ pages */
 
+  /* Visible steps follow the demo workflow. Pages flagged `retired` keep their section and code in the document
+     but are not offered; add ?all-steps to the address to bring them back. */
   const PAGES = [
-    { id: "session", label: "Session", blurb: "Open your prepared session" },
-    { id: "questions", label: "Questions", blurb: "Answer what the system asks" },
-    { id: "phone", label: "Phone", blurb: "Connect the phone and see its videos" },
-    { id: "drawings", label: "Drawings", blurb: "Outline a part from the video" },
-    { id: "guide", label: "Guide", blurb: "Ask where a part goes" },
-    { id: "part", label: "Selected part", blurb: "Origin and storage of one part" },
+    { id: "phone", label: "Phone", blurb: "Pair the phone, name the session, see its videos" },
+    { id: "session", label: "Session", blurb: "Open the processed session" },
+    { id: "questions", label: "Questions", blurb: "Answer what the assistant asks and save to memory" },
+    { id: "drawings", label: "Drawings", blurb: "Outline parts and see the video moments" },
+    { id: "belong", label: "Where does it belong?", blurb: "Ask about a part in the explosion view", href: "/explosion.html" },
     { id: "rebuild", label: "Rebuild", blurb: "Put it back, step by step" },
-    { id: "photos", label: "Photos needed", blurb: "See what is still missing" },
     { id: "report", label: "Report", blurb: "Save a summary file" },
+    { id: "guide", label: "Guide", blurb: "Ask where a part goes", retired: true },
+    { id: "part", label: "Selected part", blurb: "Origin and storage of one part", retired: true },
+    { id: "photos", label: "Photos needed", blurb: "See what is still missing", retired: true },
   ];
+  const showRetired = new URLSearchParams(location.search).has("all-steps");
+  const VISIBLE = PAGES.filter((page) => showRetired || !page.retired);
   const INFO = {
     home: ["Anastylos helps you take a device apart and put it back together. Photos and your answers are the proof.",
            "Answers come from stored facts. Muse is only used for your voice and for part drawings.",
@@ -39,16 +44,16 @@
 
   function buildMenu() {
     const nav = $("main-nav");
-    for (const page of PAGES) {
+    for (const page of VISIBLE) {
       const link = make("a", "menu-link", page.label);
-      link.href = `#/${page.id}`;
+      link.href = page.href || `#/${page.id}`;
       link.dataset.page = page.id;
       nav.append(link);
     }
     const cards = $("home-cards");
-    PAGES.forEach((page, index) => {
+    VISIBLE.forEach((page, index) => {
       const card = make("a", "card");
-      card.href = `#/${page.id}`;
+      card.href = page.href || `#/${page.id}`;
       card.append(make("span", "card-number", String(index + 1).padStart(2, "0")), make("span", "card-title", page.label),
                   make("span", "card-blurb", page.blurb));
       cards.append(card);
@@ -74,7 +79,7 @@
 
   function currentPage() {
     const id = location.hash.replace(/^#\/?/, "");
-    return sections.has(id) ? id : "home";
+    return sections.has(id) && VISIBLE.some((page) => page.id === id) ? id : "home";
   }
 
   function route() {
@@ -97,7 +102,7 @@
     const object = $("fact-object").textContent.trim();
     const open = $("question-states").textContent.match(/OPEN: (\d+)/);
     const line = !object ? "No session is open yet. Start with step 1."
-      : `${object}${open ? ` · ${open[1]} questions still open` : ""}`;
+      : `${$("fact-name").textContent.trim() ? `${$("fact-name").textContent.trim()} · ` : ""}${object}${open ? ` · ${open[1]} questions still open` : ""}`;
     $("home-status").textContent = line;
   }
 
@@ -160,7 +165,7 @@
     { title: "Connect Muse", connect: true, lines: [
       "Muse understands your voice and draws outlines of parts. It needs a personal key from Meta." ] },
     { title: "You are ready", lines: [
-      "Start at Home, step 1: open your session.",
+      "Start at Home, step 1: connect your phone.",
       "You can open this guide again any time from the “i” button." ] },
   ];
   let stepIndex = 0;

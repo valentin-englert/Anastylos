@@ -89,6 +89,14 @@ class TestProcess(VideoCase):
         self.assertEqual(command[command.index("--video") + 1], str((directory / "video.mp4").resolve()))
         self.assertEqual(videos.list_videos(self.root)["videos"][0]["job"]["state"], "done")
 
+    def test_the_name_given_before_recording_lands_beside_the_new_session_once(self):
+        import ui_meta
+        self.store()
+        ui_meta.set_next_session_name(self.root, "Tuner")
+        job = self.process(FakeRunner())
+        self.assertEqual(ui_meta.session_name(self.root / job["session"]), "Tuner")
+        self.assertEqual(ui_meta.settings(self.root)["next_session_name"], "")
+
     def test_a_second_click_returns_the_same_job_without_a_second_run(self):
         self.store()
         runner = FakeRunner()
@@ -149,6 +157,26 @@ class TestProcess(VideoCase):
         videos.start_processing(self.root, VIDEO_ID, FakeRunner(), self.python, background=False, find_parts=broken)
         job = videos.list_videos(self.root)["videos"][0]["job"]
         self.assertEqual((job["state"], job["parts"], job["parts_error"]), ("done", "failed", "no key"))
+
+    def test_storage_cells_are_measured_after_the_part_search_and_a_failure_stays_visible(self):
+        self.store()
+        calls = []
+        videos.start_processing(self.root, VIDEO_ID, FakeRunner(), self.python, background=False,
+                                find_parts=lambda root, folder: {"not_drawn": []},
+                                measure_cells=lambda root, folder: calls.append(folder) or {"measured": ["P1"]})
+        job = videos.list_videos(self.root)["videos"][0]["job"]
+        self.assertEqual((job["state"], job["parts"], job["cells"], len(calls)), ("done", "found", "measured", 1))
+
+    def test_a_failed_cell_measurement_leaves_the_job_done_and_the_parts_found(self):
+        self.store()
+
+        def broken(root, folder):
+            raise AdapterError("the video cannot be read", 502)
+
+        videos.start_processing(self.root, VIDEO_ID, FakeRunner(), self.python, background=False,
+                                find_parts=lambda root, folder: {"not_drawn": []}, measure_cells=broken)
+        job = videos.list_videos(self.root)["videos"][0]["job"]
+        self.assertEqual((job["state"], job["parts"], job["cells"], job["cells_error"]), ("done", "found", "failed", "the video cannot be read"))
 
     def test_background_job_ends_in_a_visible_state(self):
         self.store()

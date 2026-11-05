@@ -137,14 +137,7 @@ contracts, coordinate systems, module status, and validation gaps.
 
 ## Development provenance
 
-ANASTYLOS foundations — Assembly Memory, the calibration kit, the
-recognizer suite, and the capture PWA — predate the hackathon. Work
-developed during the event (Android guided capture and its physical
-validation, the authenticated Receiver and Core ingestion, live/Meta
-provider integration, custody advances, microscopy, CAD/mesh
-experiments) is visible as such in the preserved Git history:
-timestamps, ancestry, and authorship are intact and no history has been
-rewritten. Older components are not presented as new work.
+ANASTYLOS was developed during the October–November 2026 Meta Hackathon. Its initial foundations included Assembly Memory, calibration, specialized recognizers, and a capture PWA. Subsequent development expanded the system with native Android capture, physical validation, authenticated evidence transfer, Meta Muse integration, and assembly reconstruction. The first commit is dated 2026-10-26, and the preserved Git history shows timestamps, ancestry and authorship; no history has been rewritten. 
 
 ## Setup and verification
 
